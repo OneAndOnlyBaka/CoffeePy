@@ -3,3 +3,4 @@ __pycache__/
 gui/awthemes-*
 libnfc/
 *.db
+CoffeePy.ini

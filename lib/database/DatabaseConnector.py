@@ -2,6 +2,8 @@ import sqlite3
 import os
 from datetime import datetime
 import time
+from threading import Thread, Lock
+import io
 
 class Connector():
     def __init__(self):
@@ -255,3 +257,43 @@ class Connector():
             ret = []
 
         return ret
+
+    def CreateBackup(self,backupFile:str='coffee_backup.db'):
+        con = sqlite3.connect(self.__databaseFile)
+        with io.open(backupFile, 'w') as p:
+            for line in con.iterdump():
+                p.write('%s\n' % line)
+
+class DatabaseBackupThread(Thread):
+    def __init__(self,connector:Connector,path:str,backupIntervalMinutes:int=60,backupDepth=10):
+        Thread.__init__(self)
+        self.__running = True
+        self.__backupIntervalSeconds = backupIntervalMinutes * 60
+        self.__backupDepth = backupDepth
+        self.__connector = connector
+        self.__path = path
+        self.__mutex = Lock()
+
+    def run(self) -> None:
+        backupCounter = 1
+        running = self.__running
+        while running:
+            backupFileName = self.__path +  'coffee' + str(backupCounter) + '.db'
+
+            self.__connector.CreateBackup(backupFileName)
+
+            backupCounter = backupCounter + 1
+            if backupCounter > self.__backupDepth :
+                backupCounter = 1
+
+            time.sleep(float(self.__backupIntervalSeconds))
+            
+            self.__mutex.acquire()
+            running = self.__running
+            self.__mutex.release()
+
+    def kill(self):
+        self.__mutex.acquire()
+        self.__running = False
+        self.__mutex.release()
+        self.join()
