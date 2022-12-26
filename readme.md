@@ -17,8 +17,16 @@ For an installation is debian or ubuntu required. Basically are the packages fro
 
 For raspberry pi got [setup_raspbian.sh](setup_raspbian.sh) added. It will also compile and setup libnfc which is installed already on debian for the ACR122U.
 
+Also awthemes needs to get copied into gui/awthemes-10.4.0
+
+```
+wget http://deb.debian.org/debian/pool/main/t/tcl-awthemes/tcl-awthemes_10.4.0.orig.tar.xz
+tar -xf tcl-awthemes_10.4.0.orig.tar.xz -C gui/
+rm tcl-awthemes_10.4.0.orig.tar.xz
+```
+
 # Source note
 
 - ACR122U python abstraction from github project [Flowtter](https://github.com/Flowtter/py-acr122u). The code is in the folder [lib/nfc/Flowtter](lib/nfc/Flowtter) with minor modification The print() got removed with logging module
 - All icon from [gui/res](gui/res) were obtained from https://iconarchive.com/
-- For tkinter is [awthemes](https://wiki.tcl-lang.org/page/awthemes) got copied in version 10.4.0 in [gui/awthemes-10.4.0](gui/awthemes-10.4.0)
+- For tkinter is [awthemes](https://wiki.tcl-lang.org/page/awthemes) gets copied in version 10.4.0 in gui/awthemes-10.4.0, see setup scripts.
