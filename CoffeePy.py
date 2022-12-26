@@ -23,7 +23,7 @@ if os.path.exists('CoffeePy.ini'):
 
 connector = Connector()
 
-mainApp = CoffeePyMain(connector,borderless=False)
+mainApp = CoffeePyMain(connector,borderless=True)
 
 databaseThread = None
 if autoBackupDB:
