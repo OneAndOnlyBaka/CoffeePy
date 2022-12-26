@@ -1,3 +1,5 @@
+![CoffeePy](setup/splash.png)
+
 # Abstract
 
 Software to handle coffee matters. Simple GUI with SQL Backend which replaces a pen and paper tally for your coffee machine. To simplify things the identification uses NFC for handling the user management.
