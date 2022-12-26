@@ -4,3 +4,4 @@ gui/awthemes-*
 libnfc/
 *.db
 CoffeePy.ini
+StartCoffeePy.sh
