@@ -1,0 +1,5 @@
+.vscode/
+__pycache__/
+gui/awthemes-*
+libnfc/
+*.db
