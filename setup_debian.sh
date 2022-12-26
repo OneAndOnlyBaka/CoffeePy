@@ -6,6 +6,16 @@ rm tcl-awthemes_10.4.0.orig.tar.xz
 
 sudo apt install -y swig python3 python3-tk python3-pil python3-pil.imagetk python3-pyscard python3-pip pcscd checkinstall
 
+git clone https://github.com/nfc-tools/libnfc
+sudo mkdir -p /etc/nfc/devices.d
+cd libnfc
+autoreconf -vis 
+./configure --with-drivers=acr122_usb --sysconfdir=/etc --prefix=/usr
+make
+sudo make install all
+cd ..
+rm -rf libnfc
+
 sudo sh -c 'echo blacklist pn533_usb >> /etc/modprobe.d/blacklist-nfc.conf'
 
 pip install pyscard

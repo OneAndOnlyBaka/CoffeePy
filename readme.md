@@ -57,7 +57,6 @@ The parameters Interval and Depth are optional. Interval specifies how often a b
 
 The backup files will be named in following scheme "coffee<1..Depth>.db". If the program get restarted the backup always starts at 1.
 
-# Usage
 
 # Source note
 
