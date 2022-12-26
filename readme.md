@@ -60,6 +60,5 @@ The backup files will be named in following scheme "coffee<1..Depth>.db". If the
 
 # Source note
 
-- ACR122U python abstraction from github project [Flowtter](https://github.com/Flowtter/py-acr122u). The code is in the folder [lib/nfc/Flowtter](lib/nfc/Flowtter) with minor modification The print() got removed with logging module
 - All icon from [gui/res](gui/res) were obtained from https://iconarchive.com/
 - For tkinter is [awthemes](https://wiki.tcl-lang.org/page/awthemes) gets copied in version 10.4.0 in gui/awthemes-10.4.0, see setup scripts.
