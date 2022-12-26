@@ -4,6 +4,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 START_COFFEEPY_BASH=$SCRIPT_DIR"/StartCoffeePy.sh"
 AUTOSTART_PATH="~/.config/autostart/"
 AUTOSTART_FILE=$SCRIPT_DIR"/CoffeePy.desktop"
+SPLASH_FILE=$SCRIPT_DIR"/setup/splash.png"
 
 wget http://deb.debian.org/debian/pool/main/t/tcl-awthemes/tcl-awthemes_10.4.0.orig.tar.xz
 tar -xf tcl-awthemes_10.4.0.orig.tar.xz -C gui/
@@ -37,5 +38,10 @@ echo "Type=Application" >> $AUTOSTART_FILE
 echo "Name=CoffeePyApp" >> $AUTOSTART_FILE
 echo "Exec=xterm -hold -e 'sh "$START_COFFEEPY_BASH"'" >> $AUTOSTART_FILE
 echo "Terminal=false" >> $AUTOSTART_FILE
+
+sudo mv /usr/share/plymouth/themes/pix/splash.png /usr/share/plymouth/themes/pix/splash.png.bk
+sudo cp $SPLASH_FILE /usr/share/plymouth/themes/pix/splash.png
+sudo cp $SPLASH_FILE ~/Pictures/wp.png
+pcmanfm --set-wallpaper ~/Pictures/wp.png
 
 echo "Restart is required..."
