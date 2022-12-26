@@ -59,6 +59,45 @@ The parameters Interval and Depth are optional. Interval specifies how often a b
 
 The backup files will be named in following scheme "coffee<1..Depth>.db". If the program get restarted the backup always starts at 1.
 
+# Usage
+
+The following picture shows how CoffeePy starts up. On the left side you can find four symbols. The coffee cup symbolizes the order menu which is default function of CoffeePy. The books is for the selection to show you your stats and the possibility to mark your orders as payed.
+The gears option is to modify your nickname within the application and your favourite coffee type, so you can faster checkout.
+The lowest button is for showing the current ranking and all time stats over all users.
+
+The beans next to the buttons are showing the current selection. If the beans next to the button are black, this submenu is currently selected. All submenues do require a login through the NFC card, except the ranking. Each time a submenu gets changed a login with NFC is required. 
+
+![](doc/pictures/screen_applycard_order.png)
+
+## New User & User Settings
+If an new user applies his card to coffeepy he will directed to the setup submenu. By default the UID of the card will be used as nick, but it can be changed to any name. Also it is always possible to change the name by login in the setup menu (gear symbol).
+For fast-checkout the favourite coffee sort can be picked. So each time the user will add his card to order, this option will be selected by default. It is always possible to change the coffee product while checkout process.
+
+All date will stored by clicking on the "SAVE" button and the user will be logged out. Next time the user will apply the card the order menu will show up.
+
+If nothing gets saved, the user will be logged out after 20s. Each time an keyboard or selection dialog gets opened the logout timer will get stopped.
+
+![](doc/pictures/screen_settings.png)
+
+## Checkout
+
+If you want to checkout apply the card while the coffee cup is selected. The screen below will show up. By default will your favourite sort be picked, after the checkout counter timed out (20s). You can skip the timer by pressing the ok button.
+In case you do not want something press 'x' and your process will be canceled. And if you pick something from the list, the timer will get stopped and you have to press the ok button to proceed. 
+
+![](doc/pictures/screen_checkout.png)
+
+## Pay & Personal Stats
+The pay & personal stats area is to show you how much coffee you did consume and how your current balance in the kitty is. If the balance is negative, the value will be automatically set in the pay area, so you just have to click on 'pay' after you did put the money in the kitty.
+Also its possible to edit the value before paying. 
+
+The stats CCT & CCM are showing your [C]up[C]ount while CCT all time total count shows, is CCM just the current month. ABT is your current balance in the kitty. ABT stands for [A]ccount [B]alance [T]otal.
+
+You will get logged out after 20s, except you are in an subdialog. Each subdialog will reset the logout timer to 20s.
+
+![](doc/pictures/screen_pay_stats.png)
+
+## Ranking
+The ranking area does not require a login. It shows the top three of all time and the current month.
 
 # Source note
 
