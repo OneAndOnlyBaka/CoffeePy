@@ -55,8 +55,7 @@ sudo cp $SPLASH_FILE /usr/share/plymouth/themes/pix/splash.png
 sudo cp $SPLASH_FILE ~/Pictures/wp.png
 pcmanfm --set-wallpaper ~/Pictures/wp.png
 
-# Disable Mouse cursor and display to going blank
+# Disable display to going blank
 xset s noblank
-startx -- -nocursor
 
 echo "Restart is required..."
