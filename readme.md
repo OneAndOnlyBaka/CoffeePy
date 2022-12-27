@@ -1,4 +1,4 @@
-![CoffeePy](setup/splash.png)
+![](doc/pictures/coffeepy.png)
 
 # Abstract
 
