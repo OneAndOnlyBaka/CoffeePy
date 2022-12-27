@@ -18,6 +18,4 @@ rm -rf libnfc
 
 sudo sh -c 'echo blacklist pn533_usb >> /etc/modprobe.d/blacklist-nfc.conf'
 
-pip install pyscard
-
 echo "Restart is required..."
