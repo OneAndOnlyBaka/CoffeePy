@@ -16,7 +16,7 @@ rm tcl-awthemes_10.4.0.orig.tar.xz
 
 # Installs all required modules
 
-sudo apt-get -y install swig python3 python3-tk python3-pil python3-pil.imagetk python3-pyscard python3-pip pcscd autoconf debhelper flex libusb-dev libpcsclite-dev libpcsclite1 libccid pcscd pcsc-tools libpcsc-perl libusb-1.0-0-dev libtool libssl-dev cmake xterm checkinstall
+sudo apt-get -y install swig python3 python3-tk python3-pil python3-pil.imagetk python3-pyscard python3-pip pcscd autoconf debhelper flex libusb-dev libpcsclite-dev libpcsclite1 libccid pcscd pcsc-tools libpcsc-perl libusb-1.0-0-dev libtool libssl-dev cmake xterm unclutter xscreensaver checkinstall
 
 # Installs NFC lib
 
@@ -55,7 +55,11 @@ sudo cp $SPLASH_FILE /usr/share/plymouth/themes/pix/splash.png
 sudo cp $SPLASH_FILE ~/Pictures/wp.png
 pcmanfm --set-wallpaper ~/Pictures/wp.png
 
+# Disable mouse cursor
+echo "@unclutter -idle 0" > "~/.config/lxsession/LXDE-pi/autostart"
 # Disable display to going blank
-xset s noblank
+echo "@xset s off" >> "~/.config/lxsession/LXDE-pi/autostart"
+echo "@xset -dpms" >> "~/.config/lxsession/LXDE-pi/autostart"
+echo "@xset s noblank" >> "~/.config/lxsession/LXDE-pi/autostart"
 
 echo "Restart is required..."
