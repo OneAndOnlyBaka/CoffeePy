@@ -99,6 +99,12 @@ You will get logged out after 20s, except you are in an subdialog. Each subdialo
 ## Ranking
 The ranking area does not require a login. It shows the top three of all time and the current month.
 
+# Housing
+
+![](doc/pictures/housing.jpg)
+
+Folder [housing](housing) contains labels and STL files to create a desk housing for your coffeepy.
+
 # Source note
 
 - All icon from [gui/res](gui/res) were obtained from https://iconarchive.com/
