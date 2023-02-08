@@ -15,8 +15,17 @@ tar -xf tcl-awthemes_10.4.0.orig.tar.xz -C gui/
 rm tcl-awthemes_10.4.0.orig.tar.xz
 
 # Installs all required modules
+sudo apt-get update
+sudo apt-get -y install swig python3 python3-tk python3-pil python3-pil.imagetk python3-pyscard python3-pip pcscd autoconf debhelper flex libusb-dev libpcsclite-dev libpcsclite1 libccid pcscd pcsc-tools libpcsc-perl libusb-1.0-0-dev libtool libssl-dev cmake xterm unclutter xscreensaver i2c-tools checkinstall
 
-sudo apt-get -y install swig python3 python3-tk python3-pil python3-pil.imagetk python3-pyscard python3-pip pcscd autoconf debhelper flex libusb-dev libpcsclite-dev libpcsclite1 libccid pcscd pcsc-tools libpcsc-perl libusb-1.0-0-dev libtool libssl-dev cmake xterm unclutter xscreensaver checkinstall
+# Install DS3231 as clock source
+echo "i2c_dev" >> /etc/modules
+echo "i2c-bcm2708" >> /etc/modules
+echo ds3231 0x68 | sudo tee /sys/class/i2c-adapter/i2c-1/new_device
+sudo hwclock -w
+sudo update-rc.d fake-hwclock disable
+sudo ntpd -gq
+sudo hwclock -w
 
 # Installs NFC lib
 
@@ -39,6 +48,7 @@ sudo sh -c 'echo blacklist pn533_usb >> /etc/modprobe.d/blacklist-nfc.conf'
 ~/.config/autostart/coffeepy.desktop
 
 echo "#!/bin/bash" > $START_COFFEEPY_BASH
+echo "echo ds3231 0x68 | sudo tee /sys/class/i2c-adapter/i2c-1/new_device" >> $START_COFFEEPY_BASH
 echo "cd "$SCRIPT_DIR >> $START_COFFEEPY_BASH
 echo "/bin/python3 CoffeePy.py" >> $START_COFFEEPY_BASH
 

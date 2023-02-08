@@ -10,14 +10,19 @@ The gui is designed for a 1024x600 touchscreen to run it in fullscreen.
 
 ## Hardware requirements
 
+general:
 - Touchscreen with 1024x600, e.g. https://www.adafruit.com/product/2396
 - Advanced Card System ACR122U
+
+for raspberry pi:
+- RTC Clock DS3231 Module
 
 ## Software requierments
 
 For testing or regular debians you can use [setup_debian.sh](setup_debian.sh) which sets up everything to run CoffeePy, like drivers for the ACR122U.
 
-For raspberry pi got [setup_raspbian.sh](setup_raspbian.sh) added. It will also compile and setup libnfc which is installed already on debian for the ACR122U.
+For raspberry pi got [setup_raspbian.sh](setup_raspbian.sh) added. It will also compile and setup libnfc which is installed already on debian for the ACR122U. Before executing [setup_raspbian.sh](setup_raspbian.sh) enable I²C first for the RTC Module.
+The rest will be handled by the script. i2c-1 must be enabled for using DS3231, this can be done via raspi-config.
 
 Also awthemes needs to get copied into gui/awthemes-10.4.0. Use the following command in the root folder of CoffeePy:
 
