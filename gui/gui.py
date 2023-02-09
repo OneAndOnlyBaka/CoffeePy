@@ -670,7 +670,9 @@ class CoffeePyMain():
                 callback = self.__EventCreateNewUser
                 if userMeta != None:
                     callback = self.__EventUpdateExistingUser
-                self.__innerCardPanel = SettingsPanel(self.__tkRoot,self.__selectionPanal,uid,userMeta['nick_name'],userMeta['favourite_coffee'],coffeeSorts,callback)
+                    self.__innerCardPanel = SettingsPanel(self.__tkRoot,self.__selectionPanal,uid,userMeta['nick_name'],userMeta['favourite_coffee'],coffeeSorts,callback)
+                else:
+                    self.__innerCardPanel = SettingsPanel(self.__tkRoot,self.__selectionPanal,uid,'',coffeeSorts[0]['coffee_id'],coffeeSorts,self.__EventCreateNewUser)
             elif self.__currentMenuSelection == MenuSelectionType.MENU_INFO_AND_PAY:
                 if userMeta != None:
                     self.__innerCardPanel = UserInfoAndPayPanel(self.__tkRoot,self.__selectionPanal,userMeta,self.__databaseConnector)
