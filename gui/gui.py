@@ -47,13 +47,8 @@ class GuiConstants():
 
 class BaseSelectionPanel():
     def __init__(self,mainWindow,panel:PanedWindow):
-        for widget in panel.winfo_children():
-            widget.destroy()
-
-        for i in range(8):
-            panel.columnconfigure(i,minsize=0)
-            panel.rowconfigure(i,minsize=0)
-
+        self.__panel = panel
+        self.CleanUpContent()
         self.mainWindow = mainWindow
 
     def UpdateSecond(self):
@@ -64,6 +59,14 @@ class BaseSelectionPanel():
 
     def FinalizeAction(self):
         pass
+
+    def CleanUpContent(self):
+        for widget in self.__panel.winfo_children():
+            widget.destroy()
+
+        for i in range(8):
+            self.__panel.columnconfigure(i,minsize=0)
+            self.__panel.rowconfigure(i,minsize=0)
             
 class RequiredCardPanel(BaseSelectionPanel):
     def __init__(self, mainWindow, panel: PanedWindow):
@@ -354,84 +357,148 @@ class NoCoffeeSortsInDatabase(BaseSelectionPanel):
 class RankingPanel(BaseSelectionPanel):
     def __init__(self, mainWindow, panel: PanedWindow,databaseConnector:DatabaseConnector.Connector):
         super().__init__(mainWindow,panel)
-        self.__welcomeLabel = Label(panel, text='TOP 3 - ALL TIME',bg='#663300' ,fg='white' , justify=LEFT, font=(GuiConstants.GetFont(),28), borderwidth=2,relief='ridge',width=1)
-        self.__welcomeLabel.grid(row=0,column=0,columnspan=4,sticky='w',ipady=10,ipadx=395)
+        width = 100
+        height = width
+        next = Image.open("gui/res/Custom-Icon-Design-Flatastic-1-Forward.512.png")
+        next = next.resize((width,height), Image.ANTIALIAS)
+        self.__nextIcon =  ImageTk.PhotoImage(next)
+        self.__panel = panel
+        self.__databaseConnector = databaseConnector
+        self.__ShowAllTimeRanking()
 
-        tab = Label(panel, text='POS',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+    def __EventShowTotalRanking(self,sender):
+        self.__ShowAllTimeRanking()
+
+    def __ShowAllTimeRanking(self):
+        self.CleanUpContent()
+        self.title = Label(self.__panel, text='TOP 7 - ALL TIME',bg='#663300' ,fg='white' , justify=LEFT, font=(GuiConstants.GetFont(),28), borderwidth=2,relief='ridge',width=1)
+        self.title.grid(row=0,column=0,columnspan=4,sticky='w',ipady=10,ipadx=395)
+
+        tab = Label(self.__panel, text='POS',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
         tab.grid(row=1,column=0,sticky='w',ipady=10,ipadx=25)
-        tab = Label(panel, text='NAME',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        tab = Label(self.__panel, text='NAME',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
         tab.grid(row=1,column=1,sticky='w',ipady=10,ipadx=248)
-        tab = Label(panel, text='CCT',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        tab = Label(self.__panel, text='CCT',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
         tab.grid(row=1,column=2,sticky='w',ipady=10,ipadx=50)
-        tab = Label(panel, text='CCM',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        tab = Label(self.__panel, text='CCM',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
         tab.grid(row=1,column=3,sticky='w',ipady=10,ipadx=50)
-        tab = Label(panel, text='1',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-        tab.grid(row=2,column=0,sticky='w',ipady=10,ipadx=25)
-        tab = Label(panel, text='2',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-        tab.grid(row=3,column=0,sticky='w',ipady=10,ipadx=25)
-        tab = Label(panel, text='3',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-        tab.grid(row=4,column=0,sticky='w',ipady=10,ipadx=25)
-        tab = Label(panel, text='4',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
 
-        rankIdList = databaseConnector.GetUIDSortedByTotalCupsDecreasing()
-        rowCounterMax = 3
+        rankIdList = self.__databaseConnector.GetUIDSortedByTotalCupsDecreasing()
+        rowCounterMax = 7
         rowCounter = 0
 
-        for id in rankIdList:
-            meta = databaseConnector.GetUserMeta(id)
-            ccm = databaseConnector.GetCurrentMonthCupsForUID(id)
-            cct = databaseConnector.GetTotalCupsForUID(id)
+        for rowCt in range(0,rowCounterMax):
+            tab = Label(self.__panel, text=str(rowCt + 1),bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+            tab.grid(row=2 + rowCt,column=0,sticky='w',ipady=10,ipadx=25)
 
-            tab = Label(panel, text=meta['nick_name'],bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        for id in rankIdList:
+            meta = self.__databaseConnector.GetUserMeta(id)
+            ccm = self.__databaseConnector.GetCurrentMonthCupsForUID(id)
+            cct = self.__databaseConnector.GetTotalCupsForUID(id)
+
+            tab = Label(self.__panel, text=meta['nick_name'],bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
             tab.grid(row=2 + rowCounter,column=1,sticky='w',ipady=10,ipadx=248)
-            tab = Label(panel, text=str(cct),bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+            tab = Label(self.__panel, text=str(cct),bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
             tab.grid(row=2 + rowCounter,column=2,sticky='w',ipady=10,ipadx=50)
-            tab = Label(panel, text=str(ccm),bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+            tab = Label(self.__panel, text=str(ccm),bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
             tab.grid(row=2 + rowCounter,column=3,sticky='w',ipady=10,ipadx=50)
             rowCounter = rowCounter + 1
             if rowCounter >= rowCounterMax:
                 break
 
-        self.__welcomeLabel = Label(panel, text='TOP 3 - MONTH',bg='#663300' ,fg='white' , justify=LEFT, font=(GuiConstants.GetFont(),28), borderwidth=2,relief='ridge',width=1)
-        self.__welcomeLabel.grid(row=5,column=0,columnspan=4,sticky='w',ipady=10,ipadx=395)
+        infoText = Label(self.__panel, text='CC = Cups Count;T/M = Total/Month',bg=GuiConstants.GetDefaultBackgroundColor() , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        infoText.grid(row=10,column=0,columnspan=4,sticky='w',ipadx=295)
+        nextBt = ttk.Button(self.__panel, image=self.__nextIcon)
+        nextBt.grid(row=10,column=3,columnspan=4,sticky='w')
+        nextBt.bind("<Button-1>",self.__EventShowMonthRanking)
 
-        tab = Label(panel, text='POS',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-        tab.grid(row=6,column=0,sticky='w',ipady=10,ipadx=25)
-        tab = Label(panel, text='NAME',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-        tab.grid(row=6,column=1,sticky='w',ipady=10,ipadx=248)
-        tab = Label(panel, text='CCT',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-        tab.grid(row=6,column=2,sticky='w',ipady=10,ipadx=50)
-        tab = Label(panel, text='CCM',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-        tab.grid(row=6,column=3,sticky='w',ipady=10,ipadx=50)
-        tab = Label(panel, text='1',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-        tab.grid(row=7,column=0,sticky='w',ipady=10,ipadx=25)
-        tab = Label(panel, text='2',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-        tab.grid(row=8,column=0,sticky='w',ipady=10,ipadx=25)
-        tab = Label(panel, text='3',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-        tab.grid(row=9,column=0,sticky='w',ipady=10,ipadx=25)
-        tab = Label(panel, text='4',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+    def __EventShowMonthRanking(self,sender):
+        self.__ShowMonthRanking()
 
-        rankIdList = databaseConnector.GetUIDSortedByCurrentMonthsCupsDecreasing()
-        rowCounterMax = 3
+    def __ShowMonthRanking(self):
+        self.CleanUpContent()
+        self.title = Label(self.__panel, text='TOP 7 - MONTH',bg='#663300' ,fg='white' , justify=LEFT, font=(GuiConstants.GetFont(),28), borderwidth=2,relief='ridge',width=1)
+        self.title.grid(row=0,column=0,columnspan=4,sticky='w',ipady=10,ipadx=395)
+
+        tab = Label(self.__panel, text='POS',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        tab.grid(row=1,column=0,sticky='w',ipady=10,ipadx=25)
+        tab = Label(self.__panel, text='NAME',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        tab.grid(row=1,column=1,sticky='w',ipady=10,ipadx=248)
+        tab = Label(self.__panel, text='CCT',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        tab.grid(row=1,column=2,sticky='w',ipady=10,ipadx=50)
+        tab = Label(self.__panel, text='CCM',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        tab.grid(row=1,column=3,sticky='w',ipady=10,ipadx=50)
+
+        rankIdList = self.__databaseConnector.GetUIDSortedByCurrentMonthsCupsDecreasing()
+        rowCounterMax = 7
         rowCounter = 0
 
-        for id in rankIdList:
-            meta = databaseConnector.GetUserMeta(id)
-            ccm = databaseConnector.GetCurrentMonthCupsForUID(id)
-            cct = databaseConnector.GetTotalCupsForUID(id)
+        for rowCt in range(0,rowCounterMax):
+            tab = Label(self.__panel, text=str(rowCt + 1),bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+            tab.grid(row=2 + rowCt,column=0,sticky='w',ipady=10,ipadx=25)
 
-            tab = Label(panel, text=meta['nick_name'],bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-            tab.grid(row=7 + rowCounter,column=1,sticky='w',ipady=10,ipadx=248)
-            tab = Label(panel, text=str(cct),bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-            tab.grid(row=7 + rowCounter,column=2,sticky='w',ipady=10,ipadx=50)
-            tab = Label(panel, text=str(ccm),bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-            tab.grid(row=7 + rowCounter,column=3,sticky='w',ipady=10,ipadx=50)
+        for id in rankIdList:
+            meta = self.__databaseConnector.GetUserMeta(id)
+            ccm = self.__databaseConnector.GetCurrentMonthCupsForUID(id)
+            cct = self.__databaseConnector.GetTotalCupsForUID(id)
+
+            tab = Label(self.__panel, text=meta['nick_name'],bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+            tab.grid(row=2 + rowCounter,column=1,sticky='w',ipady=10,ipadx=248)
+            tab = Label(self.__panel, text=str(cct),bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+            tab.grid(row=2 + rowCounter,column=2,sticky='w',ipady=10,ipadx=50)
+            tab = Label(self.__panel, text=str(ccm),bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+            tab.grid(row=2 + rowCounter,column=3,sticky='w',ipady=10,ipadx=50)
             rowCounter = rowCounter + 1
             if rowCounter >= rowCounterMax:
                 break
 
-        infoText = Label(panel, text='CC = Cups Count;T/M = Total/Month',bg=GuiConstants.GetDefaultBackgroundColor() , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
-        infoText.grid(row=10,column=0,columnspan=4,sticky='w',ipadx=395)
+        infoText = Label(self.__panel, text='CC = Cups Count;T/M = Total/Month',bg=GuiConstants.GetDefaultBackgroundColor() , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        infoText.grid(row=10,column=0,columnspan=4,sticky='w',ipadx=295)
+        nextBt = ttk.Button(self.__panel, image=self.__nextIcon)
+        nextBt.grid(row=10,column=3,columnspan=4,sticky='w')
+        nextBt.bind("<Button-1>",self.__EventShowUnpayedPillory)
+
+    def __EventShowUnpayedPillory(self,sender):
+        self.__ShowUnpayedPillory()
+
+    def __ShowUnpayedPillory(self):
+        self.CleanUpContent()
+        self.title = Label(self.__panel, text='DEPOSIT PILLORY',bg='#663300' ,fg='white' , justify=LEFT, font=(GuiConstants.GetFont(),28), borderwidth=2,relief='ridge',width=1)
+        self.title.grid(row=0,column=0,columnspan=4,sticky='w',ipady=10,ipadx=395)
+
+        tab = Label(self.__panel, text='POS',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        tab.grid(row=1,column=0,sticky='w',ipady=10,ipadx=25)
+        tab = Label(self.__panel, text='NAME',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        tab.grid(row=1,column=1,sticky='w',ipady=10,ipadx=248)
+        tab = Label(self.__panel, text='UPM',bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        tab.grid(row=1,column=2,sticky='w',ipady=10,ipadx=50)
+
+        pilloryList = self.__databaseConnector.GetPillorySortedByDecreasing()
+        rowCounterMax = 7
+        rowCounter = 0
+
+        for rowCt in range(0,rowCounterMax):
+            tab = Label(self.__panel, text=str(rowCt + 1),bg='#000000' ,fg='white' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+            tab.grid(row=2 + rowCt,column=0,sticky='w',ipady=10,ipadx=25)
+
+        for entry in pilloryList:
+            meta = self.__databaseConnector.GetUserMeta(entry['id'])
+
+            tab = Label(self.__panel, text=meta['nick_name'],bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+            tab.grid(row=2 + rowCounter,column=1,sticky='w',ipady=10,ipadx=248)
+            tab = Label(self.__panel, text=str(entry['balance']),bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+            tab.grid(row=2 + rowCounter,column=2,sticky='w',ipady=10,ipadx=50)
+            rowCounter = rowCounter + 1
+            if rowCounter >= rowCounterMax:
+                break
+
+        infoText = Label(self.__panel, text='UPM = Negative deposit of previous months (pay your coffee...)',bg=GuiConstants.GetDefaultBackgroundColor() , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+        infoText.grid(row=10,column=0,columnspan=4,sticky='w',ipadx=295)
+        nextBt = ttk.Button(self.__panel, image=self.__nextIcon)
+        nextBt.grid(row=10,column=3,columnspan=4,sticky='w')
+        nextBt.bind("<Button-1>",self.__EventShowTotalRanking)
+
+        
 
 
 class UserInfoAndPayPanel(BaseSelectionPanel):

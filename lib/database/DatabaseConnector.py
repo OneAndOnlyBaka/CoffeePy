@@ -142,9 +142,9 @@ class Connector():
 
         return int(rows[0][0])
 
-    def GetAccountBalance(self,uid:int,round_value:bool=True):
+    def GetAccountBalance(self,uid:int,round_value:bool=True,for_year:int=-1,for_month:int=-1,):
         payments = self.GetPayments(uid,round_value=False)
-        deposit = self.GetDeposit(uid,round_value=False)
+        deposit = self.GetDeposit(uid,round_value=False,for_year=for_year,for_month=for_month)
 
         diff = payments - deposit
         if round_value:
@@ -263,6 +263,25 @@ class Connector():
         with io.open(backupFile, 'w') as p:
             for line in con.iterdump():
                 p.write('%s\n' % line)
+
+    def GetPillorySortedByDecreasing(self):
+        date = time.mktime(datetime(datetime.now().year,datetime.now().month,1,0,0,0).timetuple())
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        cur.execute('SELECT user_uid from user')
+        rows = cur.fetchall()
+        con.close()
+
+        pillory = []
+
+        for row in rows:
+            id = int(row[0])
+            balance = self.GetAccountBalance(id,False,for_year=datetime.now().year,for_month=datetime.now().month)
+            if balance < 0.0:
+                pillory.append({'id': id, 'balance': balance})
+        
+        return sorted(pillory, key=lambda d: d['balance']) 
+
 
 class DatabaseBackupThread(Thread):
     def __init__(self,connector:Connector,path:str,backupIntervalMinutes:int=60,backupDepth=10):

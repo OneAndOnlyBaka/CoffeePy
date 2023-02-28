@@ -102,7 +102,16 @@ You will get logged out after 20s, except you are in an subdialog. Each subdialo
 ![](doc/pictures/screen_pay_stats.png)
 
 ## Ranking
-The ranking area does not require a login. It shows the top three of all time and the current month.
+The ranking area does not require a login. The button in the lower left corner can be used to switch between the ranking tables. Currently there are three tables shown.
+
+The ranking will always start in the all time ranking (default). Only the top seven will be shown.
+![](doc/pictures/screen_alltime_seven.png)
+
+Next slide shows the top seven of the month.
+![](doc/pictures/screen_month_seven.png)
+
+The last one shows the pillory. If the users did not pay the previous month or months, they will be shown on this slide. The guys with the highest negative deposit are shown on top. If the table is empty, no one has to pay for the previous months.
+![](doc/pictures/screen_unpaied.png)
 
 # Housing
 
