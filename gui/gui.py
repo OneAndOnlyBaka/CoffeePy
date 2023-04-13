@@ -752,7 +752,7 @@ class CoffeePyMain():
             self.__loggedIn = True
             self.__logoutTimer = Timer(1,self.__LogoutTimer)
             self.__logoutTimer.start()
-            self.__mutex.release()
+        self.__mutex.release()
         
     
     def EventCardNotRecognized(self,sender):
