@@ -486,7 +486,7 @@ class RankingPanel(BaseSelectionPanel):
 
             tab = Label(self.__panel, text=meta['nick_name'],bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
             tab.grid(row=2 + rowCounter,column=1,sticky='w',ipady=10,ipadx=248)
-            tab = Label(self.__panel, text=str(entry['balance']),bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
+            tab = Label(self.__panel, text='{:.2f}€'.format(entry['balance']),bg='SandyBrown' ,fg='black' , justify=LEFT, font=GuiConstants.GetMessageInfoTextFont(),borderwidth=2,relief='ridge',width=1)
             tab.grid(row=2 + rowCounter,column=2,sticky='w',ipady=10,ipadx=50)
             rowCounter = rowCounter + 1
             if rowCounter >= rowCounterMax:
