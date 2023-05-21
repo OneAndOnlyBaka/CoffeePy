@@ -5,7 +5,7 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 START_COFFEEPY_BASH=$SCRIPT_DIR"/StartCoffeePy.sh"
 AUTOSTART_PATH="~/.config/autostart/"
-AUTOSTART_FILE=$SCRIPT_DIR"/CoffeePy.desktop"
+AUTOSTART_FILE=$AUTOSTART_PATH"/CoffeePy.desktop"
 SPLASH_FILE=$SCRIPT_DIR"/setup/splash.png"
 
 # Installs themes for tkinter
