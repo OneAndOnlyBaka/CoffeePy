@@ -199,4 +199,4 @@ if __name__ == "__main__":
                 port = 8000
 
     # For development only. In production use a proper WSGI server.
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)
