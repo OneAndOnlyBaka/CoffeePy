@@ -105,7 +105,9 @@ class OrderPanel(BaseSelectionPanel):
         panel.rowconfigure(0,minsize=20)
         panel.rowconfigure(2,minsize=20)
 
-        fav = list(filter(lambda x : x['coffee_id'] == favouriteSelection,coffeeOptions))[0]
+        fav = next((x for x in coffeeOptions if x['coffee_id'] == favouriteSelection), None)
+        if fav is None:
+            fav = coffeeOptions[0] if coffeeOptions else {'coffee_name': 'Unknown', 'coffee_price': 0.0, 'coffee_id': 0}
         
         welcomeText = "Hi " + username + "! \"" + fav['coffee_name'] +"\"?\nOr something different?"
 
@@ -224,12 +226,18 @@ class SettingsPanel(BaseSelectionPanel):
 
         panel.rowconfigure(1,minsize=40)
 
+        # ensure running flag exists to avoid AttributeError in IsStillInUsage / logout timer
+        self.__running = True
+
+        # store uid for use when saving settings
+        self.__uid = uid
+
         self.__autoLogoutSecoundsMax = 20
         self.__autoLogoutCounter = 0
         self.__keyboardOpen = False
-        self.__running = True
-        self.__uid = uid
-        self.__favourite = list(filter(lambda x : x['coffee_id'] == favouriteSelection,coffeeOptions))[0]
+        self.__favourite = next((x for x in coffeeOptions if x['coffee_id'] == favouriteSelection), None)
+        if self.__favourite is None:
+            self.__favourite = coffeeOptions[0] if coffeeOptions else {'coffee_name': 'Unknown', 'coffee_id': 0}
         self.__coffeeOptions = coffeeOptions
         if nick:
             self.__nick = nick
