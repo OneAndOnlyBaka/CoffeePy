@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en" style="--bg1:#efe6dd; --bg2:#d6c0a1; --card:#fff9f4; --muted:#6b4f3b; --accent:#5a3419; --danger:#7a1e1e; --radius:12px; --shadow:0 12px 30px rgba(85,50,20,0.12);">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Login</title>
+    <style>
+        :root{
+            --bg1: #f5f7fa;
+            --bg2: #c3cfe2;
+            --card: #ffffff;
+            --muted: #64748b;
+            --accent: #2563eb;
+            --danger: #b91c1c;
+            --radius: 10px;
+            --shadow: 0 10px 30px rgba(2,6,23,0.12);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
+
+        html,body{
+            height:100%;
+            margin:0;
+        }
+
+        body{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background: linear-gradient(135deg, var(--bg1), var(--bg2));
+            padding:24px;
+        }
+
+        .card{
+            width:100%;
+            max-width:420px;
+            background:var(--card);
+            border-radius:var(--radius);
+            box-shadow:var(--shadow);
+            padding:28px;
+            box-sizing:border-box;
+        }
+
+        h2{
+            margin:0 0 14px 0;
+            font-size:1.25rem;
+            color:#0f172a;
+            text-align:center;
+            font-weight:600;
+        }
+
+        .error{
+            color:var(--danger);
+            background: rgba(185,28,28,0.05);
+            border:1px solid rgba(185,28,28,0.08);
+            padding:8px 10px;
+            border-radius:8px;
+            margin-bottom:14px;
+            text-align:center;
+            font-size:0.95rem;
+        }
+
+        form{display:block;}
+
+        .field{
+            margin-bottom:12px;
+        }
+
+        label{
+            display:block;
+            font-size:0.9rem;
+            color:var(--muted);
+            margin-bottom:6px;
+        }
+
+        input[type="text"], input[type="password"]{
+            width:100%;
+            padding:10px 12px;
+            border-radius:8px;
+            border:1px solid #e2e8f0;
+            background: #fff;
+            font-size:0.95rem;
+            box-sizing:border-box;
+            outline:none;
+            transition:box-shadow .12s, border-color .12s;
+        }
+
+        input:focus{
+            border-color: rgba(37,99,235,0.9);
+            box-shadow: 0 6px 18px rgba(37,99,235,0.08);
+        }
+
+        .actions{
+            margin-top:14px;
+        }
+
+        button{
+            width:100%;
+            padding:10px 12px;
+            background:var(--accent);
+            color:#fff;
+            border:0;
+            border-radius:8px;
+            font-weight:600;
+            cursor:pointer;
+            font-size:0.98rem;
+            transition:background .12s ease;
+        }
+
+        button:hover{ background:#1e40af; }
+
+        .meta{
+            margin-top:12px;
+            text-align:center;
+            font-size:0.88rem;
+            color:var(--muted);
+        }
+
+        .meta a{ color:var(--accent); text-decoration:none; }
+        .meta a:hover{ text-decoration:underline; }
+
+        @media (max-width:420px){
+            .card{ padding:18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Login</h2>
+        {% if error %}<p class="error">{{ error }}</p>{% endif %}
+        <form method="post" novalidate>
+            <div class="field">
+                <label for="username">Username</label>
+                <input id="username" name="username" type="text" autofocus value="{{ username|default('') }}">
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password">
+            </div>
+            <div class="actions">
+                <button type="submit">Sign in</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

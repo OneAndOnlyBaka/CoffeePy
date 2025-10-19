@@ -50,7 +50,7 @@ sudo sh -c 'echo blacklist pn533_usb >> /etc/modprobe.d/blacklist-nfc.conf'
 echo "#!/bin/bash" > $START_COFFEEPY_BASH
 echo "echo ds3231 0x68 | sudo tee /sys/class/i2c-adapter/i2c-1/new_device" >> $START_COFFEEPY_BASH
 echo "cd "$SCRIPT_DIR >> $START_COFFEEPY_BASH
-echo "/bin/python3 CoffeePy.py" >> $START_COFFEEPY_BASH
+echo "/bin/python3 runner.py" >> $START_COFFEEPY_BASH
 
 mkdir -p $AUTOSTART_PATH
 echo "[Desktop Entry]" > $AUTOSTART_FILE
@@ -71,5 +71,85 @@ echo "@unclutter -idle 0" > "~/.config/lxsession/LXDE-pi/autostart"
 echo "@xset s off" >> "~/.config/lxsession/LXDE-pi/autostart"
 echo "@xset -dpms" >> "~/.config/lxsession/LXDE-pi/autostart"
 echo "@xset s noblank" >> "~/.config/lxsession/LXDE-pi/autostart"
+
+# Configure Raspberry Pi as a WLAN access point
+sudo apt-get -y install hostapd dnsmasq
+
+sudo systemctl stop hostapd
+sudo systemctl stop dnsmasq
+
+# Configure static IP for wlan0 in dhcpcd.conf (idempotent)
+if ! grep -q "interface wlan0" /etc/dhcpcd.conf; then
+sudo tee -a /etc/dhcpcd.conf > /dev/null <<'EOT'
+
+interface wlan0
+    static ip_address=192.168.4.1/24
+    nohook wpa_supplicant
+EOT
+fi
+
+# Backup and write dnsmasq config
+sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig 2>/dev/null || true
+sudo tee /etc/dnsmasq.conf > /dev/null <<'EOT'
+interface=wlan0
+dhcp-range=192.168.4.2,192.168.4.20,255.255.255.0,24h
+EOT
+
+# Write hostapd configuration
+sudo tee /etc/hostapd/hostapd.conf > /dev/null <<'EOT'
+country_code=DE
+interface=wlan0
+ssid=CoffeePyAP
+hw_mode=g
+channel=7
+ieee80211n=1
+wmm_enabled=1
+auth_algs=1
+ignore_broadcast_ssid=0
+wpa=2
+wpa_passphrase=CoffeePy123
+wpa_key_mgmt=WPA-PSK
+rsn_pairwise=CCMP
+EOT
+
+# Point hostapd to its config file
+if ! grep -q '^DAEMON_CONF="/etc/hostapd/hostapd.conf"' /etc/default/hostapd 2>/dev/null; then
+    sudo sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd 2>/dev/null || \
+    echo 'DAEMON_CONF="/etc/hostapd/hostapd.conf"' | sudo tee -a /etc/default/hostapd > /dev/null
+fi
+
+# Enable IP forwarding
+if ! grep -q '^net.ipv4.ip_forward=1' /etc/sysctl.conf; then
+    sudo sed -i 's/^#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf 2>/dev/null || \
+    echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf > /dev/null
+fi
+sudo sysctl -p > /dev/null
+
+# Configure NAT (masquerade) from wlan0 to eth0 and save rules
+sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+sudo sh -c "iptables-save > /etc/iptables.ipv4.nat"
+
+# Ensure iptables rules are restored on boot via /etc/rc.local (idempotent)
+if [ ! -f /etc/rc.local ]; then
+  sudo tee /etc/rc.local > /dev/null <<'EOT'
+#!/bin/sh -e
+iptables-restore < /etc/iptables.ipv4.nat
+exit 0
+EOT
+  sudo chmod +x /etc/rc.local
+else
+  sudo sed -i '/iptables-restore < \/etc\/iptables.ipv4.nat/d' /etc/rc.local || true
+  sudo sed -i '/^exit 0/i iptables-restore < /etc/iptables.ipv4.nat' /etc/rc.local
+fi
+
+# Enable and start services
+sudo systemctl unmask hostapd
+sudo systemctl enable hostapd
+sudo systemctl enable dnsmasq
+sudo systemctl restart dhcpcd
+sudo systemctl start hostapd
+sudo systemctl start dnsmasq
+
+pip install -r ./requirements.txt --break-system-packages
 
 echo "Restart is required..."

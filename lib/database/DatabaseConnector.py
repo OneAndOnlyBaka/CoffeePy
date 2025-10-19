@@ -14,11 +14,21 @@ class Connector():
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
         cur.execute('CREATE TABLE IF NOT EXISTS coffee_sorts(coffee_name TEXT, coffee_price REAL,coffee_machine_strokes INT)')
-        cur.execute('CREATE TABLE IF NOT EXISTS user(user_uid INTEGER PRIMARY KEY, user_nick_name TEXT, user_favourite_coffee INT, FOREIGN KEY(user_favourite_coffee) REFERENCES coffee_sorts(rowid))')
+        cur.execute('CREATE TABLE IF NOT EXISTS user(user_uid INTEGER PRIMARY KEY, user_alt_uid INTEGER UNIQUE DEFAULT NULL, user_nick_name TEXT, user_favourite_coffee INT, FOREIGN KEY(user_favourite_coffee) REFERENCES coffee_sorts(rowid))')
         cur.execute('CREATE TABLE IF NOT EXISTS coffee_order(user_uid INTEGER, order_value REAL, order_coffee_machine_strokes INT, order_timestamp INT, order_datetime TEXT, order_info TEXT, FOREIGN KEY(user_uid) REFERENCES user(user_uid))')
         cur.execute('CREATE TABLE IF NOT EXISTS payments(user_uid INTEGER, payment_value REAL, payment_timestamp INT, payment_datetime TEXT, payment_info TEXT, FOREIGN KEY(user_uid) REFERENCES user(user_uid))')
+        # Ensure user_alt_uid column exists (for older DBs)
+        cur.execute("PRAGMA table_info(user)")
+        cols = [row[1] for row in cur.fetchall()]
+        if 'user_alt_uid' not in cols:
+            # Add column and unique index to preserve original schema intent
+            cur.execute("ALTER TABLE user ADD COLUMN user_alt_uid INTEGER DEFAULT NULL")
+            cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_alt_uid ON user(user_alt_uid)")
         con.commit()
         con.close()
+
+    def GetDatabasePath(self):
+        return self.__databaseFile
 
     def IsUserExisting(self,uid:int):
         return self.GetUserMeta(uid) != None
@@ -26,7 +36,7 @@ class Connector():
     def CreateNewUser(self,uid:int,nickName:str,favouriteCoffeeUid:int):
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
-        cur.execute('INSERT INTO user VALUES(' + str(uid) + ',\'' + nickName + '\',' + str(favouriteCoffeeUid) +')')
+        cur.execute('INSERT INTO user(user_uid, user_alt_uid, user_nick_name, user_favourite_coffee) VALUES(?, NULL, ?, ?)', (uid, nickName, favouriteCoffeeUid))
         con.commit()
         con.close()
 
@@ -37,11 +47,18 @@ class Connector():
         con.commit()
         con.close()
 
-    def GetUserMeta(self,uid:int):
+    def UpdateUserAltUID(self,uid:int,altUID:int):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        cur.execute('UPDATE user SET user_alt_uid = ' + str(altUID) + ' WHERE user_uid = ' + str(uid))
+        con.commit()
+        con.close()
+
+    def GetUserList(self):
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
         try:
-            cur.execute('SELECT * FROM user WHERE user_uid = ' + str(uid))
+            cur.execute('SELECT user_uid, user_nick_name, user_favourite_coffee, user_alt_uid FROM user')
             rows = cur.fetchall()
             if len(rows) == 0:
                 rows = None
@@ -53,13 +70,48 @@ class Connector():
         if rows == None:
             return None
 
-        return {'uid': rows[0][0], 'nick_name': rows[0][1], 'favourite_coffee': rows[0][2]}
+        ret = []
+        for item in rows:
+            ret.append({'uid': item[0], 'nick_name': item[1], 'favourite_coffee': item[2], 'user_alt_uid': item[3]})
 
+        return ret
+
+    def GetUserMeta(self,uid:int):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        try:
+            cur.execute('SELECT user_uid, user_nick_name, user_favourite_coffee, user_alt_uid FROM user WHERE user_uid = ? OR user_alt_uid = ?', (uid, uid))
+            rows = cur.fetchall()
+            if len(rows) == 0:
+                rows = None
+        except:
+            rows = None
+        finally:
+            con.close()
+
+        if rows == None:
+            return None
+
+        return {'uid': rows[0][0], 'nick_name': rows[0][1], 'favourite_coffee': rows[0][2], 'user_alt_uid': rows[0][3]}
+
+    def DeleteUser(self,uid:int):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        cur.execute('DELETE FROM user WHERE user_uid = ' + str(uid))
+        con.commit()
+        con.close()
 
     def CreateCoffeeSort(self,name:str,price:float,strokes:int):
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
         cur.execute('INSERT INTO coffee_sorts VALUES(\'' + name + '\', ' + str(price) + ', ' + str(strokes) +')')
+        con.commit()
+        con.close()
+
+    def UpdateCoffeeSort(self,name:str,price:float,strokes:int):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        cur.execute('UPDATE coffee_sorts SET coffee_price = ' + str(price) + ', coffee_machine_strokes = ' + str(strokes) + ' WHERE coffee_name = \'' + name + '\'')
         con.commit()
         con.close()
 

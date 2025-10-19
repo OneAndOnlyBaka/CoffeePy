@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en" class="coffee" style="--bg1:#f7efe6; --bg2:#d7c3a6; --card:#fff8f2; --muted:#7b5a43; --accent:#6b3b00; --danger:#8b1a1a; --radius:10px; --shadow:0 10px 30px rgba(33,18,6,0.12);">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CoffeePy</title>
+    <style>
+        :root{
+            --bg1: #f5f7fa;
+            --bg2: #c3cfe2;
+            --card: #ffffff;
+            --muted: #64748b;
+            --accent: #2563eb;
+            --danger: #b91c1c;
+            --radius: 10px;
+            --shadow: 0 10px 30px rgba(2,6,23,0.12);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
+
+        html,body{
+            height:100%;
+            margin:0;
+        }
+
+        body{
+            display:flex;
+            align-items:flex-start;
+            justify-content:center;
+            background: linear-gradient(135deg, var(--bg1), var(--bg2));
+            padding:24px;
+        }
+
+        /* toolbar: sticky over tabs */
+        .toolbar {
+            width:100%;
+            max-width:1200px;
+            margin:0 auto 12px;
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+            align-items:center;
+            box-sizing:border-box;
+            padding:10px 20px;
+            border-radius:var(--radius);
+            background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.8));
+            box-shadow: var(--shadow);
+            position:sticky;
+            top:12px;
+            z-index:1000;
+        }
+        .toolbar .left { font-weight:700; color:var(--muted); }
+        .toolbar .actions { display:flex; gap:8px; align-items:center; }
+
+        .container{max-width:1200px;margin:0 auto;width:100%;}
+        /* tabs header below toolbar */
+        .tabs-header{
+            display:flex;
+            gap:8px;
+            align-items:center;
+            margin:8px 0 18px;
+            padding:6px;
+        }
+        .tab-btn{
+            padding:8px 12px;
+            border-radius:8px;
+            background:transparent;
+            border:1px solid transparent;
+            cursor:pointer;
+            font-weight:600;
+            color:var(--muted);
+        }
+        .tab-btn.active{
+            background:var(--card);
+            border-color:rgba(0,0,0,0.06);
+            box-shadow:var(--shadow);
+            color:var(--accent);
+        }
+
+        .tab-panels{display:block;}
+        .tab-panel{display:none;}
+        .tab-panel.active{display:block;}
+
+        .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;box-sizing:border-box;overflow-x:auto;}
+
+        /* make tables responsive inside cards */
+        table{width:100%;border-collapse:collapse;font-size:0.95rem;table-layout:fixed;min-width:0;}
+        th,td{padding:8px 10px;border-bottom:1px solid #eef2f7;text-align:left;word-break:break-word;white-space:normal;vertical-align:middle;}
+        input[type="text"], input[type="number"], input[type="datetime-local"]{
+            padding:10px 12px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;font-size:0.95rem;box-sizing:border-box;outline:none;transition:box-shadow .12s, border-color .12s;max-width:100%;
+        }
+        input:focus{border-color: rgba(37,99,235,0.9);box-shadow: 0 6px 18px rgba(37,99,235,0.08);}
+        button{padding:8px 10px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:600;}
+        button.danger{background:var(--danger);}
+        .muted{color:var(--muted);font-size:0.9rem;}
+        .row-actions{display:flex;gap:8px;min-width:0;}
+        .msg{margin-top:8px;font-size:0.9rem;}
+        .msg.success{color:green;}
+        .msg.error{color:var(--danger);background: rgba(185,28,28,0.05);padding:6px;border-radius:6px;}
+
+        @media (min-width:900px){
+            .layout-columns{display:grid;grid-template-columns:1fr 420px;gap:18px;}
+        }
+        @media (max-width:420px){
+            .card{ padding:18px; }
+            .toolbar{ top:6px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- toolbar: logout + reload all (sticky) -->
+        <div class="toolbar" role="navigation" aria-label="Top toolbar">
+            <div class="left">CoffeePy</div>
+            <div class="actions">
+                <button id="download-database" title="Download database file">Download DB</button>
+                <button id="reload-all" title="Reload all data">Reload all</button>
+                <button id="logout-btn" title="Logout">Logout</button>
+            </div>
+        </div>
+
+        <!-- tabs header -->
+        <div class="tabs-header" role="tablist" aria-label="Main sections">
+            <button class="tab-btn active" data-target="coffee-section" role="tab" aria-selected="true">Coffee</button>
+            <button class="tab-btn" data-target="time-section" role="tab" aria-selected="false">Server time</button>
+            <button class="tab-btn" data-target="users-section" role="tab" aria-selected="false">Users</button>
+        </div>
+
+        <!-- panels -->
+        <div class="tab-panels">
+            <div id="coffee-section" class="tab-panel active card" role="tabpanel" aria-hidden="false">
+                <h2>Coffee sorts — edit price & strokes</h2>
+                <p class="muted">Load, edit and save price / machine strokes for each coffee.</p>
+                <table id="coffee-table">
+                    <thead>
+                        <tr><th>ID</th><th>Name</th><th>Price</th><th>Strokes</th><th></th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div style="margin-top:10px;">
+                    <button id="reload-coffee">Reload</button>
+                </div>
+                <div id="coffee-msg" class="msg"></div>
+            </div>
+
+            <div id="time-section" class="tab-panel card" role="tabpanel" aria-hidden="true" style="margin-top:8px;">
+                <h2>Server time</h2>
+                <p class="muted">View the server's current time and optionally set it (requires backend capability).</p>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <div>
+                        <div><strong>Server time:</strong></div>
+                        <div id="server-time" class="muted">loading…</div>
+                    </div>
+                    <div style="margin-left:auto">
+                        <input id="datetime-input" type="datetime-local">
+                    </div>
+                </div>
+                <div style="margin-top:10px;display:flex;gap:8px;">
+                    <button id="refresh-time">Refresh</button>
+                    <button id="set-time">Set server time</button>
+                </div>
+                <div id="time-msg" class="msg"></div>
+            </div>
+
+            <div id="users-section" class="tab-panel card" role="tabpanel" aria-hidden="true" style="margin-top:8px;">
+                <h2>Users</h2>
+                <p class="muted">List of users. In case a card gets defective or lost, 
+                                it is possible to set an alternative UID. The alternative UID can be obtained by
+                                put the new card on the nfc reader and note the UID of the new card. Just do not create a new
+                                user in this situation or delete the created.</p>
+                <table id="users-table">
+                    <thead>
+                        <tr><th>UID</th><th>Nick</th><th>Fav coffee</th><th>Alternative UID</th><th></th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div id="users-msg" class="msg"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showMsg(elId, text, isError=false) {
+            const el = document.getElementById(elId);
+            el.textContent = text;
+            el.className = 'msg ' + (isError ? 'error' : 'success');
+            setTimeout(()=>{ if (el.textContent===text) el.textContent=''; }, 5000);
+        }
+
+        async function loadCoffee() {
+            const tbody = document.querySelector('#coffee-table tbody');
+            tbody.innerHTML = '<tr><td colspan="5">loading…</td></tr>';
+            try {
+                const res = await fetch('/api/coffee_sorts');
+                if(!res.ok) throw new Error(res.statusText);
+                const data = await res.json();
+                tbody.innerHTML = '';
+                data.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${c.coffee_id}</td>
+                        <td>${escapeHtml(c.coffee_name)}</td>
+                        <td><input type="number" step="0.01" value="${c.coffee_price}" data-id="${c.coffee_id}" data-field="price"></td>
+                        <td><input type="number" step="1" value="${c.coffee_machine_strokes}" data-id="${c.coffee_id}" data-field="strokes"></td>
+                        <td class="row-actions">
+                            <button data-action="save" data-id="${c.coffee_id}" data-name="${escapeHtml(c.coffee_name)}">Save</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                tbody.querySelectorAll('button[data-action="save"]').forEach(btn=>{
+                    btn.addEventListener('click', async (ev)=>{
+                        const id = btn.getAttribute('data-id');
+                        const name = btn.getAttribute('data-name');
+                        const row = btn.closest('tr');
+                        const price = row.querySelector('input[data-field="price"]').value;
+                        const strokes = row.querySelector('input[data-field="strokes"]').value;
+                        btn.disabled = true;
+                        try {
+                            const r = await fetch('/api/coffee_sort', {
+                                method: 'PUT',
+                                headers:{'Content-Type':'application/json'},
+                                body: JSON.stringify({ name: name, price: parseFloat(price), strokes: parseInt(strokes) })
+                            });
+                            if(!r.ok) throw new Error(await r.text());
+                            showMsg('coffee-msg','Saved.');
+                            loadCoffee();
+                        } catch(e) {
+                            showMsg('coffee-msg','Error: '+e.message,true);
+                        } finally { btn.disabled = false; }
+                    });
+                });
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="5">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
+            }
+        }
+
+        async function loadServerTime(){
+            const el = document.getElementById('server-time');
+            el.textContent = 'loading…';
+            try {
+                const res = await fetch('/api/system_time');
+                if(!res.ok) throw new Error(res.statusText);
+                const data = await res.json();
+                const dt = data.datetime || new Date(data.timestamp * 1000).toISOString();
+                el.textContent = dt;
+                const local = new Date(dt);
+                const isoLocal = local.toISOString().slice(0,16);
+                document.getElementById('datetime-input').value = isoLocal;
+            } catch(e) {
+                el.textContent = 'Failed: ' + e.message;
+            }
+        }
+
+        async function setServerTime(){
+            const input = document.getElementById('datetime-input').value;
+            if(!input){ showMsg('time-msg','Please enter a datetime.',true); return; }
+            try {
+                const res = await fetch('/api/system_time', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({datetime: input})
+                });
+                if(!res.ok) throw new Error(await res.text());
+                showMsg('time-msg','Server time updated.');
+                loadServerTime();
+            } catch(e) {
+                showMsg('time-msg','Error: '+e.message,true);
+            }
+        }
+
+        async function loadUsers(){
+            const tbody = document.querySelector('#users-table tbody');
+            tbody.innerHTML = '<tr><td colspan="5">loading…</td></tr>';
+            try {
+                const res = await fetch('/api/user_list');
+                if(!res.ok) throw new Error(res.statusText);
+                const data = await res.json();
+                tbody.innerHTML = '';
+                data.forEach(u=>{
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${u.uid}</td>
+                        <td>${escapeHtml(u.nick_name||'')}</td>
+                        <td>${u.favourite_coffee ?? ''}</td>
+                        <td><input type="number" value="${u.user_alt_uid ?? ''}" data-uid="${u.uid}" data-field="alt"></td>
+                        <td class="row-actions">
+                            <button data-action="update" data-uid="${u.uid}">Update</button>
+                            <button data-action="delete" data-uid="${u.uid}" class="danger">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                tbody.querySelectorAll('button[data-action="update"]').forEach(btn=>{
+                    btn.addEventListener('click', async ()=>{
+                        const uid = btn.getAttribute('data-uid');
+                        const row = btn.closest('tr');
+                        const altVal = row.querySelector('input[data-field="alt"]').value;
+                        btn.disabled = true;
+                        try {
+                            const body = { uid: parseInt(uid), alt_uid: altVal === '' ? null : parseInt(altVal) };
+                            const r = await fetch('/api/user', {
+                                method:'PUT',
+                                headers:{'Content-Type':'application/json'},
+                                body: JSON.stringify(body)
+                            });
+                            if(!r.ok) throw new Error(await r.text());
+                            showMsg('users-msg','Updated user '+uid);
+                            loadUsers();
+                        } catch(e) {
+                            showMsg('users-msg','Error: '+e.message,true);
+                        } finally { btn.disabled = false; }
+                    });
+                });
+                // delete handlers with confirmation (irreversible)
+                tbody.querySelectorAll('button[data-action="delete"]').forEach(btn=>{
+                    btn.addEventListener('click', async ()=>{
+                        const uid = btn.getAttribute('data-uid');
+                        if(!confirm('Delete user ' + uid + '? This action cannot be undone.')) return;
+                        btn.disabled = true;
+                        try {
+                            const r = await fetch('/api/delete_user', {
+                                method: 'POST',
+                                headers: {'Content-Type':'application/json'},
+                                body: JSON.stringify({ uid: parseInt(uid) })
+                            });
+                            if(!r.ok) throw new Error(await r.text());
+                            showMsg('users-msg','Deleted user '+uid);
+                            loadUsers();
+                        } catch(e) {
+                            showMsg('users-msg','Error: '+e.message,true);
+                        } finally { btn.disabled = false; }
+                    });
+                });
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="5">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
+            }
+        }
+
+        function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+        // tab switching
+        function showTab(targetId, updateAria=true){
+            document.querySelectorAll('.tab-btn').forEach(btn=>{
+                const on = btn.getAttribute('data-target')===targetId;
+                btn.classList.toggle('active', on);
+                if(updateAria) btn.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            document.querySelectorAll('.tab-panel').forEach(panel=>{
+                const on = panel.id===targetId;
+                panel.classList.toggle('active', on);
+                panel.setAttribute('aria-hidden', on ? 'false' : 'true');
+            });
+            // lazy-reload content for the shown tab
+            if(targetId==='coffee-section') loadCoffee();
+            if(targetId==='time-section') loadServerTime();
+            if(targetId==='users-section') loadUsers();
+        }
+
+        document.addEventListener('DOMContentLoaded', ()=>{
+            // initial loads for default active panel
+            loadCoffee();
+            loadServerTime();
+            loadUsers();
+
+            // tab clicks
+            document.querySelectorAll('.tab-btn').forEach(btn=>{
+            btn.addEventListener('click', ()=> showTab(btn.getAttribute('data-target')));
+            });
+
+            document.getElementById('reload-coffee').addEventListener('click', loadCoffee);
+            document.getElementById('refresh-time').addEventListener('click', loadServerTime);
+            document.getElementById('set-time').addEventListener('click', setServerTime);
+
+            document.getElementById('reload-all').addEventListener('click', ()=>{ loadCoffee(); loadServerTime(); loadUsers(); });
+            const logoutBtn = document.getElementById('logout-btn');
+            if(logoutBtn) logoutBtn.addEventListener('click', ()=> { window.location = '/logout'; });
+            const downloadDbBtn = document.getElementById('download-database');
+            if(downloadDbBtn) downloadDbBtn.addEventListener('click', async ()=>{
+            try {
+                const res = await fetch('/api/database');
+                if(!res.ok) throw new Error(res.statusText);
+                const blob = await res.blob();
+                // attempt to get filename from Content-Disposition header
+                const cd = res.headers.get('content-disposition') || '';
+                let filename = 'database';
+                const m = /filename\*=UTF-8''([^;]+)|filename="([^"]+)"|filename=([^;]+)/i.exec(cd);
+                if(m){
+                filename = decodeURIComponent(m[1] || m[2] || m[3]);
+                } else {
+                // fallback extension guess
+                const ext = blob.type === 'application/x-sqlite3' ? '.sqlite' : '';
+                filename += ext;
+                }
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showMsg('coffee-msg','Database download started.');
+            } catch(e) {
+                showMsg('coffee-msg','Error: '+e.message,true);
+            }
+            });
+        });
+    </script>
+</body>
+</html>

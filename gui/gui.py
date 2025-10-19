@@ -360,7 +360,7 @@ class RankingPanel(BaseSelectionPanel):
         width = 100
         height = width
         next = Image.open("gui/res/Custom-Icon-Design-Flatastic-1-Forward.512.png")
-        next = next.resize((width,height), Image.ANTIALIAS)
+        next = next.resize((width,height), Image.Resampling.LANCZOS)
         self.__nextIcon =  ImageTk.PhotoImage(next)
         self.__panel = panel
         self.__databaseConnector = databaseConnector
@@ -690,22 +690,22 @@ class CoffeePyMain():
         height = width
 
         im = Image.open("gui/res/Coffee-icon.png")
-        imResized = im.resize((width,height), Image.ANTIALIAS)
+        imResized = im.resize((width,height), Image.Resampling.LANCZOS)
         self.__orderIco =  ImageTk.PhotoImage(imResized)
         medal = Image.open("gui/res/Badge-Trophy-02-icon.png")
-        medal = medal.resize((width,height), Image.ANTIALIAS)
+        medal = medal.resize((width,height), Image.Resampling.LANCZOS)
         self.__rankingIco =  ImageTk.PhotoImage(medal)
         info = Image.open("gui/res/Books-2-icon.png")
-        info = info.resize((width,height), Image.ANTIALIAS)
+        info = info.resize((width,height), Image.Resampling.LANCZOS)
         self.__infoIco =  ImageTk.PhotoImage(info)
         options = Image.open("gui/res/spur-gear-icon.png")
-        options = options.resize((width,height), Image.ANTIALIAS)
+        options = options.resize((width,height), Image.Resampling.LANCZOS)
         self.__settingsIco =  ImageTk.PhotoImage(options)
         bar = Image.open("gui/res/bar.png")
-        bar = bar.resize((50,145), Image.ANTIALIAS)
+        bar = bar.resize((50,145), Image.Resampling.LANCZOS)
         self.__barIco =  ImageTk.PhotoImage(bar)
         barsel = Image.open("gui/res/barselected.png")
-        barsel = barsel.resize((50,145), Image.ANTIALIAS)
+        barsel = barsel.resize((50,145), Image.Resampling.LANCZOS)
         self.__barIcoSelected =  ImageTk.PhotoImage(barsel)
 
     def __GridSetup(self):
