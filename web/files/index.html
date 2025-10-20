@@ -105,6 +105,8 @@
             .toolbar{ top:6px; }
         }
     </style>
+    <!-- Flatpickr for consistent 24-hour time picker across browsers -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 <body>
     <div class="container">
@@ -150,8 +152,9 @@
                         <div><strong>Server time:</strong></div>
                         <div id="server-time" class="muted">loading…</div>
                     </div>
-                    <div style="margin-left:auto">
-                        <input id="datetime-input" type="datetime-local">
+                    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+                        <input id="date-input" type="date" aria-label="Date"></br>
+                        <input id="time-input" type="time" aria-label="Time (24h)">
                     </div>
                 </div>
                 <div style="margin-top:10px;display:flex;gap:8px;">
@@ -179,7 +182,25 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
+        // initialize a 24-hour time picker on the #time-input
+        function initTimePicker() {
+            try {
+                if (typeof flatpickr === 'function') {
+                    flatpickr('#time-input', {
+                        enableTime: true,
+                        noCalendar: true,
+                        dateFormat: 'H:i',
+                        time_24hr: true,
+                        allowInput: true
+                    });
+                }
+            } catch (e) {
+                // ignore if flatpickr failed to load; the native input will still work
+                console.warn('flatpickr init failed', e);
+            }
+        }
         function showMsg(elId, text, isError=false) {
             const el = document.getElementById(elId);
             el.textContent = text;
@@ -242,24 +263,43 @@
                 const res = await fetch('/api/system_time');
                 if(!res.ok) throw new Error(res.statusText);
                 const data = await res.json();
-                const dt = data.datetime || new Date(data.timestamp * 1000).toISOString();
-                el.textContent = dt;
+                // server may return either an ISO datetime string or a timestamp (seconds)
+                const dt = data.datetime || (typeof data.timestamp === 'number' ? new Date(data.timestamp * 1000).toISOString() : new Date().toISOString());
+                // represent the server time as a local, human-friendly 24-hour string
                 const local = new Date(dt);
-                const isoLocal = local.toISOString().slice(0,16);
-                document.getElementById('datetime-input').value = isoLocal;
+                const pad = (n) => String(n).padStart(2, '0');
+                const formatLocalDatetime = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+                // show YYYY-MM-DD HH:MM:SS with 24-hour clock
+                el.textContent = formatLocalDatetime(local);
+                // Populate separate date and time inputs. Time input value uses 24-hour
+                // format (HH:mm) which we set explicitly to ensure 24h values.
+                const toLocalDateValue = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                const toLocalTimeValue = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                const dateEl = document.getElementById('date-input');
+                const timeEl = document.getElementById('time-input');
+                if(dateEl) dateEl.value = toLocalDateValue(local);
+                if(timeEl) timeEl.value = toLocalTimeValue(local);
             } catch(e) {
                 el.textContent = 'Failed: ' + e.message;
             }
         }
 
         async function setServerTime(){
-            const input = document.getElementById('datetime-input').value;
-            if(!input){ showMsg('time-msg','Please enter a datetime.',true); return; }
+            const dateVal = document.getElementById('date-input').value;
+            const timeVal = document.getElementById('time-input').value;
+            if(!dateVal || !timeVal){ showMsg('time-msg','Please enter both date and time (24h).',true); return; }
             try {
+                // Combine local date + time (both local, no timezone) into a single
+                // local datetime string and convert to an ISO instant (UTC) so the
+                // backend receives a timezone-aware timestamp.
+                // Use the native Date constructor with "YYYY-MM-DDTHH:MM" which is
+                // treated as local time by browsers.
+                const combined = `${dateVal}T${timeVal}`; // e.g. 2025-10-20T14:05
+                const iso = new Date(combined).toISOString();
                 const res = await fetch('/api/system_time', {
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({datetime: input})
+                    body: JSON.stringify({datetime: iso})
                 });
                 if(!res.ok) throw new Error(await res.text());
                 showMsg('time-msg','Server time updated.');
@@ -362,6 +402,8 @@
             loadCoffee();
             loadServerTime();
             loadUsers();
+            // initialize optional JS time picker (flatpickr) for 24-hour input
+            initTimePicker();
 
             // tab clicks
             document.querySelectorAll('.tab-btn').forEach(btn=>{

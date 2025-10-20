@@ -65,7 +65,7 @@ def api_system_time():
     if request.method == "GET":
         return jsonify({
             "timestamp": int(time.time()),
-            "datetime": datetime.now().isoformat()
+            "datetime": datetime.now().astimezone().isoformat()
         })
 
     # POST
@@ -81,12 +81,26 @@ def api_system_time():
     except Exception as e:
         return jsonify({"error": "invalid datetime format", "detail": str(e)}), 400
 
+    # Ensure datetime is in the server's local timezone:
+    # - treat naive datetimes as local time
+    # - convert timezone-aware datetimes to local timezone if different
+    local_tz = datetime.now().astimezone().tzinfo
+    if new_dt.tzinfo is None:
+        # interpret naive datetime as local time
+        new_dt = new_dt.replace(tzinfo=local_tz)
+    else:
+        try:
+            new_dt = new_dt.astimezone(local_tz)
+        except Exception:
+            # if conversion fails, leave the parsed datetime as-is
+            pass
+
     try:
         datetime_setter.set_system_datetime(new_dt)
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"error": "failed to set system time", "detail": str(e)}), 500
-    
+        
 @app.route("/api/user_list", methods=["GET"])
 @login_required
 def api_user_list():
