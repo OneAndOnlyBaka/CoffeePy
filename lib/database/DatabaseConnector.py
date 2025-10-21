@@ -317,22 +317,40 @@ class Connector():
                 p.write('%s\n' % line)
 
     def GetPillorySortedByDecreasing(self):
-        date = time.mktime(datetime(datetime.now().year,datetime.now().month,1,0,0,0).timetuple())
+        # Calculate the unix timestamp for the start of the current month.
+        start_of_month = int(time.mktime(datetime(datetime.now().year, datetime.now().month, 1, 0, 0, 0).timetuple()))
+
+        # Use a single aggregated query to compute, per user, the sum of payments and
+        # the sum
+        # 
+        #  of order_value (deposits) where timestamps are strictly before the
+        # start_of_month. LEFT JOIN with user to include users with NULL sums.
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
-        cur.execute('SELECT user_uid from user')
+
+        query = (
+            'SELECT u.user_uid, '
+            'IFNULL(p.payments_sum, 0) AS payments_sum, '
+            'IFNULL(o.deposits_sum, 0) AS deposits_sum '
+            'FROM user u '
+            'LEFT JOIN (SELECT user_uid, SUM(payment_value) AS payments_sum FROM payments WHERE payment_timestamp < ? GROUP BY user_uid) p ON u.user_uid = p.user_uid '
+            'LEFT JOIN (SELECT user_uid, SUM(order_value) AS deposits_sum FROM coffee_order WHERE order_timestamp < ? GROUP BY user_uid) o ON u.user_uid = o.user_uid '
+        )
+
+        cur.execute(query, (start_of_month, start_of_month))
         rows = cur.fetchall()
         con.close()
 
         pillory = []
-
-        for row in rows:
-            id = int(row[0])
-            balance = self.GetAccountBalance(id,False,for_year=datetime.now().year,for_month=datetime.now().month)
+        for uid, payments_sum, deposits_sum in rows:
+            payments = float(payments_sum if payments_sum is not None else 0.0)
+            deposit = float(deposits_sum if deposits_sum is not None else 0.0)
+            balance = payments - deposit
             if balance < 0.0:
-                pillory.append({'id': id, 'balance': balance})
-        
-        return sorted(pillory, key=lambda d: d['balance']) 
+                pillory.append({'id': int(uid), 'balance': round(balance, 2)})
+
+        # Sort ascending so the most negative balances are first
+        return sorted(pillory, key=lambda d: d['balance'])
 
 
 class DatabaseBackupThread(Thread):
