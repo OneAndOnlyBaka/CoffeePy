@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 from threading import Thread, Lock
 import io
@@ -351,6 +351,57 @@ class Connector():
 
         # Sort ascending so the most negative balances are first
         return sorted(pillory, key=lambda d: d['balance'])
+    
+    def GetAllOrders(self,timespan:timedelta=None):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        query = 'SELECT user_uid, order_value, order_coffee_machine_strokes, order_timestamp, order_datetime, order_info FROM coffee_order'
+        params = ()
+        if timespan is not None:
+            time_threshold = int(time.time() - timespan.total_seconds())
+            query += ' WHERE order_timestamp >= ?'
+            params = (time_threshold,)
+        cur.execute(query, params)
+        rows = cur.fetchall()
+        con.close()
+
+        orders = []
+        for row in rows:
+            orders.append({
+                'user_uid': int(row[0]),
+                'order_value': float(row[1]),
+                'order_coffee_machine_strokes': int(row[2]),
+                'order_timestamp': int(row[3]),
+                'order_datetime': row[4],
+                'order_info': row[5]
+            })
+
+        return orders
+    
+    def GetAllPayments(self,timespan:timedelta=None):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        query = 'SELECT user_uid, payment_value, payment_timestamp, payment_datetime, payment_info FROM payments'
+        params = ()
+        if timespan is not None:
+            time_threshold = int(time.time() - timespan.total_seconds())
+            query += ' WHERE payment_timestamp >= ?'
+            params = (time_threshold,)
+        cur.execute(query, params)
+        rows = cur.fetchall()
+        con.close()
+
+        payments = []
+        for row in rows:
+            payments.append({
+                'user_uid': int(row[0]),
+                'payment_value': float(row[1]),
+                'payment_timestamp': int(row[2]),
+                'payment_datetime': row[3],
+                'payment_info': row[4]
+            })
+
+        return payments
 
 
 class DatabaseBackupThread(Thread):

@@ -5,7 +5,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from lib.clock.adjustment import datetime_setter
 from lib.database.DatabaseConnector import Connector
 from flask import jsonify
-from datetime import datetime 
+from datetime import datetime,timedelta
 import time 
 import configparser
 
@@ -161,41 +161,50 @@ def api_coffee_sort_update():
 
     return jsonify({"status": "ok"})
 
-@app.route("/api/delete_user", methods=["POST"])
-@login_required
-def api_delete_user():
-    data = request.get_json(silent=True)
-    if not data or "uid" not in data:
-        return jsonify({"error": "missing 'uid' field"}), 400
-
-    uid = data["uid"]
-
+@app.route("/api/order_list", methods=["GET"])
+def api_order_list():
     db = Connector()
-    user_meta = db.GetUserMeta(uid)
-    if user_meta is None:
-        return jsonify({"error": "user not found"}), 404
 
-    db.DeleteUser(uid)
+    payload = request.get_json(silent=True) or {}
+    start = payload.get("start")
+    end = payload.get("end")
+    span = None
+    if start is not None and end is not None:
+        try:
+            start_dt = datetime.fromisoformat(start)
+            end_dt = datetime.fromisoformat(end)
+            span = end_dt - start_dt
+        except Exception as e:
+            return jsonify({"error": "invalid 'start' or 'end' datetime format", "detail": str(e)}), 400
 
-    return jsonify({"status": "ok"})
+    orders = db.GetAllOrders(timespan=span)
+    return jsonify(orders)
 
-@app.route("/api/database", methods=["GET"])
+
+@app.route("/api/payment_list", methods=["GET"])
+def api_payment_list():
+    db = Connector()
+    payload = request.get_json(silent=True) or {}
+    start = payload.get("start")
+    end = payload.get("end")
+    span = None
+    if start is not None and end is not None:
+        try:
+            start_dt = datetime.fromisoformat(start)
+            end_dt = datetime.fromisoformat(end)
+            span = end_dt - start_dt
+        except Exception as e:
+            return jsonify({"error": "invalid 'start' or 'end' datetime format", "detail": str(e)}), 400
+
+    payments = db.GetAllPayments(timespan=span)
+    return jsonify(payments)
+@app.route("/api/deposit_pillory", methods=["GET"])
 @login_required
-def download_database():
-    db_path = Connector().GetDatabasePath()
-    if not os.path.exists(db_path):
-        return jsonify({"error": "database file not found"}), 500
+def get_deposit_pillory():
+    db = Connector()
+    pillory_data = db.GetPillorySortedByDecreasing()
+    return jsonify(pillory_data)
 
-    with open(db_path, "rb") as f:
-        data = f.read()
-
-    response = app.response_class(
-        response=data,
-        status=200,
-        mimetype="application/octet-stream",
-    )
-    response.headers.set("Content-Disposition", "attachment", filename="CoffeePy.db")
-    return response
 
 if __name__ == "__main__":
     if os.path.exists('CoffeePy.ini'):

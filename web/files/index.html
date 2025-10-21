@@ -96,14 +96,18 @@
         .msg{margin-top:8px;font-size:0.9rem;}
         .msg.success{color:green;}
         .msg.error{color:var(--danger);background: rgba(185,28,28,0.05);padding:6px;border-radius:6px;}
+    .deposit-negative{color:var(--danger);font-weight:600}
 
         @media (min-width:900px){
             .layout-columns{display:grid;grid-template-columns:1fr 420px;gap:18px;}
         }
         @media (max-width:420px){
-            .card{ padding:18px; }
+            .card{ padding:18px; } 
             .toolbar{ top:6px; }
         }
+        /* simple spinner */
+        .spinner{width:20px;height:20px;border-radius:50%;border:3px solid rgba(0,0,0,0.08);border-top-color:var(--accent);animation:spin 1s linear infinite;display:inline-block;vertical-align:middle}
+        @keyframes spin{to{transform:rotate(360deg)}}
     </style>
     <!-- Flatpickr for consistent 24-hour time picker across browsers -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -122,14 +126,53 @@
 
         <!-- tabs header -->
         <div class="tabs-header" role="tablist" aria-label="Main sections">
-            <button class="tab-btn active" data-target="coffee-section" role="tab" aria-selected="true">Coffee</button>
+            <button class="tab-btn active" data-target="stats-section" role="tab" aria-selected="true">Statistics</button>
+            <button class="tab-btn" data-target="coffee-section" role="tab" aria-selected="false">Coffee</button>
             <button class="tab-btn" data-target="time-section" role="tab" aria-selected="false">Server time</button>
             <button class="tab-btn" data-target="users-section" role="tab" aria-selected="false">Users</button>
+            <button class="tab-btn" data-target="deposit-section" role="tab" aria-selected="false">Deposit pillory</button>
         </div>
 
         <!-- panels -->
         <div class="tab-panels">
-            <div id="coffee-section" class="tab-panel active card" role="tabpanel" aria-hidden="false">
+            <div id="stats-section" class="tab-panel active card" role="tabpanel" aria-hidden="false">
+                <h2>Statistics</h2>
+                <p class="muted">Overview of recent orders and payments. Shows totals for the last entries as a bar chart.</p>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                    <button id="reload-stats">Reload statistics</button>
+                    <div class="muted">Showing last 10 records combined (orders + payments)</div>
+                </div>
+                <div style="width:100%;max-width:900px;">
+                    <canvas id="stats-chart" height="200"></canvas>
+                    <div id="stats-chart-spinner" style="display:none;margin-top:8px;"><span class="spinner"></span> Loading chart…</div>
+                </div>
+                <div style="width:100%;max-width:500px;margin-top:18px;">
+                    <h3 style="margin:6px 0 8px;">Ordered coffee sorts (all time)</h3>
+                    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                        <button id="reload-pie">Reload coffee sort pie</button>
+                        <div class="muted">Distribution of ordered coffee sorts (by count)</div>
+                    </div>
+                    <canvas id="coffee-pie" height="180"></canvas>
+                    <div id="pie-chart-spinner" style="display:none;margin-top:8px;"><span class="spinner"></span> Loading pie…</div>
+                </div>
+                <div style="width:100%;max-width:1000px;margin-top:18px;">
+                    <h3 style="margin:6px 0 8px;">Price development (last 3 years, by quarter)</h3>
+                    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                        <button id="reload-price-dev">Reload price development</button>
+                        <div class="muted">Average order price per coffee sort for each quarter (last 12 quarters)</div>
+                    </div>
+                    <canvas id="price-dev-chart" height="220"></canvas>
+                    <div id="price-chart-spinner" style="display:none;margin-top:8px;"><span class="spinner"></span> Loading price data…</div>
+                </div>
+                <div style="display:flex;gap:12px;margin-top:8px;align-items:center;">
+                    <div class="muted">Total orders (12m): <strong id="stats-total-orders">-</strong></div>
+                    <div class="muted">Total payments (12m): <strong id="stats-total-payments">-</strong></div>
+                    <div class="muted">Net (payments - orders): <strong id="stats-net">-</strong></div>
+                </div>
+                <div id="stats-msg" class="msg"></div>
+            </div>
+
+            <div id="coffee-section" class="tab-panel card" role="tabpanel" aria-hidden="true">
                 <h2>Coffee sorts — edit price & strokes</h2>
                 <p class="muted">Load, edit and save price / machine strokes for each coffee.</p>
                 <table id="coffee-table">
@@ -179,10 +222,26 @@
 
                 <div id="users-msg" class="msg"></div>
             </div>
+
+            <div id="deposit-section" class="tab-panel card" role="tabpanel" aria-hidden="true" style="margin-top:8px;">
+                <h2>Deposit pillory</h2>
+                <p class="muted">List of users currently in the deposit pillory. Use the reload button to refresh.</p>
+                <table id="deposit-table">
+                    <thead>
+                        <tr><th>UID</th><th>Nick</th><th>Deposit</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div style="margin-top:10px;">
+                    <button id="reload-deposit">Reload</button>
+                </div>
+                <div id="deposit-msg" class="msg"></div>
+            </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
         // initialize a 24-hour time picker on the #time-input
         function initTimePicker() {
@@ -254,6 +313,269 @@
             } catch(e) {
                 tbody.innerHTML = `<tr><td colspan="5">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
             }
+        }
+
+        // Statistics: fetch last orders and payments and display as bar chart
+        let statsChart = null;
+        let pieChart = null;
+
+        async function loadStatistics(){
+            const msgEl = document.getElementById('stats-msg');
+            const spinner = document.getElementById('stats-chart-spinner');
+            if(spinner) spinner.style.display = 'inline-block';
+            msgEl.textContent = 'loading…';
+            try {
+                const [ordersRes, paymentsRes] = await Promise.all([
+                    fetch('/api/order_list'),
+                    fetch('/api/payment_list')
+                ]);
+                if(!ordersRes.ok) throw new Error('orders: '+ordersRes.statusText);
+                if(!paymentsRes.ok) throw new Error('payments: '+paymentsRes.statusText);
+                const orders = await ordersRes.json();
+                const payments = await paymentsRes.json();
+
+                const now = new Date();
+                const months = [];
+                const ordersByMonth = {};
+                const paymentsByMonth = {};
+                for(let i=11;i>=0;i--){
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1, 0,0,0);
+                    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                    months.push(key);
+                    ordersByMonth[key] = 0.0;
+                    paymentsByMonth[key] = 0.0;
+                }
+
+                const tsToKey = (ts)=>{
+                    if(!ts) return null;
+                    const d = new Date(ts * 1000);
+                    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                };
+
+                if(Array.isArray(orders)){
+                    orders.forEach(o=>{
+                        const ts = o.order_timestamp || o.timestamp || (o.order_datetime ? Date.parse(o.order_datetime)/1000 : 0);
+                        const key = tsToKey(ts);
+                        if(key && key in ordersByMonth){
+                            ordersByMonth[key] += Math.abs(Number(o.order_value || 0));
+                        }
+                    });
+                }
+
+                if(Array.isArray(payments)){
+                    payments.forEach(p=>{
+                        const ts = p.payment_timestamp || p.timestamp || (p.payment_datetime ? Date.parse(p.payment_datetime)/1000 : 0);
+                        const key = tsToKey(ts);
+                        if(key && key in paymentsByMonth){
+                            const raw = p.payment_value ?? p.order_value ?? p.value ?? 0;
+                            paymentsByMonth[key] += Math.abs(Number(raw));
+                        }
+                    });
+                }
+
+                const orderData = months.map(m => Number(ordersByMonth[m].toFixed(2)));
+                const paymentData = months.map(m => Number(paymentsByMonth[m].toFixed(2)));
+
+                const labels = months.map(k=>{
+                    const [y,mm] = k.split('-');
+                    const d = new Date(Number(y), Number(mm)-1, 1);
+                    return d.toLocaleString(undefined, { month: 'short', year: 'numeric' });
+                });
+
+                console.debug('stats months', months);
+                console.debug('orderData', orderData);
+                console.debug('paymentData', paymentData);
+
+                const totalOrders = orderData.reduce((a,b)=>a+b,0);
+                const totalPayments = paymentData.reduce((a,b)=>a+b,0);
+                document.getElementById('stats-total-orders').textContent = totalOrders.toFixed(2);
+                document.getElementById('stats-total-payments').textContent = totalPayments.toFixed(2);
+                document.getElementById('stats-net').textContent = (totalPayments - totalOrders).toFixed(2);
+
+                renderStatsChart(labels, orderData, paymentData);
+                msgEl.textContent = '';
+                if(spinner) spinner.style.display = 'none';
+            } catch(e) {
+                msgEl.textContent = 'Failed: '+ e.message;
+                if(statsChart){ statsChart.destroy(); statsChart = null; }
+                if(spinner) spinner.style.display = 'none';
+            }
+        }
+
+        // Pie chart for ordered coffee sorts — aggregates order_info text heuristically and maps coffee ids
+        async function loadCoffeeSortsPie(){
+            const spinner = document.getElementById('pie-chart-spinner');
+            if(spinner) spinner.style.display = 'inline-block';
+            try{
+                const [ordersRes, sortsRes] = await Promise.all([fetch('/api/order_list'), fetch('/api/coffee_sorts')]);
+                if(!ordersRes.ok) throw new Error('orders: '+ordersRes.statusText);
+                const orders = await ordersRes.json();
+
+                const coffeeMap = {};
+                if(sortsRes && sortsRes.ok){
+                    const sorts = await sortsRes.json();
+                    if(Array.isArray(sorts)) sorts.forEach(s=>{ coffeeMap[String(s.coffee_id)] = s.coffee_name; });
+                }
+
+                const counts = {};
+                if(Array.isArray(orders)){
+                    orders.forEach(o=>{
+                        let name = null;
+                        // order_info often contains 'Ordered ID [<coffee_id>]' — try to extract the id
+                        if(o.order_info && typeof o.order_info === 'string'){
+                            const s = o.order_info.trim();
+                            const m = /\[(\d+)\]/.exec(s);
+                            if(m){
+                                const id = m[1];
+                                if(coffeeMap[id]) name = coffeeMap[id];
+                            }
+                        }
+                        // fallback to explicit coffee_id if present
+                        if(!name && o.coffee_id && coffeeMap[String(o.coffee_id)]) name = coffeeMap[String(o.coffee_id)];
+                        // fallback to parsing order_info more generally
+                        if(!name && o.order_info && typeof o.order_info === 'string' && o.order_info.trim()!==''){
+                            const s2 = o.order_info.trim();
+                            const parts = s2.split(/[:|\-]/).map(p=>p.trim()).filter(Boolean);
+                            name = parts.length>1 ? parts[parts.length-1] : s2;
+                        }
+                        if(!name && o.order_coffee_machine_strokes) name = 'strokes:'+o.order_coffee_machine_strokes;
+                        if(!name) name = 'unknown';
+                        counts[name] = (counts[name]||0) + 1;
+                    });
+                }
+
+                const labels = Object.keys(counts);
+                const data = labels.map(l=>counts[l]);
+                renderPieChart(labels,data);
+                if(spinner) spinner.style.display = 'none';
+            }catch(e){
+                console.warn('loadCoffeeSortsPie failed', e);
+                if(spinner) spinner.style.display = 'none';
+            }
+        }
+
+        // Price development chart: average order price per coffee sort for last 12 quarters (~3 years)
+        let priceDevChart = null;
+        async function loadPriceDevelopment(){
+            const spinner = document.getElementById('price-chart-spinner');
+            if(spinner) spinner.style.display = 'inline-block';
+            try{
+                const [ordersRes, sortsRes] = await Promise.all([fetch('/api/order_list'), fetch('/api/coffee_sorts')]);
+                if(!ordersRes.ok) throw new Error('orders: '+ordersRes.statusText);
+                const orders = await ordersRes.json();
+                const coffeeMap = {};
+                const coffeeIds = [];
+                if(sortsRes && sortsRes.ok){
+                    const sorts = await sortsRes.json();
+                    if(Array.isArray(sorts)) sorts.forEach(s=>{ coffeeMap[String(s.coffee_id)] = s.coffee_name; coffeeIds.push(String(s.coffee_id)); });
+                }
+
+                // Build the last 12 quarters keys like '2024-Q1'
+                const now = new Date();
+                const quarters = [];
+                for(let i=11;i>=0;i--){
+                    const d = new Date(now.getFullYear(), now.getMonth() - i*3, 1);
+                    const year = d.getFullYear();
+                    const q = Math.floor(d.getMonth()/3)+1;
+                    quarters.push(`${year}-Q${q}`);
+                }
+
+                // Initialize accumulators per coffee per quarter
+                const sums = {};
+                const counts = {};
+                coffeeIds.forEach(id=>{ sums[id] = {}; counts[id] = {}; quarters.forEach(q=>{ sums[id][q]=0; counts[id][q]=0; }); });
+
+                // Helper to map timestamp to quarter key
+                const tsToQuarter = (ts)=>{
+                    if(!ts) return null;
+                    const d = new Date(ts * 1000);
+                    const year = d.getFullYear();
+                    const q = Math.floor(d.getMonth()/3)+1;
+                    return `${year}-Q${q}`;
+                };
+
+                if(Array.isArray(orders)){
+                    orders.forEach(o=>{
+                        const q = tsToQuarter(o.order_timestamp || o.timestamp || (o.order_datetime ? Date.parse(o.order_datetime)/1000 : 0));
+                        if(!q || !quarters.includes(q)) return;
+                        // try to extract coffee id
+                        let coffeeId = null;
+                        if(o.order_info && typeof o.order_info === 'string'){
+                            const m = /\[(\d+)\]/.exec(o.order_info);
+                            if(m) coffeeId = m[1];
+                        }
+                        if(!coffeeId && o.coffee_id) coffeeId = String(o.coffee_id);
+                        if(!coffeeId) return;
+                        const val = Math.abs(Number(o.order_value || 0));
+                        if(!(coffeeId in sums)){
+                            // unknown coffee id — initialize
+                            sums[coffeeId] = {}; counts[coffeeId] = {}; quarters.forEach(qq=>{ sums[coffeeId][qq]=0; counts[coffeeId][qq]=0; });
+                        }
+                        sums[coffeeId][q] = (sums[coffeeId][q]||0) + val;
+                        counts[coffeeId][q] = (counts[coffeeId][q]||0) + 1;
+                    });
+                }
+
+                // Build datasets: one line per coffee id that has data
+                const datasets = [];
+                Object.keys(sums).forEach((id,idx)=>{
+                    const arr = quarters.map(q=> counts[id][q] ? +(sums[id][q]/counts[id][q]).toFixed(2) : null);
+                    // skip coffees with no data at all
+                    if(arr.every(v=>v===null)) return;
+                    const label = coffeeMap[String(id)] || ('id:'+id);
+                    const color = `hsl(${(idx*47)%360}deg 65% 45%)`;
+                    datasets.push({ label, data: arr, borderColor: color, backgroundColor: color, spanGaps: true, tension: 0.2 });
+                });
+
+                // Render line chart
+                const ctx = document.getElementById('price-dev-chart').getContext('2d');
+                if(priceDevChart) priceDevChart.destroy();
+                priceDevChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: quarters, datasets },
+                    options: { responsive:true, interaction:{mode:'nearest',axis:'x'}, scales:{ y:{ beginAtZero:true } } }
+                });
+                if(spinner) spinner.style.display = 'none';
+            }catch(e){
+                console.warn('loadPriceDevelopment failed', e);
+                if(spinner) spinner.style.display = 'none';
+            }
+        }
+
+        function renderPieChart(labels,data){
+            const ctx = document.getElementById('coffee-pie').getContext('2d');
+            if(pieChart) pieChart.destroy();
+            pieChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets:[{ data: data, backgroundColor: labels.map((_,i)=> `hsl(${(i*47)%360}deg 70% 50%)`) }]
+                },
+                options:{ responsive:true }
+            });
+        }
+
+        function renderStatsChart(labels, orders, payments){
+            const ctx = document.getElementById('stats-chart').getContext('2d');
+            if(statsChart) statsChart.destroy();
+            statsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Orders (total)', data: orders, backgroundColor: 'rgba(37,99,235,0.9)' },
+                        { label: 'Payments (total)', data: payments, backgroundColor: 'rgba(34,197,94,0.9)' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index' },
+                    scales: {
+                        x: { stacked: false },
+                            y: { stacked: false, beginAtZero: true }
+                    }
+                }
+            });
         }
 
         async function loadServerTime(){
@@ -392,13 +714,25 @@
                 panel.setAttribute('aria-hidden', on ? 'false' : 'true');
             });
             // lazy-reload content for the shown tab
+            if(targetId==='stats-section'){
+                // Ensure all statistics-related charts load when the tab is activated.
+                // Call the three loaders but avoid tight duplicate calls (they're idempotent).
+                loadStatistics();
+                // load both pie and price development when stats tab is shown
+                loadCoffeeSortsPie();
+                loadPriceDevelopment();
+            }
             if(targetId==='coffee-section') loadCoffee();
             if(targetId==='time-section') loadServerTime();
             if(targetId==='users-section') loadUsers();
         }
 
         document.addEventListener('DOMContentLoaded', ()=>{
-            // initial loads for default active panel
+            // initial loads for default active panel (statistics first)
+            loadStatistics();
+            // load the coffee sorts pie chart and price development on first load as well
+            loadCoffeeSortsPie();
+            loadPriceDevelopment();
             loadCoffee();
             loadServerTime();
             loadUsers();
@@ -407,14 +741,25 @@
 
             // tab clicks
             document.querySelectorAll('.tab-btn').forEach(btn=>{
-            btn.addEventListener('click', ()=> showTab(btn.getAttribute('data-target')));
+                btn.addEventListener('click', ()=> showTab(btn.getAttribute('data-target')));
+                btn.addEventListener('click', ()=>{
+                    if(btn.getAttribute('data-target')==='stats-section'){
+                        loadStatistics();
+                        loadCoffeeSortsPie();
+                        loadPriceDevelopment();
+                    }
+                });
             });
 
             document.getElementById('reload-coffee').addEventListener('click', loadCoffee);
             document.getElementById('refresh-time').addEventListener('click', loadServerTime);
             document.getElementById('set-time').addEventListener('click', setServerTime);
+            document.getElementById('reload-deposit')?.addEventListener('click', loadDepositPillory);
+            document.getElementById('reload-stats')?.addEventListener('click', loadStatistics);
+            document.getElementById('reload-pie')?.addEventListener('click', loadCoffeeSortsPie);
+            document.getElementById('reload-price-dev')?.addEventListener('click', loadPriceDevelopment);
 
-            document.getElementById('reload-all').addEventListener('click', ()=>{ loadCoffee(); loadServerTime(); loadUsers(); });
+            document.getElementById('reload-all').addEventListener('click', ()=>{ loadCoffee(); loadServerTime(); loadUsers(); loadDepositPillory(); loadStatistics(); loadCoffeeSortsPie(); loadPriceDevelopment(); });
             const logoutBtn = document.getElementById('logout-btn');
             if(logoutBtn) logoutBtn.addEventListener('click', ()=> { window.location = '/logout'; });
             const downloadDbBtn = document.getElementById('download-database');
@@ -446,6 +791,66 @@
             } catch(e) {
                 showMsg('coffee-msg','Error: '+e.message,true);
             }
+            });
+            
+            // load deposit pillory list
+            async function loadDepositPillory(){
+                const tbody = document.querySelector('#deposit-table tbody');
+                if(!tbody) return;
+                tbody.innerHTML = '<tr><td colspan="3">loading…</td></tr>';
+                try{
+                    // fetch deposit data and user list in parallel to resolve nicknames
+                    const [rDeposit, rUsers] = await Promise.all([
+                        fetch('/api/deposit_pillory'),
+                        fetch('/api/user_list')
+                    ]);
+
+                    if(!rDeposit.ok) throw new Error('deposit request failed: ' + rDeposit.statusText);
+                    const depositData = await rDeposit.json();
+
+                    let usersMap = {};
+                    if(rUsers.ok){
+                        try{
+                            const users = await rUsers.json();
+                            users.forEach(u => { usersMap[String(u.uid)] = u.nick_name ?? u.nick ?? ''; });
+                        }catch(_){ /* ignore parse errors, fallback to empty map */ }
+                    }
+
+                    tbody.innerHTML = '';
+                    // normalize to array: endpoint may return a single object or an array
+                    const entries = Array.isArray(depositData) ? depositData : [depositData];
+                    if(entries.length === 0){
+                        tbody.innerHTML = '<tr><td colspan="3">(no entries)</td></tr>';
+                        return;
+                    }
+
+                    console.debug('deposit entries', entries);
+                    console.debug('usersMap sample', Object.keys(usersMap).slice(0,10));
+
+                    entries.forEach(item=>{
+                        // endpoint returns { id: <uid>, balance: <number> }
+                        const id = item.id ?? item.uid ?? item.user_id ?? '';
+                        const depositRaw = item.balance ?? item.deposit ?? item.value ?? item.amount ?? '';
+                        const deposit = (typeof depositRaw === 'number') ? depositRaw.toFixed(2) : depositRaw;
+                        const nick = escapeHtml(usersMap[String(id)] ?? '');
+                        const tr = document.createElement('tr');
+                        const depositCell = `<td class="${(typeof depositRaw === 'number' && depositRaw < 0) ? 'deposit-negative' : ''}">${deposit}</td>`;
+                        tr.innerHTML = `<td>${id}</td><td>${nick}</td>${depositCell}`;
+                        tbody.appendChild(tr);
+                    });
+                }catch(e){
+                    tbody.innerHTML = `<tr><td colspan="3">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
+                    showMsg('deposit-msg','Error: '+e.message,true);
+                }
+            }
+
+            // lazily load when the deposit tab is activated
+            document.querySelectorAll('.tab-btn').forEach(btn=>{
+                btn.addEventListener('click', ()=>{
+                    if(btn.getAttribute('data-target')==='deposit-section'){
+                        loadDepositPillory();
+                    }
+                });
             });
         });
     </script>
