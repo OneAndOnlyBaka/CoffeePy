@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 from threading import Thread, Lock
 import io
@@ -14,11 +14,21 @@ class Connector():
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
         cur.execute('CREATE TABLE IF NOT EXISTS coffee_sorts(coffee_name TEXT, coffee_price REAL,coffee_machine_strokes INT)')
-        cur.execute('CREATE TABLE IF NOT EXISTS user(user_uid INTEGER PRIMARY KEY, user_nick_name TEXT, user_favourite_coffee INT, FOREIGN KEY(user_favourite_coffee) REFERENCES coffee_sorts(rowid))')
+        cur.execute('CREATE TABLE IF NOT EXISTS user(user_uid INTEGER PRIMARY KEY, user_alt_uid INTEGER UNIQUE DEFAULT NULL, user_nick_name TEXT, user_favourite_coffee INT, FOREIGN KEY(user_favourite_coffee) REFERENCES coffee_sorts(rowid))')
         cur.execute('CREATE TABLE IF NOT EXISTS coffee_order(user_uid INTEGER, order_value REAL, order_coffee_machine_strokes INT, order_timestamp INT, order_datetime TEXT, order_info TEXT, FOREIGN KEY(user_uid) REFERENCES user(user_uid))')
         cur.execute('CREATE TABLE IF NOT EXISTS payments(user_uid INTEGER, payment_value REAL, payment_timestamp INT, payment_datetime TEXT, payment_info TEXT, FOREIGN KEY(user_uid) REFERENCES user(user_uid))')
+        # Ensure user_alt_uid column exists (for older DBs)
+        cur.execute("PRAGMA table_info(user)")
+        cols = [row[1] for row in cur.fetchall()]
+        if 'user_alt_uid' not in cols:
+            # Add column and unique index to preserve original schema intent
+            cur.execute("ALTER TABLE user ADD COLUMN user_alt_uid INTEGER DEFAULT NULL")
+            cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_alt_uid ON user(user_alt_uid)")
         con.commit()
         con.close()
+
+    def GetDatabasePath(self):
+        return self.__databaseFile
 
     def IsUserExisting(self,uid:int):
         return self.GetUserMeta(uid) != None
@@ -26,7 +36,7 @@ class Connector():
     def CreateNewUser(self,uid:int,nickName:str,favouriteCoffeeUid:int):
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
-        cur.execute('INSERT INTO user VALUES(' + str(uid) + ',\'' + nickName + '\',' + str(favouriteCoffeeUid) +')')
+        cur.execute('INSERT INTO user(user_uid, user_alt_uid, user_nick_name, user_favourite_coffee) VALUES(?, NULL, ?, ?)', (uid, nickName, favouriteCoffeeUid))
         con.commit()
         con.close()
 
@@ -37,11 +47,18 @@ class Connector():
         con.commit()
         con.close()
 
-    def GetUserMeta(self,uid:int):
+    def UpdateUserAltUID(self,uid:int,altUID:int):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        cur.execute('UPDATE user SET user_alt_uid = ' + str(altUID) + ' WHERE user_uid = ' + str(uid))
+        con.commit()
+        con.close()
+
+    def GetUserList(self):
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
         try:
-            cur.execute('SELECT * FROM user WHERE user_uid = ' + str(uid))
+            cur.execute('SELECT user_uid, user_nick_name, user_favourite_coffee, user_alt_uid FROM user')
             rows = cur.fetchall()
             if len(rows) == 0:
                 rows = None
@@ -53,13 +70,48 @@ class Connector():
         if rows == None:
             return None
 
-        return {'uid': rows[0][0], 'nick_name': rows[0][1], 'favourite_coffee': rows[0][2]}
+        ret = []
+        for item in rows:
+            ret.append({'uid': item[0], 'nick_name': item[1], 'favourite_coffee': item[2], 'user_alt_uid': item[3]})
 
+        return ret
+
+    def GetUserMeta(self,uid:int):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        try:
+            cur.execute('SELECT user_uid, user_nick_name, user_favourite_coffee, user_alt_uid FROM user WHERE user_uid = ? OR user_alt_uid = ?', (uid, uid))
+            rows = cur.fetchall()
+            if len(rows) == 0:
+                rows = None
+        except:
+            rows = None
+        finally:
+            con.close()
+
+        if rows == None:
+            return None
+
+        return {'uid': rows[0][0], 'nick_name': rows[0][1], 'favourite_coffee': rows[0][2], 'user_alt_uid': rows[0][3]}
+
+    def DeleteUser(self,uid:int):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        cur.execute('DELETE FROM user WHERE user_uid = ' + str(uid))
+        con.commit()
+        con.close()
 
     def CreateCoffeeSort(self,name:str,price:float,strokes:int):
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
         cur.execute('INSERT INTO coffee_sorts VALUES(\'' + name + '\', ' + str(price) + ', ' + str(strokes) +')')
+        con.commit()
+        con.close()
+
+    def UpdateCoffeeSort(self,name:str,price:float,strokes:int):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        cur.execute('UPDATE coffee_sorts SET coffee_price = ' + str(price) + ', coffee_machine_strokes = ' + str(strokes) + ' WHERE coffee_name = \'' + name + '\'')
         con.commit()
         con.close()
 
@@ -265,22 +317,91 @@ class Connector():
                 p.write('%s\n' % line)
 
     def GetPillorySortedByDecreasing(self):
-        date = time.mktime(datetime(datetime.now().year,datetime.now().month,1,0,0,0).timetuple())
+        # Calculate the unix timestamp for the start of the current month.
+        start_of_month = int(time.mktime(datetime(datetime.now().year, datetime.now().month, 1, 0, 0, 0).timetuple()))
+
+        # Use a single aggregated query to compute, per user, the sum of payments and
+        # the sum
+        # 
+        #  of order_value (deposits) where timestamps are strictly before the
+        # start_of_month. LEFT JOIN with user to include users with NULL sums.
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
-        cur.execute('SELECT user_uid from user')
+
+        query = (
+            'SELECT u.user_uid, '
+            'IFNULL(p.payments_sum, 0) AS payments_sum, '
+            'IFNULL(o.deposits_sum, 0) AS deposits_sum '
+            'FROM user u '
+            'LEFT JOIN (SELECT user_uid, SUM(payment_value) AS payments_sum FROM payments WHERE payment_timestamp < ? GROUP BY user_uid) p ON u.user_uid = p.user_uid '
+            'LEFT JOIN (SELECT user_uid, SUM(order_value) AS deposits_sum FROM coffee_order WHERE order_timestamp < ? GROUP BY user_uid) o ON u.user_uid = o.user_uid '
+        )
+
+        cur.execute(query, (start_of_month, start_of_month))
         rows = cur.fetchall()
         con.close()
 
         pillory = []
-
-        for row in rows:
-            id = int(row[0])
-            balance = self.GetAccountBalance(id,False,for_year=datetime.now().year,for_month=datetime.now().month)
+        for uid, payments_sum, deposits_sum in rows:
+            payments = float(payments_sum if payments_sum is not None else 0.0)
+            deposit = float(deposits_sum if deposits_sum is not None else 0.0)
+            balance = payments - deposit
             if balance < 0.0:
-                pillory.append({'id': id, 'balance': balance})
-        
-        return sorted(pillory, key=lambda d: d['balance']) 
+                pillory.append({'id': int(uid), 'balance': round(balance, 2)})
+
+        # Sort ascending so the most negative balances are first
+        return sorted(pillory, key=lambda d: d['balance'])
+    
+    def GetAllOrders(self,timespan:timedelta=None):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        query = 'SELECT user_uid, order_value, order_coffee_machine_strokes, order_timestamp, order_datetime, order_info FROM coffee_order'
+        params = ()
+        if timespan is not None:
+            time_threshold = int(time.time() - timespan.total_seconds())
+            query += ' WHERE order_timestamp >= ?'
+            params = (time_threshold,)
+        cur.execute(query, params)
+        rows = cur.fetchall()
+        con.close()
+
+        orders = []
+        for row in rows:
+            orders.append({
+                'user_uid': int(row[0]),
+                'order_value': float(row[1]),
+                'order_coffee_machine_strokes': int(row[2]),
+                'order_timestamp': int(row[3]),
+                'order_datetime': row[4],
+                'order_info': row[5]
+            })
+
+        return orders
+    
+    def GetAllPayments(self,timespan:timedelta=None):
+        con = sqlite3.connect(self.__databaseFile)
+        cur = con.cursor()
+        query = 'SELECT user_uid, payment_value, payment_timestamp, payment_datetime, payment_info FROM payments'
+        params = ()
+        if timespan is not None:
+            time_threshold = int(time.time() - timespan.total_seconds())
+            query += ' WHERE payment_timestamp >= ?'
+            params = (time_threshold,)
+        cur.execute(query, params)
+        rows = cur.fetchall()
+        con.close()
+
+        payments = []
+        for row in rows:
+            payments.append({
+                'user_uid': int(row[0]),
+                'payment_value': float(row[1]),
+                'payment_timestamp': int(row[2]),
+                'payment_datetime': row[3],
+                'payment_info': row[4]
+            })
+
+        return payments
 
 
 class DatabaseBackupThread(Thread):

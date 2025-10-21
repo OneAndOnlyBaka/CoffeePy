@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="en" class="coffee" style="--bg1:#f7efe6; --bg2:#d7c3a6; --card:#fff8f2; --muted:#7b5a43; --accent:#6b3b00; --danger:#8b1a1a; --radius:10px; --shadow:0 10px 30px rgba(33,18,6,0.12);">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CoffeePy</title>
+    <style>
+        :root{
+            --bg1: #f5f7fa;
+            --bg2: #c3cfe2;
+            --card: #ffffff;
+            --muted: #64748b;
+            --accent: #2563eb;
+            --danger: #b91c1c;
+            --radius: 10px;
+            --shadow: 0 10px 30px rgba(2,6,23,0.12);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
+
+        html,body{
+            height:100%;
+            margin:0;
+        }
+
+        body{
+            display:flex;
+            align-items:flex-start;
+            justify-content:center;
+            background: linear-gradient(135deg, var(--bg1), var(--bg2));
+            padding:24px;
+        }
+
+        /* toolbar: sticky over tabs */
+        .toolbar {
+            width:100%;
+            max-width:1200px;
+            margin:0 auto 12px;
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+            align-items:center;
+            box-sizing:border-box;
+            padding:10px 20px;
+            border-radius:var(--radius);
+            background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.8));
+            box-shadow: var(--shadow);
+            position:sticky;
+            top:12px;
+            z-index:1000;
+        }
+        .toolbar .left { font-weight:700; color:var(--muted); }
+        .toolbar .actions { display:flex; gap:8px; align-items:center; }
+
+        .container{max-width:1200px;margin:0 auto;width:100%;}
+        /* tabs header below toolbar */
+        .tabs-header{
+            display:flex;
+            gap:8px;
+            align-items:center;
+            margin:8px 0 18px;
+            padding:6px;
+        }
+        .tab-btn{
+            padding:8px 12px;
+            border-radius:8px;
+            background:transparent;
+            border:1px solid transparent;
+            cursor:pointer;
+            font-weight:600;
+            color:var(--muted);
+        }
+        .tab-btn.active{
+            background:var(--card);
+            border-color:rgba(0,0,0,0.06);
+            box-shadow:var(--shadow);
+            color:var(--accent);
+        }
+
+        .tab-panels{display:block;}
+        .tab-panel{display:none;}
+        .tab-panel.active{display:block;}
+
+        .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;box-sizing:border-box;overflow-x:auto;}
+
+        /* make tables responsive inside cards */
+        table{width:100%;border-collapse:collapse;font-size:0.95rem;table-layout:fixed;min-width:0;}
+        th,td{padding:8px 10px;border-bottom:1px solid #eef2f7;text-align:left;word-break:break-word;white-space:normal;vertical-align:middle;}
+        input[type="text"], input[type="number"], input[type="datetime-local"]{
+            padding:10px 12px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;font-size:0.95rem;box-sizing:border-box;outline:none;transition:box-shadow .12s, border-color .12s;max-width:100%;
+        }
+        input:focus{border-color: rgba(37,99,235,0.9);box-shadow: 0 6px 18px rgba(37,99,235,0.08);}
+        button{padding:8px 10px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:600;}
+        button.danger{background:var(--danger);}
+        .muted{color:var(--muted);font-size:0.9rem;}
+        .row-actions{display:flex;gap:8px;min-width:0;}
+        .msg{margin-top:8px;font-size:0.9rem;}
+        .msg.success{color:green;}
+        .msg.error{color:var(--danger);background: rgba(185,28,28,0.05);padding:6px;border-radius:6px;}
+    .deposit-negative{color:var(--danger);font-weight:600}
+
+        @media (min-width:900px){
+            .layout-columns{display:grid;grid-template-columns:1fr 420px;gap:18px;}
+        }
+        @media (max-width:420px){
+            .card{ padding:18px; } 
+            .toolbar{ top:6px; }
+        }
+        /* simple spinner */
+        .spinner{width:20px;height:20px;border-radius:50%;border:3px solid rgba(0,0,0,0.08);border-top-color:var(--accent);animation:spin 1s linear infinite;display:inline-block;vertical-align:middle}
+        @keyframes spin{to{transform:rotate(360deg)}}
+    </style>
+    <!-- Flatpickr for consistent 24-hour time picker across browsers -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- toolbar: logout + reload all (sticky) -->
+        <div class="toolbar" role="navigation" aria-label="Top toolbar">
+            <div class="left">CoffeePy</div>
+            <div class="actions">
+                <button id="download-database" title="Download database file">Download DB</button>
+                <button id="reload-all" title="Reload all data">Reload all</button>
+                <button id="logout-btn" title="Logout">Logout</button>
+            </div>
+        </div>
+
+        <!-- tabs header -->
+        <div class="tabs-header" role="tablist" aria-label="Main sections">
+            <button class="tab-btn active" data-target="stats-section" role="tab" aria-selected="true">Statistics</button>
+            <button class="tab-btn" data-target="coffee-section" role="tab" aria-selected="false">Coffee</button>
+            <button class="tab-btn" data-target="time-section" role="tab" aria-selected="false">Server time</button>
+            <button class="tab-btn" data-target="users-section" role="tab" aria-selected="false">Users</button>
+            <button class="tab-btn" data-target="deposit-section" role="tab" aria-selected="false">Deposit pillory</button>
+        </div>
+
+        <!-- panels -->
+        <div class="tab-panels">
+            <div id="stats-section" class="tab-panel active card" role="tabpanel" aria-hidden="false">
+                <h2>Statistics</h2>
+                <p class="muted">Overview of recent orders and payments. Shows totals for the last entries as a bar chart.</p>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                    <button id="reload-stats">Reload statistics</button>
+                    <div class="muted">Showing last 10 records combined (orders + payments)</div>
+                </div>
+                <div style="width:100%;max-width:900px;">
+                    <canvas id="stats-chart" height="200"></canvas>
+                    <div id="stats-chart-spinner" style="display:none;margin-top:8px;"><span class="spinner"></span> Loading chart…</div>
+                </div>
+                <div style="width:100%;max-width:500px;margin-top:18px;">
+                    <h3 style="margin:6px 0 8px;">Ordered coffee sorts (all time)</h3>
+                    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                        <button id="reload-pie">Reload coffee sort pie</button>
+                        <div class="muted">Distribution of ordered coffee sorts (by count)</div>
+                    </div>
+                    <canvas id="coffee-pie" height="180"></canvas>
+                    <div id="pie-chart-spinner" style="display:none;margin-top:8px;"><span class="spinner"></span> Loading pie…</div>
+                </div>
+                <div style="width:100%;max-width:1000px;margin-top:18px;">
+                    <h3 style="margin:6px 0 8px;">Price development (last 3 years, by quarter)</h3>
+                    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                        <button id="reload-price-dev">Reload price development</button>
+                        <div class="muted">Average order price per coffee sort for each quarter (last 12 quarters)</div>
+                    </div>
+                    <canvas id="price-dev-chart" height="220"></canvas>
+                    <div id="price-chart-spinner" style="display:none;margin-top:8px;"><span class="spinner"></span> Loading price data…</div>
+                </div>
+                <div style="display:flex;gap:12px;margin-top:8px;align-items:center;">
+                    <div class="muted">Total orders (12m): <strong id="stats-total-orders">-</strong></div>
+                    <div class="muted">Total payments (12m): <strong id="stats-total-payments">-</strong></div>
+                    <div class="muted">Net (payments - orders): <strong id="stats-net">-</strong></div>
+                </div>
+                <div id="stats-msg" class="msg"></div>
+            </div>
+
+            <div id="coffee-section" class="tab-panel card" role="tabpanel" aria-hidden="true">
+                <h2>Coffee sorts — edit price & strokes</h2>
+                <p class="muted">Load, edit and save price / machine strokes for each coffee.</p>
+                <table id="coffee-table">
+                    <thead>
+                        <tr><th>ID</th><th>Name</th><th>Price</th><th>Strokes</th><th></th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div style="margin-top:10px;">
+                    <button id="reload-coffee">Reload</button>
+                </div>
+                <div id="coffee-msg" class="msg"></div>
+            </div>
+
+            <div id="time-section" class="tab-panel card" role="tabpanel" aria-hidden="true" style="margin-top:8px;">
+                <h2>Server time</h2>
+                <p class="muted">View the server's current time and optionally set it (requires backend capability).</p>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <div>
+                        <div><strong>Server time:</strong></div>
+                        <div id="server-time" class="muted">loading…</div>
+                    </div>
+                    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+                        <input id="date-input" type="date" aria-label="Date"></br>
+                        <input id="time-input" type="time" aria-label="Time (24h)">
+                    </div>
+                </div>
+                <div style="margin-top:10px;display:flex;gap:8px;">
+                    <button id="refresh-time">Refresh</button>
+                    <button id="set-time">Set server time</button>
+                </div>
+                <div id="time-msg" class="msg"></div>
+            </div>
+
+            <div id="users-section" class="tab-panel card" role="tabpanel" aria-hidden="true" style="margin-top:8px;">
+                <h2>Users</h2>
+                <p class="muted">List of users. In case a card gets defective or lost, 
+                                it is possible to set an alternative UID. The alternative UID can be obtained by
+                                put the new card on the nfc reader and note the UID of the new card. Just do not create a new
+                                user in this situation or delete the created.</p>
+                <table id="users-table">
+                    <thead>
+                        <tr><th>UID</th><th>Nick</th><th>Fav coffee</th><th>Alternative UID</th><th></th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div id="users-msg" class="msg"></div>
+            </div>
+
+            <div id="deposit-section" class="tab-panel card" role="tabpanel" aria-hidden="true" style="margin-top:8px;">
+                <h2>Deposit pillory</h2>
+                <p class="muted">List of users currently in the deposit pillory. Use the reload button to refresh.</p>
+                <table id="deposit-table">
+                    <thead>
+                        <tr><th>UID</th><th>Nick</th><th>Deposit</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div style="margin-top:10px;">
+                    <button id="reload-deposit">Reload</button>
+                </div>
+                <div id="deposit-msg" class="msg"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // initialize a 24-hour time picker on the #time-input
+        function initTimePicker() {
+            try {
+                if (typeof flatpickr === 'function') {
+                    flatpickr('#time-input', {
+                        enableTime: true,
+                        noCalendar: true,
+                        dateFormat: 'H:i',
+                        time_24hr: true,
+                        allowInput: true
+                    });
+                }
+            } catch (e) {
+                // ignore if flatpickr failed to load; the native input will still work
+                console.warn('flatpickr init failed', e);
+            }
+        }
+        function showMsg(elId, text, isError=false) {
+            const el = document.getElementById(elId);
+            el.textContent = text;
+            el.className = 'msg ' + (isError ? 'error' : 'success');
+            setTimeout(()=>{ if (el.textContent===text) el.textContent=''; }, 5000);
+        }
+
+        async function loadCoffee() {
+            const tbody = document.querySelector('#coffee-table tbody');
+            tbody.innerHTML = '<tr><td colspan="5">loading…</td></tr>';
+            try {
+                const res = await fetch('/api/coffee_sorts');
+                if(!res.ok) throw new Error(res.statusText);
+                const data = await res.json();
+                tbody.innerHTML = '';
+                data.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${c.coffee_id}</td>
+                        <td>${escapeHtml(c.coffee_name)}</td>
+                        <td><input type="number" step="0.01" value="${c.coffee_price}" data-id="${c.coffee_id}" data-field="price"></td>
+                        <td><input type="number" step="1" value="${c.coffee_machine_strokes}" data-id="${c.coffee_id}" data-field="strokes"></td>
+                        <td class="row-actions">
+                            <button data-action="save" data-id="${c.coffee_id}" data-name="${escapeHtml(c.coffee_name)}">Save</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                tbody.querySelectorAll('button[data-action="save"]').forEach(btn=>{
+                    btn.addEventListener('click', async (ev)=>{
+                        const id = btn.getAttribute('data-id');
+                        const name = btn.getAttribute('data-name');
+                        const row = btn.closest('tr');
+                        const price = row.querySelector('input[data-field="price"]').value;
+                        const strokes = row.querySelector('input[data-field="strokes"]').value;
+                        btn.disabled = true;
+                        try {
+                            const r = await fetch('/api/coffee_sort', {
+                                method: 'PUT',
+                                headers:{'Content-Type':'application/json'},
+                                body: JSON.stringify({ name: name, price: parseFloat(price), strokes: parseInt(strokes) })
+                            });
+                            if(!r.ok) throw new Error(await r.text());
+                            showMsg('coffee-msg','Saved.');
+                            loadCoffee();
+                        } catch(e) {
+                            showMsg('coffee-msg','Error: '+e.message,true);
+                        } finally { btn.disabled = false; }
+                    });
+                });
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="5">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
+            }
+        }
+
+        // Statistics: fetch last orders and payments and display as bar chart
+        let statsChart = null;
+        let pieChart = null;
+
+        async function loadStatistics(){
+            const msgEl = document.getElementById('stats-msg');
+            const spinner = document.getElementById('stats-chart-spinner');
+            if(spinner) spinner.style.display = 'inline-block';
+            msgEl.textContent = 'loading…';
+            try {
+                const [ordersRes, paymentsRes] = await Promise.all([
+                    fetch('/api/order_list'),
+                    fetch('/api/payment_list')
+                ]);
+                if(!ordersRes.ok) throw new Error('orders: '+ordersRes.statusText);
+                if(!paymentsRes.ok) throw new Error('payments: '+paymentsRes.statusText);
+                const orders = await ordersRes.json();
+                const payments = await paymentsRes.json();
+
+                const now = new Date();
+                const months = [];
+                const ordersByMonth = {};
+                const paymentsByMonth = {};
+                for(let i=11;i>=0;i--){
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1, 0,0,0);
+                    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                    months.push(key);
+                    ordersByMonth[key] = 0.0;
+                    paymentsByMonth[key] = 0.0;
+                }
+
+                const tsToKey = (ts)=>{
+                    if(!ts) return null;
+                    const d = new Date(ts * 1000);
+                    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                };
+
+                if(Array.isArray(orders)){
+                    orders.forEach(o=>{
+                        const ts = o.order_timestamp || o.timestamp || (o.order_datetime ? Date.parse(o.order_datetime)/1000 : 0);
+                        const key = tsToKey(ts);
+                        if(key && key in ordersByMonth){
+                            ordersByMonth[key] += Math.abs(Number(o.order_value || 0));
+                        }
+                    });
+                }
+
+                if(Array.isArray(payments)){
+                    payments.forEach(p=>{
+                        const ts = p.payment_timestamp || p.timestamp || (p.payment_datetime ? Date.parse(p.payment_datetime)/1000 : 0);
+                        const key = tsToKey(ts);
+                        if(key && key in paymentsByMonth){
+                            const raw = p.payment_value ?? p.order_value ?? p.value ?? 0;
+                            paymentsByMonth[key] += Math.abs(Number(raw));
+                        }
+                    });
+                }
+
+                const orderData = months.map(m => Number(ordersByMonth[m].toFixed(2)));
+                const paymentData = months.map(m => Number(paymentsByMonth[m].toFixed(2)));
+
+                const labels = months.map(k=>{
+                    const [y,mm] = k.split('-');
+                    const d = new Date(Number(y), Number(mm)-1, 1);
+                    return d.toLocaleString(undefined, { month: 'short', year: 'numeric' });
+                });
+
+                console.debug('stats months', months);
+                console.debug('orderData', orderData);
+                console.debug('paymentData', paymentData);
+
+                const totalOrders = orderData.reduce((a,b)=>a+b,0);
+                const totalPayments = paymentData.reduce((a,b)=>a+b,0);
+                document.getElementById('stats-total-orders').textContent = totalOrders.toFixed(2);
+                document.getElementById('stats-total-payments').textContent = totalPayments.toFixed(2);
+                document.getElementById('stats-net').textContent = (totalPayments - totalOrders).toFixed(2);
+
+                renderStatsChart(labels, orderData, paymentData);
+                msgEl.textContent = '';
+                if(spinner) spinner.style.display = 'none';
+            } catch(e) {
+                msgEl.textContent = 'Failed: '+ e.message;
+                if(statsChart){ statsChart.destroy(); statsChart = null; }
+                if(spinner) spinner.style.display = 'none';
+            }
+        }
+
+        // Pie chart for ordered coffee sorts — aggregates order_info text heuristically and maps coffee ids
+        async function loadCoffeeSortsPie(){
+            const spinner = document.getElementById('pie-chart-spinner');
+            if(spinner) spinner.style.display = 'inline-block';
+            try{
+                const [ordersRes, sortsRes] = await Promise.all([fetch('/api/order_list'), fetch('/api/coffee_sorts')]);
+                if(!ordersRes.ok) throw new Error('orders: '+ordersRes.statusText);
+                const orders = await ordersRes.json();
+
+                const coffeeMap = {};
+                if(sortsRes && sortsRes.ok){
+                    const sorts = await sortsRes.json();
+                    if(Array.isArray(sorts)) sorts.forEach(s=>{ coffeeMap[String(s.coffee_id)] = s.coffee_name; });
+                }
+
+                const counts = {};
+                if(Array.isArray(orders)){
+                    orders.forEach(o=>{
+                        let name = null;
+                        // order_info often contains 'Ordered ID [<coffee_id>]' — try to extract the id
+                        if(o.order_info && typeof o.order_info === 'string'){
+                            const s = o.order_info.trim();
+                            const m = /\[(\d+)\]/.exec(s);
+                            if(m){
+                                const id = m[1];
+                                if(coffeeMap[id]) name = coffeeMap[id];
+                            }
+                        }
+                        // fallback to explicit coffee_id if present
+                        if(!name && o.coffee_id && coffeeMap[String(o.coffee_id)]) name = coffeeMap[String(o.coffee_id)];
+                        // fallback to parsing order_info more generally
+                        if(!name && o.order_info && typeof o.order_info === 'string' && o.order_info.trim()!==''){
+                            const s2 = o.order_info.trim();
+                            const parts = s2.split(/[:|\-]/).map(p=>p.trim()).filter(Boolean);
+                            name = parts.length>1 ? parts[parts.length-1] : s2;
+                        }
+                        if(!name && o.order_coffee_machine_strokes) name = 'strokes:'+o.order_coffee_machine_strokes;
+                        if(!name) name = 'unknown';
+                        counts[name] = (counts[name]||0) + 1;
+                    });
+                }
+
+                const labels = Object.keys(counts);
+                const data = labels.map(l=>counts[l]);
+                renderPieChart(labels,data);
+                if(spinner) spinner.style.display = 'none';
+            }catch(e){
+                console.warn('loadCoffeeSortsPie failed', e);
+                if(spinner) spinner.style.display = 'none';
+            }
+        }
+
+        // Price development chart: average order price per coffee sort for last 12 quarters (~3 years)
+        let priceDevChart = null;
+        async function loadPriceDevelopment(){
+            const spinner = document.getElementById('price-chart-spinner');
+            if(spinner) spinner.style.display = 'inline-block';
+            try{
+                const [ordersRes, sortsRes] = await Promise.all([fetch('/api/order_list'), fetch('/api/coffee_sorts')]);
+                if(!ordersRes.ok) throw new Error('orders: '+ordersRes.statusText);
+                const orders = await ordersRes.json();
+                const coffeeMap = {};
+                const coffeeIds = [];
+                if(sortsRes && sortsRes.ok){
+                    const sorts = await sortsRes.json();
+                    if(Array.isArray(sorts)) sorts.forEach(s=>{ coffeeMap[String(s.coffee_id)] = s.coffee_name; coffeeIds.push(String(s.coffee_id)); });
+                }
+
+                // Build the last 12 quarters keys like '2024-Q1'
+                const now = new Date();
+                const quarters = [];
+                for(let i=11;i>=0;i--){
+                    const d = new Date(now.getFullYear(), now.getMonth() - i*3, 1);
+                    const year = d.getFullYear();
+                    const q = Math.floor(d.getMonth()/3)+1;
+                    quarters.push(`${year}-Q${q}`);
+                }
+
+                // Initialize accumulators per coffee per quarter
+                const sums = {};
+                const counts = {};
+                coffeeIds.forEach(id=>{ sums[id] = {}; counts[id] = {}; quarters.forEach(q=>{ sums[id][q]=0; counts[id][q]=0; }); });
+
+                // Helper to map timestamp to quarter key
+                const tsToQuarter = (ts)=>{
+                    if(!ts) return null;
+                    const d = new Date(ts * 1000);
+                    const year = d.getFullYear();
+                    const q = Math.floor(d.getMonth()/3)+1;
+                    return `${year}-Q${q}`;
+                };
+
+                if(Array.isArray(orders)){
+                    orders.forEach(o=>{
+                        const q = tsToQuarter(o.order_timestamp || o.timestamp || (o.order_datetime ? Date.parse(o.order_datetime)/1000 : 0));
+                        if(!q || !quarters.includes(q)) return;
+                        // try to extract coffee id
+                        let coffeeId = null;
+                        if(o.order_info && typeof o.order_info === 'string'){
+                            const m = /\[(\d+)\]/.exec(o.order_info);
+                            if(m) coffeeId = m[1];
+                        }
+                        if(!coffeeId && o.coffee_id) coffeeId = String(o.coffee_id);
+                        if(!coffeeId) return;
+                        const val = Math.abs(Number(o.order_value || 0));
+                        if(!(coffeeId in sums)){
+                            // unknown coffee id — initialize
+                            sums[coffeeId] = {}; counts[coffeeId] = {}; quarters.forEach(qq=>{ sums[coffeeId][qq]=0; counts[coffeeId][qq]=0; });
+                        }
+                        sums[coffeeId][q] = (sums[coffeeId][q]||0) + val;
+                        counts[coffeeId][q] = (counts[coffeeId][q]||0) + 1;
+                    });
+                }
+
+                // Build datasets: one line per coffee id that has data
+                const datasets = [];
+                Object.keys(sums).forEach((id,idx)=>{
+                    const arr = quarters.map(q=> counts[id][q] ? +(sums[id][q]/counts[id][q]).toFixed(2) : null);
+                    // skip coffees with no data at all
+                    if(arr.every(v=>v===null)) return;
+                    const label = coffeeMap[String(id)] || ('id:'+id);
+                    const color = `hsl(${(idx*47)%360}deg 65% 45%)`;
+                    datasets.push({ label, data: arr, borderColor: color, backgroundColor: color, spanGaps: true, tension: 0.2 });
+                });
+
+                // Render line chart
+                const ctx = document.getElementById('price-dev-chart').getContext('2d');
+                if(priceDevChart) priceDevChart.destroy();
+                priceDevChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: quarters, datasets },
+                    options: { responsive:true, interaction:{mode:'nearest',axis:'x'}, scales:{ y:{ beginAtZero:true } } }
+                });
+                if(spinner) spinner.style.display = 'none';
+            }catch(e){
+                console.warn('loadPriceDevelopment failed', e);
+                if(spinner) spinner.style.display = 'none';
+            }
+        }
+
+        function renderPieChart(labels,data){
+            const ctx = document.getElementById('coffee-pie').getContext('2d');
+            if(pieChart) pieChart.destroy();
+            pieChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets:[{ data: data, backgroundColor: labels.map((_,i)=> `hsl(${(i*47)%360}deg 70% 50%)`) }]
+                },
+                options:{ responsive:true }
+            });
+        }
+
+        function renderStatsChart(labels, orders, payments){
+            const ctx = document.getElementById('stats-chart').getContext('2d');
+            if(statsChart) statsChart.destroy();
+            statsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Orders (total)', data: orders, backgroundColor: 'rgba(37,99,235,0.9)' },
+                        { label: 'Payments (total)', data: payments, backgroundColor: 'rgba(34,197,94,0.9)' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index' },
+                    scales: {
+                        x: { stacked: false },
+                            y: { stacked: false, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        async function loadServerTime(){
+            const el = document.getElementById('server-time');
+            el.textContent = 'loading…';
+            try {
+                const res = await fetch('/api/system_time');
+                if(!res.ok) throw new Error(res.statusText);
+                const data = await res.json();
+                // server may return either an ISO datetime string or a timestamp (seconds)
+                const dt = data.datetime || (typeof data.timestamp === 'number' ? new Date(data.timestamp * 1000).toISOString() : new Date().toISOString());
+                // represent the server time as a local, human-friendly 24-hour string
+                const local = new Date(dt);
+                const pad = (n) => String(n).padStart(2, '0');
+                const formatLocalDatetime = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+                // show YYYY-MM-DD HH:MM:SS with 24-hour clock
+                el.textContent = formatLocalDatetime(local);
+                // Populate separate date and time inputs. Time input value uses 24-hour
+                // format (HH:mm) which we set explicitly to ensure 24h values.
+                const toLocalDateValue = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                const toLocalTimeValue = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                const dateEl = document.getElementById('date-input');
+                const timeEl = document.getElementById('time-input');
+                if(dateEl) dateEl.value = toLocalDateValue(local);
+                if(timeEl) timeEl.value = toLocalTimeValue(local);
+            } catch(e) {
+                el.textContent = 'Failed: ' + e.message;
+            }
+        }
+
+        async function setServerTime(){
+            const dateVal = document.getElementById('date-input').value;
+            const timeVal = document.getElementById('time-input').value;
+            if(!dateVal || !timeVal){ showMsg('time-msg','Please enter both date and time (24h).',true); return; }
+            try {
+                // Combine local date + time (both local, no timezone) into a single
+                // local datetime string and convert to an ISO instant (UTC) so the
+                // backend receives a timezone-aware timestamp.
+                // Use the native Date constructor with "YYYY-MM-DDTHH:MM" which is
+                // treated as local time by browsers.
+                const combined = `${dateVal}T${timeVal}`; // e.g. 2025-10-20T14:05
+                const iso = new Date(combined).toISOString();
+                const res = await fetch('/api/system_time', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({datetime: iso})
+                });
+                if(!res.ok) throw new Error(await res.text());
+                showMsg('time-msg','Server time updated.');
+                loadServerTime();
+            } catch(e) {
+                showMsg('time-msg','Error: '+e.message,true);
+            }
+        }
+
+        async function loadUsers(){
+            const tbody = document.querySelector('#users-table tbody');
+            tbody.innerHTML = '<tr><td colspan="5">loading…</td></tr>';
+            try {
+                const res = await fetch('/api/user_list');
+                if(!res.ok) throw new Error(res.statusText);
+                const data = await res.json();
+                tbody.innerHTML = '';
+                data.forEach(u=>{
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${u.uid}</td>
+                        <td>${escapeHtml(u.nick_name||'')}</td>
+                        <td>${u.favourite_coffee ?? ''}</td>
+                        <td><input type="number" value="${u.user_alt_uid ?? ''}" data-uid="${u.uid}" data-field="alt"></td>
+                        <td class="row-actions">
+                            <button data-action="update" data-uid="${u.uid}">Update</button>
+                            <button data-action="delete" data-uid="${u.uid}" class="danger">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                tbody.querySelectorAll('button[data-action="update"]').forEach(btn=>{
+                    btn.addEventListener('click', async ()=>{
+                        const uid = btn.getAttribute('data-uid');
+                        const row = btn.closest('tr');
+                        const altVal = row.querySelector('input[data-field="alt"]').value;
+                        btn.disabled = true;
+                        try {
+                            const body = { uid: parseInt(uid), alt_uid: altVal === '' ? null : parseInt(altVal) };
+                            const r = await fetch('/api/user', {
+                                method:'PUT',
+                                headers:{'Content-Type':'application/json'},
+                                body: JSON.stringify(body)
+                            });
+                            if(!r.ok) throw new Error(await r.text());
+                            showMsg('users-msg','Updated user '+uid);
+                            loadUsers();
+                        } catch(e) {
+                            showMsg('users-msg','Error: '+e.message,true);
+                        } finally { btn.disabled = false; }
+                    });
+                });
+                // delete handlers with confirmation (irreversible)
+                tbody.querySelectorAll('button[data-action="delete"]').forEach(btn=>{
+                    btn.addEventListener('click', async ()=>{
+                        const uid = btn.getAttribute('data-uid');
+                        if(!confirm('Delete user ' + uid + '? This action cannot be undone.')) return;
+                        btn.disabled = true;
+                        try {
+                            const r = await fetch('/api/delete_user', {
+                                method: 'POST',
+                                headers: {'Content-Type':'application/json'},
+                                body: JSON.stringify({ uid: parseInt(uid) })
+                            });
+                            if(!r.ok) throw new Error(await r.text());
+                            showMsg('users-msg','Deleted user '+uid);
+                            loadUsers();
+                        } catch(e) {
+                            showMsg('users-msg','Error: '+e.message,true);
+                        } finally { btn.disabled = false; }
+                    });
+                });
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="5">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
+            }
+        }
+
+        function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+        // tab switching
+        function showTab(targetId, updateAria=true){
+            document.querySelectorAll('.tab-btn').forEach(btn=>{
+                const on = btn.getAttribute('data-target')===targetId;
+                btn.classList.toggle('active', on);
+                if(updateAria) btn.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            document.querySelectorAll('.tab-panel').forEach(panel=>{
+                const on = panel.id===targetId;
+                panel.classList.toggle('active', on);
+                panel.setAttribute('aria-hidden', on ? 'false' : 'true');
+            });
+            // lazy-reload content for the shown tab
+            if(targetId==='stats-section'){
+                // Ensure all statistics-related charts load when the tab is activated.
+                // Call the three loaders but avoid tight duplicate calls (they're idempotent).
+                loadStatistics();
+                // load both pie and price development when stats tab is shown
+                loadCoffeeSortsPie();
+                loadPriceDevelopment();
+            }
+            if(targetId==='coffee-section') loadCoffee();
+            if(targetId==='time-section') loadServerTime();
+            if(targetId==='users-section') loadUsers();
+        }
+
+        document.addEventListener('DOMContentLoaded', ()=>{
+            // initial loads for default active panel (statistics first)
+            loadStatistics();
+            // load the coffee sorts pie chart and price development on first load as well
+            loadCoffeeSortsPie();
+            loadPriceDevelopment();
+            loadCoffee();
+            loadServerTime();
+            loadUsers();
+            // initialize optional JS time picker (flatpickr) for 24-hour input
+            initTimePicker();
+
+            // tab clicks
+            document.querySelectorAll('.tab-btn').forEach(btn=>{
+                btn.addEventListener('click', ()=> showTab(btn.getAttribute('data-target')));
+                btn.addEventListener('click', ()=>{
+                    if(btn.getAttribute('data-target')==='stats-section'){
+                        loadStatistics();
+                        loadCoffeeSortsPie();
+                        loadPriceDevelopment();
+                    }
+                });
+            });
+
+            document.getElementById('reload-coffee').addEventListener('click', loadCoffee);
+            document.getElementById('refresh-time').addEventListener('click', loadServerTime);
+            document.getElementById('set-time').addEventListener('click', setServerTime);
+            document.getElementById('reload-deposit')?.addEventListener('click', loadDepositPillory);
+            document.getElementById('reload-stats')?.addEventListener('click', loadStatistics);
+            document.getElementById('reload-pie')?.addEventListener('click', loadCoffeeSortsPie);
+            document.getElementById('reload-price-dev')?.addEventListener('click', loadPriceDevelopment);
+
+            document.getElementById('reload-all').addEventListener('click', ()=>{ loadCoffee(); loadServerTime(); loadUsers(); loadDepositPillory(); loadStatistics(); loadCoffeeSortsPie(); loadPriceDevelopment(); });
+            const logoutBtn = document.getElementById('logout-btn');
+            if(logoutBtn) logoutBtn.addEventListener('click', ()=> { window.location = '/logout'; });
+            const downloadDbBtn = document.getElementById('download-database');
+            if(downloadDbBtn) downloadDbBtn.addEventListener('click', async ()=>{
+            try {
+                const res = await fetch('/api/database');
+                if(!res.ok) throw new Error(res.statusText);
+                const blob = await res.blob();
+                // attempt to get filename from Content-Disposition header
+                const cd = res.headers.get('content-disposition') || '';
+                let filename = 'database';
+                const m = /filename\*=UTF-8''([^;]+)|filename="([^"]+)"|filename=([^;]+)/i.exec(cd);
+                if(m){
+                filename = decodeURIComponent(m[1] || m[2] || m[3]);
+                } else {
+                // fallback extension guess
+                const ext = blob.type === 'application/x-sqlite3' ? '.sqlite' : '';
+                filename += ext;
+                }
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showMsg('coffee-msg','Database download started.');
+            } catch(e) {
+                showMsg('coffee-msg','Error: '+e.message,true);
+            }
+            });
+            
+            // load deposit pillory list
+            async function loadDepositPillory(){
+                const tbody = document.querySelector('#deposit-table tbody');
+                if(!tbody) return;
+                tbody.innerHTML = '<tr><td colspan="3">loading…</td></tr>';
+                try{
+                    // fetch deposit data and user list in parallel to resolve nicknames
+                    const [rDeposit, rUsers] = await Promise.all([
+                        fetch('/api/deposit_pillory'),
+                        fetch('/api/user_list')
+                    ]);
+
+                    if(!rDeposit.ok) throw new Error('deposit request failed: ' + rDeposit.statusText);
+                    const depositData = await rDeposit.json();
+
+                    let usersMap = {};
+                    if(rUsers.ok){
+                        try{
+                            const users = await rUsers.json();
+                            users.forEach(u => { usersMap[String(u.uid)] = u.nick_name ?? u.nick ?? ''; });
+                        }catch(_){ /* ignore parse errors, fallback to empty map */ }
+                    }
+
+                    tbody.innerHTML = '';
+                    // normalize to array: endpoint may return a single object or an array
+                    const entries = Array.isArray(depositData) ? depositData : [depositData];
+                    if(entries.length === 0){
+                        tbody.innerHTML = '<tr><td colspan="3">(no entries)</td></tr>';
+                        return;
+                    }
+
+                    console.debug('deposit entries', entries);
+                    console.debug('usersMap sample', Object.keys(usersMap).slice(0,10));
+
+                    entries.forEach(item=>{
+                        // endpoint returns { id: <uid>, balance: <number> }
+                        const id = item.id ?? item.uid ?? item.user_id ?? '';
+                        const depositRaw = item.balance ?? item.deposit ?? item.value ?? item.amount ?? '';
+                        const deposit = (typeof depositRaw === 'number') ? depositRaw.toFixed(2) : depositRaw;
+                        const nick = escapeHtml(usersMap[String(id)] ?? '');
+                        const tr = document.createElement('tr');
+                        const depositCell = `<td class="${(typeof depositRaw === 'number' && depositRaw < 0) ? 'deposit-negative' : ''}">${deposit}</td>`;
+                        tr.innerHTML = `<td>${id}</td><td>${nick}</td>${depositCell}`;
+                        tbody.appendChild(tr);
+                    });
+                }catch(e){
+                    tbody.innerHTML = `<tr><td colspan="3">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
+                    showMsg('deposit-msg','Error: '+e.message,true);
+                }
+            }
+
+            // lazily load when the deposit tab is activated
+            document.querySelectorAll('.tab-btn').forEach(btn=>{
+                btn.addEventListener('click', ()=>{
+                    if(btn.getAttribute('data-target')==='deposit-section'){
+                        loadDepositPillory();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

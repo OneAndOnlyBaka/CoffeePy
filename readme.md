@@ -74,8 +74,12 @@ The beans next to the buttons are showing the current selection. If the beans ne
 
 ![](doc/pictures/screen_applycard_order.png)
 
+```
+The order screen also shows the time and date of the system. Sometimes it's possible that the battery of the RTC is broken. With this feature you can track its behavior.
+```
+
 ## New User & User Settings
-If an new user applies his card to coffeepy he will directed to the setup submenu. By default the UID of the card will be used as nick, but it can be changed to any name. Also it is always possible to change the name by login in the setup menu (gear symbol).
+If a new user applies his card to coffeepy he will be directed to the setup submenu. By default the UID of the card will be used as nick, but it can be changed to any name. Also it is always possible to change the name by login in the setup menu (gear symbol).
 For fast-checkout the favourite coffee sort can be picked. So each time the user will add his card to order, this option will be selected by default. It is always possible to change the coffee product while checkout process.
 
 All date will stored by clicking on the "SAVE" button and the user will be logged out. Next time the user will apply the card the order menu will show up.
@@ -112,6 +116,49 @@ Next slide shows the top seven of the month.
 
 The last one shows the pillory. If the users did not pay the previous month or months, they will be shown on this slide. The guys with the highest negative deposit are shown on top. If the table is empty, no one has to pay for the previous months.
 ![](doc/pictures/screen_ranking_unpaied.png)
+
+# Webinterface
+CoffeePy will host a webserver on port 8000 by default. If you want any other port, you can assign it with the CoffeePy.ini by adding port under the section web. It's also possible to set the password for the login in there. By default the password is `secret` and default user is `admin`.
+
+Example:
+``` 
+[web]
+port = 8000
+admin_password = mypassword
+``` 
+ 
+How the webserver surface works
+
+The web interface is a small Flask application (templates live in `web/files`) that serves a protected dashboard after logging in with the single admin account (`admin` / default password `secret`, configurable via `CoffeePy.ini`). The main dashboard is split into tabs (Statistics, Coffee, Server time, Users, Deposit pillory) and the UI talks to a set of JSON endpoints; many endpoints require an authenticated session.
+
+Key JSON endpoints provided by the server:
+- `GET /api/system_time` — returns current server timestamp and ISO datetime. `POST /api/system_time` — sets the system time (requires authentication).
+- `GET /api/user_list` — returns the list of users (requires authentication).
+- `PUT /api/user` — update a user's metadata (requires authentication).
+- `GET /api/coffee_sorts` — list coffee sorts (requires authentication).
+- `PUT /api/coffee_sort` — update a coffee sort (requires authentication).
+- `GET /api/order_list` — returns orders; optional `start`/`end` ISO datetimes may be provided in the JSON request body to limit the range.
+- `GET /api/payment_list` — returns payments; optional `start`/`end` like above.
+- `GET /api/deposit_pillory` — returns pillory (unpaid deposit) ranking (requires authentication).
+
+The root `/` serves the dashboard (`index.html`) and is protected; `/login` and `/logout` handle session management. The Flask development server listens on port `8000` by default (changeable in `CoffeePy.ini`). For production deployments, run behind a proper WSGI server and set a secure `SECRET_KEY` and admin password.
+
+The webserver shows multiple sections to check data and to change settings like coffee prices or the system time.
+Web dashboard sections
+
+Toolbar
+- Download DB: download the current SQLite database file from the server for offline inspection or backup.
+- Reload all: refresh all tabs and data in the dashboard.
+- Logout: end the admin session and return to the login screen.
+
+Tabs / Sections (what you'll see and can do)
+- Statistics: An overview of recent orders and payments. Contains a bar chart showing monthly totals (last 12 months), a pie chart aggregating ordered coffee sorts (all time distribution), and a price development chart (average order price per coffee sort for the last 12 quarters). Totals and reload controls are provided.
+- Coffee: A table of coffee sorts (ID, name, price, machine strokes). Edit a coffee's price or number of strokes inline and press Save to update the database. Use Reload to refresh the list.
+- Server time: Displays current server time and provides date/time inputs to set the system time (requires authenticated access and OS-level capability on the host). Includes Refresh and Set server time controls.
+- Users: Lists registered users (UID, nickname, favourite coffee, alternative UID). Use this view to edit nicknames or favourite coffees and to assign an alternative UID if a physical card is lost/defective. Changes are sent to the backend via the user update endpoint.
+- Deposit pillory: Shows users with negative account balances (unpaid deposits), sorted by amount owed. Useful for seeing who still needs to pay; includes a Reload button to refresh the list.
+
+If you are using a Raspberry Pi, this can be used together with utilizing its WLAN interface as an access point.
 
 # Housing
 

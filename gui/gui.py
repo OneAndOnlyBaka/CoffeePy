@@ -3,6 +3,7 @@ from tkinter import ttk
 import tkinter
 from PIL import ImageTk, Image
 from enum import Enum
+from datetime import datetime
 from threading import Lock
 from threading import Timer
 from lib.nfc import CardScanner
@@ -71,14 +72,74 @@ class BaseSelectionPanel():
 class RequiredCardPanel(BaseSelectionPanel):
     def __init__(self, mainWindow, panel: PanedWindow):
         super().__init__(mainWindow,panel)
+        # keep reference to parent container so we can schedule/cancel after callbacks
+        self.__parentPanel = panel
         panel.columnconfigure(0,minsize=30)
         self.__infoText = Label(panel, text="APPLY YOUR ID CARD",bg=GuiConstants.GetDefaultBackgroundColor(),font=GuiConstants.GetHeaderFont())
-        self.__infoText.grid(row=0,column=1)
+        self.__infoText.grid(row=1,column=1)
         self.__infoText2 = Label(panel, text="SCANNER IS ON RIGHT SIDE",bg=GuiConstants.GetDefaultBackgroundColor(),font=GuiConstants.GetHeaderFont())
-        self.__infoText2.grid(row=3,column=1)
+        self.__infoText2.grid(row=4,column=1)
         self.__img = ImageTk.PhotoImage(Image.open("gui/res/Industry-Rfid-Signal-icon.png"))
         self.__panel = Label(panel, image = self.__img,bg=GuiConstants.GetDefaultBackgroundColor())
-        self.__panel.grid(row=1,column=1,rowspan=2,columnspan=2)
+        self.__panel.grid(row=2,column=0,rowspan=2,columnspan=5)
+        # separate time and date labels
+        now = datetime.now()
+        timestr = now.strftime('   ' +'%H:%M:%S')
+        datestr = now.strftime('%d.%m.%Y')
+        # time on the left upper corner
+        self.__timeLabel = Label(panel, text=timestr, bg=GuiConstants.GetDefaultBackgroundColor(), font=GuiConstants.GetMessageFont())
+        self.__timeLabel.grid(row=6, column=0, sticky='w', padx=10, pady=5, columnspan=2)
+        # date on the right upper corner
+        self.__dateLabel = Label(panel, text=datestr, bg=GuiConstants.GetDefaultBackgroundColor(), font=GuiConstants.GetMessageFont())
+        self.__dateLabel.grid(row=6, column=1, sticky='e', padx=10, pady=5, columnspan=2)
+
+        panel.rowconfigure(0,minsize=100)
+        panel.rowconfigure(5,minsize=100)
+
+        # after-callback id for scheduled updates
+        self.__clock_after_id = None
+        # start self-updating clock
+        self.__schedule_clock_update()
+
+    def __schedule_clock_update(self):
+        try:
+            # schedule next tick in ~1s
+            if self.__parentPanel:
+                self.__clock_after_id = self.__parentPanel.after(1000, self.__on_clock_tick)
+        except Exception:
+            self.__clock_after_id = None
+
+    def __on_clock_tick(self):
+        try:
+            now = datetime.now()
+            timestr = now.strftime('%H:%M:%S')
+            datestr = now.strftime('%d.%m.%Y')
+            self.__timeLabel.configure(text= '   ' + timestr)
+            self.__dateLabel.configure(text=datestr)
+        except Exception:
+            pass
+        finally:
+            # reschedule
+            self.__schedule_clock_update()
+
+    def UpdateSecond(self):
+        # keep compatibility with external callers (logout timer)
+        try:
+            now = datetime.now()
+            timestr = now.strftime('%H:%M:%S')
+            datestr = now.strftime('%Y-%m-%d')
+            self.__timeLabel.configure(text=timestr)
+            self.__dateLabel.configure(text=datestr)
+        except Exception:
+            pass
+
+    def FinalizeAction(self):
+        # cancel scheduled callbacks to avoid orphaned after calls
+        try:
+            if self.__clock_after_id is not None and self.__parentPanel:
+                self.__parentPanel.after_cancel(self.__clock_after_id)
+        except Exception:
+            pass
 
 class OrderPanelResult():
     def __init__(self,uid:int,coffeeId:int) -> None:
@@ -105,7 +166,9 @@ class OrderPanel(BaseSelectionPanel):
         panel.rowconfigure(0,minsize=20)
         panel.rowconfigure(2,minsize=20)
 
-        fav = list(filter(lambda x : x['coffee_id'] == favouriteSelection,coffeeOptions))[0]
+        fav = next((x for x in coffeeOptions if x['coffee_id'] == favouriteSelection), None)
+        if fav is None:
+            fav = coffeeOptions[0] if coffeeOptions else {'coffee_name': 'Unknown', 'coffee_price': 0.0, 'coffee_id': 0}
         
         welcomeText = "Hi " + username + "! \"" + fav['coffee_name'] +"\"?\nOr something different?"
 
@@ -224,12 +287,18 @@ class SettingsPanel(BaseSelectionPanel):
 
         panel.rowconfigure(1,minsize=40)
 
+        # ensure running flag exists to avoid AttributeError in IsStillInUsage / logout timer
+        self.__running = True
+
+        # store uid for use when saving settings
+        self.__uid = uid
+
         self.__autoLogoutSecoundsMax = 20
         self.__autoLogoutCounter = 0
         self.__keyboardOpen = False
-        self.__running = True
-        self.__uid = uid
-        self.__favourite = list(filter(lambda x : x['coffee_id'] == favouriteSelection,coffeeOptions))[0]
+        self.__favourite = next((x for x in coffeeOptions if x['coffee_id'] == favouriteSelection), None)
+        if self.__favourite is None:
+            self.__favourite = coffeeOptions[0] if coffeeOptions else {'coffee_name': 'Unknown', 'coffee_id': 0}
         self.__coffeeOptions = coffeeOptions
         if nick:
             self.__nick = nick
@@ -360,7 +429,7 @@ class RankingPanel(BaseSelectionPanel):
         width = 100
         height = width
         next = Image.open("gui/res/Custom-Icon-Design-Flatastic-1-Forward.512.png")
-        next = next.resize((width,height), Image.ANTIALIAS)
+        next = next.resize((width,height), Image.Resampling.LANCZOS)
         self.__nextIcon =  ImageTk.PhotoImage(next)
         self.__panel = panel
         self.__databaseConnector = databaseConnector
@@ -690,22 +759,22 @@ class CoffeePyMain():
         height = width
 
         im = Image.open("gui/res/Coffee-icon.png")
-        imResized = im.resize((width,height), Image.ANTIALIAS)
+        imResized = im.resize((width,height), Image.Resampling.LANCZOS)
         self.__orderIco =  ImageTk.PhotoImage(imResized)
         medal = Image.open("gui/res/Badge-Trophy-02-icon.png")
-        medal = medal.resize((width,height), Image.ANTIALIAS)
+        medal = medal.resize((width,height), Image.Resampling.LANCZOS)
         self.__rankingIco =  ImageTk.PhotoImage(medal)
         info = Image.open("gui/res/Books-2-icon.png")
-        info = info.resize((width,height), Image.ANTIALIAS)
+        info = info.resize((width,height), Image.Resampling.LANCZOS)
         self.__infoIco =  ImageTk.PhotoImage(info)
         options = Image.open("gui/res/spur-gear-icon.png")
-        options = options.resize((width,height), Image.ANTIALIAS)
+        options = options.resize((width,height), Image.Resampling.LANCZOS)
         self.__settingsIco =  ImageTk.PhotoImage(options)
         bar = Image.open("gui/res/bar.png")
-        bar = bar.resize((50,145), Image.ANTIALIAS)
+        bar = bar.resize((50,145), Image.Resampling.LANCZOS)
         self.__barIco =  ImageTk.PhotoImage(bar)
         barsel = Image.open("gui/res/barselected.png")
-        barsel = barsel.resize((50,145), Image.ANTIALIAS)
+        barsel = barsel.resize((50,145), Image.Resampling.LANCZOS)
         self.__barIcoSelected =  ImageTk.PhotoImage(barsel)
 
     def __GridSetup(self):
