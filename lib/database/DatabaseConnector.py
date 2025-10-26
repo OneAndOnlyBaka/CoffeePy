@@ -317,37 +317,55 @@ class Connector():
                 p.write('%s\n' % line)
 
     def GetPillorySortedByDecreasing(self):
-        # Calculate the unix timestamp for the start of the current month.
-        start_of_month = int(time.mktime(datetime(datetime.now().year, datetime.now().month, 1, 0, 0, 0).timetuple()))
+        # Compute time window: start of previous month (inclusive) up to start of
+        # current month (exclusive). The requirement is to exclude the current
+        # month and consider transactions "ab dem Vormonat".
+        now = datetime.now()
+        start_current_month = datetime(now.year, now.month, 1, 0, 0, 0)
+        # determine previous month
+        if now.month == 1:
+            prev_year = now.year - 1
+            prev_month = 12
+        else:
+            prev_year = now.year
+            prev_month = now.month - 1
 
-        # Use a single aggregated query to compute, per user, the sum of payments and
-        # the sum
-        # 
-        #  of order_value (deposits) where timestamps are strictly before the
-        # start_of_month. LEFT JOIN with user to include users with NULL sums.
+        start_prev_month = datetime(prev_year, prev_month, 1, 0, 0, 0)
+        start_prev_ts = int(time.mktime(start_prev_month.timetuple()))
+        start_current_ts = int(time.mktime(start_current_month.timetuple()))
+
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
 
+        # Aggregate payments and deposits only for the window [start_prev_month, start_current_month)
         query = (
-            'SELECT u.user_uid, '
+            'SELECT u.user_uid, u.user_nick_name, '
             'IFNULL(p.payments_sum, 0) AS payments_sum, '
             'IFNULL(o.deposits_sum, 0) AS deposits_sum '
             'FROM user u '
-            'LEFT JOIN (SELECT user_uid, SUM(payment_value) AS payments_sum FROM payments WHERE payment_timestamp < ? GROUP BY user_uid) p ON u.user_uid = p.user_uid '
-            'LEFT JOIN (SELECT user_uid, SUM(order_value) AS deposits_sum FROM coffee_order WHERE order_timestamp < ? GROUP BY user_uid) o ON u.user_uid = o.user_uid '
+            'LEFT JOIN (SELECT user_uid, SUM(payment_value) AS payments_sum FROM payments WHERE payment_timestamp >= ? AND payment_timestamp < ? GROUP BY user_uid) p ON u.user_uid = p.user_uid '
+            'LEFT JOIN (SELECT user_uid, SUM(order_value) AS deposits_sum FROM coffee_order WHERE order_timestamp >= ? AND order_timestamp < ? GROUP BY user_uid) o ON u.user_uid = o.user_uid '
         )
 
-        cur.execute(query, (start_of_month, start_of_month))
+        cur.execute(query, (start_prev_ts, start_current_ts, start_prev_ts, start_current_ts))
         rows = cur.fetchall()
         con.close()
 
         pillory = []
-        for uid, payments_sum, deposits_sum in rows:
+        for uid, nick_name, payments_sum, deposits_sum in rows:
             payments = float(payments_sum if payments_sum is not None else 0.0)
             deposit = float(deposits_sum if deposits_sum is not None else 0.0)
             balance = payments - deposit
+            # only include users with outstanding (negative) balance
             if balance < 0.0:
-                pillory.append({'id': int(uid), 'balance': round(balance, 2)})
+                pillory.append({
+                    'uid': int(uid),
+                    'id': int(uid),  # keep 'id' for compatibility with callers that expect it
+                    'nick_name': nick_name,
+                    'payments': round(payments, 2),
+                    'deposits': round(deposit, 2),
+                    'balance': round(balance, 2)
+                })
 
         # Sort ascending so the most negative balances are first
         return sorted(pillory, key=lambda d: d['balance'])
