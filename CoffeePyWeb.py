@@ -1,6 +1,6 @@
 import os
 from functools import wraps
-from flask import Flask, request, session, redirect, url_for, render_template
+from flask import Flask, request, session, redirect, url_for, render_template, send_file, send_from_directory
 from werkzeug.security import check_password_hash, generate_password_hash
 from lib.clock.adjustment import datetime_setter
 from lib.database.DatabaseConnector import Connector
@@ -107,6 +107,33 @@ def api_user_list():
     db = Connector()
     return jsonify(db.GetUserList())
 
+
+@app.route("/api/database", methods=["GET"])
+@login_required
+def api_database():
+    """Return the underlying SQLite database file as a downloadable attachment.
+
+    Uses the DatabaseConnector to locate the file so the endpoint works even if
+    the project has been started from a different working directory.
+    """
+    db = Connector()
+    db_path = db.GetDatabasePath()
+    if not os.path.exists(db_path):
+        return jsonify({"error": "database file not found"}), 404
+    try:
+        # Use send_file to return the file as an attachment. Flask will set
+        # Content-Disposition for us. Return as generic octet-stream so
+        # browsers always download the file rather than attempt to open it.
+        return send_file(db_path, mimetype='application/octet-stream', as_attachment=True, download_name=os.path.basename(db_path))
+    except TypeError:
+        # Fallback for older Flask versions that use 'attachment_filename'
+        try:
+            return send_file(db_path, mimetype='application/octet-stream', as_attachment=True, attachment_filename=os.path.basename(db_path))
+        except Exception as e:
+            return jsonify({"error": "failed to send database", "detail": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": "failed to send database", "detail": str(e)}), 500
+
 @app.route("/api/user", methods=["PUT"])
 @login_required
 def api_user_update():
@@ -204,6 +231,15 @@ def get_deposit_pillory():
     db = Connector()
     pillory_data = db.GetPillorySortedByDecreasing()
     return jsonify(pillory_data)
+
+
+# Serve local vendor static files (flatpickr, Chart.js, etc.)
+# The files are expected under the templates folder at web/files/vendor/*
+@app.route('/vendor/<path:filename>')
+def vendor_static(filename):
+    vendor_dir = os.path.join(app.template_folder, 'vendor')
+    # send_from_directory will return 404 automatically if file is missing
+    return send_from_directory(vendor_dir, filename)
 
 
 if __name__ == "__main__":

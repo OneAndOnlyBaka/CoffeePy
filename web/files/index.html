@@ -109,8 +109,8 @@
         .spinner{width:20px;height:20px;border-radius:50%;border:3px solid rgba(0,0,0,0.08);border-top-color:var(--accent);animation:spin 1s linear infinite;display:inline-block;vertical-align:middle}
         @keyframes spin{to{transform:rotate(360deg)}}
     </style>
-    <!-- Flatpickr for consistent 24-hour time picker across browsers -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- Flatpickr for consistent 24-hour time picker across browsers (local vendor copy for offline use) -->
+    <link rel="stylesheet" href="vendor/flatpickr/flatpickr.min.css">
 </head>
 <body>
     <div class="container">
@@ -240,8 +240,35 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Local vendor copies (place files in web/files/vendor/) -->
+    <script src="vendor/flatpickr/flatpickr.min.js"></script>
+    <script src="vendor/chartjs/chart.umd.min.js"></script>
+
+    <!-- Runtime check: if vendor libs are missing, show a helpful message -->
+    <script>
+        (function(){
+            const missing = [];
+            try{ if(typeof flatpickr === 'undefined') missing.push('flatpickr'); }catch(e){ missing.push('flatpickr'); }
+            try{ if(typeof Chart === 'undefined') missing.push('Chart.js'); }catch(e){ missing.push('Chart.js'); }
+            if(missing.length){
+                console.warn('Missing vendor libraries:', missing.join(', '));
+                const el = document.getElementById('stats-msg') || document.querySelector('.toolbar');
+                const msg = 'Warning: Missing vendor files ('+missing.join(', ')+'). Charts and timepicker may not work offline. See vendor/README.md to download them.';
+                if(el) {
+                    // create a subtle inline notice element if stats-msg exists otherwise log to console
+                    if(el.id === 'stats-msg'){
+                        el.textContent = msg;
+                        el.className = 'msg error';
+                    } else {
+                        const note = document.createElement('div');
+                        note.style.fontSize='0.9rem'; note.style.color='#a33'; note.style.padding='6px';
+                        note.textContent = msg;
+                        el.parentNode.insertBefore(note, el.nextSibling);
+                    }
+                }
+            }
+        })();
+    </script>
     <script>
         // initialize a 24-hour time picker on the #time-input
         function initTimePicker() {
