@@ -1,6 +1,6 @@
 import os
 from functools import wraps
-from flask import Flask, request, session, redirect, url_for, render_template, send_file
+from flask import Flask, request, session, redirect, url_for, render_template, send_file, send_from_directory
 from werkzeug.security import check_password_hash, generate_password_hash
 from lib.clock.adjustment import datetime_setter
 from lib.database.DatabaseConnector import Connector
@@ -231,6 +231,15 @@ def get_deposit_pillory():
     db = Connector()
     pillory_data = db.GetPillorySortedByDecreasing()
     return jsonify(pillory_data)
+
+
+# Serve local vendor static files (flatpickr, Chart.js, etc.)
+# The files are expected under the templates folder at web/files/vendor/*
+@app.route('/vendor/<path:filename>')
+def vendor_static(filename):
+    vendor_dir = os.path.join(app.template_folder, 'vendor')
+    # send_from_directory will return 404 automatically if file is missing
+    return send_from_directory(vendor_dir, filename)
 
 
 if __name__ == "__main__":
