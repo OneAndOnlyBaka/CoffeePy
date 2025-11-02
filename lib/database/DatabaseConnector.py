@@ -337,17 +337,26 @@ class Connector():
         con = sqlite3.connect(self.__databaseFile)
         cur = con.cursor()
 
-        # Aggregate payments and deposits only for the window [start_prev_month, start_current_month)
+        # We need to compute the pillory from the previous month and earlier,
+        # excluding any transactions that happened in the current month. The
+        # business requirement: show outstanding balances "ab dem Vormonat"
+        # — i.e., consider all payments and deposits with timestamp < start_current_month.
+        # To preserve compatibility with previous behaviour that only looked at
+        # the previous month window, we'll sum all payments/deposits strictly
+        # before the start of the current month.
         query = (
             'SELECT u.user_uid, u.user_nick_name, '
             'IFNULL(p.payments_sum, 0) AS payments_sum, '
             'IFNULL(o.deposits_sum, 0) AS deposits_sum '
             'FROM user u '
-            'LEFT JOIN (SELECT user_uid, SUM(payment_value) AS payments_sum FROM payments WHERE payment_timestamp >= ? AND payment_timestamp < ? GROUP BY user_uid) p ON u.user_uid = p.user_uid '
-            'LEFT JOIN (SELECT user_uid, SUM(order_value) AS deposits_sum FROM coffee_order WHERE order_timestamp >= ? AND order_timestamp < ? GROUP BY user_uid) o ON u.user_uid = o.user_uid '
+            # payments: include all payments (including current month)
+            'LEFT JOIN (SELECT user_uid, SUM(payment_value) AS payments_sum FROM payments GROUP BY user_uid) p ON u.user_uid = p.user_uid '
+            # deposits/orders: only consider orders before the start of the current month
+            'LEFT JOIN (SELECT user_uid, SUM(order_value) AS deposits_sum FROM coffee_order WHERE order_timestamp < ? GROUP BY user_uid) o ON u.user_uid = o.user_uid '
         )
 
-        cur.execute(query, (start_prev_ts, start_current_ts, start_prev_ts, start_current_ts))
+        # Use start_current_ts as the exclusive upper bound for deposits/orders only
+        cur.execute(query, (start_current_ts,))
         rows = cur.fetchall()
         con.close()
 
