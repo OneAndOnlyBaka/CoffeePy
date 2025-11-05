@@ -13,6 +13,9 @@ from datetime import datetime,timedelta
 import time 
 import configparser
 from pathlib import Path
+import sys
+import threading
+import signal
 
 # /home/tom/CoffeePy/webaccess/app.py
 # Simple Flask webserver with a single static-user login
@@ -281,6 +284,30 @@ def api_upload_update():
         if version:
             resp['version'] = version
         resp['backup'] = os.path.basename(backup_zip) if backup_zip else None
+        # Schedule a restart of the whole application so the new files are loaded.
+        # We perform the restart in a separate thread to allow the HTTP response
+        # to be returned to the client first. The thread will wait a short
+        # moment then replace the current process with a new one using execv.
+        def _delayed_restart(delay=0.5):
+            try:
+                time.sleep(delay)
+                # flush and give gunicorn/launcher a moment
+                # Try to perform an exec of the current Python with the same argv.
+                python = sys.executable or 'python3'
+                os.execv(python, [python] + sys.argv)
+            except Exception:
+                # if exec fails, attempt a hard exit so an external supervisor can restart
+                try:
+                    os.kill(os.getpid(), signal.SIGTERM)
+                except Exception:
+                    os._exit(1)
+
+        try:
+            t = threading.Thread(target=_delayed_restart, daemon=True)
+            t.start()
+            resp['restart_scheduled'] = True
+        except Exception:
+            resp['restart_scheduled'] = False
         return jsonify(resp)
     finally:
         # cleanup tmpdir
