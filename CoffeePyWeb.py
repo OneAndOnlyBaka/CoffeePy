@@ -330,7 +330,7 @@ def api_upload_update():
                 print(f'Error in delayed reboot thread: {e}', file=sys.stderr)
 
         t = threading.Thread(target=_delayed_reboot, args=(3,), daemon=True)
-        #t.start()
+        t.start()
 
         # return a response that tells the client to redirect to the rebooting page
         # The web UI should navigate the user to /rebooting where an informational
