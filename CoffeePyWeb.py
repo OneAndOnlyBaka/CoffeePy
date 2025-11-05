@@ -300,8 +300,34 @@ def api_upload_update():
             for fname in files:
                 full = os.path.join(root, fname)
                 rel = os.path.relpath(full, extract_dir)
+                # normalize separators (handle zips created on Windows)
+                rel = os.path.normpath(rel)
                 # we will place rel into project root
                 files_to_overwrite.append(rel)
+
+        # If the zip contains a single top-level directory (common when zipping a repo),
+        # strip that directory so its contents are applied to the project root.
+        top_components = set()
+        for r in files_to_overwrite:
+            parts = r.split(os.path.sep)
+            if parts and parts[0] not in ('.', ''):
+                top_components.add(parts[0])
+
+        extract_root = extract_dir
+        if len(top_components) == 1:
+            single_top = next(iter(top_components))
+            candidate = os.path.join(extract_dir, single_top)
+            if os.path.isdir(candidate):
+                # use the inner top folder as the effective extract root
+                extract_root = candidate
+                # recompute files_to_overwrite relative to the new root
+                files_to_overwrite = []
+                for root, dirs, files in os.walk(extract_root):
+                    for fname in files:
+                        full = os.path.join(root, fname)
+                        rel = os.path.relpath(full, extract_root)
+                        rel = os.path.normpath(rel)
+                        files_to_overwrite.append(rel)
 
         # determine project root by locating runner.py (fallback to cwd)
         project_root = find_runner_root()
@@ -359,7 +385,7 @@ def api_upload_update():
                 print(f'Error in delayed reboot thread: {e}', file=sys.stderr)
 
         t = threading.Thread(target=_delayed_reboot, args=(3,), daemon=True)
-        t.start()
+        #t.start()
 
         # return a response that tells the client to redirect to the rebooting page
         # The web UI should navigate the user to /rebooting where an informational
