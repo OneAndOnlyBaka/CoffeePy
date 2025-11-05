@@ -844,12 +844,16 @@
                             const msg = json && json.error ? (json.error + (json.detail ? (': '+json.detail) : '')) : ('Upload failed: ' + res.statusText);
                             showMsg('stats-msg', msg, true);
                         } else {
-                            const ver = json.version ? (' version: '+json.version) : '';
-                            showMsg('stats-msg', 'Update applied successfully' + ver);
-                            // optionally show backup info
-                            if(json.backup) showMsg('coffee-msg', 'Backup created: ' + json.backup);
-                            // suggest user to reload to pick up new code
-                            setTimeout(()=>{ if(confirm('Update applied. Reload page to pick up changes?')) location.reload(); }, 800);
+                            // On successful update, remove the visible message boxes and redirect
+                            // to the rebooting page so the UI shows the reboot state.
+                            // Persist backup info to sessionStorage so the rebooting page can show it if desired.
+                            try{ if(json.backup) sessionStorage.setItem('update_backup', json.backup); }catch(_){ }
+                            const statsEl = document.getElementById('stats-msg');
+                            if(statsEl && statsEl.parentNode) statsEl.parentNode.removeChild(statsEl);
+                            const coffeeEl = document.getElementById('coffee-msg');
+                            if(coffeeEl && coffeeEl.parentNode) coffeeEl.parentNode.removeChild(coffeeEl);
+                            // Redirect to the local rebooting page. Use a short timeout to allow DOM changes to apply.
+                            setTimeout(()=>{ location.href = 'rebooting.html'; }, 200);
                         }
                     }catch(e){ showMsg('stats-msg','Error uploading update: '+e.message, true); }
                     finally{ uploadBtn.disabled = false; uploadBtn.textContent = oldText; uploadInput.value = ''; }
