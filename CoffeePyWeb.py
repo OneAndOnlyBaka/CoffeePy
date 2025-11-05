@@ -285,71 +285,38 @@ def api_upload_update():
         if version:
             resp['version'] = version
         resp['backup'] = os.path.basename(backup_zip) if backup_zip else None
-        # Schedule a restart of the whole application so the new files are loaded.
-        # We perform the restart in a separate thread to allow the HTTP response
-        # to be returned to the client first. The thread will wait a short
-        # moment then attempt an exec; if that fails it will create a small
-        # self-deleting bash script in $HOME and start it detached so the
-        # process can exit and an external supervisor (or runner) can restart
-        # the app.
-        def _delayed_restart(delay=0.5):
-            try:
-                time.sleep(delay)
-                # Try to exec a fresh interpreter running the same script.
-                python = sys.executable or 'python3'
-                try:
-                    script = os.path.abspath(sys.argv[0]) if sys.argv and sys.argv[0] else os.path.abspath(__file__)
-                except Exception:
-                    script = os.path.abspath(__file__)
-                os.execv(python, [python, script] + sys.argv[1:])
-            except Exception:
-                # Exec failed — fallback to writing a small self-deleting
-                # shell script into the user's home directory and starting it
-                # detached. The script will exec the same interpreter/script
-                # and then remove itself.
-                try:
-                    home = os.path.expanduser('~') or '/tmp'
-                    script_path = os.path.join(home, f'restart_coffeepy_{int(time.time())}.sh')
-                    # Recompute script in this scope
-                    try:
-                        script = os.path.abspath(sys.argv[0]) if sys.argv and sys.argv[0] else os.path.abspath(__file__)
-                    except Exception:
-                        script = os.path.abspath(__file__)
-                    python = sys.executable or 'python3'
-                    sh = f"""#!/bin/sh
-                            sleep 0.5
-                            exec {python} {script} "$@"
-                            rm -- "$0" || true
-                            """
-                    with open(script_path, 'w', encoding='utf-8') as fh:
-                        fh.write(sh)
-                    os.chmod(script_path, 0o700)
-                    # Start detached. Prefer setsid to fully detach.
-                    try:
-                        subprocess.Popen(['setsid', script_path], stdout=open('/dev/null', 'wb'), stderr=open('/dev/null', 'wb'))
-                    except Exception:
-                        # Fallback to simple background exec
-                        try:
-                            subprocess.Popen([script_path], stdout=open('/dev/null', 'wb'), stderr=open('/dev/null', 'wb'))
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-                # exit so supervisor/runner can restart everything
-                try:
-                    os._exit(0)
-                except Exception:
-                    try:
-                        os.kill(os.getpid(), signal.SIGTERM)
-                    except Exception:
-                        pass
 
-        try:
-            t = threading.Thread(target=_delayed_restart, daemon=True)
-            t.start()
-            resp['restart_scheduled'] = True
-        except Exception:
-            resp['restart_scheduled'] = False
+        # Schedule a system reboot after a short delay (3s) and instruct the
+        # client to navigate to the rebooting page. We perform the reboot in a
+        # background thread so the HTTP response can be returned immediately.
+        def _delayed_reboot(delay_seconds=3):
+            try:
+                time.sleep(delay_seconds)
+                # Try systemctl reboot first, fall back to shutdown -r now
+                # Use subprocess.call to avoid shell quoting issues
+                try:
+                    subprocess.call(['systemctl', 'reboot'])
+                except Exception:
+                    try:
+                        subprocess.call(['shutdown', '-r', 'now'])
+                    except Exception:
+                        # As a last resort, try reboot command
+                        try:
+                            subprocess.call(['reboot'])
+                        except Exception:
+                            # If all reboot attempts failed, log to stderr
+                            print('Failed to reboot system after update', file=sys.stderr)
+            except Exception as e:
+                print(f'Error in delayed reboot thread: {e}', file=sys.stderr)
+
+        t = threading.Thread(target=_delayed_reboot, args=(3,), daemon=True)
+        t.start()
+
+        # return a response that tells the client to redirect to the rebooting page
+        # The web UI should navigate the user to /rebooting where an informational
+        # page will show and then redirect to the login page after bootup.
+        resp['reboot'] = True
+        resp['reboot_path'] = url_for('rebooting')
         return jsonify(resp)
     finally:
         # cleanup tmpdir
@@ -464,6 +431,14 @@ def vendor_static(filename):
     vendor_dir = os.path.join(app.template_folder, 'vendor')
     # send_from_directory will return 404 automatically if file is missing
     return send_from_directory(vendor_dir, filename)
+
+
+@app.route('/rebooting')
+def rebooting():
+    # Serve a simple static template that informs the user the system is
+    # rebooting and will redirect back to the login page after the expected
+    # boot time.
+    return render_template('rebooting.html')
 
 
 if __name__ == "__main__":
