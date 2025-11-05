@@ -170,36 +170,16 @@ def _safe_copy_tree(src_dir, dest_dir):
             os.replace(str(tf_name), str(d))
 
 
-def find_runner_root():
+def find_runner_root(pathToCheck:str)->str:
     """Locate the directory that contains runner.py. If multiple are found, return
     the first one. If not found, fall back to the current working directory.
     """
-    # common locations: repo root, current working dir
-    cwd = Path.cwd()
-    # Search upwards from cwd to filesystem root for runner.py
-    p = cwd
-    while True:
-        candidate = p / 'runner.py'
-        if candidate.exists():
-            return str(p)
-        if p.parent == p:
-            break
-        p = p.parent
-
-    # As a fallback, try importing project tree: search entire workspace-ish tree
-    for root, dirs, files in os.walk(str(cwd)):
+    cwd = Path(pathToCheck).resolve()
+    for root, dirs, files in os.walk(cwd):
         if 'runner.py' in files:
-            return str(Path(root))
+            return str(Path(root).resolve())
+    return None
 
-    # final fallback
-    return str(cwd)
-
-
-def _make_backup(paths, backup_dir):
-    """Create a zip backup of the list of paths (files or directories) into backup_dir.
-    Returns path to backup zip file."""
-    # keep backward compatible signature but allow caller to specify a base_dir
-    return _make_backup_with_base(paths, backup_dir, base_dir=None)
 
 
 def _make_backup_with_base(paths, backup_dir, base_dir=None):
@@ -282,84 +262,49 @@ def api_upload_update():
         with zipfile.ZipFile(zpath, 'r') as zf:
             zf.extractall(extract_dir)
 
-        # optional version info
-        version = None
-        for candidate in ('VERSION', 'version', 'version.txt', 'VERSION.txt'):
-            p = os.path.join(extract_dir, candidate)
-            if os.path.exists(p):
-                try:
-                    with open(p, 'r', encoding='utf-8') as fh:
-                        version = fh.read().strip()
-                except Exception:
-                    pass
-                break
+        root_dir = find_runner_root(extract_dir)
+        if root_dir is None:
+            return jsonify({'error': 'failed to locate project root for update'}), 500
+        
+        # determine current project root (where runner.py lives) falling back to cwd
+        project_root = find_runner_root(os.getcwd()) or os.getcwd()
 
-        # build list of files to overwrite (relative paths inside zip)
-        files_to_overwrite = []
-        for root, dirs, files in os.walk(extract_dir):
+        # build list of existing files in the current project that will be overwritten
+        targets_to_backup = []
+        for root, dirs, files in os.walk(root_dir):
             for fname in files:
-                full = os.path.join(root, fname)
-                rel = os.path.relpath(full, extract_dir)
-                # normalize separators (handle zips created on Windows)
-                rel = os.path.normpath(rel)
-                # we will place rel into project root
-                files_to_overwrite.append(rel)
+                rel = os.path.relpath(os.path.join(root, fname), root_dir)
+                tgt = os.path.join(project_root, rel)
+                if os.path.exists(tgt):
+                    targets_to_backup.append(tgt)
 
-        # If the zip contains a single top-level directory (common when zipping a repo),
-        # strip that directory so its contents are applied to the project root.
-        top_components = set()
-        for r in files_to_overwrite:
-            parts = r.split(os.path.sep)
-            if parts and parts[0] not in ('.', ''):
-                top_components.add(parts[0])
-
-        extract_root = extract_dir
-        if len(top_components) == 1:
-            single_top = next(iter(top_components))
-            candidate = os.path.join(extract_dir, single_top)
-            if os.path.isdir(candidate):
-                # use the inner top folder as the effective extract root
-                extract_root = candidate
-                # recompute files_to_overwrite relative to the new root
-                files_to_overwrite = []
-                for root, dirs, files in os.walk(extract_root):
-                    for fname in files:
-                        full = os.path.join(root, fname)
-                        rel = os.path.relpath(full, extract_root)
-                        rel = os.path.normpath(rel)
-                        files_to_overwrite.append(rel)
-
-        # determine project root by locating runner.py (fallback to cwd)
-        project_root = find_runner_root()
-        # resolve existing absolute paths that would be overwritten
-        existing_paths = [os.path.join(project_root, p) for p in files_to_overwrite if os.path.exists(os.path.join(project_root, p))]
-        backup_dir = os.path.join(project_root, 'tmp_update_backups')
-        backup_zip = None
-        if existing_paths:
+        # create a backup of the existing files that will be replaced
+        backup_path = None
+        if targets_to_backup:
             try:
-                # create backup with paths relative to the project_root
-                backup_zip = _make_backup_with_base(existing_paths, backup_dir, base_dir=project_root)
+                backup_path = _make_backup_with_base(targets_to_backup, os.path.join(tmpdir, "backup"), base_dir=project_root)
             except Exception as e:
-                return jsonify({'error': 'failed to create backup', 'detail': str(e)}), 500
+                return jsonify({"error": "failed to create backup", "detail": str(e)}), 500
 
-        # attempt to copy files into place
+        # attempt to copy the new files into the project root; on failure try to restore from backup
         try:
-            _safe_copy_tree(extract_dir, project_root)
+            _safe_copy_tree(root_dir, project_root)
         except Exception as e:
-            # try rollback if we have a backup
-            if backup_zip and os.path.exists(backup_zip):
-                try:
-                    with zipfile.ZipFile(backup_zip, 'r') as zf:
-                        zf.extractall(project_root)
-                except Exception as e2:
-                    return jsonify({'error': 'update failed and rollback failed', 'detail': f'{e} | rollback: {e2}'}), 500
-            return jsonify({'error': 'failed to apply update', 'detail': str(e)}), 500
+            # try to restore from backup if available
+            try:
+                if backup_path and os.path.exists(backup_path):
+                    restore_dir = os.path.join(tmpdir, "restore")
+                    os.makedirs(restore_dir, exist_ok=True)
+                    with zipfile.ZipFile(backup_path, "r") as zf:
+                        zf.extractall(restore_dir)
+                    _safe_copy_tree(restore_dir, project_root)
+            except Exception as restore_err:
+                return jsonify({"error": "update failed and restore failed", "detail": str(e), "restore_detail": str(restore_err)}), 500
+            return jsonify({"error": "update failed; changes rolled back", "detail": str(e)}), 500
+        _safe_copy_tree(root_dir, )
 
         # success
         resp = {'status': 'ok'}
-        if version:
-            resp['version'] = version
-        resp['backup'] = os.path.basename(backup_zip) if backup_zip else None
 
         # Schedule a system reboot after a short delay (3s) and instruct the
         # client to navigate to the rebooting page. We perform the reboot in a
@@ -390,8 +335,6 @@ def api_upload_update():
         # return a response that tells the client to redirect to the rebooting page
         # The web UI should navigate the user to /rebooting where an informational
         # page will show and then redirect to the login page after bootup.
-        resp['reboot'] = True
-        resp['reboot_path'] = url_for('rebooting')
         return jsonify(resp)
     finally:
         # cleanup tmpdir
