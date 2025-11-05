@@ -5,6 +5,7 @@ import configparser
 import os
 
 autoBackupDB = False
+borderless = True
 if os.path.exists('CoffeePy.ini'):
     config = configparser.ConfigParser()
     config.read('CoffeePy.ini')
@@ -19,11 +20,17 @@ if os.path.exists('CoffeePy.ini'):
             autoBackupDepth = int(config['Backup']['Depth'])
         except:
             autoBackupDepth = 10
+    if 'gui' in config.sections():
+        try:
+            if int(config['gui']['borderless']) == 0:
+                borderless = False
+        except:
+            borderless = True
 
 
 connector = Connector()
 
-mainApp = CoffeePyMain(connector,borderless=True)
+mainApp = CoffeePyMain(connector,borderless=borderless)
 
 databaseThread = None
 if autoBackupDB:

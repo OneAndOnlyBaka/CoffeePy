@@ -1,4 +1,8 @@
 import os
+import shutil
+import tempfile
+import zipfile
+import hashlib
 from functools import wraps
 from flask import Flask, request, session, redirect, url_for, render_template, send_file, send_from_directory
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -8,6 +12,11 @@ from flask import jsonify
 from datetime import datetime,timedelta
 import time 
 import configparser
+from pathlib import Path
+import sys
+import threading
+import signal
+import subprocess
 
 # /home/tom/CoffeePy/webaccess/app.py
 # Simple Flask webserver with a single static-user login
@@ -57,6 +66,10 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+@app.route("/rebooting")
+def rebooting_html():
+    return render_template("rebooting.html")
 
 # added endpoint: GET returns server time, POST sets it (requires privilege)
 @app.route("/api/system_time", methods=["GET", "POST"])
@@ -133,6 +146,189 @@ def api_database():
             return jsonify({"error": "failed to send database", "detail": str(e)}), 500
     except Exception as e:
         return jsonify({"error": "failed to send database", "detail": str(e)}), 500
+
+
+def _safe_copy_tree(src_dir, dest_dir):
+    """Recursively copy files from src_dir to dest_dir, overwriting existing files.
+    Preserves file permissions. Raises on any low-level IO error so callers can roll back."""
+    src = Path(src_dir)
+    dest = Path(dest_dir)
+    if not src.exists():
+        raise FileNotFoundError(str(src))
+    for root, dirs, files in os.walk(src):
+        rel = os.path.relpath(root, src)
+        target_root = dest.joinpath(rel) if rel != '.' else dest
+        target_root.mkdir(parents=True, exist_ok=True)
+        for fname in files:
+            s = Path(root) / fname
+            d = target_root / fname
+            # use atomic replace: write to temp then replace
+            with tempfile.NamedTemporaryFile(dir=str(target_root), delete=False) as tf:
+                tf_name = Path(tf.name)
+                tf.close()
+            shutil.copy2(s, tf_name)
+            os.replace(str(tf_name), str(d))
+
+
+def find_runner_root(pathToCheck:str)->str:
+    """Locate the directory that contains runner.py. If multiple are found, return
+    the first one. If not found, fall back to the current working directory.
+    """
+    cwd = Path(pathToCheck).resolve()
+    for root, dirs, files in os.walk(cwd):
+        if 'runner.py' in files:
+            return str(Path(root).resolve())
+    return None
+
+
+
+def _make_backup_with_base(paths, backup_dir, base_dir=None):
+    """Create a zip backup of the list of paths (files or directories) into backup_dir.
+    If base_dir is provided, arcname in the zip will be relative to that directory.
+    Returns path to backup zip file.
+    """
+    backup_dir = Path(backup_dir)
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    bpath = backup_dir / f"backup_{int(time.time())}.zip"
+    if base_dir is None:
+        base_dir = Path.cwd()
+    else:
+        base_dir = Path(base_dir)
+
+    with zipfile.ZipFile(bpath, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for p in paths:
+            ppath = Path(p)
+            if not ppath.exists():
+                continue
+            if ppath.is_file():
+                try:
+                    arcname = str(ppath.relative_to(base_dir))
+                except Exception:
+                    arcname = str(ppath)
+                zf.write(str(ppath), arcname=arcname)
+            else:
+                for root, dirs, files in os.walk(ppath):
+                    for f in files:
+                        full = Path(root) / f
+                        try:
+                            arc = full.relative_to(base_dir)
+                        except Exception:
+                            arc = full
+                        zf.write(str(full), arcname=str(arc))
+    return str(bpath)
+
+
+@app.route('/api/upload_update', methods=['POST'])
+@login_required
+def api_upload_update():
+    """Upload a zip file containing an update. The zip should contain files to replace
+    relative to the project root. Optional top-level file 'VERSION' is read for info.
+
+    Workflow:
+    - accept multipart file field 'file'
+    - validate it's a zip
+    - extract to a temp dir
+    - optionally read VERSION or version.txt
+    - create a backup zip of current files that will be overwritten
+    - copy extracted files into project root atomically
+    - on error, attempt to restore from backup
+    """
+    if 'file' not in request.files:
+        return jsonify({'error': 'missing file field'}), 400
+    f = request.files['file']
+    if f.filename == '':
+        return jsonify({'error': 'empty filename'}), 400
+
+    # basic filename sanitization
+    filename = os.path.basename(f.filename)
+    # require .zip
+    if not filename.lower().endswith('.zip'):
+        return jsonify({'error': 'only .zip files are supported'}), 400
+
+    tmpdir = tempfile.mkdtemp(prefix='coffeepy_update_')
+    try:
+        zpath = os.path.join(tmpdir, filename)
+        f.save(zpath)
+        # make sure it's a valid zip
+        try:
+            with zipfile.ZipFile(zpath, 'r') as zf:
+                zf.testzip()  # returns None if OK or name of first bad file
+        except zipfile.BadZipFile:
+            return jsonify({'error': 'uploaded file is not a valid zip'}), 400
+
+        # extract to extract_dir
+        extract_dir = os.path.join(tmpdir, 'extracted')
+        os.makedirs(extract_dir, exist_ok=True)
+        with zipfile.ZipFile(zpath, 'r') as zf:
+            zf.extractall(extract_dir)
+
+        root_dir = find_runner_root(extract_dir)
+        if root_dir is None:
+            return jsonify({'error': 'failed to locate project root for update'}), 500
+        
+        # determine current project root (where runner.py lives) falling back to cwd
+        project_root = find_runner_root(os.getcwd()) or os.getcwd()
+
+        # build list of existing files in the current project that will be overwritten
+        targets_to_backup = []
+        for root, dirs, files in os.walk(root_dir):
+            for fname in files:
+                rel = os.path.relpath(os.path.join(root, fname), root_dir)
+                tgt = os.path.join(project_root, rel)
+                if os.path.exists(tgt):
+                    targets_to_backup.append(tgt)
+
+        # create a backup of the existing files that will be replaced
+        backup_path = None
+        if targets_to_backup:
+            try:
+                backup_path = _make_backup_with_base(targets_to_backup, os.path.join(tmpdir, "backup"), base_dir=project_root)
+            except Exception as e:
+                return jsonify({"error": "failed to create backup", "detail": str(e)}), 500
+
+        __restart_device_with_shellscript()
+
+        # attempt to copy the new files into the project root; on failure try to restore from backup
+        try:
+            _safe_copy_tree(root_dir, project_root)
+        except Exception as e:
+            # try to restore from backup if available
+            try:
+                if backup_path and os.path.exists(backup_path):
+                    restore_dir = os.path.join(tmpdir, "restore")
+                    os.makedirs(restore_dir, exist_ok=True)
+                    with zipfile.ZipFile(backup_path, "r") as zf:
+                        zf.extractall(restore_dir)
+                    _safe_copy_tree(restore_dir, project_root)
+            except Exception as restore_err:
+                return jsonify({"error": "update failed and restore failed", "detail": str(e), "restore_detail": str(restore_err)}), 500
+            return jsonify({"error": "update failed; changes rolled back", "detail": str(e)}), 500
+
+        # success
+        resp = {'status': 'ok'}
+
+        # return a response that tells the client to redirect to the rebooting page
+        # The web UI should navigate the user to /rebooting where an informational
+        # page will show and then redirect to the login page after bootup.
+        return jsonify(resp)
+    finally:
+        # cleanup tmpdir
+        try:
+            shutil.rmtree(tmpdir)
+        except Exception:
+            pass
+
+def __restart_device_with_shellscript():
+    scriptContent = """#!/bin/bash
+                sleep 5
+                systemctl reboot
+                rm -- "$0"
+                """
+    scriptPath = "~/reboot_script.sh" 
+    with open(os.path.expanduser(scriptPath), "w") as scriptFile:
+        scriptFile.write(scriptContent)
+    os.chmod(os.path.expanduser(scriptPath), 0o755)
+    subprocess.Popen([os.path.expanduser(scriptPath)])  
 
 @app.route("/api/user", methods=["PUT"])
 @login_required
@@ -240,6 +436,14 @@ def vendor_static(filename):
     vendor_dir = os.path.join(app.template_folder, 'vendor')
     # send_from_directory will return 404 automatically if file is missing
     return send_from_directory(vendor_dir, filename)
+
+
+@app.route('/rebooting')
+def rebooting():
+    # Serve a simple static template that informs the user the system is
+    # rebooting and will redirect back to the login page after the expected
+    # boot time.
+    return render_template('rebooting.html')
 
 
 if __name__ == "__main__":

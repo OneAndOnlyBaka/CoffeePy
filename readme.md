@@ -132,14 +132,49 @@ How the webserver surface works
 The web interface is a small Flask application (templates live in `web/files`) that serves a protected dashboard after logging in with the single admin account (`admin` / default password `secret`, configurable via `CoffeePy.ini`). The main dashboard is split into tabs (Statistics, Coffee, Server time, Users, Deposit pillory) and the UI talks to a set of JSON endpoints; many endpoints require an authenticated session.
 
 Key JSON endpoints provided by the server:
-- `GET /api/system_time` — returns current server timestamp and ISO datetime. `POST /api/system_time` — sets the system time (requires authentication).
-- `GET /api/user_list` — returns the list of users (requires authentication).
-- `PUT /api/user` — update a user's metadata (requires authentication).
-- `GET /api/coffee_sorts` — list coffee sorts (requires authentication).
-- `PUT /api/coffee_sort` — update a coffee sort (requires authentication).
-- `GET /api/order_list` — returns orders; optional `start`/`end` ISO datetimes may be provided in the JSON request body to limit the range.
-- `GET /api/payment_list` — returns payments; optional `start`/`end` like above.
-- `GET /api/deposit_pillory` — returns pillory (unpaid deposit) ranking (requires authentication).
+- POST /api/order — create an order (requires authentication)
+    - Body (JSON): { "uid": "string", "coffee_id": int, "quantity": int (default 1), "timestamp": "ISO8601" (optional) }
+    - Response: { "order_id": int, "new_balance": float, "order": { ... } }
+
+- POST /api/payment — add a payment / deposit (requires authentication)
+    - Body (JSON): { "uid": "string", "amount": float, "method": "string" (optional), "note": "string" (optional), "timestamp": "ISO8601" (optional) }
+    - Response: { "payment_id": int, "new_balance": float, "payment": { ... } }
+
+- POST /api/user — create a new user (requires authentication)
+    - Body (JSON): { "uid": "string", "nickname": "string" (optional), "favourite_coffee_id": int (optional), "alternative_uid": "string" (optional) }
+    - Response: { "uid": "string", "created": true, "user": { ... } }
+
+- DELETE /api/user — delete a user (requires authentication)
+    - Body (JSON) or query: { "uid": "string" } or /api/user?uid=<uid>
+    - Response: { "uid": "string", "deleted": true }
+
+- POST /api/coffee_sort — create a new coffee sort (requires authentication)
+    - Body (JSON): { "name": "string", "price": float, "strokes": int }
+    - Response: { "coffee_id": int, "coffee_sort": { ... } }
+
+- DELETE /api/coffee_sort — delete a coffee sort (requires authentication)
+    - Body (JSON) or query: { "id": int } or /api/coffee_sort?id=<id>
+    - Response: { "id": int, "deleted": true }
+
+- POST /api/backup — trigger an immediate backup (requires authentication)
+    - Body (JSON) optional: { "path": "string" } (overrides configured backup path)
+    - Response: { "status": "started", "file": "path/to/coffeeX.db" }
+
+- GET /api/db_download — download current SQLite DB file (requires authentication)
+    - Response: application/octet-stream attachment of the DB file
+
+- GET /api/health — quick health check (no authentication)
+    - Response: { "status": "ok" | "error", "version": "string", "db_size": bytes, "free_disk": bytes, "uptime_seconds": int }
+
+- GET /api/export_orders — export orders as CSV/JSON (requires authentication)
+    - Query or JSON body: { "start": "ISO8601" (optional), "end": "ISO8601" (optional), "format": "csv"|"json" (default csv) }
+    - Response: file download (text/csv or application/json) or inline JSON
+
+Notes
+- All endpoints that "require authentication" use the same admin session as the dashboard (login at /login). For production deployments, ensure TLS and a strong admin password/SECRET_KEY.
+- Timestamps are accepted as ISO 8601 strings; if omitted the server will use current time.
+- Error responses use HTTP status codes and return JSON: { "error": "message", "code": int }.
+- Use the existing GET /api/order_list and /api/payment_list endpoints to fetch created records after calling create endpoints.
 
 The root `/` serves the dashboard (`index.html`) and is protected; `/login` and `/logout` handle session management. The Flask development server listens on port `8000` by default (changeable in `CoffeePy.ini`). For production deployments, run behind a proper WSGI server and set a secure `SECRET_KEY` and admin password.
 
@@ -147,6 +182,7 @@ The webserver shows multiple sections to check data and to change settings like 
 Web dashboard sections
 
 Toolbar
+- Upload update zip: upload and update to a new version of coffeepy. Just download coffeepy as zip from github and install the version with this button.
 - Download DB: download the current SQLite database file from the server for offline inspection or backup.
 - Reload all: refresh all tabs and data in the dashboard.
 - Logout: end the admin session and return to the login screen.
