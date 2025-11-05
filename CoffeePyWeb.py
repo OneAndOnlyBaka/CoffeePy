@@ -170,28 +170,71 @@ def _safe_copy_tree(src_dir, dest_dir):
             os.replace(str(tf_name), str(d))
 
 
+def find_runner_root():
+    """Locate the directory that contains runner.py. If multiple are found, return
+    the first one. If not found, fall back to the current working directory.
+    """
+    # common locations: repo root, current working dir
+    cwd = Path.cwd()
+    # Search upwards from cwd to filesystem root for runner.py
+    p = cwd
+    while True:
+        candidate = p / 'runner.py'
+        if candidate.exists():
+            return str(p)
+        if p.parent == p:
+            break
+        p = p.parent
+
+    # As a fallback, try importing project tree: search entire workspace-ish tree
+    for root, dirs, files in os.walk(str(cwd)):
+        if 'runner.py' in files:
+            return str(Path(root))
+
+    # final fallback
+    return str(cwd)
+
+
 def _make_backup(paths, backup_dir):
     """Create a zip backup of the list of paths (files or directories) into backup_dir.
     Returns path to backup zip file."""
+    # keep backward compatible signature but allow caller to specify a base_dir
+    return _make_backup_with_base(paths, backup_dir, base_dir=None)
+
+
+def _make_backup_with_base(paths, backup_dir, base_dir=None):
+    """Create a zip backup of the list of paths (files or directories) into backup_dir.
+    If base_dir is provided, arcname in the zip will be relative to that directory.
+    Returns path to backup zip file.
+    """
     backup_dir = Path(backup_dir)
     backup_dir.mkdir(parents=True, exist_ok=True)
     bpath = backup_dir / f"backup_{int(time.time())}.zip"
+    if base_dir is None:
+        base_dir = Path.cwd()
+    else:
+        base_dir = Path(base_dir)
+
     with zipfile.ZipFile(bpath, 'w', zipfile.ZIP_DEFLATED) as zf:
         for p in paths:
             ppath = Path(p)
             if not ppath.exists():
                 continue
             if ppath.is_file():
-                zf.write(p, arcname=str(ppath.relative_to(Path.cwd())))
+                try:
+                    arcname = str(ppath.relative_to(base_dir))
+                except Exception:
+                    arcname = str(ppath)
+                zf.write(str(ppath), arcname=arcname)
             else:
                 for root, dirs, files in os.walk(ppath):
                     for f in files:
                         full = Path(root) / f
                         try:
-                            arc = full.relative_to(Path.cwd())
+                            arc = full.relative_to(base_dir)
                         except Exception:
                             arc = full
-                        zf.write(full, arcname=str(arc))
+                        zf.write(str(full), arcname=str(arc))
     return str(bpath)
 
 
@@ -260,14 +303,16 @@ def api_upload_update():
                 # we will place rel into project root
                 files_to_overwrite.append(rel)
 
-        # create backup of existing files that will be overwritten
-        project_root = os.getcwd()
+        # determine project root by locating runner.py (fallback to cwd)
+        project_root = find_runner_root()
+        # resolve existing absolute paths that would be overwritten
         existing_paths = [os.path.join(project_root, p) for p in files_to_overwrite if os.path.exists(os.path.join(project_root, p))]
         backup_dir = os.path.join(project_root, 'tmp_update_backups')
         backup_zip = None
         if existing_paths:
             try:
-                backup_zip = _make_backup(existing_paths, backup_dir)
+                # create backup with paths relative to the project_root
+                backup_zip = _make_backup_with_base(existing_paths, backup_dir, base_dir=project_root)
             except Exception as e:
                 return jsonify({'error': 'failed to create backup', 'detail': str(e)}), 500
 
