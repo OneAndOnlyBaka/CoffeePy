@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>Rebooting — CoffeePy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Redirect to login after expected boot time (30s) -->
+    <!-- Redirect to login after expected boot time (60s) -->
     <meta http-equiv="refresh" content="30;url=/login">
     <style>
       :root{
@@ -120,14 +120,14 @@
       </div>
 
       <p>The device will reboot now to finish applying the update.</p>
-      <p>Please wait approximately <strong>30 seconds</strong> for the system to come back online.</p>
+      <p>Please wait approximately <strong>60 seconds</strong> for the system to come back online.</p>
       <p class="hint">You'll be redirected automatically — you can also <a href="/login">go to the login page</a>.</p>
     </div>
 
     <script>
       // small accessible countdown for screenreaders and visual feedback
       (function(){
-        var refresh = 30; // seconds, matches meta refresh
+        var refresh = 60; // seconds, matches meta refresh
         var timerId;
         var announce = document.createElement('div');
         announce.setAttribute('aria-hidden','true'); announce.style.position='absolute'; announce.style.left='-9999px';
