@@ -1,4 +1,8 @@
 import os
+import shutil
+import tempfile
+import zipfile
+import hashlib
 from functools import wraps
 from flask import Flask, request, session, redirect, url_for, render_template, send_file, send_from_directory
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -8,6 +12,7 @@ from flask import jsonify
 from datetime import datetime,timedelta
 import time 
 import configparser
+from pathlib import Path
 
 # /home/tom/CoffeePy/webaccess/app.py
 # Simple Flask webserver with a single static-user login
@@ -133,6 +138,156 @@ def api_database():
             return jsonify({"error": "failed to send database", "detail": str(e)}), 500
     except Exception as e:
         return jsonify({"error": "failed to send database", "detail": str(e)}), 500
+
+
+def _safe_copy_tree(src_dir, dest_dir):
+    """Recursively copy files from src_dir to dest_dir, overwriting existing files.
+    Preserves file permissions. Raises on any low-level IO error so callers can roll back."""
+    src = Path(src_dir)
+    dest = Path(dest_dir)
+    if not src.exists():
+        raise FileNotFoundError(str(src))
+    for root, dirs, files in os.walk(src):
+        rel = os.path.relpath(root, src)
+        target_root = dest.joinpath(rel) if rel != '.' else dest
+        target_root.mkdir(parents=True, exist_ok=True)
+        for fname in files:
+            s = Path(root) / fname
+            d = target_root / fname
+            # use atomic replace: write to temp then replace
+            with tempfile.NamedTemporaryFile(dir=str(target_root), delete=False) as tf:
+                tf_name = Path(tf.name)
+                tf.close()
+            shutil.copy2(s, tf_name)
+            os.replace(str(tf_name), str(d))
+
+
+def _make_backup(paths, backup_dir):
+    """Create a zip backup of the list of paths (files or directories) into backup_dir.
+    Returns path to backup zip file."""
+    backup_dir = Path(backup_dir)
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    bpath = backup_dir / f"backup_{int(time.time())}.zip"
+    with zipfile.ZipFile(bpath, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for p in paths:
+            ppath = Path(p)
+            if not ppath.exists():
+                continue
+            if ppath.is_file():
+                zf.write(p, arcname=str(ppath.relative_to(Path.cwd())))
+            else:
+                for root, dirs, files in os.walk(ppath):
+                    for f in files:
+                        full = Path(root) / f
+                        try:
+                            arc = full.relative_to(Path.cwd())
+                        except Exception:
+                            arc = full
+                        zf.write(full, arcname=str(arc))
+    return str(bpath)
+
+
+@app.route('/api/upload_update', methods=['POST'])
+@login_required
+def api_upload_update():
+    """Upload a zip file containing an update. The zip should contain files to replace
+    relative to the project root. Optional top-level file 'VERSION' is read for info.
+
+    Workflow:
+    - accept multipart file field 'file'
+    - validate it's a zip
+    - extract to a temp dir
+    - optionally read VERSION or version.txt
+    - create a backup zip of current files that will be overwritten
+    - copy extracted files into project root atomically
+    - on error, attempt to restore from backup
+    """
+    if 'file' not in request.files:
+        return jsonify({'error': 'missing file field'}), 400
+    f = request.files['file']
+    if f.filename == '':
+        return jsonify({'error': 'empty filename'}), 400
+
+    # basic filename sanitization
+    filename = os.path.basename(f.filename)
+    # require .zip
+    if not filename.lower().endswith('.zip'):
+        return jsonify({'error': 'only .zip files are supported'}), 400
+
+    tmpdir = tempfile.mkdtemp(prefix='coffeepy_update_')
+    try:
+        zpath = os.path.join(tmpdir, filename)
+        f.save(zpath)
+        # make sure it's a valid zip
+        try:
+            with zipfile.ZipFile(zpath, 'r') as zf:
+                zf.testzip()  # returns None if OK or name of first bad file
+        except zipfile.BadZipFile:
+            return jsonify({'error': 'uploaded file is not a valid zip'}), 400
+
+        # extract to extract_dir
+        extract_dir = os.path.join(tmpdir, 'extracted')
+        os.makedirs(extract_dir, exist_ok=True)
+        with zipfile.ZipFile(zpath, 'r') as zf:
+            zf.extractall(extract_dir)
+
+        # optional version info
+        version = None
+        for candidate in ('VERSION', 'version', 'version.txt', 'VERSION.txt'):
+            p = os.path.join(extract_dir, candidate)
+            if os.path.exists(p):
+                try:
+                    with open(p, 'r', encoding='utf-8') as fh:
+                        version = fh.read().strip()
+                except Exception:
+                    pass
+                break
+
+        # build list of files to overwrite (relative paths inside zip)
+        files_to_overwrite = []
+        for root, dirs, files in os.walk(extract_dir):
+            for fname in files:
+                full = os.path.join(root, fname)
+                rel = os.path.relpath(full, extract_dir)
+                # we will place rel into project root
+                files_to_overwrite.append(rel)
+
+        # create backup of existing files that will be overwritten
+        project_root = os.getcwd()
+        existing_paths = [os.path.join(project_root, p) for p in files_to_overwrite if os.path.exists(os.path.join(project_root, p))]
+        backup_dir = os.path.join(project_root, 'tmp_update_backups')
+        backup_zip = None
+        if existing_paths:
+            try:
+                backup_zip = _make_backup(existing_paths, backup_dir)
+            except Exception as e:
+                return jsonify({'error': 'failed to create backup', 'detail': str(e)}), 500
+
+        # attempt to copy files into place
+        try:
+            _safe_copy_tree(extract_dir, project_root)
+        except Exception as e:
+            # try rollback if we have a backup
+            if backup_zip and os.path.exists(backup_zip):
+                try:
+                    with zipfile.ZipFile(backup_zip, 'r') as zf:
+                        zf.extractall(project_root)
+                except Exception as e2:
+                    return jsonify({'error': 'update failed and rollback failed', 'detail': f'{e} | rollback: {e2}'}), 500
+            return jsonify({'error': 'failed to apply update', 'detail': str(e)}), 500
+
+        # success
+        resp = {'status': 'ok'}
+        if version:
+            resp['version'] = version
+        resp['backup'] = os.path.basename(backup_zip) if backup_zip else None
+        return jsonify(resp)
+    finally:
+        # cleanup tmpdir
+        try:
+            shutil.rmtree(tmpdir)
+        except Exception:
+            pass
 
 @app.route("/api/user", methods=["PUT"])
 @login_required

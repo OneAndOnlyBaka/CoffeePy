@@ -119,6 +119,8 @@
             <div class="left">CoffeePy</div>
             <div class="actions">
                 <button id="download-database" title="Download database file">Download DB</button>
+                <button id="upload-update" title="Upload update zip">Upload update</button>
+                <input id="upload-update-input" type="file" accept=".zip" style="display:none" />
                 <button id="reload-all" title="Reload all data">Reload all</button>
                 <button id="logout-btn" title="Logout">Logout</button>
             </div>
@@ -819,6 +821,40 @@
                 showMsg('coffee-msg','Error: '+e.message,true);
             }
             });
+            // Upload update UI integration
+            const uploadBtn = document.getElementById('upload-update');
+            const uploadInput = document.getElementById('upload-update-input');
+            if(uploadBtn && uploadInput){
+                uploadBtn.addEventListener('click', ()=> uploadInput.click());
+                uploadInput.addEventListener('change', async ()=>{
+                    const file = uploadInput.files[0];
+                    if(!file) return;
+                    if(!confirm('Upload update package "' + file.name + '" and apply to server?')) return;
+                    uploadBtn.disabled = true;
+                    const oldText = uploadBtn.textContent;
+                    uploadBtn.textContent = 'Uploading...';
+                    try{
+                        const fd = new FormData();
+                        fd.append('file', file, file.name);
+                        const res = await fetch('/api/upload_update', { method: 'POST', body: fd });
+                        const text = await res.text();
+                        let json = null;
+                        try{ json = JSON.parse(text); } catch(e) { json = { raw: text }; }
+                        if(!res.ok){
+                            const msg = json && json.error ? (json.error + (json.detail ? (': '+json.detail) : '')) : ('Upload failed: ' + res.statusText);
+                            showMsg('stats-msg', msg, true);
+                        } else {
+                            const ver = json.version ? (' version: '+json.version) : '';
+                            showMsg('stats-msg', 'Update applied successfully' + ver);
+                            // optionally show backup info
+                            if(json.backup) showMsg('coffee-msg', 'Backup created: ' + json.backup);
+                            // suggest user to reload to pick up new code
+                            setTimeout(()=>{ if(confirm('Update applied. Reload page to pick up changes?')) location.reload(); }, 800);
+                        }
+                    }catch(e){ showMsg('stats-msg','Error uploading update: '+e.message, true); }
+                    finally{ uploadBtn.disabled = false; uploadBtn.textContent = oldText; uploadInput.value = ''; }
+                });
+            }
             
             // load deposit pillory list
             async function loadDepositPillory(){
