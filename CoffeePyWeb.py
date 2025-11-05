@@ -303,7 +303,6 @@ def api_upload_update():
             except Exception as restore_err:
                 return jsonify({"error": "update failed and restore failed", "detail": str(e), "restore_detail": str(restore_err)}), 500
             return jsonify({"error": "update failed; changes rolled back", "detail": str(e)}), 500
-        _safe_copy_tree(root_dir, )
 
         # success
         resp = {'status': 'ok'}
