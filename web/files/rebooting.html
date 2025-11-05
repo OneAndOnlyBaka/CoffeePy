@@ -7,18 +7,137 @@
     <!-- Redirect to login after expected boot time (30s) -->
     <meta http-equiv="refresh" content="30;url=/login">
     <style>
-      body { font-family: Arial, Helvetica, sans-serif; text-align: center; padding: 2rem; }
-      .card { max-width: 600px; margin: 4rem auto; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-      h1 { color: #333; }
-      p { color: #555; }
+      :root{
+        --cream:#F7EFE7;
+        --light-brown:#D4B89A;
+        --mid-brown:#A66B3A;
+        --dark-brown:#3B2B23;
+        --accent:#8B5E3C;
+      }
+      html,body{height:100%;}
+      body {
+        margin:0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background: linear-gradient(180deg,var(--cream) 0%, #efe6dc 40%, #dfd1c5 100%);
+        color:var(--dark-brown);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:2rem;
+      }
+
+      .card {
+        width:100%;
+        max-width:680px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.85));
+        margin:1rem;
+        padding:2rem;
+        border-radius:16px;
+        box-shadow: 0 8px 30px rgba(60,40,20,0.12);
+        text-align:center;
+        border:1px solid rgba(60,40,20,0.06);
+      }
+
+      h1{ font-size:1.6rem; margin:0 0 0.5rem; color:var(--dark-brown); }
+      p{ color: #5a4439; margin:0.4rem 0; }
+
+      /* Coffee graphic + spinner */
+      .visual {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:1.5rem;
+        margin:1rem 0 1.5rem;
+        flex-wrap:wrap;
+      }
+
+      /* SVG cup */
+      .cup { width:120px; height:120px; }
+      .steam path{
+        fill:none;
+        stroke:var(--accent);
+        stroke-width:2.5;
+        opacity:0.75;
+        stroke-linecap:round;
+        animation:steam 2.4s ease-in-out infinite;
+      }
+      .steam path:nth-child(2){ animation-delay:0.2s; }
+      .steam path:nth-child(3){ animation-delay:0.45s; }
+
+      @keyframes steam{
+        0%{ transform: translateY(0); opacity:0.2; }
+        50%{ transform: translateY(-12px); opacity:1; }
+        100%{ transform: translateY(-28px); opacity:0; }
+      }
+
+      /* Spinner - coffee bean ring */
+      .spinner {
+        width:64px;
+        height:64px;
+        border-radius:50%;
+        display:inline-grid;
+        place-items:center;
+        position:relative;
+      }
+      .spinner .ring{
+        width:100%; height:100%; border-radius:50%;
+        box-sizing:border-box;
+        border:4px solid rgba(59,43,35,0.12);
+        border-top-color: var(--mid-brown);
+        animation:spin 1s linear infinite;
+      }
+      .spinner .bean{
+        width:18px; height:10px; background:var(--dark-brown);
+        border-radius:10px / 6px; transform:translateY(-2px) rotate(-20deg);
+        position:absolute; left:50%; top:50%; margin-left:-9px; margin-top:-5px;
+        box-shadow: inset -2px -1px 0 rgba(255,255,255,0.06);
+      }
+      .spinner .bean::after{
+        content:""; position:absolute; left:6px; top:1px; width:2px; height:6px; background:rgba(255,255,255,0.12); transform:rotate(-12deg);
+        border-radius:1px;
+      }
+
+      @keyframes spin{ to{ transform: rotate(360deg); } }
+
+      /* footer small */
+      .hint{ font-size:0.9rem; color:#6b4f43; margin-top:0.6rem; }
+
+      a{ color:var(--mid-brown); text-decoration:underline; }
+
+      @media (max-width:420px){ .visual{ gap:1rem; } .cup{ width:96px; height:96px; } }
     </style>
   </head>
   <body>
-    <div class="card">
-      <h1>System is rebooting</h1>
+    <div class="card" role="main" aria-labelledby="title">
+      <h1 id="title">System is rebooting</h1>
+      <div class="visual" aria-hidden="false">
+
+        <!-- Spinner -->
+        <div class="spinner" role="status" aria-live="polite">
+          <div class="ring"></div>
+          <div class="bean" aria-hidden="true"></div>
+        </div>
+      </div>
+
       <p>The device will reboot now to finish applying the update.</p>
-      <p>Please wait approximately 30 seconds for the system to come back online.</p>
-      <p>If your browser does not redirect automatically, <a href="/login">click here to go to the login page</a>.</p>
+      <p>Please wait approximately <strong>30 seconds</strong> for the system to come back online.</p>
+      <p class="hint">You'll be redirected automatically — you can also <a href="/login">go to the login page</a>.</p>
     </div>
+
+    <script>
+      // small accessible countdown for screenreaders and visual feedback
+      (function(){
+        var refresh = 30; // seconds, matches meta refresh
+        var timerId;
+        var announce = document.createElement('div');
+        announce.setAttribute('aria-hidden','true'); announce.style.position='absolute'; announce.style.left='-9999px';
+        document.body.appendChild(announce);
+        function tick(){
+          refresh--; if(refresh<=0){ clearInterval(timerId); return; }
+          announce.textContent = 'Redirecting in ' + refresh + ' seconds';
+        }
+        timerId = setInterval(tick,1000);
+      })();
+    </script>
   </body>
 </html>

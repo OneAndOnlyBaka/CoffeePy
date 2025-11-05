@@ -67,6 +67,10 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
+@app.route("/rebooting")
+def rebooting_html():
+    return render_template("rebooting.html")
+
 # added endpoint: GET returns server time, POST sets it (requires privilege)
 @app.route("/api/system_time", methods=["GET", "POST"])
 @login_required
