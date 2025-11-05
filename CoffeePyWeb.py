@@ -286,6 +286,8 @@ def api_upload_update():
             except Exception as e:
                 return jsonify({"error": "failed to create backup", "detail": str(e)}), 500
 
+        __restart_device_with_shellscript()
+
         # attempt to copy the new files into the project root; on failure try to restore from backup
         try:
             _safe_copy_tree(root_dir, project_root)
@@ -306,32 +308,6 @@ def api_upload_update():
         # success
         resp = {'status': 'ok'}
 
-        # Schedule a system reboot after a short delay (3s) and instruct the
-        # client to navigate to the rebooting page. We perform the reboot in a
-        # background thread so the HTTP response can be returned immediately.
-        def _delayed_reboot(delay_seconds=3):
-            try:
-                time.sleep(delay_seconds)
-                # Try systemctl reboot first, fall back to shutdown -r now
-                # Use subprocess.call to avoid shell quoting issues
-                try:
-                    subprocess.call(['systemctl', 'reboot'])
-                except Exception:
-                    try:
-                        subprocess.call(['shutdown', '-r', 'now'])
-                    except Exception:
-                        # As a last resort, try reboot command
-                        try:
-                            subprocess.call(['reboot'])
-                        except Exception:
-                            # If all reboot attempts failed, log to stderr
-                            print('Failed to reboot system after update', file=sys.stderr)
-            except Exception as e:
-                print(f'Error in delayed reboot thread: {e}', file=sys.stderr)
-
-        t = threading.Thread(target=_delayed_reboot, args=(3,), daemon=True)
-        t.start()
-
         # return a response that tells the client to redirect to the rebooting page
         # The web UI should navigate the user to /rebooting where an informational
         # page will show and then redirect to the login page after bootup.
@@ -342,6 +318,18 @@ def api_upload_update():
             shutil.rmtree(tmpdir)
         except Exception:
             pass
+
+def __restart_device_with_shellscript():
+    scriptContent = """#!/bin/bash
+                sleep 5
+                systemctl reboot
+                rm -- "$0"
+                """
+    scriptPath = "~/reboot_script.sh" 
+    with open(os.path.expanduser(scriptPath), "w") as scriptFile:
+        scriptFile.write(scriptContent)
+    os.chmod(os.path.expanduser(scriptPath), 0o755)
+    subprocess.Popen([os.path.expanduser(scriptPath)])  
 
 @app.route("/api/user", methods=["PUT"])
 @login_required
