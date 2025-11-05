@@ -16,6 +16,7 @@ from pathlib import Path
 import sys
 import threading
 import signal
+import subprocess
 
 # /home/tom/CoffeePy/webaccess/app.py
 # Simple Flask webserver with a single static-user login
@@ -287,20 +288,61 @@ def api_upload_update():
         # Schedule a restart of the whole application so the new files are loaded.
         # We perform the restart in a separate thread to allow the HTTP response
         # to be returned to the client first. The thread will wait a short
-        # moment then replace the current process with a new one using execv.
+        # moment then attempt an exec; if that fails it will create a small
+        # self-deleting bash script in $HOME and start it detached so the
+        # process can exit and an external supervisor (or runner) can restart
+        # the app.
         def _delayed_restart(delay=0.5):
             try:
                 time.sleep(delay)
-                # flush and give gunicorn/launcher a moment
-                # Try to perform an exec of the current Python with the same argv.
+                # Try to exec a fresh interpreter running the same script.
                 python = sys.executable or 'python3'
-                os.execv(python, [python] + sys.argv)
-            except Exception:
-                # if exec fails, attempt a hard exit so an external supervisor can restart
                 try:
-                    os.kill(os.getpid(), signal.SIGTERM)
+                    script = os.path.abspath(sys.argv[0]) if sys.argv and sys.argv[0] else os.path.abspath(__file__)
                 except Exception:
-                    os._exit(1)
+                    script = os.path.abspath(__file__)
+                os.execv(python, [python, script] + sys.argv[1:])
+            except Exception:
+                # Exec failed — fallback to writing a small self-deleting
+                # shell script into the user's home directory and starting it
+                # detached. The script will exec the same interpreter/script
+                # and then remove itself.
+                try:
+                    home = os.path.expanduser('~') or '/tmp'
+                    script_path = os.path.join(home, f'restart_coffeepy_{int(time.time())}.sh')
+                    # Recompute script in this scope
+                    try:
+                        script = os.path.abspath(sys.argv[0]) if sys.argv and sys.argv[0] else os.path.abspath(__file__)
+                    except Exception:
+                        script = os.path.abspath(__file__)
+                    python = sys.executable or 'python3'
+                    sh = f"""#!/bin/sh
+                            sleep 0.5
+                            exec {python} {script} "$@"
+                            rm -- "$0" || true
+                            """
+                    with open(script_path, 'w', encoding='utf-8') as fh:
+                        fh.write(sh)
+                    os.chmod(script_path, 0o700)
+                    # Start detached. Prefer setsid to fully detach.
+                    try:
+                        subprocess.Popen(['setsid', script_path], stdout=open('/dev/null', 'wb'), stderr=open('/dev/null', 'wb'))
+                    except Exception:
+                        # Fallback to simple background exec
+                        try:
+                            subprocess.Popen([script_path], stdout=open('/dev/null', 'wb'), stderr=open('/dev/null', 'wb'))
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                # exit so supervisor/runner can restart everything
+                try:
+                    os._exit(0)
+                except Exception:
+                    try:
+                        os.kill(os.getpid(), signal.SIGTERM)
+                    except Exception:
+                        pass
 
         try:
             t = threading.Thread(target=_delayed_restart, daemon=True)
