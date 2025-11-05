@@ -20,9 +20,10 @@ if os.path.exists('CoffeePy.ini'):
             autoBackupDepth = int(config['Backup']['Depth'])
         except:
             autoBackupDepth = 10
-    if 'GUI' in config.sections():
+    if 'gui' in config.sections():
         try:
-            borderless = bool(config['GUI']['Borderless'])
+            if int(config['gui']['borderless']) == 0:
+                borderless = False
         except:
             borderless = True
 
