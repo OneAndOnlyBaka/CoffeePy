@@ -1,0 +1,70 @@
+:root {
+  --coffee-dark: #3b2314;
+  --coffee: #6b3b00;
+  --coffee-light: #a9744f;
+  --cream: #f7efe6;
+  --cream-dark: #e6d4c1;
+  --accent: #c98a3d;
+  --danger: #b3261e;
+  --success: #2f7a3d;
+  --info: #2f6fb3;
+  --text: #2a1c12;
+  --text-inverse: #fbf3ea;
+  --radius: 14px;
+  --touch: 64px;
+  font-size: 18px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--cream);
+  color: var(--text);
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+button, .btn {
+  font: inherit;
+  min-height: var(--touch);
+  min-width: var(--touch);
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--coffee);
+  color: var(--text-inverse);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:active, .btn:active { filter: brightness(0.9); }
+button.secondary, .btn.secondary { background: var(--cream-dark); color: var(--text); }
+button.danger, .btn.danger { background: var(--danger); color: var(--text-inverse); }
+button.success, .btn.success { background: var(--success); color: var(--text-inverse); }
+button:disabled { opacity: 0.5; cursor: default; }
+.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+
+input[type="text"], input[type="number"], input[type="password"], select {
+  font: inherit;
+  min-height: var(--touch);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 2px solid var(--cream-dark);
+  background: #fff;
+}
+
+a { color: var(--coffee); }
+
+.card {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: 0 6px 18px rgba(59, 35, 20, 0.12);
+  padding: 20px;
+}
+
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--cream-dark); }

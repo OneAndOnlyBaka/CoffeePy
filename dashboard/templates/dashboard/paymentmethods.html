@@ -1,0 +1,33 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Payment methods - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>Payment methods</h1>
+<p class="muted">Cash is always available and isn't listed here. Pick a provider (PayPal, PayPal Pool or WERO) and fill in just the one identifier it needs so members can pay/scan-to-pay via the kiosk and their linked phone - or use "Custom link" for anything else.</p>
+<p><a href="{% url 'dashboard:paymentmethod_add' %}" class="btn success">+ Add payment method</a></p>
+<div class="card">
+    <table>
+        <thead><tr><th>Name</th><th>Provider</th><th>Identifier / link</th><th>Active</th><th></th></tr></thead>
+        <tbody>
+        {% for method in methods %}
+            <tr>
+                <td>{{ method.name }}</td>
+                <td>{{ method.get_provider_display }}</td>
+                <td>{% if method.provider == "custom" %}{{ method.link_template|default:"-" }}{% else %}{{ method.identifier|default:"-" }}{% endif %}</td>
+                <td>{{ method.is_active|yesno:"Yes,No" }}</td>
+                <td>
+                    <a href="{% url 'dashboard:paymentmethod_edit' method.pk %}">Edit</a>
+                    &middot;
+                    <form method="post" action="{% url 'dashboard:paymentmethod_delete' method.pk %}"
+                          style="display:inline" onsubmit="return confirm('Delete {{ method.name }}?');">
+                        {% csrf_token %}
+                        <button type="submit" class="danger" style="min-height:auto; padding:2px 10px;">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="muted">No payment methods configured yet - members can still pay cash.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+services:
+  acr122u-mqtt:
+    build: .
+    image: acr122u-mqtt-bridge:latest
+    restart: unless-stopped
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    environment:
+      MQTT_HOST: mqtt.local
+      MQTT_PORT: "1883"
+      MQTT_USER: ""
+      MQTT_PASSWORD: ""
+      MQTT_TOPIC: nfc/acr122u
+      LOG_LEVEL: INFO

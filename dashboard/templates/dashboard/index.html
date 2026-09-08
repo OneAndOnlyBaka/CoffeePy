@@ -1,0 +1,32 @@
+{% extends "dashboard/base.html" %}
+{% block title %}CoffeePy Dashboard{% endblock %}
+{% block dashboard_content %}
+<h1>Welcome, {{ user.username }}</h1>
+<p>Use the navigation on the left to review statistics, the deposit pillory, coffee sorts
+and members (via the Django admin), and — for superusers — trigger backups, upload
+updates, or correct the system time.</p>
+<div class="card">
+    <h2>System status</h2>
+    <p>
+        NFC card reader:
+        {% if reader_status.is_online %}
+        <span class="msg success" style="padding:2px 10px;">● online</span>
+        {% else %}
+        <span class="msg error" style="padding:2px 10px;">● offline</span>
+        {% endif %}
+        {% if reader_status %}
+        <span class="muted">(last update {{ reader_status.updated_at|date:"d.m.Y H:i:s" }})</span>
+        {% else %}
+        <span class="muted">(never reported in)</span>
+        {% endif %}
+    </p>
+    <p class="muted">Reachable from another device at http://{{ public_host }}:8000/
+        {% if user.is_superuser %}(<a href="{% url 'dashboard:system_dashboard' %}">CPU/RAM/disk</a>){% endif %}
+    </p>
+</div>
+<div class="card">
+    <h2>Exports</h2>
+    <p><a href="{% url 'dashboard:export_orders' %}">Download all orders (CSV)</a></p>
+    <p><a href="{% url 'dashboard:export_payments' %}">Download all payments (CSV)</a></p>
+</div>
+{% endblock %}

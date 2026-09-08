@@ -1,0 +1,6 @@
+<div class="modal-card">
+    <button type="button" class="modal-close" hx-on:click="document.getElementById('qr-modal').classList.remove('open')">✕</button>
+    <h1>Setup &amp; network info</h1>
+    <p>Scan to join the WiFi or open the dashboard from a phone or PC.</p>
+    {% include "kiosk/_qr_row.html" %}
+</div>

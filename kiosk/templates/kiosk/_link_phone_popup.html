@@ -1,0 +1,20 @@
+<div class="modal-card">
+    <button type="button" class="modal-close" hx-on:click="document.getElementById('qr-modal').classList.remove('open')">✕</button>
+    <h1>Link your phone</h1>
+    <p>Scan with your phone's camera to get your stats, order history and Pay area on your own device.
+        {% if wifi_qr_svg %}The link only opens while your phone is on the coffee machine's network, so join that first.{% endif %}</p>
+    <div class="qr-row">
+        {% if wifi_qr_svg %}
+        <div class="qr-card">
+            <h2>1. Join WiFi</h2>
+            <div class="qr-image">{{ wifi_qr_svg|safe }}</div>
+            <p class="muted">Network "{{ ap_ssid }}"</p>
+        </div>
+        {% endif %}
+        <div class="qr-card">
+            <h2>{% if wifi_qr_svg %}2. {% endif %}Link phone</h2>
+            <div class="qr-image">{{ link_qr_svg|safe }}</div>
+            <p class="muted">Expires in {{ link_ttl_minutes }} minutes and works once</p>
+        </div>
+    </div>
+</div>

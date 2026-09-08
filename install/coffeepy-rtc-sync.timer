@@ -1,0 +1,13 @@
+[Unit]
+Description=Check every few minutes whether the system clock has to be written to the RTC
+
+[Timer]
+# The kiosk gets its power pulled rather than shut down cleanly, so an ExecStop-on-halt
+# would rarely run - hence a plain interval. Ten minutes bounds how much of a manual
+# correction can be lost to a power cut, at one I2C read per tick when nothing changed.
+OnBootSec=3min
+OnUnitActiveSec=10min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

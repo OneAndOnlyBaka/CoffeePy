@@ -1,0 +1,32 @@
+#!/bin/sh
+# ~/.config/openbox/autostart - runs once Openbox itself is up.
+
+# No mouse on a touchscreen kiosk: blank the cursor after half a second of inactivity,
+# and disable the screen blanking/DPMS a normal desktop would apply.
+xset s off
+xset -dpms
+xset s noblank
+unclutter-xfixes --idle 0.5 --fork
+
+# Wait for the app container to actually answer before pointing Chromium at it, so the
+# first paint is the kiosk UI rather than a "connection refused" error page. Bounded
+# wait so a genuinely broken/not-yet-built stack still eventually shows *something*
+# (Chromium's own offline page) instead of hanging forever.
+for _ in $(seq 1 60); do
+    curl -sf http://localhost:8000/health/ >/dev/null 2>&1 && break
+    sleep 2
+done
+
+# Relaunch on crash - a kiosk should never just sit at a bare Openbox desktop.
+while true; do
+    chromium \
+        --kiosk "http://localhost:8000/kiosk/" \
+        --noerrdialogs \
+        --disable-infobars \
+        --disable-session-crashed-bubble \
+        --disable-translate \
+        --overscroll-history-navigation=0 \
+        --check-for-update-interval=31536000 \
+        --no-first-run
+    sleep 2
+done

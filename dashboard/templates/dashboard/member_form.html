@@ -1,0 +1,27 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{% if instance %}Edit{% else %}Add{% endif %} member - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% if instance %}Edit {{ instance.display_name }}{% else %}Add member{% endif %}</h1>
+{% if not instance %}
+<p class="muted">The UID is the card's numeric identifier - easiest to get from an
+existing <a href="{% url 'dashboard:pillory' %}">scan</a> rather than typing it from
+memory. Most members are created automatically the first time a new card is tapped in
+the kiosk; use this form for pre-provisioning a card ahead of time instead.</p>
+{% endif %}
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <label class="field">
+            {{ field.label }}
+            {{ field }}
+            {% if field.errors %}<span class="msg error">{{ field.errors|join:", " }}</span>{% endif %}
+        </label>
+        {% endfor %}
+        <div class="action-row">
+            <a href="{% url 'dashboard:members' %}" class="btn secondary">Cancel</a>
+            <button type="submit" class="success">Save</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

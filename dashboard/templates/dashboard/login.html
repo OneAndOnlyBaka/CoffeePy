@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">{% endblock %}
+{% block title %}CoffeePy Dashboard - Login{% endblock %}
+{% block body %}
+<div class="login-wrap">
+    <form method="post" class="card" style="width: 320px;">
+        {% csrf_token %}
+        <h1>CoffeePy</h1>
+        {% if form.errors %}<p class="msg error">Invalid username or password.</p>{% endif %}
+        <label class="field">Username {{ form.username }}</label>
+        <label class="field">Password {{ form.password }}</label>
+        <button type="submit" class="success">Log in</button>
+    </form>
+</div>
+{% endblock %}

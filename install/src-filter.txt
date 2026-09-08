@@ -1,0 +1,37 @@
+# rsync filter rules for the copy this checkout makes into /opt/coffeepy (install.sh's
+# "app" step, rsync --filter='. <this file>').
+#
+# First matching rule wins, so the "+" lines have to come before the "-" that would
+# otherwise swallow them. Note rsync knows nothing about .gitignore - a file being
+# git-ignored is exactly why it is still sitting in the working tree at build time.
+
+# install.sh copies this into place and fills in per-device secrets; it must ship.
++ /.env.example
+
+# A .env from somewhere else must NOT be copied in: the device's own secrets live only at
+# /opt/coffeepy/.env, generated once by install.sh - and since it only generates them when
+# no .env is there yet, an imported one would quietly suppress that.
+- /.env
+- /.env.*
+
+# Local development leftovers: a virtualenv of the wrong architecture, editor state, a
+# dev database, collected static files (the image rebuilds them in the container).
+- /.venv/
+- /venv/
+- /.vscode/
+- /.idea/
+- node_modules/
+- *.sqlite3
+- /staticfiles/
+- __pycache__/
+- *.pyc
+
+- /.git/
+- /.github/
+- /pi-gen/  # leftovers from the removed image build, if any are still around
+
+# Runtime state of whichever machine built the image; the device makes its own.
+- /data/updates/incoming/*
+- /data/updates/processed/*
+- /data/updates/status/*
+- /data/backups/*

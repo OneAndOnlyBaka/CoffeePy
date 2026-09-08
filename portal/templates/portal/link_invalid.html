@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Link no longer valid - CoffeePy{% endblock %}
+{% block viewport %}width=device-width, initial-scale=1{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/portal.css' %}">{% endblock %}
+{% block body_class %}portal{% endblock %}
+{% block body %}
+<div class="portal-frame">
+    <main class="portal-content">
+        <div class="card">
+            <h1>This link is no longer valid</h1>
+            <p>The link may have expired, already been used, or this device may have been logged out. Ask an admin for a fresh "Link this phone" QR code from the kiosk's Settings screen.</p>
+        </div>
+    </main>
+</div>
+{% endblock %}

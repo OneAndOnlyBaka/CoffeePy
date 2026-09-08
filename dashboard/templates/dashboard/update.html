@@ -1,0 +1,37 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Update - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>Software update</h1>
+<p>Upload a bundle produced by <code>scripts/build_update_bundle.sh</code> - a
+<code>.tar</code>/<code>.tar.gz</code> containing every image the app needs (the Django
+app, the NFC bridge, Postgres, Mosquitto) plus the current <code>docker-compose.yml</code>.
+The host-level update watcher loads the images, applies the compose file (backing up the
+previous one), and recreates whichever services actually changed - including starting
+any brand-new container the update adds. No internet connection needed on this device.</p>
+{% if message %}<p class="msg {% if 'Please' in message %}error{% else %}success{% endif %}">{{ message }}</p>{% endif %}
+<div class="card">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="bundle" accept=".tar,.tar.gz" required>
+        <button type="submit" class="success">Upload</button>
+    </form>
+</div>
+<div class="card" style="margin-top: 20px;">
+    <h2>Watcher status</h2>
+    <pre id="status-log" class="muted">Waiting for status…</pre>
+</div>
+<script>
+async function pollStatus() {
+    try {
+        const res = await fetch("{% url 'dashboard:update_status' %}");
+        const data = await res.json();
+        const el = document.getElementById("status-log");
+        el.textContent = data.entries.length
+            ? data.entries.map(e => `[${e.name}]\n${e.text}`).join("\n\n")
+            : "No update processed yet.";
+    } catch (e) { /* ignore transient errors */ }
+}
+pollStatus();
+setInterval(pollStatus, 3000);
+</script>
+{% endblock %}

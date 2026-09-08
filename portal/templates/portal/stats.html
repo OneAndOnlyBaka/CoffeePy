@@ -1,0 +1,82 @@
+{% extends "portal/base.html" %}
+{% load static %}
+{% block title %}Stats - CoffeePy{% endblock %}
+{% block extra_head %}
+{{ block.super }}
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+{% endblock %}
+{% block portal_content %}
+<h1>You vs the others</h1>
+
+<div class="card stats-card">
+    <div class="stats-row">
+        <div class="stat"><span class="label">Your cups</span><span class="value">{{ summary.your_cups }}</span></div>
+        <div class="stat"><span class="label">Others' average</span><span class="value">{{ summary.others_average }}</span></div>
+        <div class="stat"><span class="label">Your rank</span><span class="value">{{ summary.rank }}/{{ summary.members }}</span></div>
+    </div>
+    {% if summary.percent_of_average is not None %}
+    <p class="muted">
+        {% if summary.percent_of_average > 0 %}
+        You've had {{ summary.percent_of_average }}% more coffee than the average member.
+        {% elif summary.percent_of_average < 0 %}
+        You've had {{ summary.percent_of_average|cut:"-" }}% less coffee than the average member.
+        {% else %}
+        You're spot on the average member.
+        {% endif %}
+    </p>
+    {% endif %}
+</div>
+
+<div class="card"><canvas id="monthlyChart"></canvas></div>
+<div class="card"><canvas id="hourlyChart"></canvas></div>
+<div class="card"><canvas id="weekdayChart"></canvas></div>
+<div class="card"><canvas id="sortsChart"></canvas></div>
+
+<script>
+const YOU = '#6b3b00';
+const OTHERS = '#c98a3d';
+const monthly = {{ monthly|safe }};
+const hourly = {{ hourly|safe }};
+const weekday = {{ weekday|safe }};
+const sorts = {{ sorts|safe }};
+
+// Everything except the monthly chart is a percentage of each side's own total: one
+// member can never out-bar two dozen others in absolute cups, whatever their habits.
+function comparison(canvasId, data, title, {type = 'bar', percent = true, othersLabel = 'Others'} = {}) {
+    new Chart(document.getElementById(canvasId), {
+        type: type,
+        data: {
+            labels: data.labels,
+            datasets: [
+                {label: 'You', data: data.you, backgroundColor: YOU, borderColor: YOU},
+                {label: othersLabel, data: data.others, backgroundColor: OTHERS, borderColor: OTHERS},
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: percent ? {callback: v => v + '%'} : {},
+                }
+            },
+            plugins: {
+                title: {display: true, text: title},
+                tooltip: {
+                    callbacks: {
+                        label: c => `${c.dataset.label}: ${c.parsed.y}${percent ? '%' : ' cups'}`,
+                    }
+                }
+            }
+        }
+    });
+}
+
+comparison('monthlyChart', monthly, 'Cups per month', {
+    type: 'line', percent: false, othersLabel: 'Average member',
+});
+comparison('hourlyChart', hourly, 'When you drink coffee');
+comparison('weekdayChart', weekday, 'Which weekday');
+comparison('sortsChart', sorts, 'Which coffee');
+</script>
+{% endblock %}

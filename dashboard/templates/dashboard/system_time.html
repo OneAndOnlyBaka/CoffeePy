@@ -1,0 +1,19 @@
+{% extends "dashboard/base.html" %}
+{% block title %}System time - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>System time</h1>
+<p>Only needed as a fallback if the RTC module drifts or isn't fitted - normally the
+Raspbian install script keeps the clock correct via the DS3231 RTC overlay.</p>
+{% if error %}<p class="msg error">{{ error }}</p>{% endif %}
+<div class="card" style="max-width: 420px;">
+    <p>Current server time: <strong>{{ now }}</strong></p>
+    <form method="post">
+        {% csrf_token %}
+        <label class="field">
+            New date/time
+            <input type="datetime-local" name="datetime" required>
+        </label>
+        <button type="submit" class="success">Set system time</button>
+    </form>
+</div>
+{% endblock %}

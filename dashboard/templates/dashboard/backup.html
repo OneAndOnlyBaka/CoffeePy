@@ -1,0 +1,25 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Backup - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>Backup</h1>
+{% if message %}<p class="msg {% if 'failed' in message %}error{% else %}success{% endif %}">{{ message }}</p>{% endif %}
+{% if not backup_path %}
+<p class="msg error">BACKUP_PATH is not configured - set it (and BACKUP_ENABLED) in the environment.</p>
+{% endif %}
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="success">Backup now</button>
+    </form>
+</div>
+<div class="card" style="margin-top: 20px;">
+    <h2>Existing backups {% if backup_path %}({{ backup_path }}){% endif %}</h2>
+    <ul class="file-list">
+        {% for f in files %}
+        <li><a href="{% url 'dashboard:backup_download' f.name %}">{{ f.name }}</a></li>
+        {% empty %}
+        <li class="muted">No backups yet.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

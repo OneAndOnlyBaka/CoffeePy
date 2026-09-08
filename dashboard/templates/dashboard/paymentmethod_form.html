@@ -1,0 +1,22 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{% if instance %}Edit{% else %}Add{% endif %} payment method - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% if instance %}Edit {{ instance.name }}{% else %}Add payment method{% endif %}</h1>
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <label class="field">
+            {{ field.label }}
+            {{ field }}
+            {% if field.help_text %}<span class="muted">{{ field.help_text }}</span>{% endif %}
+            {% if field.errors %}<span class="msg error">{{ field.errors|join:", " }}</span>{% endif %}
+        </label>
+        {% endfor %}
+        <div class="action-row">
+            <a href="{% url 'dashboard:paymentmethods' %}" class="btn secondary">Cancel</a>
+            <button type="submit" class="success">Save</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+# Every package install.sh installs on the device, one per line. Shared with
+# scripts/build_offline_bundle.sh, which downloads exactly these (plus their dependencies)
+# for an offline install - keeping the two in sync by keeping them in one file.
+#
+# Names are Raspberry Pi OS names, which are not always Debian's: chromium comes from the
+# Raspberry Pi archive, and the "pix" boot splash is rpd-plym-splash rather than one of
+# Debian's plymouth-theme-* packages.
+
+# Minimal X11 + Openbox kiosk (no desktop environment, no display manager - autologin plus
+# startx does that, see kiosk/bash_profile_kiosk).
+xserver-xorg
+xinit
+x11-xserver-utils
+openbox
+chromium
+unclutter-xfixes
+
+# Boot splash, carried over from the original project's setup.
+plymouth
+rpd-plym-splash
+
+# App runtime. Only the engine: Compose v2 is not packaged for Raspberry Pi OS at all, so
+# install.sh fetches Docker's own plugin binary (pinned in versions.env).
+docker.io
+
+# Standalone WiFi access point.
+hostapd
+dnsmasq
+
+# The update watcher (inotify), the DS3231 (i2c-tools for diagnosis), and hwclock - which
+# lives in util-linux-extra since bookworm and is what install/rtc_sync.sh calls.
+inotify-tools
+i2c-tools
+util-linux-extra
+
+# Fetching and unpacking during the install itself.
+curl
+ca-certificates
+rsync

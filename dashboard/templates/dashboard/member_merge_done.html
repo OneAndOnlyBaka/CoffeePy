@@ -1,0 +1,15 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Merge complete - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>Merge complete</h1>
+<div class="card">
+    <p class="msg success">
+        Done - {{ keep.display_name }} now has the combined history
+        ({{ moved_orders }} order(s) and {{ moved_payments }} payment(s) moved over).
+        Card {{ old_uid }}{% if moved_cards %} and its {{ moved_cards }} other linked card(s){% endif %}
+        {% if moved_cards %}are{% else %}is{% endif %} now linked to their account.
+        {% if nickname_switched %}Renamed to "{{ keep.display_name }}" since that card was used more recently.{% endif %}
+    </p>
+    <p><a href="{% url 'dashboard:members' %}" class="btn success">Back to members</a></p>
+</div>
+{% endblock %}

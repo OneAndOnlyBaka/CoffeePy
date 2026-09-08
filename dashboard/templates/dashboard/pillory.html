@@ -1,0 +1,25 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Deposit pillory - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>Deposit pillory</h1>
+<p>Members with a negative balance, considering all payments and orders up to (but not
+including) the current month.</p>
+<div class="card">
+    <table>
+        <thead><tr><th>#</th><th>Member</th><th>Payments</th><th>Deposits</th><th>Balance</th></tr></thead>
+        <tbody>
+        {% for entry in entries %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ entry.member.display_name }}</td>
+                <td>{{ entry.payments }}€</td>
+                <td>{{ entry.deposits }}€</td>
+                <td>{{ entry.balance }}€</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="muted">Nobody owes anything. 🎉</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

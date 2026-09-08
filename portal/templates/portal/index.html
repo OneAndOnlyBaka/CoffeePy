@@ -1,0 +1,50 @@
+{% extends "portal/base.html" %}
+{% block title %}{{ member.display_name }} - CoffeePy{% endblock %}
+{% block portal_content %}
+<h1>Hi {{ member.display_name }}!</h1>
+<div class="card stats-card">
+    <div class="stats-row">
+        <div class="stat"><span class="label">Total cups</span><span class="value">{{ total_cups }}</span></div>
+        <div class="stat"><span class="label">This month</span><span class="value">{{ month_cups }}</span></div>
+        <div class="stat"><span class="label">Balance</span><span class="value">{{ balance }}€</span></div>
+    </div>
+    {% if balance < 0 %}
+    <p class="msg error">You owe {{ owed }}€.</p>
+    {% endif %}
+    <a href="{% url 'portal:pay' %}" class="btn success btn-block">Pay</a>
+</div>
+
+<div class="card">
+    <h2>Recent orders</h2>
+    <div class="list">
+        {% for order in recent_orders %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ order.coffee_sort.name|default:"Coffee" }}</span>
+                <span class="list-row-meta">{{ order.created_at|date:"d.m. H:i" }}</span>
+            </div>
+            <span class="list-row-value">{{ order.value }}€</span>
+        </div>
+        {% empty %}
+        <p class="muted">No orders yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <h2>Recent payments</h2>
+    <div class="list">
+        {% for payment in recent_payments %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ payment.method_name|default:"Cash" }}</span>
+                <span class="list-row-meta">{{ payment.created_at|date:"d.m. H:i" }}</span>
+            </div>
+            <span class="list-row-value">{{ payment.value }}€</span>
+        </div>
+        {% empty %}
+        <p class="muted">No payments yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

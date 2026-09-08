@@ -1,0 +1,6 @@
+# Appended to /etc/dnsmasq.conf by install/install.sh (access point step).
+# DHCP + local DNS for the standalone wlan0 access point (paired with hostapd.conf.template).
+interface=wlan0
+dhcp-range=192.168.4.2,192.168.4.20,255.255.255.0,24h
+domain=coffeepy.local
+address=/coffeepy.local/192.168.4.1

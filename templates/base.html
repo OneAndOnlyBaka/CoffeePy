@@ -1,0 +1,13 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="{% block viewport %}width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no{% endblock %}">
+    <title>{% block title %}CoffeePy{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    {% block body %}{% endblock %}
+</body>
+</html>

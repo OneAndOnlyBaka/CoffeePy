@@ -1,0 +1,67 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Members - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>Members</h1>
+<p>
+    <a href="{% url 'dashboard:member_add' %}" class="btn success">+ Add member</a>
+    <a href="{% url 'dashboard:member_merge' %}" class="btn secondary">Merge members</a>
+</p>
+<div class="card">
+    <table>
+        <thead><tr><th>Nickname</th><th>Status</th><th>UID</th><th>Alt cards</th><th>Favourite coffee</th><th></th></tr></thead>
+        <tbody>
+        {% for member in members %}
+            <tr{% if member.is_departed %} class="muted"{% endif %}>
+                <td>{{ member.nickname|default:"-" }}</td>
+                <td>
+                    {% if member.is_departed %}
+                    <span title="Departed {{ member.departed_at|date:'d.m.Y' }}">Departed</span>
+                    {% else %}
+                    Active
+                    {% endif %}
+                </td>
+                <td>{{ member.uid }}</td>
+                <td>
+                    {% for card in member.alt_cards.all %}{{ card.uid }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+                </td>
+                <td>{{ member.favourite_coffee.name|default:"-" }}</td>
+                <td>
+                    <a href="{% url 'dashboard:member_edit' member.uid %}">Edit</a>
+                    &middot;
+                    <a href="{% url 'dashboard:member_alt_uid_start' member.uid %}">Add card</a>
+                    {% if member.devices.count %}
+                    &middot;
+                    <form method="post" action="{% url 'dashboard:member_revoke_devices' member.uid %}"
+                          style="display:inline" onsubmit="return confirm('Log out all of {{ member.display_name }}\'s linked devices?');">
+                        {% csrf_token %}
+                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">Revoke devices ({{ member.devices.count }})</button>
+                    </form>
+                    {% endif %}
+                    &middot;
+                    {% if member.is_departed %}
+                    <form method="post" action="{% url 'dashboard:member_reactivate' member.uid %}" style="display:inline">
+                        {% csrf_token %}
+                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">Reactivate</button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="{% url 'dashboard:member_mark_departed' member.uid %}"
+                          style="display:inline" onsubmit="return confirm('Mark {{ member.display_name }} as departed? This writes off their balance and deactivates their card(s).');">
+                        {% csrf_token %}
+                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">Mark as departed</button>
+                    </form>
+                    {% endif %}
+                    &middot;
+                    <form method="post" action="{% url 'dashboard:member_delete' member.uid %}"
+                          style="display:inline" onsubmit="return confirm('Delete {{ member.display_name }}?');">
+                        {% csrf_token %}
+                        <button type="submit" class="danger" style="min-height:auto; padding:2px 10px;">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6" class="muted">No members yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

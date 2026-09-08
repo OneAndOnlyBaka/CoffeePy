@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+__pycache__
+*.pyc
+db.sqlite3
+staticfiles/
+data/
+nfc-cardreader/
+install/
+scripts/
+README.md

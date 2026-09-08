@@ -1,0 +1,42 @@
+{% extends "dashboard/base.html" %}
+{% block title %}System - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>System</h1>
+<div class="card">
+    <p>Reachable from another device (phone, laptop) at:
+        <strong>http://{{ public_host }}:8000/</strong>
+    </p>
+</div>
+
+<div class="system-grid">
+    <div class="card">
+        <h2>CPU</h2>
+        <p class="stat-value-large">{{ stats.cpu_percent }}%</p>
+        <div class="stat-bar-track">
+            <div class="stat-bar-fill{% if stats.cpu_percent >= 90 %} danger{% elif stats.cpu_percent >= 70 %} warn{% endif %}"
+                 style="width: {{ stats.cpu_percent }}%;"></div>
+        </div>
+        <p class="muted">{{ stats.cpu_count }} core(s){% if stats.cpu_temp %} - {{ stats.cpu_temp }}&deg;C{% endif %}</p>
+    </div>
+
+    <div class="card">
+        <h2>Memory</h2>
+        <p class="stat-value-large">{{ stats.memory_percent }}%</p>
+        <div class="stat-bar-track">
+            <div class="stat-bar-fill{% if stats.memory_percent >= 90 %} danger{% elif stats.memory_percent >= 70 %} warn{% endif %}"
+                 style="width: {{ stats.memory_percent }}%;"></div>
+        </div>
+        <p class="muted">{{ stats.memory_used_mb }} MB / {{ stats.memory_total_mb }} MB</p>
+    </div>
+
+    <div class="card">
+        <h2>Disk</h2>
+        <p class="stat-value-large">{{ stats.disk_percent }}%</p>
+        <div class="stat-bar-track">
+            <div class="stat-bar-fill{% if stats.disk_percent >= 90 %} danger{% elif stats.disk_percent >= 70 %} warn{% endif %}"
+                 style="width: {{ stats.disk_percent }}%;"></div>
+        </div>
+        <p class="muted">{{ stats.disk_used_gb }} GB / {{ stats.disk_total_gb }} GB</p>
+    </div>
+</div>
+{% endblock %}

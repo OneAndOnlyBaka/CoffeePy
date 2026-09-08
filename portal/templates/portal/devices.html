@@ -1,0 +1,28 @@
+{% extends "portal/base.html" %}
+{% block title %}Devices - CoffeePy{% endblock %}
+{% block portal_content %}
+<h1>Linked devices</h1>
+<div class="card">
+    <div class="list">
+        {% for device in devices %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">
+                    {{ device.label|default:"Browser" }}{% if device.session_key == current_key %} <span class="muted">(this device)</span>{% endif %}
+                </span>
+                <span class="list-row-meta">Linked {{ device.created_at|date:"d.m.Y" }} &middot; last used {{ device.last_seen_at|date:"d.m. H:i" }}</span>
+            </div>
+            <div class="list-row-actions">
+                <form method="post" action="{% url 'portal:revoke_device' device.pk %}"
+                      onsubmit="return confirm('Log out this device?');">
+                    {% csrf_token %}
+                    <button type="submit" class="danger">Revoke</button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <p class="muted">No linked devices.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

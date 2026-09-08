@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Keyboard - CoffeePy{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'kiosk/kiosk.css' %}">
+<script src="{% static 'kiosk/keyboard_page.js' %}" defer></script>
+{% endblock %}
+{% block body_class %}kiosk{% endblock %}
+{% block body %}
+<div class="keyboard-page">
+    <form method="post" action="{% url 'kiosk:keyboard' %}">
+        {% csrf_token %}
+        <input type="hidden" name="field" value="{{ field }}">
+        <input type="text" {% if numeric %}inputmode="decimal"{% endif %}
+               name="value" id="keyboard-input" value="{{ value }}" autocomplete="off">
+        <div id="onscreen-keyboard" class="osk" data-numeric="{{ numeric|yesno:'1,0' }}"></div>
+        <div class="action-row">
+            <a class="btn danger" href="{% url 'kiosk:index' %}">✕ Cancel</a>
+            <button type="submit" class="success">✓ Done</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

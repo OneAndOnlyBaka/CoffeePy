@@ -1,0 +1,223 @@
+{% load static %}
+<div id="panel-state" data-panel-key="{{ panel_key }}" hidden></div>
+{% if state == "wait_for_card" %}
+<button type="button" class="info-btn" title="WLAN Settings"
+        hx-get="{% url 'kiosk:qr_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
+        hx-on:click="document.getElementById('qr-modal').classList.add('open')">📡</button>
+<div class="wait-card{% if not reader_online %} error{% endif %}">
+    {% if not reader_online %}
+    <h1>Card reader not available</h1>
+    <p>The NFC reader isn't responding - please tell an admin.</p>
+    {% else %}
+    <h1>Apply your card</h1>
+    <p>Scanner is next to the machine</p>
+    {% endif %}
+    <div class="clock">{% now "H:i:s" %} <span class="date">{% now "d.m.Y" %}</span></div>
+</div>
+
+{% elif state == "assigning_alt_uid" %}
+<div class="wait-card{% if capture_error %} error{% endif %}">
+    <h1>Assigning card to account {{ member.display_name }}</h1>
+    {% if capture_error %}<p class="msg error">{{ capture_error }}</p>{% endif %}
+    <p>Tap the new card now - this closes automatically after 60 seconds.</p>
+</div>
+
+{% elif state == "card_not_recognized" %}
+<div class="wait-card error">
+    <h1>Card not recognized</h1>
+    <p>Please try applying your card again.</p>
+</div>
+
+{% elif state == "account_departed" %}
+<div class="wait-card error">
+    <h1>Account no longer active</h1>
+    <p>This card's account has been marked as departed. Please see an admin.</p>
+</div>
+
+{% elif state == "no_coffee_sorts" %}
+<div class="wait-card error setup-wizard">
+    <h1>Setup needed</h1>
+    <p>No coffee sorts configured yet. Finish setup from a phone or PC - the touchscreen has no keyboard.</p>
+    {% include "kiosk/_qr_row.html" %}
+</div>
+
+{% elif state == "thank_you" %}
+<div class="wait-card thank-you">
+    <h1>Thank you, {{ member_name }}!</h1>
+    {% comment %}
+    Nothing here may vary between two polls of the same interlude: identical HTML is what
+    lets panel_stable_swap.js skip the swap, and only an untouched <img> element plays its
+    gif through instead of restarting at frame 0 twice a second.
+    {% endcomment %}
+    <img class="thank-you-gif" src="{% static 'kiosk/img/thankyou/'|add:gif %}" alt="">
+    <p>{{ message }}</p>
+</div>
+
+{% elif state == "order" %}
+<div class="panel-card">
+    <form hx-target="#panel" hx-swap="innerHTML">
+        {% csrf_token %}
+        <h1 class="panel-header">Hi {{ member.display_name }}!
+            {% if alltime_badge %}<span class="rank-badge" title="Top 3 all-time">{{ alltime_badge }}</span>{% endif %}
+            {% if month_badge %}<span class="rank-badge" title="Top 3 this month">{{ month_badge }}</span>{% endif %}
+        </h1>
+        <div class="panel-body">
+            {% if month_reminder_balance %}
+            <p class="msg error">Reminder: you still owe {{ month_reminder_balance }}€ from last month - please settle up soon (see Pay &amp; Stats).</p>
+            {% endif %}
+            <div class="coffee-list">
+                {% for sort in coffee_sorts %}
+                <label class="coffee-option {% if sort.pk == selected_coffee_id %}selected{% endif %}">
+                    <input type="radio" name="coffee_id" value="{{ sort.pk }}"
+                           {% if sort.pk == selected_coffee_id %}checked{% endif %}
+                           hx-post="{% url 'kiosk:order_select' %}" hx-trigger="change">
+                    <span>{{ sort.name }}</span>
+                    <span class="price">{{ sort.price }}€</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="action-row panel-footer">
+            <button type="button" class="danger" hx-post="{% url 'kiosk:order_cancel' %}">✕ Cancel</button>
+            {% if auto_checkout and seconds_left is not None %}
+            <span class="countdown">Automatic checkout in {{ seconds_left }}s</span>
+            {% endif %}
+            <button type="button" class="success primary-action" hx-post="{% url 'kiosk:order_confirm' %}">✓ Order now</button>
+        </div>
+    </form>
+</div>
+
+{% elif state == "settings" %}
+<div class="panel-card">
+    <form hx-post="{% url 'kiosk:settings_save' %}" hx-target="#panel" hx-swap="innerHTML">
+        {% csrf_token %}
+        <h1 class="panel-header">{% if is_new_user %}Welcome, new card!{% else %}Hello {{ nickname|default:uid }}!{% endif %}</h1>
+        <div class="panel-body">
+            <p class="muted">Card UID: {{ uid }}</p>
+            <label class="field">
+                Nickname
+                <div class="field-with-osk">
+                    <input type="text" name="nickname" value="{{ nickname }}" placeholder="{{ uid }}"
+                           id="nickname-input"
+                           hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="keyup changed delay:1s" hx-swap="none">
+                    <a class="btn osk-open-btn" href="{% url 'kiosk:keyboard' %}?field=nickname&value={{ nickname|urlencode }}">⌨ Keyboard</a>
+                </div>
+            </label>
+            <label class="field">
+                Favourite coffee
+                <select name="favourite_coffee_id"
+                        hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="change" hx-swap="none">
+                    {% for sort in coffee_sorts %}
+                    <option value="{{ sort.pk }}" {% if sort.pk == favourite_coffee_id %}selected{% endif %}>{{ sort.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="action-row panel-footer">
+            <button type="button" class="btn secondary" title="Link this phone"
+                    hx-get="{% url 'kiosk:link_phone_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
+                    hx-on:click="document.getElementById('qr-modal').classList.add('open')">📱 Link this phone</button>
+            {% if seconds_left is not None %}<span class="countdown">Automatic logout in {{ seconds_left }}s</span>{% endif %}
+            <button type="submit" class="success primary-action">Save</button>
+        </div>
+    </form>
+</div>
+
+{% elif state == "info_pay" %}
+<div class="panel-card">
+    <form hx-post="{% url 'kiosk:pay' %}" hx-target="#panel" hx-swap="innerHTML">
+        {% csrf_token %}
+        <h1 class="panel-header">Hello {{ member.display_name }}!</h1>
+        <div class="panel-body">
+            <div class="stats-row">
+                <div class="stat"><span class="label">CCT</span><span class="value">{{ total_cups }}</span></div>
+                <div class="stat"><span class="label">CCM</span><span class="value">{{ month_cups }}</span></div>
+                <div class="stat"><span class="label">Balance</span><span class="value">{{ balance }}€</span></div>
+            </div>
+            <p class="muted">CC = Cups Count; T/M = Total/Month</p>
+            <label class="field">
+                Payment amount
+                <div class="field-with-osk">
+                    <input type="text" inputmode="decimal" name="amount" value="{{ pay_default }}"
+                           id="pay-amount-input">
+                    <a class="btn osk-open-btn" href="{% url 'kiosk:keyboard' %}?field=amount&value={{ pay_default|urlencode }}">⌨ Keyboard</a>
+                </div>
+            </label>
+            {% if payment_method_names|length > 1 %}
+            <label class="field">
+                Paid via
+                <select name="method">
+                    {% for name in payment_method_names %}
+                    <option value="{{ name }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            {% endif %}
+            {% if payment_method_qr_row %}
+            <p class="muted">Or scan to pay what you owe directly:</p>
+            <div class="qr-row">
+                {% for entry in payment_method_qr_row %}
+                <div class="qr-card">
+                    <h2>{{ entry.name }}</h2>
+                    <div class="qr-image">{{ entry.qr_svg|safe }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% for instruction in payment_method_instructions %}
+            <p class="muted">{{ instruction }}</p>
+            {% endfor %}
+        </div>
+        <div class="action-row panel-footer">
+            {% if seconds_left is not None %}<span class="countdown">Automatic logout in {{ seconds_left }}s</span>{% endif %}
+            <button type="submit" class="success primary-action">Pay</button>
+        </div>
+    </form>
+</div>
+
+{% elif state == "ranking" %}
+<div class="panel-card">
+    <h1 class="panel-header">
+        {% if ranking_view == "alltime" %}Top 7 - All time
+        {% elif ranking_view == "month" %}Top 7 - This month
+        {% else %}Deposit pillory{% endif %}
+    </h1>
+    <div class="panel-body">
+        <table>
+            <thead>
+                {% if ranking_view == "pillory" %}
+                <tr><th>Pos</th><th>Name</th><th>Unpaid</th></tr>
+                {% else %}
+                <tr><th>Pos</th><th>Name</th><th>CCT</th><th>CCM</th></tr>
+                {% endif %}
+            </thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td>
+                        {% if ranking_view != "pillory" and forloop.counter == 1 %}<span class="rank-badge" title="1st place">🥇</span>
+                        {% elif ranking_view != "pillory" and forloop.counter == 2 %}<span class="rank-badge" title="2nd place">🥈</span>
+                        {% elif ranking_view != "pillory" and forloop.counter == 3 %}<span class="rank-badge" title="3rd place">🥉</span>
+                        {% else %}{{ forloop.counter }}
+                        {% endif %}
+                    </td>
+                    <td>{{ row.name }}</td>
+                    {% if ranking_view == "pillory" %}
+                    <td>{{ row.balance }}€</td>
+                    {% else %}
+                    <td>{{ row.cct }}</td>
+                    <td>{{ row.ccm }}</td>
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr><td colspan="4" class="muted">No data yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <form class="action-row panel-footer" hx-target="#panel" hx-swap="innerHTML">
+        {% csrf_token %}
+        <button type="button" class="primary-action" hx-post="{% url 'kiosk:ranking_next' %}">Next ▸</button>
+    </form>
+</div>
+{% endif %}

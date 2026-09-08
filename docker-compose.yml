@@ -1,0 +1,104 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-coffeepy}
+      POSTGRES_USER: ${POSTGRES_USER:-coffeepy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-coffeepy}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-coffeepy}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./nfc-cardreader/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro,z
+
+  nfc-bridge:
+    build: ./nfc-cardreader
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      MQTT_TOPIC: ${MQTT_TOPIC:-nfc/acr122u}
+      LOG_LEVEL: INFO
+
+  migrate:
+    build: .
+    image: coffeepy-web:latest
+    command: ["true"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+
+  web:
+    build: .
+    image: coffeepy-web:latest
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      BACKUP_PATH: /backups
+    # Overrides the Dockerfile's own CMD (which defaults to 3, a reasonable default for
+    # non-Pi hosts) - each worker is a full separate Django process, so on a 1GB-RAM Pi
+    # running Postgres/mosquitto/mqtt-listener/backup alongside it, that's real RAM.
+    # GUNICORN_WORKERS in .env lets Pi builds run leaner (see .env.example).
+    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "${GUNICORN_WORKERS:-3}"]
+    ports:
+      - "8000:8000"
+    cap_add:
+      - SYS_TIME
+    volumes:
+      - ./data/updates:/app/updates:z
+      - ${BACKUP_HOST_PATH:-./data/backups}:/backups:z
+
+  mqtt-listener:
+    build: .
+    image: coffeepy-web:latest
+    command: ["python", "manage.py", "mqtt_listener"]
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      mosquitto:
+        condition: service_started
+    env_file: .env
+
+  backup:
+    build: .
+    image: coffeepy-web:latest
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        python manage.py migrate --noinput
+        while true; do
+          python manage.py backup_db
+          sleep "$$((${BACKUP_INTERVAL_MINUTES:-60} * 60))"
+        done
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      BACKUP_PATH: /backups
+    volumes:
+      - ${BACKUP_HOST_PATH:-./data/backups}:/backups:z
+
+volumes:
+  pg_data:

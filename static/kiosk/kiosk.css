@@ -1,0 +1,317 @@
+html, body.kiosk { overflow: hidden; }
+
+.kiosk-frame {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+.kiosk-nav {
+  flex: 0 0 170px;
+  background: var(--coffee-dark);
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  padding: 2px 4px;
+  color: var(--text-inverse);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.9rem;
+}
+
+/* The icon fills as much of the button as it can - only the label text below it is
+   reserved space, matching the original CoffeePy's near-edge-to-edge nav icons instead
+   of a small icon floating in a mostly-empty cell. */
+.nav-icon { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.nav-icon img { width: 100%; height: 100%; object-fit: contain; filter: brightness(0.85); }
+.nav-label { flex: 0 0 auto; text-align: center; }
+.nav-btn.active { background: var(--coffee); }
+.nav-btn.active .nav-icon img { filter: none; }
+
+.kiosk-panel {
+  position: relative;
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--info);
+  color: var(--text-inverse);
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+
+.modal-card {
+  position: relative;
+  background: var(--cream);
+  border-radius: var(--radius);
+  padding: 28px;
+  max-width: 720px;
+  width: 90%;
+  text-align: center;
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 44px;
+  height: 44px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--danger);
+  color: var(--text-inverse);
+  font-size: 1.1rem;
+}
+
+.wait-card {
+  text-align: center;
+}
+
+.wait-card h1 { color: var(--coffee); margin-bottom: 8px; font-size: 3rem; }
+.wait-card.error h1 { color: var(--danger); }
+.wait-card p { font-size: 1.3rem; }
+.clock { font-size: 3.2rem; margin-top: 32px; color: var(--text); font-weight: 600; }
+.clock .date { margin-left: 16px; color: var(--coffee-light); }
+
+.thank-you-gif { display: block; margin: 12px auto; max-width: 220px; width: 40vw; height: auto; }
+
+.rank-badge { font-size: 1.4rem; margin-left: 4px; vertical-align: middle; }
+
+/* Every logged-in screen (order/settings/info_pay/ranking) shares this structure so its
+   action buttons always sit in the same place: a fixed-height header, a body that grows
+   to fill whatever space is left and scrolls internally if its content doesn't fit, and
+   a fixed-height footer pinned at the bottom - regardless of how much is above it. */
+.panel-card {
+  width: 100%;
+  max-width: 900px;
+  height: 100%;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* The order/settings/info_pay states wrap header+body+footer in one <form> so a single
+   htmx-post submits all of it - display:contents makes the form invisible to layout so
+   its children act as direct flex items of .panel-card instead. */
+.panel-card > form { display: contents; }
+
+.panel-header { flex: 0 0 auto; margin: 0; color: var(--coffee); font-size: 2.4rem; }
+
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.panel-body > * { margin: 0; }
+
+.panel-footer { flex: 0 0 auto; }
+.primary-action { margin-left: auto; }
+
+.coffee-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coffee-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border-radius: var(--radius);
+  background: var(--cream-dark);
+  min-height: 88px;
+  font-size: 1.3rem;
+}
+
+.coffee-option input { width: 32px; height: 32px; }
+.coffee-option.selected { background: var(--accent); color: var(--text-inverse); }
+.coffee-option .price { margin-left: auto; font-weight: 600; }
+
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.action-row button, .action-row .btn { min-height: 72px; font-size: 1.1rem; padding: 12px 20px; white-space: nowrap; }
+
+.countdown { color: var(--danger); font-weight: 600; font-size: 1rem; white-space: nowrap; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.field select { min-height: 76px; font-size: 1.2rem; }
+
+.stats-row { display: flex; gap: 20px; }
+.stat {
+  flex: 1;
+  background: var(--cream-dark);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+}
+.stat .label { display: block; font-weight: 600; color: var(--coffee); font-size: 1.1rem; }
+.stat .value { display: block; font-size: 2.2rem; margin-top: 10px; font-weight: 700; }
+
+.muted { color: var(--coffee-light); }
+
+.msg { padding: 10px 14px; border-radius: var(--radius); }
+.msg.error { background: #fbe4e2; color: var(--danger); }
+
+/* Compact and never-wrap by design: this has to fit two QR cards side by side within a
+   single short kiosk screen (e.g. 800x480) without scrolling - a centered, overflowing
+   flex column would otherwise get cropped at both top and bottom instead of scrolling
+   into view. */
+.setup-wizard { max-width: 720px; }
+.setup-wizard h1 { font-size: 2rem; margin-bottom: 4px; }
+.setup-wizard > p { font-size: 1.1rem; margin: 4px 0; }
+.qr-row { display: flex; gap: 24px; justify-content: center; margin-top: 16px; flex-wrap: nowrap; }
+.qr-card { background: var(--cream-dark); border-radius: var(--radius); padding: 14px; }
+.qr-card h2 { margin: 0 0 8px; font-size: 1.05rem; color: var(--coffee); }
+.qr-card p.muted { margin: 8px 0 0; font-size: 0.95rem; }
+.qr-image svg { width: 150px; height: 150px; }
+
+.field-with-osk { display: flex; gap: 10px; align-items: stretch; }
+.field-with-osk input { flex: 1; min-height: 76px; font-size: 1.2rem; }
+.osk-open-btn { flex: 0 0 auto; white-space: nowrap; font-size: 1.2rem; padding: 12px 28px; min-height: 76px; }
+
+/* Standalone /kiosk/keyboard/ page - a separate page entirely, never re-rendered while
+   the user is on it, so it fills the whole viewport rather than overlaying #panel.
+   Fullscreen by design: the keyboard is the only thing on this page, so every row and
+   key stretches to use all the space it's given instead of clustering at a fixed size. */
+.keyboard-page { height: 100vh; padding: 12px; }
+.keyboard-page form { display: flex; flex-direction: column; height: 100%; gap: 10px; }
+.keyboard-page input { flex: 0 0 auto; font-size: 2rem; padding: 18px; text-align: center; }
+
+.keyboard-page .action-row { flex: 0 0 auto; gap: 10px; }
+.keyboard-page .action-row .btn,
+.keyboard-page .action-row button { flex: 1; min-height: 80px; font-size: 1.3rem; }
+
+.osk {
+  background: var(--coffee-dark);
+  border-radius: var(--radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+
+.osk-row { display: flex; gap: 8px; flex: 1; min-height: 0; }
+
+.osk-key {
+  /* button/.btn in base.css sets min-height: var(--touch) + fixed padding, which would
+     otherwise floor every key at 64px regardless of how many rows have to fit - override
+     both so flex:1 can actually shrink/grow keys to fill whatever space is available. */
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  padding: 4px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--cream);
+  color: var(--text);
+  font-size: 1.7rem;
+  font-weight: 600;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.osk-key:active { background: var(--accent); color: var(--text-inverse); }
+
+.osk-shift.active { background: var(--accent); color: var(--text-inverse); }
+.osk-space { flex: 5; }
+.osk-backspace { flex: 1.5; }
+
+/* Easter egg: standalone /kiosk/doom/ page (see secret_sequence.js for the nav trigger). */
+.doom-page { position: relative; width: 100vw; height: 100vh; background: #000; overflow: hidden; }
+.doom-screen { width: 100%; height: 100%; }
+.doom-screen canvas { width: 100% !important; height: 100% !important; }
+
+.doom-exit { position: fixed; top: 10px; right: 10px; z-index: 1000; opacity: 0.85; }
+
+.doom-controls {
+  position: fixed;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 1000;
+  pointer-events: none; /* clicks fall through the empty parts of this bar to the game */
+}
+.dpad, .dpad-actions { pointer-events: auto; }
+
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 64px);
+  grid-template-rows: repeat(2, 64px);
+  gap: 4px;
+}
+.dpad-btn {
+  border: none;
+  border-radius: var(--radius);
+  background: rgba(230, 212, 193, 0.85);
+  color: var(--text);
+  font-size: 1.4rem;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.dpad-up { grid-column: 2; grid-row: 1; }
+.dpad-left { grid-column: 1; grid-row: 2; }
+.dpad-right { grid-column: 3; grid-row: 2; }
+.dpad-down { grid-column: 2; grid-row: 2; }
+
+.dpad-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.dpad-action { min-width: 100px; min-height: 56px; opacity: 0.9; touch-action: none; user-select: none; }

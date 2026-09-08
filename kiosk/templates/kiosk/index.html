@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}CoffeePy Kiosk{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'kiosk/kiosk.css' %}">
+<script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+<script src="{% static 'kiosk/secret_sequence.js' %}" defer></script>
+<script src="{% static 'kiosk/panel_scroll.js' %}" defer></script>
+<script src="{% static 'kiosk/panel_stable_swap.js' %}" defer></script>
+<script src="{% static 'kiosk/panel_modal.js' %}" defer></script>
+{% endblock %}
+{% block body_class %}kiosk{% endblock %}
+{% block body %}
+<div class="kiosk-frame" data-mode="{{ mode }}" data-doom-url="{% url 'kiosk:doom' %}">
+    <nav class="kiosk-nav">
+        <a class="nav-btn {% if mode == 'order' %}active{% endif %}" href="{% url 'kiosk:nav' 'order' %}">
+            <span class="nav-icon"><img src="{% static 'kiosk/img/Coffee-icon.png' %}" alt="Order"></span>
+            <span class="nav-label">Order</span>
+        </a>
+        <a class="nav-btn {% if mode == 'info' %}active{% endif %}" href="{% url 'kiosk:nav' 'info' %}">
+            <span class="nav-icon"><img src="{% static 'kiosk/img/Books-2-icon.png' %}" alt="Pay & Stats"></span>
+            <span class="nav-label">Pay &amp; Stats</span>
+        </a>
+        <a class="nav-btn {% if mode == 'settings' %}active{% endif %}" href="{% url 'kiosk:nav' 'settings' %}">
+            <span class="nav-icon"><img src="{% static 'kiosk/img/spur-gear-icon.png' %}" alt="Settings"></span>
+            <span class="nav-label">Settings</span>
+        </a>
+        <a class="nav-btn {% if mode == 'ranking' %}active{% endif %}" href="{% url 'kiosk:nav' 'ranking' %}">
+            <span class="nav-icon"><img src="{% static 'kiosk/img/Badge-Trophy-02-icon.png' %}" alt="Ranking"></span>
+            <span class="nav-label">Ranking</span>
+        </a>
+    </nav>
+    <main id="panel" class="kiosk-panel"
+          hx-get="{% url 'kiosk:panel' %}"
+          hx-trigger="load, kiosk-poll"
+          hx-swap="innerHTML">
+        <div class="wait-card"><p>Loading…</p></div>
+    </main>
+</div>
+<!-- Lives outside #panel so the 500ms poll never touches it while it's open. -->
+<div id="qr-modal" class="modal-overlay"
+     hx-on:click="if (event.target === event.currentTarget) event.currentTarget.classList.remove('open')">
+    <div id="qr-modal-content"></div>
+</div>
+{% endblock %}

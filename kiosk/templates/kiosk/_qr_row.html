@@ -1,0 +1,14 @@
+<div class="qr-row">
+    {% if wifi_qr_svg %}
+    <div class="qr-card">
+        <h2>1. Join WiFi</h2>
+        <div class="qr-image">{{ wifi_qr_svg|safe }}</div>
+        <p class="muted">Network "{{ ap_ssid }}"</p>
+    </div>
+    {% endif %}
+    <div class="qr-card">
+        <h2>{% if wifi_qr_svg %}2. {% endif %}Open dashboard</h2>
+        <div class="qr-image">{{ dashboard_qr_svg|safe }}</div>
+        <p class="muted">Manage coffee sorts, members, stats and more</p>
+    </div>
+</div>

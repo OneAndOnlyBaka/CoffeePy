@@ -1,0 +1,8 @@
+# shellcheck shell=sh
+# Snippet appended to .profile (not run standalone, hence no shebang) - added by the
+# CoffeePy pi-gen image: autologin on tty1 (see the getty override) drops into a shell
+# here, so start X (-> Openbox -> Chromium kiosk) automatically, no desktop/display
+# manager needed for a single always-on kiosk session.
+if [ -z "${DISPLAY}" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    exec startx -- -nocursor
+fi
