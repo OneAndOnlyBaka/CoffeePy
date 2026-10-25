@@ -1,4 +1,5 @@
 import time
+from datetime import datetime, timedelta, timezone as dt_timezone
 from decimal import Decimal
 from unittest import mock
 
@@ -120,6 +121,35 @@ class KioskPanelTestCase(TestCase):
         self._scan("AABBCCDD")
         response = self.client.get(reverse("kiosk:panel"))
         self.assertContains(response, 'data-mode="settings"')
+
+    def test_wait_screen_explains_each_mode_with_its_own_animation(self):
+        for mode, gif, text in (
+            ("order", "wait_order.gif", "Order now"),
+            ("info", "wait_info.gif", "your balance"),
+            ("settings", "wait_settings.gif", "Link your phone"),
+        ):
+            with self.subTest(mode=mode):
+                response = self.client.get(reverse("kiosk:nav", args=[mode]), HTTP_HX_REQUEST="true")
+                self.assertContains(response, "Apply your card")
+                self.assertContains(response, gif)
+                self.assertContains(response, text)
+
+    def test_wait_screen_is_identical_from_poll_to_poll(self):
+        # panel_stable_swap.js only leaves the animation running when a poll returns the
+        # same bytes - a server-rendered clock made every other poll differ.
+        first = self.client.get(reverse("kiosk:panel")).content
+
+        later = datetime.now(dt_timezone.utc) + timedelta(seconds=61)
+
+        class Later(datetime):  # {% now %} calls datetime.now() itself, not timezone.now()
+            @classmethod
+            def now(cls, tz=None):
+                return later.astimezone(tz) if tz else later.replace(tzinfo=None)
+
+        with mock.patch("django.utils.timezone.now", return_value=later), \
+                mock.patch("django.template.defaulttags.datetime", Later):
+            second = self.client.get(reverse("kiosk:panel")).content
+        self.assertEqual(first, second)
 
     def test_card_not_recognized_for_unparseable_uid(self):
         self._scan(None)

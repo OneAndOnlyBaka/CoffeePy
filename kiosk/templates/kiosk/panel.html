@@ -4,16 +4,48 @@
 <button type="button" class="info-btn" title="WLAN Settings"
         hx-get="{% url 'kiosk:qr_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
         hx-on:click="document.getElementById('qr-modal').classList.add('open')">📡</button>
-<div class="wait-card{% if not reader_online %} error{% endif %}">
-    {% if not reader_online %}
+{% comment %}
+Nothing on this screen may change from one poll to the next: identical HTML is what lets
+panel_stable_swap.js skip the swap, and only a skipped swap keeps the animation running
+instead of restarting it every second. Hence the clock is filled in by clock.js, not here.
+{% endcomment %}
+{% if not reader_online %}
+<div class="wait-card error">
     <h1>Card reader not available</h1>
     <p>The NFC reader isn't responding - please tell an admin.</p>
-    {% else %}
-    <h1>Apply your card</h1>
-    <p>Scanner is next to the machine</p>
-    {% endif %}
-    <div class="clock">{% now "H:i:s" %} <span class="date">{% now "d.m.Y" %}</span></div>
+    <div class="clock" data-kiosk-clock></div>
 </div>
+{% else %}
+<div class="wait-card wait-{{ wait_mode }}">
+    <h1>Apply your card</h1>
+    <p class="wait-purpose">
+        {% if wait_mode == "info" %}to see your account or pay{% elif wait_mode == "settings" %}to change your settings{% else %}to order a coffee{% endif %}
+        &middot; the scanner is next to the machine
+    </p>
+    <div class="wait-body">
+        <img class="wait-gif" src="{% static 'kiosk/img/wait/wait_'|add:wait_mode|add:'.gif' %}" alt="">
+        <div class="info-box">
+            <h2>What happens next</h2>
+            <ul>
+                {% if wait_mode == "info" %}
+                <li>You see your cups this month and in total, and your balance.</li>
+                <li>Enter what you paid - or scan a payment QR code, if one is shown.</li>
+                <li>You are logged out after {{ logout_seconds }} seconds.</li>
+                {% elif wait_mode == "settings" %}
+                <li>Change your nickname and your favourite coffee.</li>
+                <li>Link your phone to see your stats and pay from there.</li>
+                <li>A card the kiosk doesn't know yet is registered here.</li>
+                {% else %}
+                <li>Your favourite coffee is preselected - tap another one to change it.</li>
+                <li>Tap <strong>Order now</strong>, or it is booked after {{ checkout_seconds }} seconds.</li>
+                <li>A card the kiosk doesn't know yet asks for your nickname first.</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    <div class="clock" data-kiosk-clock></div>
+</div>
+{% endif %}
 
 {% elif state == "assigning_alt_uid" %}
 <div class="wait-card{% if capture_error %} error{% endif %}">

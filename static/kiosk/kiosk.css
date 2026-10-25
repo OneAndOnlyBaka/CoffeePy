@@ -109,6 +109,30 @@ html, body.kiosk { overflow: hidden; }
 .wait-card.error h1 { color: var(--danger); }
 .wait-card p { font-size: 1.3rem; }
 .clock { font-size: 3.2rem; margin-top: 32px; color: var(--text); font-weight: 600; }
+
+/* "Apply your card" per mode: what a tap is about to do, next to that mode's animation.
+   One look for all three - only the wording and the GIF differ. */
+.wait-card .wait-purpose { margin: 0; color: var(--coffee-light); font-size: 1.2rem; }
+.wait-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  margin-top: 22px;
+}
+.wait-gif { flex: 0 0 auto; width: 180px; height: 180px; }
+.info-box {
+  flex: 0 1 440px;
+  text-align: left;
+  background: var(--cream-dark);
+  border-left: 6px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 14px 20px 14px 18px;
+}
+.info-box h2 { margin: 0 0 6px; font-size: 1.05rem; color: var(--coffee); text-transform: uppercase; letter-spacing: 0.04em; }
+.info-box ul { margin: 0; padding-left: 20px; }
+.info-box li { font-size: 1.05rem; line-height: 1.35; margin: 4px 0; }
+.wait-card .clock { font-size: 2.4rem; margin-top: 20px; min-height: 1.2em; }
 .clock .date { margin-left: 16px; color: var(--coffee-light); }
 
 .thank-you-gif { display: block; margin: 12px auto; max-width: 220px; width: 40vw; height: auto; }

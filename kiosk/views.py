@@ -514,7 +514,14 @@ def _state_context(request, mode):
         if CoffeeSort.objects.count() == 0:
             return _setup_wizard_context(request)
         reader_online = NfcReaderStatus.objects.filter(pk=1, is_online=True).exists()
-        return {"state": "wait_for_card", "reader_online": reader_online}
+        return {
+            "state": "wait_for_card",
+            "reader_online": reader_online,
+            # Each mode explains what a tap is about to do, with its own animation.
+            "wait_mode": mode if mode in (MODE_INFO, MODE_SETTINGS) else MODE_ORDER,
+            "checkout_seconds": ORDER_AUTO_CHECKOUT_SECONDS,
+            "logout_seconds": AUTO_LOGOUT_SECONDS,
+        }
 
     uid = request.session["uid"]
     deadline = request.session.get("deadline")

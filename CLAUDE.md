@@ -48,7 +48,10 @@ immediately. Consequences, all of which have already caused bugs:
   moves the live node and thereby detaches/re-attaches it. `panel_stable_swap.js` skips the
   swap entirely when a poll returns byte-identical HTML - that, and only that, is what lets
   the "thank you" gifs play through. Do not put anything varying per render (a countdown, a
-  csrf token) into a screen whose animation has to survive.
+  csrf token) into a screen whose animation has to survive - which is why the "apply your
+  card" screens' clock is filled in by `static/kiosk/clock.js` instead of `{% now %}`.
+  `test_wait_screen_is_identical_from_poll_to_poll` guards that. Their GIFs come from
+  `scripts/make_wait_gifs.py`.
 - **Screens with a form always differ per poll anyway**: Django re-masks `{% csrf_token %}` on
   every render. Never key anything on "the panel HTML changed".
 - **The QR modal lives outside `#panel`** so the poll can't wipe it mid-scan - so nothing
