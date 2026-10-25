@@ -4,7 +4,6 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'kiosk/kiosk.css' %}">
 <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
-<script src="{% static 'kiosk/secret_sequence.js' %}" defer></script>
 <script src="{% static 'kiosk/panel_scroll.js' %}" defer></script>
 <script src="{% static 'kiosk/panel_stable_swap.js' %}" defer></script>
 <script src="{% static 'kiosk/panel_modal.js' %}" defer></script>
@@ -14,7 +13,7 @@
 {% endblock %}
 {% block body_class %}kiosk{% endblock %}
 {% block body %}
-<div class="kiosk-frame" data-mode="{{ mode }}" data-doom-url="{% url 'kiosk:doom' %}">
+<div class="kiosk-frame" data-mode="{{ mode }}">
     {% comment %}
     The buttons swap #panel in place instead of loading a page (see views.nav). hx-sync
     aborts a poll that is still in flight - its answer predates the tap and would put the

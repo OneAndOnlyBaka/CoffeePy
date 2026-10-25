@@ -155,7 +155,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
             <button type="button" class="btn secondary" title="{% translate "Link this phone" %}"
                     hx-get="{% url 'kiosk:link_phone_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
                     hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/phone.svg" %} {% translate "Link this phone" %}</button>
-            {% if seconds_left is not None %}<span class="countdown">Automatic logout in {{ seconds_left }}s</span>{% endif %}
+            {% if seconds_left is not None %}<span class="countdown">{% blocktranslate trimmed with seconds=seconds_left %}Automatic logout in {{ seconds }}s{% endblocktranslate %}</span>{% endif %}
             <button type="submit" class="success primary-action">{% translate "Save" %}</button>
         </div>
     </form>
@@ -207,7 +207,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
             {% endfor %}
         </div>
         <div class="action-row panel-footer">
-            {% if seconds_left is not None %}<span class="countdown">Automatic logout in {{ seconds_left }}s</span>{% endif %}
+            {% if seconds_left is not None %}<span class="countdown">{% blocktranslate trimmed with seconds=seconds_left %}Automatic logout in {{ seconds }}s{% endblocktranslate %}</span>{% endif %}
             <button type="submit" class="success primary-action">{% translate "Pay" %}</button>
         </div>
     </form>

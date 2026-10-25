@@ -327,50 +327,6 @@ html, body.kiosk { overflow: hidden; }
 .osk-space { flex: 5; }
 .osk-backspace { flex: 1.5; }
 
-/* Easter egg: standalone /kiosk/doom/ page (see secret_sequence.js for the nav trigger). */
-.doom-page { position: relative; width: 100vw; height: 100vh; background: #000; overflow: hidden; }
-.doom-screen { width: 100%; height: 100%; }
-.doom-screen canvas { width: 100% !important; height: 100% !important; }
-
-.doom-exit { position: fixed; top: 10px; right: 10px; z-index: 1000; opacity: 0.85; }
-
-.doom-controls {
-  position: fixed;
-  bottom: 10px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 16px;
-  z-index: 1000;
-  pointer-events: none; /* clicks fall through the empty parts of this bar to the game */
-}
-.dpad, .dpad-actions { pointer-events: auto; }
-
-.dpad {
-  display: grid;
-  grid-template-columns: repeat(3, 64px);
-  grid-template-rows: repeat(2, 64px);
-  gap: 4px;
-}
-.dpad-btn {
-  border: none;
-  border-radius: var(--radius);
-  background: rgba(230, 212, 193, 0.85);
-  color: var(--text);
-  font-size: 1.4rem;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-.dpad-up { grid-column: 2; grid-row: 1; }
-.dpad-left { grid-column: 1; grid-row: 2; }
-.dpad-right { grid-column: 3; grid-row: 2; }
-.dpad-down { grid-column: 2; grid-row: 2; }
-
-.dpad-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-.dpad-action { min-width: 100px; min-height: 56px; opacity: 0.9; touch-action: none; user-select: none; }
-
 /* "We'll be right back" (maintenance.js): above everything, the modal included, so a tap
    during an install or update lands nowhere. */
 .maintenance {

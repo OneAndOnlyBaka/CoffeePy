@@ -41,8 +41,10 @@ device's default first. It reloads itself as soon as the app answers again.
       const status = await fetch("/maintenance/status.json", { cache: "no-store" });
       if (status.ok) {
         const data = await status.json();
-        document.getElementById("bar").style.visibility = "visible";
-        document.querySelector("#bar span").style.width = data.percent + "%";
+        if (data.updated) {
+          document.getElementById("bar").style.visibility = "visible";
+          document.querySelector("#bar span").style.width = data.percent + "%";
+        }
       }
     } catch (e) { /* no status - just wait */ }
     try {

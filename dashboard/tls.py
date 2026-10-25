@@ -226,6 +226,9 @@ def _write_caddyfile() -> bool:
 \thandle /maintenance/status.json {{
 \t\theader Cache-Control no-store
 \t\troot * /
+\t\t# No file means no maintenance - an empty object, not a 404 every two seconds.
+\t\t@idle not file
+\t\trespond @idle "{{}}" 200
 \t\tfile_server
 \t}}
 \thandle_errors 502 503 504 {{

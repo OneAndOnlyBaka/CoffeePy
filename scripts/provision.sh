@@ -822,6 +822,11 @@ build_env() {
 	env_set "${env}" DJANGO_TIME_ZONE "${TIME_ZONE}"
 	env_set "${env}" DJANGO_SECURE_COOKIES true
 	env_set "${env}" PUBLIC_HOST "${PUBLIC_HOST}"
+	# The address this tool reached the Pi on is the one its admin types into a browser too -
+	# without it in the certificate and ALLOWED_HOSTS, Django answers that address with a 400.
+	local extra="192.168.4.1,coffeepy.local"
+	case ",${extra},${PUBLIC_HOST}," in *",${PI_HOST},"*) ;; *) extra+=",${PI_HOST}" ;; esac
+	env_set "${env}" TLS_EXTRA_HOSTNAMES "${extra}"
 	env_set "${env}" GUNICORN_WORKERS "${GUNICORN_WORKERS}"
 	env_set "${env}" BACKUP_ENABLED "${BACKUP_ENABLED}"
 	env_set "${env}" BACKUP_HOST_PATH "${BACKUP_HOST_PATH}"
@@ -983,6 +988,26 @@ fail() {
 	exit 1
 }
 
+# What the last screen (and the optional file) says - its own function so the user manual's
+# screenshot tooling can draw it with example values.
+summary_text() { # https-check-result
+	local https_ok=$1
+	local wifi
+	wifi=$(t "(own WiFi off)" "(eigenes WLAN aus)")
+	[ "${AP_ENABLE}" = yes ] && wifi="${AP_SSID}  /  $(t password Passwort) ${AP_PASSPHRASE}"
+	printf '%s' "CoffeePy $(t on auf) ${PI_HOST} - $(date '+%Y-%m-%d %H:%M')
+
+Dashboard     https://${PUBLIC_HOST}/dashboard/
+Admin         ${ADMIN_USER}  /  ${ADMIN_PASSWORD}
+$(t "WiFi          " "WLAN          ")${wifi}
+$(t "Certificate   " "Zertifikat    ")https://${PUBLIC_HOST}/certificate/  ($(t "install once per phone/PC" "einmal pro Handy/PC installieren"))
+$(t "Language      " "Sprache       ")$(language_name "${DEVICE_LANGUAGE}")
+$(t "HTTPS check   " "HTTPS-Prüfung ")${https_ok}
+
+$(t "Phones reach the dashboard and their portal through the address above" "Handys erreichen Dashboard und Portal über die Adresse oben")$([ "${AP_ENABLE}" = yes ] && t " after joining the WiFi" ", nachdem sie sich mit dem WLAN verbunden haben").
+$(t "Members link their phone from the kiosk's Settings screen." "Mitglieder verknüpfen ihr Handy über den Einstellungen-Bildschirm des Kiosks.")"
+}
+
 step_done() {
 	CURRENT_STEP=4
 	local ca="${WORK}/ca.crt" https_ok
@@ -1010,21 +1035,8 @@ step_done() {
 			"keine Antwort nach 5 Minuten - zu erwarten, wenn das WLAN des Pi das Netz ersetzt hat, über das du ihn erreichst")
 	fi
 
-	local wifi
-	wifi=$(t "(own WiFi off)" "(eigenes WLAN aus)")
-	[ "${AP_ENABLE}" = yes ] && wifi="${AP_SSID}  /  $(t password Passwort) ${AP_PASSPHRASE}"
 	local summary
-	summary="CoffeePy $(t on auf) ${PI_HOST} - $(date '+%Y-%m-%d %H:%M')
-
-Dashboard     https://${PUBLIC_HOST}/dashboard/
-Admin         ${ADMIN_USER}  /  ${ADMIN_PASSWORD}
-$(t "WiFi          " "WLAN          ")${wifi}
-$(t "Certificate   " "Zertifikat    ")https://${PUBLIC_HOST}/certificate/  ($(t "install once per phone/PC" "einmal pro Handy/PC installieren"))
-$(t "Language      " "Sprache       ")$(language_name "${DEVICE_LANGUAGE}")
-$(t "HTTPS check   " "HTTPS-Prüfung ")${https_ok}
-
-$(t "Phones reach the dashboard and their portal through the address above" "Handys erreichen Dashboard und Portal über die Adresse oben")$([ "${AP_ENABLE}" = yes ] && t " after joining the WiFi" ", nachdem sie sich mit dem WLAN verbunden haben").
-$(t "Members link their phone from the kiosk's Settings screen." "Mitglieder verknüpfen ihr Handy über den Einstellungen-Bildschirm des Kiosks.")"
+	summary=$(summary_text "${https_ok}")
 	if ui_confirm "$(t "Save the passwords?" "Passwörter speichern?")" "${summary}
 
 $(t "Save this summary - passwords included - to ${HOME}/coffeepy-${PI_HOST}.txt (readable only by you)?" \
@@ -1087,4 +1099,8 @@ main() {
 	step_done
 }
 
-main "$@"
+# Sourced (the user manual's screenshot tooling draws single screens with these functions),
+# it only defines them; run, it provisions.
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+	main "$@"
+fi

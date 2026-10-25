@@ -175,5 +175,9 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "loggers": {"django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False}},
+    "loggers": {
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        # A host missing from ALLOWED_HOSTS is a bare 400 in the browser - this says which.
+        "django.security": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+    },
 }

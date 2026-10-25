@@ -5,7 +5,6 @@ both. Needs Chromium started with --remote-debugging-port=9222 (kiosk-browser.sh
     python3 -I cdp.py errors          reload the page, print console errors + failed/!=200 requests
     python3 -I cdp.py eval 'JS'       evaluate an expression in the kiosk page, print the result
     python3 -I cdp.py taps MODE...    tap nav buttons with real touch events, time each one
-    python3 -I cdp.py egg             tap the Doom sequence (and a wrong one) and report where it lands
     python3 -I cdp.py cookie          print the kiosk's sessionid (to replay its requests in the container)
 """
 import base64
@@ -17,7 +16,8 @@ import sys
 import time
 import urllib.request
 
-PORT = 9222
+# 9222 is the kiosk's; the user manual's capture also drives a local headless Chromium.
+PORT = int(os.environ.get("CDP_PORT", "9222"))
 
 
 class Page:
@@ -156,20 +156,6 @@ def taps(page, modes):
         time.sleep(0.3)
 
 
-def egg(page):
-    for sequence in (["ranking", "order", "ranking", "settings", "ranking"],
-                     ["ranking", "ranking", "order", "settings", "ranking"]):
-        page.call("Page.enable")
-        page.call("Page.navigate", url="https://localhost:8443/kiosk/")
-        page.collect(1, until="Page.loadEventFired")
-        for mode in sequence:
-            page.tap(mode)
-            time.sleep(0.7)
-        time.sleep(2)
-        print(" -> ".join(sequence), "=>", page.eval("location.pathname"))
-    page.call("Page.navigate", url="https://localhost:8443/kiosk/")
-
-
 def main():
     command, args = sys.argv[1], sys.argv[2:]
     page = Page()
@@ -179,8 +165,6 @@ def main():
         print(page.eval(args[0]))
     elif command == "taps":
         taps(page, args)
-    elif command == "egg":
-        egg(page)
     elif command == "cookie":
         cookies = page.call("Network.getCookies", urls=["https://localhost:8443/"])["cookies"]
         print(next(c["value"] for c in cookies if c["name"] == "sessionid"))

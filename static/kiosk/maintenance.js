@@ -35,7 +35,8 @@
       const response = await fetch(overlay.dataset.statusUrl, { cache: "no-store" });
       if (!response.ok) return null;
       const status = await response.json();
-      return Date.now() / 1000 - status.updated < STALE_SECONDS ? status : null;
+      // {} while nothing is running (the Caddyfile answers that when there is no file).
+      return status.updated && Date.now() / 1000 - status.updated < STALE_SECONDS ? status : null;
     } catch (e) {
       return null;
     }

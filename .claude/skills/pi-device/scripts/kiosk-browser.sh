@@ -2,7 +2,7 @@
 # Inspects the kiosk's real Chromium through the DevTools protocol.
 #
 #   kiosk-browser.sh on              restart the kiosk with --remote-debugging-port=9222
-#   kiosk-browser.sh errors|eval|taps|egg|cookie ...   run cdp.py on the Pi (see its docstring)
+#   kiosk-browser.sh errors|eval|taps|cookie ...   run cdp.py on the Pi (see its docstring)
 #   kiosk-browser.sh off             restore the installed autostart and restart the kiosk
 #
 # ALWAYS finish with "off": the debug port is a remote-control socket for the browser, and
@@ -12,7 +12,7 @@ set -euo pipefail
 
 DIR="$(dirname "$0")"
 PI="$DIR/pi.sh"
-cmd="${1:?usage: kiosk-browser.sh on|off|errors|eval|taps|egg|cookie}"
+cmd="${1:?usage: kiosk-browser.sh on|off|errors|eval|taps|cookie}"
 shift
 
 case "$cmd" in

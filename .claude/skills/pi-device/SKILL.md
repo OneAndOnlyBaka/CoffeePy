@@ -54,13 +54,21 @@ https://coffeepy.local/...` checks the real certificate chain; on the Pi, `curl 
 - **The kiosk browser itself:** `kiosk-browser.sh on`, then `errors` (reloads the page,
   shows console errors and failed requests - the first thing to run when the screen looks
   wrong), `eval 'JS'`, `taps order info ...` (tap latency with real touch events, and
-  whether a stale poll flips the screen back), `egg` (Doom easter egg), `cookie`.
+  whether a stale poll flips the screen back), `cookie`.
   **Always `kiosk-browser.sh off` afterwards.** on/off restart the X session.
 - **App errors:** `pi.sh 'cd /opt/coffeepy && sudo docker compose logs --since 10m web'` -
   500s are logged (`config/settings.py` LOGGING). A 500 only one browser gets usually
   lives in *that* session: `kiosk-browser.sh cookie`, then replay with a test `Client`
   carrying that `sessionid` and `raise_request_exception=True` via `django.sh`.
 - **Startup:** `startup-timeline.sh` restarts the session and logs black/white/kiosk every 3s.
+- **Both languages:** the device's default is `DJANGO_LANGUAGE_CODE` in `/opt/coffeepy/.env`;
+  the kiosk's DE/EN button (or a `django_language` cookie set over CDP) switches the kiosk.
+  Check a changed screen in both - a German string can overflow where the English one fit.
+- **The maintenance screen:** `pi.sh 'sudo bash -c ". /opt/coffeepy/install/maintenance.sh;
+  maintenance_begin update; maintenance_step images 35"'` shows it, removing
+  `/opt/coffeepy/data/maintenance/status.json` ends it (the kiosk reloads itself).
+- **Screenshots for the manual** are the `user-manual` skill's job (its capture.sh) - they
+  are scripted so they can be retaken; don't hand-place a screenshot from here into docs/.
 
 ## Measuring
 
@@ -94,6 +102,12 @@ about a Pi 3. Report numbers, not impressions.
 - **The screen is black, then white, for ~45s** after every session restart or boot,
   even with the app already up - that is Chromium starting, not a hang. Wait before
   judging a screenshot; `startup-timeline.sh` shows the phases.
+- **A CDP expression that ends in a DOM node returns nothing.** `Runtime.evaluate` with
+  `returnByValue` can't serialise an element, so `a && document.querySelector(...)` is never
+  "true" to a polling script - wrap conditions in `!!(...)`. Cost two capture runs.
+- **Provisioning changes go through `scripts/provision.sh`** where possible (interactive in
+  tmux, or `--answers ... --unattended` with `PI_PASSWORD` from `.device/pi.env`) - that tests
+  the tool along with the change. It re-runs every installer step (`--force`), ~20 minutes.
 - **Session-restarting commands** (`kiosk-browser.sh on/off`, `deploy.sh kiosk`,
   `startup-timeline.sh`) interrupt whoever is using the touchscreen - say so if the user
   might be at the device.

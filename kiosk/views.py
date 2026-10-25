@@ -237,13 +237,6 @@ def keyboard_edit(request):
     )
 
 
-def doom(request):
-    """Easter egg: reachable only via the secret nav-bar tap sequence (see
-    secret_sequence.js). A standalone page like the keyboard, not tied to the panel's
-    poll/session machinery - it's just a diversion, not part of the kiosk flow."""
-    return render(request, "kiosk/doom.html")
-
-
 # --- internal helpers -------------------------------------------------
 
 

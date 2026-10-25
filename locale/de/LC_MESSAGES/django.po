@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-25 18:14+0100\n"
+"POT-Creation-Date: 2026-10-25 23:04+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -944,18 +944,6 @@ msgstr "Dashboard öffnen"
 msgid "Manage coffee sorts, members, stats and more"
 msgstr "Kaffeesorten, Mitglieder, Statistik und mehr verwalten"
 
-msgid "Fire"
-msgstr "Feuer"
-
-msgid "Use"
-msgstr "Benutzen"
-
-msgid "Enter"
-msgstr "Enter"
-
-msgid "Exit to Kiosk"
-msgstr "Zurück zum Kiosk"
-
 msgid "CoffeePy Kiosk"
 msgstr "CoffeePy-Kiosk"
 
@@ -1129,6 +1117,10 @@ msgstr "Karten-UID: %(uid)s"
 
 msgid "Link this phone"
 msgstr "Dieses Handy verknüpfen"
+
+#, python-format
+msgid "Automatic logout in %(seconds)ss"
+msgstr "Automatische Abmeldung in %(seconds)s s"
 
 msgid "CCT"
 msgstr "CCT"
@@ -1399,7 +1391,7 @@ msgid "Your cups"
 msgstr "Deine Tassen"
 
 msgid "Others' average"
-msgstr "Durchschnitt der anderen"
+msgstr "Schnitt der anderen"
 
 msgid "Your rank"
 msgstr "Dein Rang"

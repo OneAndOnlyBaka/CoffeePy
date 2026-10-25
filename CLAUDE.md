@@ -37,7 +37,10 @@ Rules that hold across all four:
   with one-stroke fixtures.
 - **Dashboard mutations get an audit row** via `dashboard.audit.log(request, "noun.verb", …)`,
   right after the change succeeds. Background work uses `audit.log_actor(username, …)`.
-- Tests live in `<app>/tests/test_*.py`. UI text is English throughout.
+- Tests live in `<app>/tests/test_*.py`. UI text is bilingual - see "Two languages" below.
+- **A change users can see also changes the manual** (`docs/MANUAL.de.md` + `.en.md`, with
+  screenshots in both languages) - the `user-manual` skill in `.claude/skills/` has the
+  mapping and the capture scripts. Not done until both manuals match.
 
 ## The kiosk polls, and that breaks things
 
@@ -83,6 +86,42 @@ network only - `curl localhost:8000` on the device finds nothing.
   https://localhost:8443/...`. Chromium trusts the CA through the kiosk user's NSS store,
   filled by `install/kiosk/openbox-autostart` with `certutil` on every session start.
 
+## Two languages
+
+Every screen exists in German and English (`settings.LANGUAGES`). Which one a device shows is
+its own cookie - the kiosk's DE/EN button, the switch in dashboard and portal - or else the
+default chosen at setup (`DJANGO_LANGUAGE_CODE`, asked by `scripts/provision.sh`), never the
+browser's language (`config/language.py`).
+
+- **msgids are the English text.** Templates use `{% translate %}`/`{% blocktranslate trimmed
+  with x=... %}`, Python `gettext`/`gettext_lazy`, never f-strings inside `_()`. A word with two
+  meanings gets a context (`pgettext`): "Order" is *Bestellen* on the kiosk but *Reihenfolge*
+  in the payment-method form.
+- **After changing any marked string:** `manage.py makemessages -l de --no-location
+  --ignore=.venv/* --ignore=static/* --ignore=staticfiles/* --ignore=nfc-cardreader/*
+  --ignore=scripts/* --ignore=.claude/*`, translate what is new **and every entry it marks
+  fuzzy** - its guesses are wrong ("Restarting" became "Start") - then `compilemessages -l de
+  --ignore=.venv`. The .mo is committed; `coffee/tests/test_translations.py` fails if it lags
+  the .po or anything is untranslated. German says "du", like the English copy's tone.
+- **German formats numbers with a comma.** Anything a program reads back - `<input value>`,
+  `data-*`, inline `<script>`, CSS widths - needs `|unlocalize` / `{% localize off %}`
+  (`json.dumps` output is safe). The kiosk's pay view accepts "1,50" for that reason.
+- **Text that is stored is stored in English** and translated where it is shown: the thank-you
+  message lives in the session, the alt-card error in the database (read by kiosk, dashboard
+  and portal, each in its own language). "Cash" is data too - show it via `|method_label`.
+- The kiosk's language button is a GET link, not `set_language`'s form: a csrf token would
+  make the wait screen differ per poll (see above).
+
+## Maintenance screen
+
+`install.sh` and the update watcher write their progress to `data/maintenance/status.json`
+(`install/maintenance.sh`); Caddy serves it itself, so the kiosk's `maintenance.js` can read it
+while the app is down, and covers the screen with "We'll be right back" until it is over. Caddy
+answers 502s with `data/tls/maintenance.html` (both languages, rendered by `dashboard/tls.py`).
+A new installer step or watcher phase needs a label in `kiosk.views.MAINTENANCE_STEPS`; the
+installer's rsync keeps `data/maintenance/` (`src-filter.txt`) or it would delete the status
+mid-run.
+
 ## Django traps that already cost time here
 
 - **`{# … #}` is only a comment within one line.** Django's lexer runs without `DOTALL`, so a
@@ -113,6 +152,23 @@ whole class of bugs:
 - Legacy timestamps are local wall-clock strings; `_parse_datetime` makes them aware in
   `TIME_ZONE`. Statistics that group by hour or weekday must use `ExtractHour` /
   `ExtractIsoWeekDay`, which convert to local time - grouping raw UTC is off by an hour.
+
+## Provisioning tool
+
+`scripts/provision.sh` is how a Pi is normally set up and reconfigured: it asks for everything
+that goes into `/opt/coffeepy/.env` and runs `install.sh` over SSH. **It has to follow every
+option the app or the installer gains** - otherwise the new option exists, but nobody can set it:
+
+- a new `.env` setting → `build_env` (and `load_existing`, so a re-run keeps it), an entry in
+  the settings menu (`step_settings` + `edit_setting`), `ANSWER_KEYS` + the header comment, the
+  settings table in both manuals, and `.env.example`;
+- a new `install.sh` flag or step → `step_install` (flags), `step_percent`/`step_label`, the
+  installer's `step_weight`, and a kiosk label in `MAINTENANCE_STEPS`;
+- every text through `t "English" "Deutsch"` (German with "du"), validators included.
+
+Test it for real: interactively in tmux (`tmux send-keys`, `capture-pane`) against the test Pi,
+and `--answers FILE --unattended` for the scripted path. It must stay sourceable - the manual's
+screenshot tooling draws single screens with its functions.
 
 ## Installing on the device
 
