@@ -14,18 +14,26 @@ x11-xserver-utils
 openbox
 chromium
 unclutter-xfixes
+# The templates use emoji (ranking medals, 📱, ☕) - without a colour emoji font they are
+# empty boxes on the kiosk. Lite ships none; phones bring their own.
+fonts-noto-color-emoji
 
 # Boot splash, carried over from the original project's setup.
 plymouth
 rpd-plym-splash
 
 # App runtime. Only the engine: Compose v2 is not packaged for Raspberry Pi OS at all, so
-# install.sh fetches Docker's own plugin binary (pinned in versions.env).
+# install.sh fetches Docker's own plugin binary (pinned in versions.env). Since trixie the
+# `docker` client is its own package, only a Recommends of docker.io - and install.sh runs
+# with --no-install-recommends, so without it the daemon runs and nothing can talk to it.
 docker.io
+docker-cli
 
-# Standalone WiFi access point.
+# Standalone WiFi access point. rfkill because Raspberry Pi OS soft-blocks the radio until a
+# WiFi country is configured - an image set up for ethernet only boots with it blocked.
 hostapd
 dnsmasq
+rfkill
 
 # The update watcher (inotify), the DS3231 (i2c-tools for diagnosis), and hwclock - which
 # lives in util-linux-extra since bookworm and is what install/rtc_sync.sh calls.

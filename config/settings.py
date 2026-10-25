@@ -86,6 +86,11 @@ else:
             "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "coffeepy"),
             "HOST": os.environ.get("POSTGRES_HOST", "db"),
             "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+            # The kiosk polls twice a second. A fresh connection per request means a forked
+            # Postgres backend plus a SCRAM handshake each time - measured on a Pi 3, that was
+            # ~85ms of a ~117ms poll and capped the whole app at ~10 requests/s.
+            "CONN_MAX_AGE": 600,
+            "CONN_HEALTH_CHECKS": True,
         }
     }
 

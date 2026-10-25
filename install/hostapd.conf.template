@@ -1,20 +1,24 @@
 # Copied to /etc/hostapd/hostapd.conf by install/install.sh (access point step), which substitutes
 # __AP_SSID__/__AP_PASSPHRASE__ from .env - the kiosk setup wizard renders the same values
 # as a WiFi QR code, so edit AP_SSID/AP_PASSPHRASE in .env rather than this file directly.
+# The control socket is only for diagnosis: `sudo hostapd_cli -i wlan0 status` / `all_sta`.
+ctrl_interface=/run/hostapd
 interface=wlan0
 driver=nl80211
 ssid=__AP_SSID__
 hw_mode=g
 channel=7
-# Without a regulatory domain the radio stays rfkill-blocked on current Raspberry Pi OS
-# (raspberrypi-sys-mods boots with rfkill.default_state=0) and the AP never comes up.
-# The image sets the same country via raspi-config at build time (WPA_COUNTRY in
-# pi-gen/build.sh) - change both together if this ever leaves Germany.
+# The regulatory domain also caps the transmit power (20 dBm on 2.4GHz in DE) - the
+# Pi 3's radio already runs at that maximum, there is nothing to turn up. Unblocking the
+# radio itself is install.sh's job (rfkill + NetworkManager), not this file's.
 country_code=DE
 ieee80211d=1
 # 802.11n with WMM, as the V1 setup ran it on this same hardware - without both, the AP
 # falls back to 802.11g speeds for the phones loading the portal.
 ieee80211n=1
+# The only HT capability the Pi 3's BCM43438 offers (no HT40): short guard interval, 72
+# instead of 65 Mbit/s.
+ht_capab=[SHORT-GI-20]
 wmm_enabled=1
 macaddr_acl=0
 auth_algs=1
@@ -22,5 +26,5 @@ ignore_broadcast_ssid=0
 wpa=2
 wpa_passphrase=__AP_PASSPHRASE__
 wpa_key_mgmt=WPA-PSK
-wpa_pairwise=TKIP
+# CCMP only: TKIP is WPA1-era, and 802.11n does not allow it at all.
 rsn_pairwise=CCMP

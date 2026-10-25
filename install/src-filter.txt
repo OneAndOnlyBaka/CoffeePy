@@ -28,7 +28,9 @@
 
 - /.git/
 - /.github/
-- /pi-gen/  # leftovers from the removed image build, if any are still around
+# Leftovers from the removed image build, if any are still around. (rsync has no trailing
+# comments - text after a rule becomes part of its pattern.)
+- /pi-gen/
 
 # Runtime state of whichever machine built the image; the device makes its own.
 - /data/updates/incoming/*

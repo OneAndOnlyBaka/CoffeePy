@@ -56,8 +56,12 @@ services:
     # Overrides the Dockerfile's own CMD (which defaults to 3, a reasonable default for
     # non-Pi hosts) - each worker is a full separate Django process, so on a 1GB-RAM Pi
     # running Postgres/mosquitto/mqtt-listener/backup alongside it, that's real RAM.
-    # GUNICORN_WORKERS in .env lets Pi builds run leaner (see .env.example).
-    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "${GUNICORN_WORKERS:-3}"]
+    # GUNICORN_WORKERS in .env lets Pi builds run leaner (see .env.example). --preload
+    # imports Django once in the master so the workers share those pages copy-on-write
+    # (~12MB less on a Pi 3 with two workers). --timeout: a sync worker is busy for the
+    # whole upload of an update bundle (~700MB, minutes over the AP's WiFi), and the default
+    # 30s killed every such upload half-way through.
+    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "${GUNICORN_WORKERS:-3}", "--preload", "--timeout", "900"]
     ports:
       - "8000:8000"
     cap_add:

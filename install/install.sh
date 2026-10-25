@@ -308,6 +308,12 @@ step_packages() {
 	fi
 
 	run systemctl enable --now docker
+	# Checked here rather than left to the images step, which would retry a missing client
+	# three times and then blame the network.
+	if [ "${DRY_RUN}" != "1" ]; then
+		docker compose version >/dev/null 2>&1 \
+			|| die "docker compose does not run after the install - check docker-cli and the plugin."
+	fi
 }
 
 step_app() {
@@ -429,6 +435,15 @@ step_kiosk() {
 		fi
 	fi
 
+	# A Desktop image (instead of the documented Lite) autologins into a full desktop through
+	# lightdm on its own VT, next to the kiosk's X on tty1 - harmless to look at, but on a
+	# 1GB board it costs the RAM the containers need.
+	if systemctl is-enabled display-manager.service >/dev/null 2>&1; then
+		log "Disabling the desktop's display manager"
+		run systemctl disable display-manager.service
+	fi
+	run systemctl set-default multi-user.target
+
 	log "Enabling autologin on tty1"
 	run install -d /etc/systemd/system/getty@tty1.service.d
 	if [ "${DRY_RUN}" = "1" ]; then
@@ -512,6 +527,26 @@ step_ap() {
 		warn "No AP_SSID/AP_PASSPHRASE in ${TARGET_DIR}/.env - falling back to the template defaults."
 	fi
 
+	# Raspberry Pi OS boots with the radio soft-blocked unless WiFi was set up in the Imager,
+	# and hostapd then only reports "Could not connect to kernel driver". systemd-rfkill
+	# stores the state at shutdown, so unblocking once is enough.
+	run rfkill unblock wlan
+
+	# Bookworm and later run NetworkManager, which would keep claiming wlan0 back from
+	# hostapd and systemd-networkd. ethernet stays with it. Unmanaged is not enough on its
+	# own: NM keeps its own "WiFi disabled" state and re-applies the soft block at every
+	# boot regardless, so the radio has to be switched on through NM as well.
+	local nm=0
+	if systemctl is-enabled NetworkManager >/dev/null 2>&1; then
+		nm=1
+		write_file /etc/NetworkManager/conf.d/coffeepy-ap.conf <<-EOF
+			[keyfile]
+			unmanaged-devices=interface-name:wlan0
+		EOF
+		run systemctl reload NetworkManager
+		run nmcli radio wifi on
+	fi
+
 	run systemctl unmask hostapd
 	if [ "${DRY_RUN}" = "1" ]; then
 		info "[dry-run] render hostapd.conf for SSID '${ssid:-CoffeePy}'"
@@ -523,6 +558,13 @@ step_ap() {
 		chmod 0600 /etc/hostapd/hostapd.conf
 		echo 'DAEMON_CONF="/etc/hostapd/hostapd.conf"' > /etc/default/hostapd
 	fi
+	# brcmfmac comes up with power saving on, which costs a phone on the AP latency spikes
+	# for nothing on a mains-powered box. Re-applied on every hostapd start, since the
+	# interface is reset with it.
+	write_file /etc/systemd/system/hostapd.service.d/coffeepy-power-save.conf <<-EOF
+		[Service]
+		ExecStartPost=-/usr/sbin/iw dev wlan0 set power_save off
+	EOF
 
 	backup_once /etc/dnsmasq.conf
 	if ! grep -q "coffeepy" /etc/dnsmasq.conf 2>/dev/null; then
@@ -537,13 +579,23 @@ step_ap() {
 		[Match]
 		Name=wlan0
 
+		[Link]
+		RequiredForOnline=no
+
 		[Network]
 		Address=${AP_ADDRESS}/24
 		DHCPServer=no
 	EOF
 
 	run systemctl enable --now systemd-networkd
+	# Enabling networkd pulls in its wait-online, which then waits for links it does not
+	# manage and times out after two minutes - holding back coffeepy.service, which is
+	# ordered after network-online.target. NM's own wait-online already covers ethernet.
+	[ "${nm}" = "1" ] && run systemctl disable systemd-networkd-wait-online.service
+	run systemctl daemon-reload
 	run systemctl enable --now hostapd dnsmasq
+	# A re-run (--only=ap) finds hostapd already running with the old config.
+	run systemctl restart hostapd
 }
 
 step_verify() {

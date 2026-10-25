@@ -21,49 +21,66 @@ STATUS_DIR="$PROJECT_DIR/data/updates/status"
 
 mkdir -p "$INCOMING_DIR" "$PROCESSED_DIR" "$STATUS_DIR"
 
+# Every failure path returns rather than exits: this runs inside the `inotifywait | while`
+# pipeline's subshell, where an exit ends the loop for good while inotifywait - and with it
+# the service - stays up. One broken upload used to silently swallow every later update.
 process_bundle() {
     bundle="$1"
     name="$(basename "$bundle")"
     log="$STATUS_DIR/${name}.log"
-    workdir="$(mktemp -d)"
+    # The bundle's images.tar is several hundred MB, hence a work dir on the data partition:
+    # /tmp is a RAM-backed tmpfs on current Raspberry Pi OS and it does not fit.
+    workdir="$(mktemp -d "$PROJECT_DIR/data/updates/.work.XXXXXX")"
 
-    {
-        echo "[$(date -Is)] Unpacking $name ..."
-        if ! tar -xf "$bundle" -C "$workdir"; then
-            echo "[$(date -Is)] FAILED: could not unpack bundle"
-            rm -rf "$workdir"
-            exit 1
-        fi
-
-        echo "[$(date -Is)] Loading images ..."
-        if ! docker load -i "$workdir/images.tar"; then
-            echo "[$(date -Is)] FAILED: docker load"
-            rm -rf "$workdir"
-            exit 1
-        fi
-
-        if [ -f "$workdir/docker-compose.yml" ]; then
-            backup="$PROJECT_DIR/docker-compose.yml.bak-$(date +%Y%m%d%H%M%S)"
-            echo "[$(date -Is)] Updating docker-compose.yml (previous version kept at $backup) ..."
-            cp "$PROJECT_DIR/docker-compose.yml" "$backup" 2>/dev/null || true
-            cp "$workdir/docker-compose.yml" "$PROJECT_DIR/docker-compose.yml"
-        fi
-
-        echo "[$(date -Is)] Recreating any service whose image or definition changed ..."
-        if ! (cd "$PROJECT_DIR" && docker compose up -d --remove-orphans); then
-            echo "[$(date -Is)] FAILED: docker compose up"
-            rm -rf "$workdir"
-            exit 1
-        fi
-
-        echo "[$(date -Is)] Update applied successfully."
-    } >"$log" 2>&1
-
+    if apply_bundle >"$log" 2>&1; then
+        mv "$bundle" "$PROCESSED_DIR/$name"
+    else
+        # Out of incoming/ either way, so a failed bundle is not tried again forever.
+        mv "$bundle" "$PROCESSED_DIR/$name.failed"
+    fi
     rm -rf "$workdir"
-    mv "$bundle" "$PROCESSED_DIR/$name"
+}
+
+apply_bundle() {
+    echo "[$(date -Is)] Unpacking $name ..."
+    if ! tar -xf "$bundle" -C "$workdir"; then
+        echo "[$(date -Is)] FAILED: could not unpack bundle"
+        return 1
+    fi
+
+    echo "[$(date -Is)] Loading images ..."
+    if ! docker load -i "$workdir/images.tar"; then
+        echo "[$(date -Is)] FAILED: docker load"
+        return 1
+    fi
+
+    if [ -f "$workdir/docker-compose.yml" ]; then
+        backup="$PROJECT_DIR/docker-compose.yml.bak-$(date +%Y%m%d%H%M%S)"
+        echo "[$(date -Is)] Updating docker-compose.yml (previous version kept at $backup) ..."
+        cp "$PROJECT_DIR/docker-compose.yml" "$backup" 2>/dev/null || true
+        cp "$workdir/docker-compose.yml" "$PROJECT_DIR/docker-compose.yml"
+    fi
+
+    echo "[$(date -Is)] Recreating any service whose image or definition changed ..."
+    if ! (cd "$PROJECT_DIR" && docker compose up -d --remove-orphans); then
+        echo "[$(date -Is)] FAILED: docker compose up"
+        return 1
+    fi
+
+    # The images the update replaced are now untagged; each is a few hundred MB of SD card.
+    docker image prune -f >/dev/null 2>&1 || true
+
+    echo "[$(date -Is)] Update applied successfully."
 }
 
 echo "coffeepy-update-watcher: watching $INCOMING_DIR"
+
+# inotify only reports what happens from now on - a bundle uploaded while the watcher was
+# down (a reboot, a restart) would otherwise sit in incoming/ forever. The upload's own
+# .uploading-* temp file does not match these patterns.
+for bundle in "$INCOMING_DIR"/*.tar "$INCOMING_DIR"/*.tar.gz; do
+    [ -e "$bundle" ] && process_bundle "$bundle"
+done
 
 if command -v inotifywait >/dev/null 2>&1; then
     inotifywait -m -e close_write -e moved_to --format '%f' "$INCOMING_DIR" | while read -r fname; do

@@ -127,6 +127,20 @@ mind before changing it:
   `scripts/build_offline_bundle.sh` resolves the packages inside a container of the
   *target* architecture with the Raspberry Pi archives configured - the only place those
   names resolve the way they will on the device.
+- **NetworkManager owns WiFi on bookworm/trixie**, also on Lite. For the AP, wlan0 has to be
+  unmanaged *and* the radio switched on through `nmcli` - NM keeps its own "WiFi off" state
+  (the default when the Imager set up no WiFi) and re-applies the rfkill block every boot.
+  Enabling systemd-networkd also enables its wait-online, which then stalls boot by two
+  minutes; `coffeepy.service` is ordered after `network-online.target`.
+- **Since trixie `docker` (the client) is the separate `docker-cli` package**, only a
+  Recommends of `docker.io`, and the installer runs with `--no-install-recommends`.
+- **`/tmp` is a RAM-backed tmpfs** on trixie (and Fedora) - ~450MB on a Pi 3. An update
+  bundle is ~700MB, so neither `build_update_bundle.sh` nor `update_watcher.sh` may stage
+  it there.
+- **`update_watcher.sh` processes bundles inside a `while` fed by `inotifywait`**, i.e. in a
+  subshell: an `exit` there ends the loop while the service still reports active. Failure
+  paths `return`. The dashboard upload itself holds a gunicorn sync worker for minutes,
+  hence `--timeout` in `docker-compose.yml`.
 - **Current Raspberry Pi OS drives HDMI through KMS**, where `hdmi_group`/`hdmi_mode`/
   `hdmi_cvt` are ignored. A panel with no usable EDID (the documented 1024x600 one) stays
   black unless the mode is forced with `video=` on the kernel command line.

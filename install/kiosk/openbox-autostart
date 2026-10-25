@@ -18,6 +18,10 @@ for _ in $(seq 1 60); do
 done
 
 # Relaunch on crash - a kiosk should never just sit at a bare Openbox desktop.
+# Raspberry Pi OS's chromium wrapper forces --force-renderer-accessibility, which rebuilds
+# the accessibility tree on every #panel swap - twice a second here. Turning it (and the
+# background services a kiosk never uses) off took Chromium on a Pi 3 from ~40% of a core
+# to ~17% while idle.
 while true; do
     chromium \
         --kiosk "http://localhost:8000/kiosk/" \
@@ -27,6 +31,11 @@ while true; do
         --disable-translate \
         --overscroll-history-navigation=0 \
         --check-for-update-interval=31536000 \
-        --no-first-run
+        --no-first-run \
+        --disable-renderer-accessibility \
+        --disable-extensions \
+        --disable-background-networking \
+        --disable-component-update \
+        --disable-sync
     sleep 2
 done

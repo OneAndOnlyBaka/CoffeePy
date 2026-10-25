@@ -19,6 +19,18 @@ cd "$(dirname "$0")/.."
 
 export DOCKER_DEFAULT_PLATFORM="$PLATFORM"
 
+# Next to the output rather than in /tmp: the image tarball is several hundred MB, and on
+# Debian trixie or Fedora /tmp is a RAM-backed tmpfs that it does not fit into.
+workdir="$(mktemp -d "$(dirname "$OUT")/.coffeepy-bundle.XXXXXX")"
+trap 'rm -rf "$workdir"' EXIT
+
+# docker-compose.yml's env_file makes every compose command fail without a .env - and a
+# clean checkout has none. Nothing from it ends up in the bundle, so the example will do.
+if [ ! -f .env ]; then
+    cp .env.example .env
+    trap 'rm -rf "$workdir"; rm -f .env' EXIT
+fi
+
 echo "== Building coffeepy-web + nfc-bridge for $PLATFORM (docker-compose.yml is the source of truth) =="
 docker compose build
 
@@ -27,11 +39,12 @@ docker compose pull db mosquitto
 
 # Every image any service resolves to, built or pulled, deduplicated (web/migrate/
 # mqtt-listener/backup all share the same coffeepy-web:latest tag).
-mapfile -t IMAGES < <(docker compose config --images | sort -u)
+# Not a process substitution: its exit status is lost, and a failing `compose config`
+# would only surface later as a confusing "docker save requires at least 1 argument".
+images="$(docker compose config --images)"
+mapfile -t IMAGES < <(sort -u <<<"$images")
+[ "${#IMAGES[@]}" -gt 0 ] && [ -n "${IMAGES[0]}" ] || { echo "No images in docker-compose.yml?" >&2; exit 1; }
 echo "== Bundling images: ${IMAGES[*]} =="
-
-workdir="$(mktemp -d)"
-trap 'rm -rf "$workdir"' EXIT
 
 docker save -o "$workdir/images.tar" "${IMAGES[@]}"
 cp docker-compose.yml "$workdir/docker-compose.yml"
