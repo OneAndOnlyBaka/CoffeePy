@@ -138,3 +138,13 @@ IMPORT_STATUS_FILE = Path(os.environ.get("IMPORT_STATUS_FILE", Path(tempfile.get
 # the kiosk setup-wizard's WiFi QR code; blank on deployments that join an existing network.
 AP_SSID = os.environ.get("AP_SSID", "")
 AP_PASSPHRASE = os.environ.get("AP_PASSPHRASE", "")
+
+# Django only prints request errors to the console with DEBUG on, and mails them otherwise -
+# on an offline box with no ADMINS that meant a 500 left no trace at all, not even in
+# `docker compose logs web`.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {"django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False}},
+}

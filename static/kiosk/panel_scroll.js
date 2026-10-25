@@ -38,8 +38,11 @@
 
   document.body.addEventListener("htmx:beforeSwap", (evt) => {
     if (evt.target.id !== "panel") return;
+    // A nav button swaps in a different screen, which should start at the top - only a
+    // poll of the same screen carries its scroll position over.
+    const fromNav = evt.detail.requestConfig && evt.detail.requestConfig.elt.closest(".kiosk-nav");
     const body = evt.target.querySelector(".panel-body");
-    evt.target.dataset.savedScrollTop = body ? body.scrollTop : 0;
+    evt.target.dataset.savedScrollTop = body && !fromNav ? body.scrollTop : 0;
   });
 
   document.body.addEventListener("htmx:afterSwap", (evt) => {

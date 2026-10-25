@@ -29,12 +29,12 @@
                     <a href="{% url 'dashboard:member_edit' member.uid %}">Edit</a>
                     &middot;
                     <a href="{% url 'dashboard:member_alt_uid_start' member.uid %}">Add card</a>
-                    {% if member.devices.count %}
+                    {% if member.device_count %}
                     &middot;
                     <form method="post" action="{% url 'dashboard:member_revoke_devices' member.uid %}"
                           style="display:inline" onsubmit="return confirm('Log out all of {{ member.display_name }}\'s linked devices?');">
                         {% csrf_token %}
-                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">Revoke devices ({{ member.devices.count }})</button>
+                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">Revoke devices ({{ member.device_count }})</button>
                     </form>
                     {% endif %}
                     &middot;

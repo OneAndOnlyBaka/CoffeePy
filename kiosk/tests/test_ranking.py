@@ -36,6 +36,19 @@ class RankingBadgeTestCase(TestCase):
         self.assertContains(response, "🥇")
         self.assertEqual(response.content.decode().count("rank-badge"), 3)
 
+    def test_ranking_follows_new_orders_while_the_screen_stays_open(self):
+        # The rows are cached between polls (_ranking_rows) - a new order has to show up on
+        # the very next one regardless.
+        self.assertIn("Alice", self.client.get(reverse("kiosk:panel")).content.decode().split("Bob")[0])
+        Order.objects.create(member=self.dave, coffee_sort=self.espresso, value=Decimal("3.00"), machine_strokes=20)
+        response = self.client.get(reverse("kiosk:panel")).content.decode()
+        self.assertLess(response.index("Dave"), response.index("Alice"))
+
+    def test_ranking_follows_a_renamed_member(self):
+        self.client.get(reverse("kiosk:panel"))
+        Member.objects.filter(pk=self.alice.pk).update(nickname="Alicia")
+        self.assertContains(self.client.get(reverse("kiosk:panel")), "Alicia")
+
     def test_pillory_view_has_no_medals(self):
         Order.objects.create(
             member=self.dave,

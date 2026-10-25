@@ -8,24 +8,34 @@
 <script src="{% static 'kiosk/panel_scroll.js' %}" defer></script>
 <script src="{% static 'kiosk/panel_stable_swap.js' %}" defer></script>
 <script src="{% static 'kiosk/panel_modal.js' %}" defer></script>
+<script src="{% static 'kiosk/nav_state.js' %}" defer></script>
 {% endblock %}
 {% block body_class %}kiosk{% endblock %}
 {% block body %}
 <div class="kiosk-frame" data-mode="{{ mode }}" data-doom-url="{% url 'kiosk:doom' %}">
-    <nav class="kiosk-nav">
-        <a class="nav-btn {% if mode == 'order' %}active{% endif %}" href="{% url 'kiosk:nav' 'order' %}">
+    {% comment %}
+    The buttons swap #panel in place instead of loading a page (see views.nav). hx-sync
+    aborts a poll that is still in flight - its answer predates the tap and would put the
+    old screen back - and holds new polls until the tap's own panel has arrived.
+    {% endcomment %}
+    <nav class="kiosk-nav" hx-target="#panel" hx-swap="innerHTML" hx-sync="#panel:replace">
+        <a class="nav-btn {% if mode == 'order' %}active{% endif %}" data-mode="order" href="{% url 'kiosk:nav' 'order' %}"
+           hx-get="{% url 'kiosk:nav' 'order' %}">
             <span class="nav-icon"><img src="{% static 'kiosk/img/Coffee-icon.png' %}" alt="Order"></span>
             <span class="nav-label">Order</span>
         </a>
-        <a class="nav-btn {% if mode == 'info' %}active{% endif %}" href="{% url 'kiosk:nav' 'info' %}">
+        <a class="nav-btn {% if mode == 'info' %}active{% endif %}" data-mode="info" href="{% url 'kiosk:nav' 'info' %}"
+           hx-get="{% url 'kiosk:nav' 'info' %}">
             <span class="nav-icon"><img src="{% static 'kiosk/img/Books-2-icon.png' %}" alt="Pay & Stats"></span>
             <span class="nav-label">Pay &amp; Stats</span>
         </a>
-        <a class="nav-btn {% if mode == 'settings' %}active{% endif %}" href="{% url 'kiosk:nav' 'settings' %}">
+        <a class="nav-btn {% if mode == 'settings' %}active{% endif %}" data-mode="settings" href="{% url 'kiosk:nav' 'settings' %}"
+           hx-get="{% url 'kiosk:nav' 'settings' %}">
             <span class="nav-icon"><img src="{% static 'kiosk/img/spur-gear-icon.png' %}" alt="Settings"></span>
             <span class="nav-label">Settings</span>
         </a>
-        <a class="nav-btn {% if mode == 'ranking' %}active{% endif %}" href="{% url 'kiosk:nav' 'ranking' %}">
+        <a class="nav-btn {% if mode == 'ranking' %}active{% endif %}" data-mode="ranking" href="{% url 'kiosk:nav' 'ranking' %}"
+           hx-get="{% url 'kiosk:nav' 'ranking' %}">
             <span class="nav-icon"><img src="{% static 'kiosk/img/Badge-Trophy-02-icon.png' %}" alt="Ranking"></span>
             <span class="nav-label">Ranking</span>
         </a>

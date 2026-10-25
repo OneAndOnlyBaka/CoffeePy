@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.sessions.models import Session
 from django.core.management import call_command
 from django.db import connection, transaction
+from django.db.models import Count
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -157,8 +158,11 @@ def member_list(request):
         request,
         "dashboard/members.html",
         {
+            # Annotated rather than member.devices.count in the template: that was two
+            # queries per member row.
             "members": Member.objects.select_related("favourite_coffee")
             .prefetch_related("alt_cards")
+            .annotate(device_count=Count("devices"))
             .order_by("nickname", "uid")
         },
     )
@@ -382,16 +386,18 @@ def export_orders(request):
     response["Content-Disposition"] = 'attachment; filename="orders.csv"'
     writer = csv.writer(response)
     writer.writerow(["uid", "nickname", "coffee_sort", "value", "machine_strokes", "created_at", "info"])
-    for order in Order.objects.select_related("member", "coffee_sort").order_by("created_at"):
-        writer.writerow([
-            order.member_id,
-            order.member.nickname,
-            order.coffee_sort.name if order.coffee_sort else "",
-            order.value,
-            order.machine_strokes,
-            order.created_at.isoformat(),
-            order.info,
-        ])
+    # Plain tuples instead of model instances: with a few years of history that is tens of
+    # thousands of orders, and building an Order + Member + CoffeeSort for each took ~12s
+    # on a Pi 3.
+    rows = (
+        Order.objects.order_by("created_at")
+        .values_list("member_id", "member__nickname", "coffee_sort__name", "value", "machine_strokes",
+                     "created_at", "info")
+        .iterator(chunk_size=2000)
+    )
+    for member_id, nickname, sort_name, value, strokes, created_at, info in rows:
+        writer.writerow([member_id, nickname, sort_name or "", value, strokes,
+                         created_at.isoformat(), info])
     return response
 
 

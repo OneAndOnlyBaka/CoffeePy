@@ -1,9 +1,10 @@
 """Query logic ported from the legacy DatabaseConnector, using the Django ORM instead of
 string-built SQL."""
+import hashlib
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django.db.models import Count, F, Q, Sum
+from django.db.models import Count, F, Max, Q, Sum
 from django.db.models.functions import ExtractHour, ExtractIsoWeekDay, TruncMonth, TruncQuarter
 from django.utils import timezone
 
@@ -114,6 +115,23 @@ def ranking_current_month(limit: int = 7):
         .filter(cups__isnull=False)
         .order_by("-cups")[:limit]
     )
+
+
+def ranking_fingerprint() -> str:
+    """Changes whenever what the ranking/pillory screens show could have: a new order or
+    payment, a member added, renamed, marked departed or merged away, the month rolling
+    over. Index lookups and one small table instead of the full-history aggregates those
+    screens run - on a Pi 3 with five years of orders, ~10ms against 100-200ms.
+
+    Not covered: editing or deleting an older order/payment through /admin/ (the max id
+    stays put) - the dashboard itself never does that, and the next order catches up."""
+    parts = (
+        Order.objects.aggregate(m=Max("id"))["m"],
+        Payment.objects.aggregate(m=Max("id"))["m"],
+        list(Member.objects.order_by("uid").values_list("uid", "nickname", "departed_at")),
+        current_month_start(),
+    )
+    return hashlib.sha1(repr(parts).encode()).hexdigest()
 
 
 def balance_before_current_month(member: Member) -> Decimal:

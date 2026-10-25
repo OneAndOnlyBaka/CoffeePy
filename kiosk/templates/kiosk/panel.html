@@ -1,5 +1,5 @@
 {% load static %}
-<div id="panel-state" data-panel-key="{{ panel_key }}" hidden></div>
+<div id="panel-state" data-panel-key="{{ panel_key }}" data-mode="{{ mode }}" hidden></div>
 {% if state == "wait_for_card" %}
 <button type="button" class="info-btn" title="WLAN Settings"
         hx-get="{% url 'kiosk:qr_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"

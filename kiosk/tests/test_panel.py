@@ -83,6 +83,18 @@ class KioskPanelTestCase(TestCase):
         self.assertContains(response, "Thank you")
         self.assertEqual(Order.objects.count(), 1)
 
+    def test_member_deleted_while_logged_in_logs_out_instead_of_failing(self):
+        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom", favourite_coffee=self.espresso)
+        self._scan("AABBCCDD")
+        self.client.get(reverse("kiosk:panel"))  # logs in
+        Member.objects.filter(uid=0xDDCCBBAA).delete()  # e.g. merged away on the dashboard
+
+        with mock.patch("time.time", return_value=time.time() + 25):
+            response = self.client.get(reverse("kiosk:panel"))
+
+        self.assertContains(response, "Apply your card")
+        self.assertEqual(Order.objects.count(), 0)
+
     def test_nav_resets_session_and_logs_out(self):
         Member.objects.create(uid=0xDDCCBBAA, nickname="Tom", favourite_coffee=self.espresso)
         self._scan("AABBCCDD")
@@ -91,6 +103,23 @@ class KioskPanelTestCase(TestCase):
         self.client.get(reverse("kiosk:nav", args=["settings"]))
         response = self.client.get(reverse("kiosk:panel"))
         self.assertContains(response, "Apply your card")
+
+    def test_nav_via_htmx_returns_the_new_panel_instead_of_a_redirect(self):
+        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom", favourite_coffee=self.espresso)
+        self._scan("AABBCCDD")
+        self.client.get(reverse("kiosk:panel"))  # logs in
+
+        response = self.client.get(reverse("kiosk:nav", args=["ranking"]), HTTP_HX_REQUEST="true")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-mode="ranking"')
+        self.assertFalse(self.client.session["logged_in"])
+
+    def test_panel_reports_mode_the_server_switched_to(self):
+        # An unknown card in order mode is sent to the settings flow - the nav bar only
+        # learns about that from the panel (nav_state.js).
+        self._scan("AABBCCDD")
+        response = self.client.get(reverse("kiosk:panel"))
+        self.assertContains(response, 'data-mode="settings"')
 
     def test_card_not_recognized_for_unparseable_uid(self):
         self._scan(None)

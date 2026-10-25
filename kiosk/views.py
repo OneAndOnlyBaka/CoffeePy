@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 import qrcode
 import qrcode.image.svg
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
@@ -75,6 +76,11 @@ def nav(request, mode):
     if mode in VALID_MODES:
         request.session["mode"] = mode
         _reset_session_state(request)
+    # The nav buttons swap only #panel via htmx (index.html): a full page load per tap took
+    # ~370ms on a Pi 3, most of it Chromium rebuilding the page. The redirect stays for
+    # anything that follows the plain link.
+    if request.headers.get("HX-Request"):
+        return _render_panel(request)
     return redirect("kiosk:index")
 
 
@@ -234,15 +240,21 @@ def _consume_new_scan(request):
 def _place_order(request):
     """Returns the created Order, or None if there was no CoffeeSort to order at all
     (shouldn't normally happen - the order screen requires one to exist) - callers use
-    this to decide whether an order actually went through before e.g. showing thanks."""
+    this to decide whether an order actually went through before e.g. showing thanks.
+
+    Also None when the logged-in member no longer exists: an admin can delete or merge
+    them away during the 20s the order screen is open, and the insert would then fail its
+    foreign key on every poll, leaving the kiosk stuck on an error for good."""
     uid = request.session["uid"]
+    member = Member.objects.filter(uid=uid).first()
+    if member is None:
+        return None
     coffee_id = request.session.get("order_coffee_id")
     coffee_sort = None
     if coffee_id:
         coffee_sort = CoffeeSort.objects.filter(pk=coffee_id).first()
     if coffee_sort is None:
-        member = Member.objects.filter(uid=uid).first()
-        coffee_sort = member.favourite_coffee if member else None
+        coffee_sort = member.favourite_coffee
     if coffee_sort is None:
         coffee_sort = CoffeeSort.objects.first()
     if coffee_sort is None:
@@ -319,6 +331,7 @@ def _render_panel(request):
     # redirects into the settings flow, or a timeout logs out) - re-read it before
     # rendering so the panel reflects the *new* state, not the one at request start.
     mode = request.session.get("mode", mode)
+    ctx["mode"] = mode
     if ctx.get("state") is None:
         ctx.update(_state_context(request, mode))
 
@@ -519,12 +532,12 @@ def _state_context(request, mode):
 RANK_BADGES = {1: "🥇", 2: "🥈", 3: "🥉"}
 
 
-def _rank_badge(uid, ranked_members):
-    """Medal emoji if `uid` is among the top 3 of `ranked_members` (a
-    ranking_all_time()/ranking_current_month() result), None otherwise - same medals the
-    ranking screen itself shows for these two views."""
-    for position, ranked_member in enumerate(ranked_members, start=1):
-        if ranked_member.uid == uid:
+def _rank_badge(uid, ranking_rows):
+    """Medal emoji if `uid` is among the top 3 of `ranking_rows` (an "alltime"/"month"
+    _ranking_rows() result), None otherwise - same medals the ranking screen itself shows
+    for these two views."""
+    for position, row in enumerate(ranking_rows[:3], start=1):
+        if row["uid"] == uid:
             return RANK_BADGES.get(position)
     return None
 
@@ -546,8 +559,9 @@ def _order_context(request, uid, seconds_left):
         prior_balance = services.balance_before_current_month(member)
         if prior_balance < 0:
             month_reminder_balance = -prior_balance
-        alltime_badge = _rank_badge(uid, services.ranking_all_time(limit=3))
-        month_badge = _rank_badge(uid, services.ranking_current_month(limit=3))
+        # Shares the ranking screen's cached rows - the order screen is polled as well.
+        alltime_badge = _rank_badge(uid, _ranking_rows(request, "alltime"))
+        month_badge = _rank_badge(uid, _ranking_rows(request, "month"))
     return {
         "state": "order",
         "member": member,
@@ -627,30 +641,57 @@ def _info_pay_context(request, uid, seconds_left):
 
 
 def _ranking_context(request):
+    view = request.session.get("ranking_view", "alltime")
+    if view not in ("month", "pillory"):
+        view = "alltime"
+    return {"ranking_view": view, "rows": _ranking_rows(request, view)}
+
+
+RANKING_CACHE_SECONDS = 300
+
+
+def _ranking_rows(request, view):
+    """The rows of one ranking view, recomputed only when services.ranking_fingerprint()
+    says the data behind them changed. The ranking screen is re-rendered on every ~500ms
+    poll for as long as the kiosk idles on it, and its aggregates run over the whole order
+    history - 100-200ms of Postgres per poll on a Pi 3 with a few years of data.
+
+    Django's per-process cache rather than the session: a poll writing the session can
+    overwrite a nav tap that landed meanwhile (see index.html's hx-sync). The session key
+    is part of the cache key only to keep separate kiosk sessions - and test clients -
+    from ever sharing an entry."""
+    fingerprint = getattr(request, "_ranking_fingerprint", None)
+    if fingerprint is None:
+        fingerprint = request._ranking_fingerprint = services.ranking_fingerprint()
+    session_key = request.session.session_key
+    key = f"kiosk-ranking:{session_key}:{view}:{fingerprint}"
+    rows = cache.get(key) if session_key else None
+    if rows is None:
+        rows = _compute_ranking_rows(view)
+        if session_key:
+            cache.set(key, rows, RANKING_CACHE_SECONDS)
+    return rows
+
+
+def _compute_ranking_rows(view):
     # ranking_all_time()/ranking_current_month() already annotate each member with the
     # cups total the ranking itself is sorted by - only the *other* figure (ccm/cct)
     # needs a lookup, and that's batched below in one query rather than one per member.
-    # This view is polled every ~500ms while the kiosk idles on the ranking screen, so an
-    # N+1 pattern here means N+1 queries every poll, indefinitely.
-    view = request.session.get("ranking_view", "alltime")
     if view == "month":
         members = list(services.ranking_current_month())
         alltime_cups = services.cups_by_member(members)
-        rows = [
-            {"name": m.display_name(), "cct": alltime_cups.get(m.uid, 0), "ccm": m.cups}
+        return [
+            {"uid": m.uid, "name": m.display_name(), "cct": alltime_cups.get(m.uid, 0), "ccm": m.cups}
             for m in members
         ]
-        return {"ranking_view": view, "rows": rows}
     if view == "pillory":
-        rows = [
+        return [
             {"name": e["member"].display_name(), "balance": e["balance"]}
             for e in services.deposit_pillory()
         ]
-        return {"ranking_view": view, "rows": rows}
     members = list(services.ranking_all_time())
     month_cups = services.cups_by_member(members, since=services.current_month_start())
-    rows = [
-        {"name": m.display_name(), "cct": m.cups, "ccm": month_cups.get(m.uid, 0)}
+    return [
+        {"uid": m.uid, "name": m.display_name(), "cct": m.cups, "ccm": month_cups.get(m.uid, 0)}
         for m in members
     ]
-    return {"ranking_view": "alltime", "rows": rows}
