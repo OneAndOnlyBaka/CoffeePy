@@ -199,8 +199,8 @@ keine angelegt ist, zeigt er *Einrichtung nötig* mit QR-Codes zu WLAN und Dashb
 ## 4. Der Kiosk
 
 Der Touchscreen hat vier Bereiche, links in der Leiste. Oben rechts sitzen zwei runde Knöpfe:
-**DE/EN** schaltet die Sprache des Kiosks um, der **WLAN-Knopf** zeigt die QR-Codes zum
-Einrichten.
+**DE/EN** schaltet die Sprache des Kiosks um, der **Schraubenschlüssel** ist der Admin-Zugang –
+für Mitglieder ist er nicht gedacht.
 
 Außer der Rangliste brauchen alle Bereiche eine Karte. Wer eine Karte auflegt, ist angemeldet,
 bis er fertig ist oder nach 20 Sekunden ohne Eingabe automatisch abgemeldet wird. Ein Tipp auf
@@ -272,12 +272,14 @@ und den **Schuldenpranger** – alle, die bis zum Vormonat noch etwas schulden.
 
 ![Schuldenpranger](pictures/manual/de/kiosk-ranking-pillory.png)
 
-### Einrichtung & Netzwerk
+### Admin-Zugang
 
-Der runde WLAN-Knopf oben rechts zeigt zwei QR-Codes: einen, um dem WLAN des Geräts
-beizutreten, und einen, der das Dashboard öffnet – der Touchscreen selbst hat ja keine Tastatur.
+Der runde Schraubenschlüssel oben rechts ist für die, die das Gerät betreuen: Er zeigt zwei
+QR-Codes, einen, um dem WLAN des Geräts beizutreten, und einen, der das Dashboard öffnet – der
+Touchscreen selbst hat ja keine Tastatur. Mitglieder brauchen ihn nicht; ihr Handy verknüpfen
+sie unter **Einstellungen**.
 
-![Einrichtung & Netzwerk](pictures/manual/de/kiosk-setup-popup.png)
+![Admin-Zugang](pictures/manual/de/kiosk-setup-popup.png)
 
 ### „Wir sind gleich wieder da“
 

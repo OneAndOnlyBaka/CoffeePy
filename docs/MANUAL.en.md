@@ -192,7 +192,8 @@ Before the kiosk takes orders it needs at least one **coffee sort** – until th
 ## 4. The kiosk
 
 The touchscreen has four sections, in the bar on the left. Two round buttons sit top right:
-**DE/EN** switches the kiosk's language, the **WiFi button** shows the QR codes for setting up.
+**DE/EN** switches the kiosk's language, the **wrench** is the admin access – it isn't meant
+for members.
 
 Apart from the ranking, every section needs a card. Holding up a card logs you in until you're
 done, or logs you out automatically after 20 seconds without input. Tapping a section in the
@@ -260,12 +261,13 @@ No card needed. **Next** pages through the all-time top 7, this month's top 7 an
 
 ![Deposit pillory](pictures/manual/en/kiosk-ranking-pillory.png)
 
-### Setup & network info
+### Admin access
 
-The round WiFi button top right shows two QR codes: one to join the device's WiFi, one that
-opens the dashboard – the touchscreen itself has no keyboard, after all.
+The round wrench top right is for whoever looks after the device: it shows two QR codes, one to
+join the device's WiFi and one that opens the dashboard – the touchscreen itself has no keyboard,
+after all. Members don't need it; they link their phone under **Settings**.
 
-![Setup & network info](pictures/manual/en/kiosk-setup-popup.png)
+![Admin access](pictures/manual/en/kiosk-setup-popup.png)
 
 ### "We'll be right back"
 

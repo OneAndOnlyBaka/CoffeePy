@@ -146,6 +146,9 @@ html, body.kiosk { overflow: hidden; }
 .rank-badge .icon { width: 1.5em; height: 1.5em; }  /* the ribbon takes a third of it */
 .info-btn .icon { width: 30px; height: 30px; vertical-align: 0; }
 /* The language button sits left of the WiFi one; labelled with the language it switches to. */
+/* Admin-only, so it must not look like something members should tap: no WiFi symbol (that
+   read as "connect here") and muted instead of the attention-grabbing blue. */
+.admin-btn { background: var(--cream-dark); color: var(--coffee); }
 .lang-btn { right: 84px; background: var(--coffee); text-decoration: none; font-weight: 700; font-size: 1.15rem; }
 
 /* Every logged-in screen (order/settings/info_pay/ranking) shares this structure so its

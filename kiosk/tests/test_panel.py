@@ -207,6 +207,6 @@ class KioskQrPopupTestCase(TestCase):
 
     def test_qr_popup_shows_qr_codes(self):
         response = self.client.get(reverse("kiosk:qr_popup"))
-        self.assertContains(response, "Setup &amp; network info")
+        self.assertContains(response, "Admin access")
         self.assertContains(response, "Join WiFi")
         self.assertContains(response, "<svg")

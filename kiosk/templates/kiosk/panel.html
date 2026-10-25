@@ -1,9 +1,9 @@
 {% load static i18n l10n coffee_tags %}
 <div id="panel-state" data-panel-key="{{ panel_key }}" data-mode="{{ mode }}" hidden></div>
 {% if state == "wait_for_card" %}
-<button type="button" class="info-btn" title="{% translate "WLAN Settings" %}"
+<button type="button" class="info-btn admin-btn" title="{% translate "Admin access" %}" aria-label="{% translate "Admin access" %}"
         hx-get="{% url 'kiosk:qr_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
-        hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/wifi.svg" %}</button>
+        hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/wrench.svg" %}</button>
 {% get_current_language as current_language %}
 {% if current_language == "de" %}
 <a class="info-btn lang-btn" href="{% url 'kiosk:language' %}" title="Switch to English" lang="en">EN</a>
