@@ -75,13 +75,17 @@ html, body.kiosk { overflow: hidden; }
 }
 .modal-overlay.open { display: flex; }
 
+/* The overlay centres #qr-modal-content, so that is what carries the size and the card
+   just fills it. With the width on the card instead, it was 90% of a wrapper that had
+   shrunk to fit it, and hung off the wrapper's left edge - ~30px left of centre. */
+#qr-modal-content { width: 90%; max-width: 720px; }
+
 .modal-card {
   position: relative;
   background: var(--cream);
   border-radius: var(--radius);
   padding: 28px;
-  max-width: 720px;
-  width: 90%;
+  width: 100%;
   text-align: center;
 }
 
@@ -237,10 +241,32 @@ html, body.kiosk { overflow: hidden; }
 .setup-wizard { max-width: 720px; }
 .setup-wizard h1 { font-size: 2rem; margin-bottom: 4px; }
 .setup-wizard > p { font-size: 1.1rem; margin: 4px 0; }
-.qr-row { display: flex; gap: 24px; justify-content: center; margin-top: 16px; flex-wrap: nowrap; }
-.qr-card { background: var(--cream-dark); border-radius: var(--radius); padding: 14px; }
-.qr-card h2 { margin: 0 0 8px; font-size: 1.05rem; color: var(--coffee); }
-.qr-card p.muted { margin: 8px 0 0; font-size: 0.95rem; }
+/* QR codes side by side (setup, link phone, payment methods): every card the same width,
+   and through subgrid the same three rows - title, code, caption - so the codes sit at
+   the same height even when one card's title or caption wraps and its neighbour's does
+   not. A shorter caption just leaves a little space below it. */
+.qr-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 250px);
+  grid-template-rows: auto auto auto;
+  column-gap: 20px;
+  justify-content: center;
+  margin-top: 16px;
+}
+.qr-card {
+  grid-row: span 3;
+  display: grid;
+  grid-template-rows: subgrid;
+  row-gap: 8px;
+  justify-items: center;
+  align-items: start;
+  background: var(--cream-dark);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.qr-card h2 { margin: 0; font-size: 1.05rem; color: var(--coffee); }
+.qr-card p.muted { margin: 0; font-size: 0.95rem; }
 .qr-image svg { width: 150px; height: 150px; }
 
 .field-with-osk { display: flex; gap: 10px; align-items: stretch; }
