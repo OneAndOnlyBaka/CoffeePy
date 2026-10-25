@@ -12,3 +12,10 @@ nfc-cardreader/
 install/
 scripts/
 README.md
+# Nothing the running app reads - and every MB here is carried by each offline update bundle.
+housing/
+docs/
+.github/
+.claude/
+.vscode/
+CLAUDE.md

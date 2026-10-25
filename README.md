@@ -1,4 +1,4 @@
-![](doc/pictures/coffeepy.png)
+![](docs/pictures/coffeepy.png)
 
 # CoffeePy V2 (Django + Postgres + NFC-over-MQTT)
 
@@ -252,7 +252,7 @@ worth reading before the first change, whether you're a person or an agent.
 
 ## Housing
 
-![](doc/pictures/housing.jpg)
+![](docs/pictures/housing.jpg)
 
 [housing/](housing/) holds the desk housing carried over from V1 - it fits V2 unchanged,
 since the hardware did not change:
@@ -277,7 +277,8 @@ since the hardware did not change:
 - `scripts/` - `build_update_bundle.sh` (dev-machine side of the offline update pipeline)
   and `build_offline_bundle.sh` (full no-internet install bundle).
 - `nfc-cardreader/` - ACR122U→MQTT bridge, unchanged from V1.
-- `docs/` - [MANUAL.md](docs/MANUAL.md): hardware shopping list + end-user/operator guide.
+- `docs/` - [MANUAL.md](docs/MANUAL.md): hardware shopping list + end-user/operator guide;
+  `docs/pictures/` the images this README shows.
 - `housing/` - STL files and labels for the desk housing (see above).
 
 ## Credits
