@@ -72,7 +72,7 @@ def seed():
                                 created_at=now - timedelta(days=95 if member.nickname == "David" else 3)))
     Payment.objects.bulk_create(payments)
     PaymentMethod.objects.get_or_create(name=PAYPAL, defaults={"provider": PaymentMethod.PROVIDER_PAYPAL_ME,
-                                                               "identifier": "coffeeclub"})
+                                                               "identifier": "coffeefund"})
     print(f"seeded {len(members)} members, {len(orders)} orders, {len(payments)} payments")
 
 
@@ -87,7 +87,7 @@ def cleanup():
     print("members:", Member.objects.filter(uid__in=uids).delete()[0])
     print("scans:", NfcScan.objects.filter(uid__startswith=CARD_PREFIX).delete()[0])
     print("sorts:", CoffeeSort.objects.filter(name__in=[n for n, _, _ in SORTS], order__isnull=True).delete()[0])
-    print("payment method:", PaymentMethod.objects.filter(name=PAYPAL, identifier="coffeeclub").delete()[0])
+    print("payment method:", PaymentMethod.objects.filter(name=PAYPAL, identifier="coffeefund").delete()[0])
 
 
 args = os.environ.get("SCRIPT_ARGS", "").split()

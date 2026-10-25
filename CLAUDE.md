@@ -40,7 +40,8 @@ Rules that hold across all four:
 - Tests live in `<app>/tests/test_*.py`. UI text is bilingual - see "Two languages" below.
 - **A change users can see also changes the manual** (`docs/MANUAL.de.md` + `.en.md`, with
   screenshots in both languages) - the `user-manual` skill in `.claude/skills/` has the
-  mapping and the capture scripts. Not done until both manuals match.
+  mapping and the capture scripts. Not done until both manuals match - unless the user says
+  to review it first: then no screenshots and no manual edits until they approve (see the skill).
 
 ## The kiosk polls, and that breaks things
 

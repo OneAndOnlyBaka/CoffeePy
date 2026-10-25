@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-25 23:28+0100\n"
+"POT-Creation-Date: 2026-10-26 00:52+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -53,12 +53,12 @@ msgid "Order"
 msgstr "Reihenfolge"
 
 msgid ""
-"PayPal: your paypal.me username (e.g. \"coffeeclub\"). PayPal Pool: the "
+"PayPal: your paypal.me username (e.g. \"coffeefund\"). PayPal Pool: the "
 "pool's URL, or just the ID at the end of it. WERO: the phone number "
 "registered with WERO - WERO has no public link format, so this is shown as a "
 "plain instruction instead of a QR link."
 msgstr ""
-"PayPal: dein paypal.me-Benutzername (z. B. \"coffeeclub\"). PayPal Pool: die "
+"PayPal: dein paypal.me-Benutzername (z. B. \"kaffeekasse\"). PayPal Pool: die "
 "URL des Pools oder nur die ID an ihrem Ende. WERO: die bei WERO registrierte "
 "Telefonnummer - WERO hat kein öffentliches Linkformat, deshalb wird das als "
 "einfache Anleitung statt als QR-Link angezeigt."
@@ -127,10 +127,9 @@ msgstr "Import fehlgeschlagen: %(error)s"
 msgid "Audit log"
 msgstr "Protokoll"
 
-msgid "Last 500 dashboard actions that changed club data, newest first."
+msgid "Last 500 dashboard actions that changed any data, newest first."
 msgstr ""
-"Die letzten 500 Dashboard-Aktionen, die Vereinsdaten geändert haben, neueste "
-"zuerst."
+"Die letzten 500 Dashboard-Aktionen, die Daten geändert haben, neueste zuerst."
 
 msgid "When"
 msgstr "Wann"
@@ -898,6 +897,9 @@ msgstr "Datenbank zurückgesetzt - gelöscht: %(summary)s."
 msgid "Audit log entries"
 msgstr "Protokolleinträge"
 
+msgid "Admin access"
+msgstr "Admin-Zugang"
+
 msgid "Link your phone"
 msgstr "Handy verknüpfen"
 
@@ -928,9 +930,6 @@ msgstr "Handy verknüpfen"
 #, python-format
 msgid "Expires in %(minutes)s minutes and works once"
 msgstr "Läuft in %(minutes)s Minuten ab und funktioniert einmal"
-
-msgid "Admin access"
-msgstr "Admin-Zugang"
 
 msgid ""
 "Only for whoever looks after this coffee machine - you don't need any of "
@@ -1140,32 +1139,20 @@ msgstr "Oder scanne, um den offenen Betrag direkt zu bezahlen:"
 msgid "Pay"
 msgstr "Bezahlen"
 
-msgid "Top 7 - All time"
-msgstr "Top 7 - insgesamt"
+msgid "All time"
+msgstr "Gesamt"
 
-msgid "Top 7 - This month"
-msgstr "Top 7 - dieser Monat"
+msgid "This month"
+msgstr "Dieser Monat"
 
-msgid "Pos"
-msgstr "Pl."
+msgid "Settle up under “Pay &amp; Stats”"
+msgstr "Bezahlen unter „Zahlen &amp; Statistik“"
 
-msgid "Unpaid"
-msgstr "Offen"
+msgid "Everyone has paid up!"
+msgstr "Alle haben bezahlt!"
 
-msgid "1st place"
-msgstr "1. Platz"
-
-msgid "2nd place"
-msgstr "2. Platz"
-
-msgid "3rd place"
-msgstr "3. Platz"
-
-msgid "No data yet."
-msgstr "Noch keine Daten."
-
-msgid "Next"
-msgstr "Weiter"
+msgid "cups"
+msgstr "Tassen"
 
 msgid "Enjoy your coffee!"
 msgstr "Lass ihn dir schmecken!"
@@ -1291,9 +1278,6 @@ msgstr "Keine verknüpften Geräte."
 msgid "Total cups"
 msgstr "Tassen gesamt"
 
-msgid "This month"
-msgstr "Dieser Monat"
-
 #, python-format
 msgid "You owe %(owed)s€."
 msgstr "Du schuldest %(owed)s€."
@@ -1414,9 +1398,6 @@ msgstr "Andere"
 msgid "Average member"
 msgstr "Durchschnittliches Mitglied"
 
-msgid "cups"
-msgstr "Tassen"
-
 msgid "Cups per month"
 msgstr "Tassen pro Monat"
 
@@ -1432,4 +1413,3 @@ msgstr "Welcher Kaffee"
 msgid "CoffeePy is being updated. This page comes back on its own."
 msgstr ""
 "CoffeePy wird gerade aktualisiert. Diese Seite kommt von selbst wieder."
-

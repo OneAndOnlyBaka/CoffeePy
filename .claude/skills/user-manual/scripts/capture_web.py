@@ -161,11 +161,10 @@ def kiosk(b):
     b.click("a.nav-btn[data-mode=ranking]")
     b.wait_state("ranking")
     b.shot("kiosk-ranking-alltime")
-    for name in ("kiosk-ranking-month", "kiosk-ranking-pillory"):
-        before = b.js("document.querySelector('.panel-header').innerText")
-        b.click("button[hx-post*='ranking/next']")
-        b.wait(f"document.querySelector('.panel-header').innerText !== {json.dumps(before)}")
-        b.shot(name)
+    for view in ("month", "pillory"):
+        b.click(f".ranking-tabs a[href$='/ranking/{view}/']")
+        b.wait(f"document.querySelector(\".ranking-tabs a.active[href$='/ranking/{view}/']\")")
+        b.shot(f"kiosk-ranking-{view}")
 
     b.click("a.nav-btn[data-mode=order]")
     b.wait_state("wait_for_card")

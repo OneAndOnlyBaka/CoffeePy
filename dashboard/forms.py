@@ -32,7 +32,7 @@ class PaymentMethodForm(forms.ModelForm):
         }
         help_texts = {
             "identifier": gettext_lazy(
-                "PayPal: your paypal.me username (e.g. \"coffeeclub\"). "
+                "PayPal: your paypal.me username (e.g. \"coffeefund\"). "
                 "PayPal Pool: the pool's URL, or just the ID at the end of it. "
                 "WERO: the phone number registered with WERO - WERO has no public link "
                 "format, so this is shown as a plain instruction instead of a QR link."

@@ -22,6 +22,18 @@ the same piece of work:
 
 Say in the report which manual sections and screenshots were updated - or why none were.
 
+**Unless the user defers it.** When they say to build something first and update the docs and
+screenshots only after they've checked it ("erst anschauen, dann Bilder und Doku"), that order
+wins over the rule above, until they explicitly approve:
+
+- Do not run `capture.sh` at all - not "just to look", not into a temp dir with a restore
+  afterwards. It rewrites `docs/pictures/manual/` and toggles the kiosk's debug port and demo
+  data on the device they are about to look at.
+- Do not touch the manuals or the capture scripts either.
+- To see the result yourself: deploy, then `pi-device`'s `screenshot.sh` of what the touchscreen
+  shows (or a headless browser writing to the scratchpad). Then hand it over and wait.
+- In the report, list the manual sections and screenshots that will need updating once approved.
+
 ## What lives where
 
 | Change in ... | Manual section | Screenshots |

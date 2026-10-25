@@ -351,3 +351,71 @@ html, body.kiosk { overflow: hidden; }
   background: var(--cream-dark); overflow: hidden; visibility: hidden; }
 .maintenance-bar span { display: block; height: 100%; width: 0; background: var(--coffee); transition: width 0.6s; }
 .maintenance-step { color: var(--coffee-light); min-height: 1.5em; }
+
+/* Ranking: tabs top left (the corner buttons sit top right), below them the award ceremony
+   - a GIF (scripts/make_podium_gif.py) between a retro banner and the names. Both are text,
+   so one GIF serves every ranking and both languages. */
+.ranking { width: 100%; height: 100%; align-self: stretch; display: flex; flex-direction: column; gap: 14px; }
+.ranking-tabs { display: flex; gap: 10px; margin-right: 150px; }
+.ranking-tabs a {
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: var(--cream-dark);
+  color: var(--coffee);
+  font-weight: 700;
+  text-decoration: none;
+}
+.ranking-tabs a.active { background: var(--coffee); color: var(--text-inverse); }
+.podium-stage {
+  width: 790px;
+  margin: 0 auto;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(59, 35, 20, 0.18);
+}
+/* The dithered banner of the 1987 original, in coffee instead of purple. */
+.podium-banner {
+  background-color: var(--coffee);
+  background-image: radial-gradient(var(--coffee-dark) 1px, transparent 1.3px);
+  background-size: 4px 4px;
+  color: #fffbf5;
+  text-align: center;
+  font-weight: 900;
+  font-size: 2.4rem;
+  letter-spacing: 6px;
+  line-height: 56px;
+  text-transform: uppercase;
+  text-shadow: 3px 3px 0 var(--coffee-dark);
+}
+.podium-gif { display: block; width: 790px; height: 343px; }  /* OUT_W x OUT_H in the script */
+.podium-names { position: relative; height: 66px; background: var(--coffee-dark); }
+/* Each name centred under its block - the GIF's BLOCKS, plus its MARGIN, over its width. */
+.podium-name {
+  position: absolute;
+  top: 6px;
+  width: 140px;
+  margin-left: -70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-inverse);
+}
+.podium-name b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.1rem; }
+.podium-place, .podium-cups { color: var(--accent); font-weight: 700; font-size: 0.85rem; }
+.podium-name.place-2 { left: 33.6%; }
+.podium-name.place-1 { left: 50%; }
+.podium-name.place-3 { left: 66.4%; }
+/* The month's standings so far: nobody on a block yet, just the names in a row, 1 to 3. */
+.podium-names.standings { display: flex; justify-content: space-evenly; }
+.standings .podium-name { position: static; margin: 6px 0 0; width: 200px; }
+/* The pillory's ticker: every debtor and their open amount, then where to pay, running
+   through the bar under the walk of shame. */
+.podium-names.ticker { display: flex; align-items: center; overflow: hidden; white-space: nowrap; }
+.ticker-track { display: flex; animation: ticker linear infinite; }
+.ticker-copy { display: flex; flex-shrink: 0; }
+.ticker-item { padding: 0 36px; color: var(--text-inverse); font-size: 1.2rem; }
+.ticker-item b { font-size: 1.3rem; }
+.ticker-debt { color: #f08a7e; font-weight: 700; }
+.ticker-hint { color: var(--accent); font-weight: 700; }
+.ticker-clear { margin: 0 auto; color: var(--text-inverse); font-size: 1.3rem; }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }

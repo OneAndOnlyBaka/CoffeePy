@@ -11,6 +11,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone, translation
+from django.utils.formats import date_format
 from django.utils.translation import gettext as _, gettext_lazy, gettext_noop
 from django.views.decorators.http import require_GET, require_POST
 
@@ -116,6 +117,8 @@ def nav(request, mode):
     if mode in VALID_MODES:
         request.session["mode"] = mode
         _reset_session_state(request)
+        if mode == MODE_RANKING:  # always opens on the podium, not on whichever tab was left open
+            request.session["ranking_view"] = "alltime"
     # The nav buttons swap only #panel via htmx (index.html): a full page load per tap took
     # ~370ms on a Pi 3, most of it Chromium rebuilding the page. The redirect stays for
     # anything that follows the plain link.
@@ -129,12 +132,16 @@ def panel(request):
     return _render_panel(request)
 
 
-@require_POST
-def ranking_next(request):
-    current = request.session.get("ranking_view", "alltime")
-    idx = (RANKING_VIEWS.index(current) + 1) % len(RANKING_VIEWS) if current in RANKING_VIEWS else 0
-    request.session["ranking_view"] = RANKING_VIEWS[idx]
-    return _render_panel(request)
+@require_GET
+def ranking_view(request, view):
+    """A tab of the ranking screen. A GET link like the language button, for the same
+    reason: a form's csrf token would make the screen differ on every poll, and the podium
+    animation restart with it (panel.html)."""
+    if view in RANKING_VIEWS:
+        request.session["ranking_view"] = view
+    if request.headers.get("HX-Request"):
+        return _render_panel(request)
+    return redirect("kiosk:index")
 
 
 @require_POST
@@ -698,7 +705,25 @@ def _ranking_context(request):
     view = request.session.get("ranking_view", "alltime")
     if view not in ("month", "pillory"):
         view = "alltime"
-    return {"ranking_view": view, "rows": _ranking_rows(request, view)}
+    rows = _ranking_rows(request, view)
+    context = {"ranking_view": view, "rows": rows}
+    if view == "pillory":
+        context["banner"] = "Shame"
+        # The ticker under the walk of shame scrolls through every debtor; a longer list
+        # scrolls longer rather than faster, so each name stays readable.
+        context["ticker_seconds"] = 8 + 4 * len(rows)
+    else:
+        first, second, third = (rows + [None, None, None])[:3]
+        # All time is decided: left to right as the podium stands. The month is still running -
+        # its GIF is the vault, and the names are the standings so far, in order. A place
+        # nobody holds yet stays empty either way.
+        if view == "alltime":
+            context["podium"] = [(2, second), (1, first), (3, third)]
+        else:
+            context["podium"] = [(1, first), (2, second), (3, third)]
+        # The banner is retro, and retro is English - only the month's name is translated.
+        context["banner"] = "All time" if view == "alltime" else date_format(timezone.localtime(), "F")
+    return context
 
 
 RANKING_CACHE_SECONDS = 300
@@ -728,24 +753,10 @@ def _ranking_rows(request, view):
 
 
 def _compute_ranking_rows(view):
-    # ranking_all_time()/ranking_current_month() already annotate each member with the
-    # cups total the ranking itself is sorted by - only the *other* figure (ccm/cct)
-    # needs a lookup, and that's batched below in one query rather than one per member.
-    if view == "month":
-        members = list(services.ranking_current_month())
-        alltime_cups = services.cups_by_member(members)
-        return [
-            {"uid": m.uid, "name": m.display_name(), "cct": alltime_cups.get(m.uid, 0), "ccm": m.cups}
-            for m in members
-        ]
     if view == "pillory":
         return [
             {"name": e["member"].display_name(), "balance": e["balance"]}
             for e in services.deposit_pillory()
         ]
-    members = list(services.ranking_all_time())
-    month_cups = services.cups_by_member(members, since=services.current_month_start())
-    return [
-        {"uid": m.uid, "name": m.display_name(), "cct": m.cups, "ccm": month_cups.get(m.uid, 0)}
-        for m in members
-    ]
+    members = services.ranking_current_month(limit=3) if view == "month" else services.ranking_all_time(limit=3)
+    return [{"uid": m.uid, "name": m.display_name(), "cups": m.cups} for m in members]

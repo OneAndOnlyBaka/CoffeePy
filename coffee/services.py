@@ -67,17 +67,6 @@ def week_cups(member: Member) -> int:
     return int(total or 0)
 
 
-def cups_by_member(members, since: datetime | None = None) -> dict:
-    """Machine-strokes total per member in one grouped query, keyed by uid - for
-    rendering a list of members (e.g. the kiosk ranking screen) without falling back to
-    total_cups()/month_cups() in a per-member loop. Those two stay as they are for the
-    single-member call sites (order/pay screens) where a loop doesn't apply."""
-    qs = Order.objects.filter(member__in=members)
-    if since is not None:
-        qs = qs.filter(created_at__gte=since)
-    return dict(qs.values("member_id").annotate(total=Sum("machine_strokes")).values_list("member_id", "total"))
-
-
 def total_payments(member: Member) -> Decimal:
     total = Payment.objects.filter(member=member).aggregate(total=Sum("value"))["total"]
     return total or Decimal("0.00")
@@ -98,7 +87,7 @@ def account_balance(member: Member, round_value: bool = True) -> Decimal:
 
 def ranking_all_time(limit: int = 7):
     """Members ranked by total machine strokes (all time), highest first. Departed
-    members are excluded - they're no longer part of the club."""
+    members are excluded - they no longer drink here."""
     return (
         Member.objects.filter(departed_at__isnull=True)
         .annotate(cups=Sum("orders__machine_strokes"))
@@ -109,7 +98,7 @@ def ranking_all_time(limit: int = 7):
 
 def ranking_current_month(limit: int = 7):
     """Members ranked by machine strokes ordered this month, highest first. Departed
-    members are excluded - they're no longer part of the club."""
+    members are excluded - they no longer drink here."""
     return (
         Member.objects.filter(departed_at__isnull=True, orders__created_at__gte=current_month_start())
         .annotate(cups=Sum("orders__machine_strokes"))

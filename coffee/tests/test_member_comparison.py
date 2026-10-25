@@ -13,7 +13,7 @@ def at(dt_str: str):
 
 
 class MemberVsOthersTestCase(TestCase):
-    """The portal's stats page: this member's habits next to the rest of the club's."""
+    """The portal's stats page: this member's habits next to everyone else's."""
 
     def setUp(self):
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)

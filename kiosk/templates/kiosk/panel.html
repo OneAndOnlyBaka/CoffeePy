@@ -1,15 +1,7 @@
 {% load static i18n l10n coffee_tags %}
 <div id="panel-state" data-panel-key="{{ panel_key }}" data-mode="{{ mode }}" hidden></div>
 {% if state == "wait_for_card" %}
-<button type="button" class="info-btn admin-btn" title="{% translate "Admin access" %}" aria-label="{% translate "Admin access" %}"
-        hx-get="{% url 'kiosk:qr_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
-        hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/wrench.svg" %}</button>
-{% get_current_language as current_language %}
-{% if current_language == "de" %}
-<a class="info-btn lang-btn" href="{% url 'kiosk:language' %}" title="Switch to English" lang="en">EN</a>
-{% else %}
-<a class="info-btn lang-btn" href="{% url 'kiosk:language' %}" title="Auf Deutsch umschalten" lang="de">DE</a>
-{% endif %}
+{% include "kiosk/_corner_buttons.html" %}
 {% comment %}
 Nothing on this screen may change from one poll to the next: identical HTML is what lets
 panel_stable_swap.js skip the swap, and only a skipped swap keeps the animation running
@@ -214,48 +206,61 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
 </div>
 
 {% elif state == "ranking" %}
-<div class="panel-card">
-    <h1 class="panel-header">
-        {% if ranking_view == "alltime" %}{% translate "Top 7 - All time" %}
-        {% elif ranking_view == "month" %}{% translate "Top 7 - This month" %}
-        {% else %}{% translate "Deposit pillory" %}{% endif %}
-    </h1>
-    <div class="panel-body">
-        <table>
-            <thead>
-                {% if ranking_view == "pillory" %}
-                <tr><th>{% translate "Pos" %}</th><th>{% translate "Name" %}</th><th>{% translate "Unpaid" %}</th></tr>
-                {% else %}
-                <tr><th>{% translate "Pos" %}</th><th>{% translate "Name" %}</th><th>{% translate "CCT" %}</th><th>{% translate "CCM" %}</th></tr>
-                {% endif %}
-            </thead>
-            <tbody>
-            {% for row in rows %}
-                <tr>
-                    <td>
-                        {% if ranking_view != "pillory" and forloop.counter == 1 %}<span class="rank-badge" title="{% translate "1st place" %}">{% include "icons/medal.svg" with place=1 %}</span>
-                        {% elif ranking_view != "pillory" and forloop.counter == 2 %}<span class="rank-badge" title="{% translate "2nd place" %}">{% include "icons/medal.svg" with place=2 %}</span>
-                        {% elif ranking_view != "pillory" and forloop.counter == 3 %}<span class="rank-badge" title="{% translate "3rd place" %}">{% include "icons/medal.svg" with place=3 %}</span>
-                        {% else %}{{ forloop.counter }}
-                        {% endif %}
-                    </td>
-                    <td>{{ row.name }}</td>
-                    {% if ranking_view == "pillory" %}
-                    <td>{{ row.balance }}€</td>
-                    {% else %}
-                    <td>{{ row.cct }}</td>
-                    <td>{{ row.ccm }}</td>
-                    {% endif %}
-                </tr>
-            {% empty %}
-                <tr><td colspan="4" class="muted">{% translate "No data yet." %}</td></tr>
+{% include "kiosk/_corner_buttons.html" %}
+{% comment %}
+Like the wait screen, identical HTML from poll to poll, or the podium GIF restarts at frame 0
+on every one: so the tabs are GET links, and there is no form (and no csrf token) here.
+{% endcomment %}
+<div class="ranking">
+    <nav class="ranking-tabs" hx-target="#panel" hx-swap="innerHTML" hx-sync="#panel:replace">
+        <a class="{% if ranking_view == 'alltime' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'alltime' %}"
+           hx-get="{% url 'kiosk:ranking_view' 'alltime' %}">{% translate "All time" %}</a>
+        <a class="{% if ranking_view == 'month' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'month' %}"
+           hx-get="{% url 'kiosk:ranking_view' 'month' %}">{% translate "This month" %}</a>
+        <a class="{% if ranking_view == 'pillory' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'pillory' %}"
+           hx-get="{% url 'kiosk:ranking_view' 'pillory' %}">{% translate "Pillory" %}</a>
+    </nav>
+    <div class="podium-stage">
+        <div class="podium-banner">{{ banner }}</div>
+        {% if ranking_view == "pillory" %}
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.gif' %}" alt="">
+        {% if rows %}
+        {% comment %}
+        The list twice in a row, moved left by exactly one copy's width per animation round
+        (kiosk.css) - so the band never runs out. A CSS animation, like the GIF, survives the
+        poll because an unchanged panel is never swapped in again.
+        {% endcomment %}
+        <div class="podium-names ticker">
+            <div class="ticker-track" style="animation-duration: {{ ticker_seconds|unlocalize }}s">
+                {% for copy in "12" %}
+                <span class="ticker-copy"{% if forloop.last %} aria-hidden="true"{% endif %}>
+                    {% for row in rows %}
+                    <span class="ticker-item"><span class="podium-place">{{ forloop.counter }}.</span> <b>{{ row.name }}</b> <span class="ticker-debt">{{ row.balance }}€</span></span>
+                    {% endfor %}
+                    <span class="ticker-item ticker-hint">{% translate "Settle up under “Pay &amp; Stats”" %}</span>
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="podium-names ticker"><b class="ticker-clear">{% translate "Everyone has paid up!" %}</b></div>
+        {% endif %}
+        {% else %}
+        {% if ranking_view == "month" %}
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/vault.gif' %}" alt="">
+        {% else %}
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/podium.gif' %}" alt="">
+        {% endif %}
+        <div class="podium-names{% if ranking_view == 'month' %} standings{% endif %}">
+            {% for place, row in podium %}
+            <div class="podium-name place-{{ place }}">
+                <span class="podium-place">{{ place }}.</span>
+                <b>{% if row %}{{ row.name }}{% else %}–{% endif %}</b>
+                {% if row %}<span class="podium-cups">{{ row.cups }} {% translate "cups" %}</span>{% endif %}
+            </div>
             {% endfor %}
-            </tbody>
-        </table>
+        </div>
+        {% endif %}
     </div>
-    <form class="action-row panel-footer" hx-target="#panel" hx-swap="innerHTML">
-        {% csrf_token %}
-        <button type="button" class="primary-action" hx-post="{% url 'kiosk:ranking_next' %}">{% translate "Next" %} ▸</button>
-    </form>
 </div>
 {% endif %}

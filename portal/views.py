@@ -70,7 +70,7 @@ def index(request):
 @portal_login_required
 def stats(request):
     """The same numbers the admin dashboard charts, but told as "you against everyone
-    else": each chart puts this member's own habits next to the rest of the club's."""
+    else": each chart puts this member's own habits next to everyone else's."""
     member = request.member
     ctx = {
         "member": member,

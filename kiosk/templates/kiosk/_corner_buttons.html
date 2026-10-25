@@ -1,0 +1,14 @@
+{% load i18n %}
+{% comment %}
+The round buttons top right on the screens nobody is logged in to: the wait screens and
+the ranking. Both are plain links/GETs - nothing here may differ from one poll to the next.
+{% endcomment %}
+<button type="button" class="info-btn admin-btn" title="{% translate "Admin access" %}" aria-label="{% translate "Admin access" %}"
+        hx-get="{% url 'kiosk:qr_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
+        hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/wrench.svg" %}</button>
+{% get_current_language as current_language %}
+{% if current_language == "de" %}
+<a class="info-btn lang-btn" href="{% url 'kiosk:language' %}" title="Switch to English" lang="en">EN</a>
+{% else %}
+<a class="info-btn lang-btn" href="{% url 'kiosk:language' %}" title="Auf Deutsch umschalten" lang="de">DE</a>
+{% endif %}
