@@ -91,6 +91,9 @@ whole class of bugs:
 
 ## Installing on the device
 
+Trying something on the real test Pi (deploy, screenshots, the kiosk's browser, load and
+page timings, update bundles) goes through the `pi-device` skill in `.claude/skills/`.
+
 `install/install.sh` turns a plain Raspberry Pi OS Lite into the kiosk. It replaced both a
 two-phase setup script and a pi-gen image build; what those cost us is worth keeping in
 mind before changing it:
