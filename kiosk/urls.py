@@ -7,6 +7,7 @@ app_name = "kiosk"
 urlpatterns = [
     path("", views.index, name="index"),
     path("panel/", views.panel, name="panel"),
+    path("language/", views.language, name="language"),
     path("nav/<str:mode>/", views.nav, name="nav"),
     path("ranking/next/", views.ranking_next, name="ranking_next"),
     path("order/select/", views.order_select, name="order_select"),

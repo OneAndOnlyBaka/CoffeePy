@@ -1,15 +1,27 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Merge complete - CoffeePy{% endblock %}
+{% load i18n l10n %}
+{% block title %}{% translate "Merge complete" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>Merge complete</h1>
+<h1>{% translate "Merge complete" %}</h1>
 <div class="card">
     <p class="msg success">
-        Done - {{ keep.display_name }} now has the combined history
-        ({{ moved_orders }} order(s) and {{ moved_payments }} payment(s) moved over).
-        Card {{ old_uid }}{% if moved_cards %} and its {{ moved_cards }} other linked card(s){% endif %}
-        {% if moved_cards %}are{% else %}is{% endif %} now linked to their account.
-        {% if nickname_switched %}Renamed to "{{ keep.display_name }}" since that card was used more recently.{% endif %}
+        {% blocktranslate trimmed with name=keep.display_name orders=moved_orders payments=moved_payments %}
+        Done - {{ name }} now has the combined history
+        ({{ orders }} order(s) and {{ payments }} payment(s) moved over).
+        {% endblocktranslate %}
+        {% if moved_cards %}
+        {% blocktranslate trimmed with uid=old_uid|unlocalize cards=moved_cards %}
+        Card {{ uid }} and its {{ cards }} other linked card(s) are now linked to their account.
+        {% endblocktranslate %}
+        {% else %}
+        {% blocktranslate trimmed with uid=old_uid|unlocalize %}
+        Card {{ uid }} is now linked to their account.
+        {% endblocktranslate %}
+        {% endif %}
+        {% if nickname_switched %}{% blocktranslate trimmed with name=keep.display_name %}
+        Renamed to "{{ name }}" since that card was used more recently.
+        {% endblocktranslate %}{% endif %}
     </p>
-    <p><a href="{% url 'dashboard:members' %}" class="btn success">Back to members</a></p>
+    <p><a href="{% url 'dashboard:members' %}" class="btn success">{% translate "Back to members" %}</a></p>
 </div>
 {% endblock %}

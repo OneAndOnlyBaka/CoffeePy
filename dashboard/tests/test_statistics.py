@@ -1,7 +1,9 @@
 import json
+import re
 from datetime import datetime
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -42,3 +44,19 @@ class StatisticsViewTestCase(TestCase):
         weekday = json.loads(response.context["weekday_distribution"])
         self.assertEqual(hourly["cups"][9], 1)
         self.assertEqual(weekday["cups"][0], 1)  # 2026-01-05 was a Monday
+
+    def test_chart_data_keeps_dot_decimals_in_german(self):
+        # German formats 0.3 as "0,3", which inside a JS array literal is two numbers - the
+        # charts would silently show the wrong data rather than fail.
+        sort = CoffeeSort.objects.get()
+        Order.objects.create(member=Member.objects.get(), coffee_sort=sort, value=sort.price, machine_strokes=1)
+        self.client.cookies[settings.LANGUAGE_COOKIE_NAME] = "de"
+        response = self.client.get(reverse("dashboard:statistics"))
+        self.assertEqual(response["Content-Language"], "de")
+
+        html = response.content.decode()
+        monthly = json.loads(re.search(r"const monthly = (.*);", html).group(1))
+        price_trend = json.loads(re.search(r"const priceTrend = (.*);", html).group(1))
+        self.assertEqual(len(monthly["orders"]), len(monthly["labels"]))
+        self.assertIn(0.3, monthly["orders"])
+        self.assertIn(0.3, [v for values in price_trend["series"].values() for v in values])

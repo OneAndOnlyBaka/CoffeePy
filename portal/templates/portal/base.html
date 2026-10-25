@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load i18n static %}
 {% block viewport %}width=device-width, initial-scale=1{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/portal.css' %}">
@@ -9,30 +9,33 @@
 {% block body %}
 <div class="portal-frame">
     <header class="portal-topbar">
-        <a href="{% url 'portal:index' %}" class="brand">{% include "icons/cup.svg" %} My CoffeePy</a>
-        <form method="post" action="{% url 'portal:logout' %}" class="logout-form">
-            {% csrf_token %}
-            <button type="submit">Log out</button>
-        </form>
+        <a href="{% url 'portal:index' %}" class="brand">{% include "icons/cup.svg" %} {% translate "My CoffeePy" %}</a>
+        <div class="topbar-actions">
+            {% include "includes/language_switch.html" %}
+            <form method="post" action="{% url 'portal:logout' %}" class="logout-form">
+                {% csrf_token %}
+                <button type="submit">{% translate "Log out" %}</button>
+            </form>
+        </div>
     </header>
     <main class="portal-content">
         {% block portal_content %}{% endblock %}
     </main>
     <nav class="portal-tabbar">
         <a href="{% url 'portal:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
-            <span class="tab-icon">{% include "icons/home.svg" %}</span>Home
+            <span class="tab-icon">{% include "icons/home.svg" %}</span>{% translate "Home" %}
         </a>
         <a href="{% url 'portal:pay' %}" class="{% if request.resolver_match.url_name == 'pay' %}active{% endif %}">
-            <span class="tab-icon">{% include "icons/card.svg" %}</span>Pay
+            <span class="tab-icon">{% include "icons/card.svg" %}</span>{% translate "Pay" %}
         </a>
         <a href="{% url 'portal:stats' %}" class="{% if request.resolver_match.url_name == 'stats' %}active{% endif %}">
-            <span class="tab-icon">{% include "icons/chart.svg" %}</span>Stats
+            <span class="tab-icon">{% include "icons/chart.svg" %}</span>{% translate "Stats" %}
         </a>
         <a href="{% url 'portal:cards' %}" class="{% if request.resolver_match.url_name == 'cards' %}active{% endif %}">
-            <span class="tab-icon">{% include "icons/id-card.svg" %}</span>Cards
+            <span class="tab-icon">{% include "icons/id-card.svg" %}</span>{% translate "Cards" %}
         </a>
         <a href="{% url 'portal:devices' %}" class="{% if request.resolver_match.url_name == 'devices' %}active{% endif %}">
-            <span class="tab-icon">{% include "icons/phone.svg" %}</span>Devices
+            <span class="tab-icon">{% include "icons/phone.svg" %}</span>{% translate "Devices" %}
         </a>
     </nav>
 </div>

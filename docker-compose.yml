@@ -133,6 +133,9 @@ services:
       - "127.0.0.1:8443:8443"
     volumes:
       - ./data/tls:/tls:ro,z
+      # Written by install.sh and the update watcher (install/maintenance.sh), served by
+      # Caddy itself so the kiosk can read it while the app is down.
+      - ./data/maintenance:/maintenance:ro,z
 
 volumes:
   pg_data:

@@ -7,8 +7,9 @@ from decimal import Decimal
 from django.db.models import Count, F, Max, Q, Sum
 from django.db.models.functions import ExtractHour, ExtractIsoWeekDay, TruncMonth, TruncQuarter
 from django.utils import timezone
+from django.utils.dates import WEEKDAYS_ABBR
 
-from .models import CoffeeSort, Member, Order, Payment
+from .models import CoffeeSort, Member, Order, Payment, payment_method_label
 
 
 def current_month_start() -> datetime:
@@ -249,7 +250,7 @@ def payment_method_totals():
         .order_by("-total")
     )
     return {
-        "labels": [r["method_name"] or "Cash" for r in rows],
+        "labels": [payment_method_label(r["method_name"]) for r in rows],
         "totals": [float(r["total"]) for r in rows],
         "counts": [r["count"] for r in rows],
     }
@@ -266,7 +267,10 @@ def coffee_distribution():
     return {"labels": [r["coffee_sort__name"] for r in rows], "counts": [r["count"] for r in rows]}
 
 
-WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+def _weekday_labels() -> list[str]:
+    """Monday first, in the active language. Django's own abbreviations, so they come
+    already translated; resolved to plain strings here because callers json.dumps them."""
+    return [str(WEEKDAYS_ABBR[day]) for day in range(7)]
 
 
 def hourly_distribution():
@@ -297,8 +301,8 @@ def weekday_distribution():
     )
     by_weekday = {row["weekday"]: int(row["cups"] or 0) for row in rows}
     return {
-        "labels": WEEKDAY_LABELS,
-        # ExtractIsoWeekDay is 1 (Monday) to 7 (Sunday), matching WEEKDAY_LABELS' order.
+        "labels": _weekday_labels(),
+        # ExtractIsoWeekDay is 1 (Monday) to 7 (Sunday), matching the order of _weekday_labels().
         "cups": [by_weekday.get(day, 0) for day in range(1, 8)],
     }
 
@@ -345,7 +349,7 @@ def member_vs_others_weekday(member) -> dict:
     mine, others = _split_cups(ExtractIsoWeekDay("created_at"), member)
     days = range(1, 8)
     return {
-        "labels": WEEKDAY_LABELS,
+        "labels": _weekday_labels(),
         "you": _as_shares([mine.get(day, 0) for day in days]),
         "others": _as_shares([others.get(day, 0) for day in days]),
     }

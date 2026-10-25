@@ -194,6 +194,28 @@ see docs/MANUAL.md), flashed with Raspberry Pi Imager. Set a user and, in "Edit 
 enable SSH and your WiFi so the Pi has internet for the install; it only needs that until
 the very last step.
 
+### From your Linux PC (recommended)
+
+```bash
+./scripts/provision.sh
+```
+
+A full-screen guide in the kiosk's colours: it asks for the Pi's address and SSH
+credentials, checks the Pi, lets you set everything that goes into `/opt/coffeepy/.env`
+(admin account, WiFi access point, the address for phones, time zone, backups, display
+mode, web workers, internet or offline bundle), copies this checkout over and runs the
+installer below on the Pi - showing its progress, and surviving a dropped connection. At
+the end it reboots the Pi, checks HTTPS against the device's own CA and can save the
+passwords to `~/coffeepy-<address>.txt` (readable only by you). Needs nothing but bash,
+ssh and tar here; nothing on your PC is changed.
+
+Run it again to change settings on an installed Pi: it starts from the existing `.env`
+and keeps the database password and secret key. For several devices, `--answers FILE`
+pre-fills the answers (`KEY=VALUE`, see the top of the script) and `--unattended` asks
+nothing; `PI_SSH_OPTS` passes extra options to ssh (`-p 2222`, `-i key`).
+
+### On the Pi itself
+
 ```bash
 sudo apt update && sudo apt install -y git
 git clone https://github.com/<owner>/CoffeePy.git

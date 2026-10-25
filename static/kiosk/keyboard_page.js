@@ -21,6 +21,8 @@
   const input = document.getElementById("keyboard-input");
   const keyboardEl = document.getElementById("onscreen-keyboard");
   const numeric = keyboardEl.dataset.numeric === "1";
+  // Rendered by the template, which knows the page's language - this file is static.
+  const spaceLabel = keyboardEl.dataset.spaceLabel || "Space";
   let shift = false;
 
   function makeKey(label, onPress, extraClass) {
@@ -78,7 +80,7 @@
           "osk-shift" + (shift ? " active" : "")
         )
       );
-      bottomRow.appendChild(makeKey("Space", () => insertText(" "), "osk-space"));
+      bottomRow.appendChild(makeKey(spaceLabel, () => insertText(" "), "osk-space"));
     }
     bottomRow.appendChild(makeKey("⌫", backspace, "osk-backspace"));
     keyboardEl.appendChild(bottomRow);

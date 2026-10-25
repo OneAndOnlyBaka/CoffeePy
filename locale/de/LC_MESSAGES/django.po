@@ -1,0 +1,1446 @@
+# German translation of CoffeePy. Source of truth for the German UI; the .mo next to it is
+# compiled from this file and committed with it (see CLAUDE.md, "Two languages").
+msgid ""
+msgstr ""
+"Project-Id-Version: CoffeePy\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-25 18:14+0100\n"
+"PO-Revision-Date: 2026-10-25 17:56+0100\n"
+"Last-Translator: CoffeePy\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Cash"
+msgstr "Bar"
+
+msgid "PayPal (Friends & Family / paypal.me)"
+msgstr "PayPal (Freunde & Familie / paypal.me)"
+
+msgid "Custom link"
+msgstr "Eigener Link"
+
+#, python-format
+msgid "Send %(amount)s€ via WERO to %(identifier)s"
+msgstr "Sende %(amount)s€ per WERO an %(identifier)s"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Price"
+msgstr "Preis"
+
+msgid "Machine strokes"
+msgstr "Bezüge (Maschine)"
+
+msgid "Provider"
+msgstr "Anbieter"
+
+msgid "Identifier"
+msgstr "Kennung"
+
+msgid "Link template"
+msgstr "Link-Vorlage"
+
+msgid "Is active"
+msgstr "Aktiv"
+
+msgctxt "position in a list"
+msgid "Order"
+msgstr "Reihenfolge"
+
+msgid ""
+"PayPal: your paypal.me username (e.g. \"coffeeclub\"). PayPal Pool: the "
+"pool's URL, or just the ID at the end of it. WERO: the phone number "
+"registered with WERO - WERO has no public link format, so this is shown as a"
+" plain instruction instead of a QR link."
+msgstr ""
+"PayPal: dein paypal.me-Benutzername (z. B. \"coffeeclub\"). PayPal Pool: die"
+" URL des Pools oder nur die ID an ihrem Ende. WERO: die bei WERO "
+"registrierte Telefonnummer - WERO hat kein öffentliches Linkformat, deshalb "
+"wird das als einfache Anleitung statt als QR-Link angezeigt."
+
+#, python-brace-format
+msgid ""
+"Custom provider only. Optional \"{amount}\" placeholder for what is owed "
+"(e.g. https://example.com/pay/{amount}EUR); leave the placeholder out for a "
+"static link, or the whole field blank for no link at all."
+msgstr ""
+"Nur für eigene Anbieter. Optionaler Platzhalter \"{amount}\" für den offenen"
+" Betrag (z. B. https://example.com/pay/{amount}EUR); ohne Platzhalter ist es"
+" ein fester Link, ein leeres Feld bedeutet gar keinen Link."
+
+msgid ""
+"Display order among payment methods (lowest number first), e.g. in the "
+"\"Paid via\" dropdown and the row of pay buttons/QR codes on the kiosk and "
+"phone. Methods with the same number are sorted alphabetically by name "
+"instead. Leave at 0 if you don't care about the order."
+msgstr ""
+"Reihenfolge unter den Zahlungsmethoden (kleinste Zahl zuerst), z. B. in der "
+"Auswahl \"Bezahlt per\" und in der Reihe der Bezahl-Buttons/QR-Codes auf "
+"Kiosk und Handy. Methoden mit gleicher Zahl werden stattdessen alphabetisch "
+"sortiert. Bei 0 lassen, wenn die Reihenfolge egal ist."
+
+msgid "Uid"
+msgstr "UID"
+
+msgid "Nickname"
+msgstr "Spitzname"
+
+msgid "Favourite coffee"
+msgstr "Lieblingskaffee"
+
+msgid "Starting"
+msgstr "Start"
+
+msgid "Reading source"
+msgstr "Quelle wird gelesen"
+
+msgid "Clearing existing data"
+msgstr "Bestehende Daten werden gelöscht"
+
+msgid "Coffee sorts"
+msgstr "Kaffeesorten"
+
+msgid "Members"
+msgstr "Mitglieder"
+
+msgid "Orders"
+msgstr "Bestellungen"
+
+msgid "Payments"
+msgstr "Zahlungen"
+
+msgid "Done"
+msgstr "Fertig"
+
+msgid "Failed"
+msgstr "Fehlgeschlagen"
+
+#, python-format
+msgid "Import failed: %(error)s"
+msgstr "Import fehlgeschlagen: %(error)s"
+
+msgid "Audit log"
+msgstr "Protokoll"
+
+msgid "Last 500 dashboard actions that changed club data, newest first."
+msgstr ""
+"Die letzten 500 Dashboard-Aktionen, die Vereinsdaten geändert haben, neueste"
+" zuerst."
+
+msgid "When"
+msgstr "Wann"
+
+msgid "Who"
+msgstr "Wer"
+
+msgid "Action"
+msgstr "Aktion"
+
+msgid "Target"
+msgstr "Ziel"
+
+msgid "Details"
+msgstr "Details"
+
+msgid "No actions recorded yet."
+msgstr "Noch keine Aktionen aufgezeichnet."
+
+msgid "Backup"
+msgstr "Backup"
+
+msgid ""
+"BACKUP_PATH is not configured - set it (and BACKUP_ENABLED) in the "
+"environment."
+msgstr ""
+"BACKUP_PATH ist nicht konfiguriert - setze es (und BACKUP_ENABLED) in der "
+"Umgebung."
+
+msgid "Backup now"
+msgstr "Jetzt sichern"
+
+msgid "Existing backups"
+msgstr "Vorhandene Backups"
+
+msgid "No backups yet."
+msgstr "Noch keine Backups."
+
+msgid "Statistics"
+msgstr "Statistik"
+
+msgid "Pillory"
+msgstr "Pranger"
+
+msgid "Payment methods"
+msgstr "Zahlungsmethoden"
+
+msgid "System"
+msgstr "System"
+
+msgid "Update"
+msgstr "Update"
+
+msgid "Import legacy DB"
+msgstr "Alte Datenbank importieren"
+
+msgid "Reset database"
+msgstr "Datenbank zurücksetzen"
+
+msgid "System time"
+msgstr "Systemzeit"
+
+msgid "Certificate"
+msgstr "Zertifikat"
+
+msgid "Admin"
+msgstr "Admin"
+
+msgid "Logout"
+msgstr "Abmelden"
+
+#, python-format
+msgid ""
+"Everything on the network is served over HTTPS. Out of the box the device "
+"signs its own certificate with a CA it created on first start - phones and "
+"PCs trust it once that CA is installed (<a "
+"href=\"%(download_url)s\">download</a>, also offered on the login pages). "
+"Upload your own certificate to replace it; the kiosk on the device itself "
+"keeps using the device's own, so it never depends on the upload."
+msgstr ""
+"Im Netzwerk läuft alles über HTTPS. Ab Werk signiert das Gerät sein "
+"Zertifikat selbst, mit einer CA, die es beim ersten Start erzeugt hat - "
+"Handys und PCs vertrauen ihm, sobald diese CA installiert ist (<a "
+"href=\"%(download_url)s\">herunterladen</a>, auch auf den Anmeldeseiten "
+"angeboten). Lade ein eigenes Zertifikat hoch, um es zu ersetzen; der Kiosk "
+"auf dem Gerät selbst nutzt weiter das eigene des Geräts und hängt so nie vom"
+" Upload ab."
+
+msgid "Certificate installed - it is live within a few seconds."
+msgstr "Zertifikat installiert - es ist in wenigen Sekunden aktiv."
+
+msgid "In use now"
+msgstr "Aktuell in Verwendung"
+
+msgid "Source"
+msgstr "Quelle"
+
+msgid "Uploaded certificate"
+msgstr "Hochgeladenes Zertifikat"
+
+msgid "Self-signed (device CA)"
+msgstr "Selbstsigniert (Geräte-CA)"
+
+msgid "Valid for"
+msgstr "Gültig für"
+
+msgid "Subject"
+msgstr "Inhaber"
+
+msgid "Issuer"
+msgstr "Aussteller"
+
+msgid "Expires"
+msgstr "Läuft ab"
+
+msgid "Download certificate"
+msgstr "Zertifikat herunterladen"
+
+msgid "Download device CA"
+msgstr "Geräte-CA herunterladen"
+
+msgid "Go back to the self-signed certificate"
+msgstr "Zurück zum selbstsignierten Zertifikat"
+
+msgid "No certificate yet - it is created when the app starts."
+msgstr "Noch kein Zertifikat - es wird beim Start der App erzeugt."
+
+msgid "Upload your own"
+msgstr "Eigenes hochladen"
+
+msgid ""
+"PEM files: the certificate first, followed by any intermediate certificates,"
+" and its unencrypted private key. It should be valid for the address phones "
+"use to reach this device."
+msgstr ""
+"PEM-Dateien: zuerst das Zertifikat, danach eventuelle Zwischenzertifikate, "
+"und sein unverschlüsselter privater Schlüssel. Es sollte für die Adresse "
+"gelten, über die Handys dieses Gerät erreichen."
+
+msgid "Certificate (with chain)"
+msgstr "Zertifikat (mit Kette)"
+
+msgid "Private key"
+msgstr "Privater Schlüssel"
+
+msgid "Install certificate"
+msgstr "Zertifikat installieren"
+
+msgid "Edit coffee sort"
+msgstr "Kaffeesorte bearbeiten"
+
+msgid "Add coffee sort"
+msgstr "Kaffeesorte hinzufügen"
+
+#, python-format
+msgid "Edit %(name)s"
+msgstr "%(name)s bearbeiten"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "Save"
+msgstr "Speichern"
+
+#, python-format
+msgid "Delete %(name)s?"
+msgstr "%(name)s löschen?"
+
+msgid "Edit"
+msgstr "Bearbeiten"
+
+msgid "Delete"
+msgstr "Löschen"
+
+msgid "No coffee sorts yet."
+msgstr "Noch keine Kaffeesorten."
+
+msgid "Import legacy database"
+msgstr "Alte Datenbank importieren"
+
+msgid ""
+"Upload an old CoffeePy <code>coffee.db</code> or one of its "
+"<code>coffeeN.db</code> backups - both a real SQLite file and a plain SQL "
+"dump text file work. By default coffee sorts, members, orders and payments "
+"are matched by name/UID and updated in place and nothing else is touched - "
+"tick the box below to start from an empty database instead."
+msgstr ""
+"Lade eine alte CoffeePy-<code>coffee.db</code> oder eines ihrer "
+"<code>coffeeN.db</code>-Backups hoch - sowohl eine echte SQLite-Datei als "
+"auch ein SQL-Dump als Text funktionieren. Standardmäßig werden Kaffeesorten,"
+" Mitglieder, Bestellungen und Zahlungen über Name/UID zugeordnet und an Ort "
+"und Stelle aktualisiert, sonst wird nichts angefasst - setze den Haken "
+"unten, um stattdessen mit einer leeren Datenbank zu beginnen."
+
+msgid ""
+"Clear existing members, cards, orders, payments and coffee sorts first, "
+"instead of merging the import into them. Payment methods and the audit log "
+"are kept."
+msgstr ""
+"Vorhandene Mitglieder, Karten, Bestellungen, Zahlungen und Kaffeesorten "
+"zuerst löschen, statt den Import mit ihnen zusammenzuführen. "
+"Zahlungsmethoden und das Protokoll bleiben erhalten."
+
+msgid "Import"
+msgstr "Importieren"
+
+msgid "Uploading…"
+msgstr "Wird hochgeladen…"
+
+msgid "Starting…"
+msgstr "Startet…"
+
+msgid "Upload failed."
+msgstr "Hochladen fehlgeschlagen."
+
+msgid ""
+"Delete all existing members, orders, payments and coffee sorts before "
+"importing?"
+msgstr ""
+"Vor dem Import alle vorhandenen Mitglieder, Bestellungen, Zahlungen und "
+"Kaffeesorten löschen?"
+
+msgid "CoffeePy Dashboard"
+msgstr "CoffeePy-Dashboard"
+
+#, python-format
+msgid "Welcome, %(name)s"
+msgstr "Willkommen, %(name)s"
+
+msgid ""
+"Use the navigation on the left to review statistics, the deposit pillory, "
+"coffee sorts and members (via the Django admin), and — for superusers — "
+"trigger backups, upload updates, or correct the system time."
+msgstr ""
+"Über die Navigation links siehst du Statistiken, den Schuldenpranger, "
+"Kaffeesorten und Mitglieder (über die Django-Admin-Oberfläche) und kannst - "
+"als Superuser - Backups auslösen, Updates hochladen oder die Systemzeit "
+"korrigieren."
+
+msgid "System status"
+msgstr "Systemstatus"
+
+msgid "NFC card reader:"
+msgstr "NFC-Kartenleser:"
+
+msgid "online"
+msgstr "online"
+
+msgid "offline"
+msgstr "offline"
+
+#, python-format
+msgid "(last update %(when)s)"
+msgstr "(letzte Meldung %(when)s)"
+
+msgid "(never reported in)"
+msgstr "(hat sich noch nie gemeldet)"
+
+#, python-format
+msgid "Reachable from another device at https://%(host)s/"
+msgstr "Von anderen Geräten erreichbar unter https://%(host)s/"
+
+msgid "CPU/RAM/disk"
+msgstr "CPU/RAM/Speicher"
+
+msgid "Exports"
+msgstr "Exporte"
+
+msgid "Download all orders (CSV)"
+msgstr "Alle Bestellungen herunterladen (CSV)"
+
+msgid "Download all payments (CSV)"
+msgstr "Alle Zahlungen herunterladen (CSV)"
+
+msgid "CoffeePy Dashboard - Login"
+msgstr "CoffeePy-Dashboard - Anmeldung"
+
+msgid "Invalid username or password."
+msgstr "Benutzername oder Passwort ungültig."
+
+msgid "Username"
+msgstr "Benutzername"
+
+msgid "Password"
+msgstr "Passwort"
+
+msgid "Log in"
+msgstr "Anmelden"
+
+#, python-format
+msgid ""
+"Browser warns about this site? <a href=\"%(download_url)s\">Download the "
+"device certificate</a> and install it once."
+msgstr ""
+"Dein Browser warnt vor dieser Seite? <a href=\"%(download_url)s\">Lade das "
+"Gerätezertifikat herunter</a> und installiere es einmal."
+
+msgid "Add alternative card"
+msgstr "Weitere Karte hinzufügen"
+
+#, python-format
+msgid "Add alternative card for %(name)s"
+msgstr "Weitere Karte für %(name)s hinzufügen"
+
+msgid ""
+"Tap the new card on the kiosk's NFC reader now - it'll be picked up "
+"automatically."
+msgstr ""
+"Halte die neue Karte jetzt an den NFC-Leser des Kiosks - sie wird "
+"automatisch erkannt."
+
+#, python-format
+msgid ""
+"Waiting for a card to be tapped on the kiosk reader… (%(seconds)ss left)"
+msgstr ""
+"Warte darauf, dass eine Karte an den Kiosk-Leser gehalten wird… (noch "
+"%(seconds)s s)"
+
+msgid "Edit member"
+msgstr "Mitglied bearbeiten"
+
+msgid "Add member"
+msgstr "Mitglied hinzufügen"
+
+#, python-format
+msgid ""
+"The UID is the card's numeric identifier - easiest to get from an existing "
+"<a href=\"%(scan_url)s\">scan</a> rather than typing it from memory. Most "
+"members are created automatically the first time a new card is tapped in the"
+" kiosk; use this form for pre-provisioning a card ahead of time instead."
+msgstr ""
+"Die UID ist die numerische Kennung der Karte - am einfachsten aus einem "
+"vorhandenen <a href=\"%(scan_url)s\">Scan</a> übernommen statt aus dem "
+"Gedächtnis abgetippt. Die meisten Mitglieder entstehen automatisch, wenn "
+"eine neue Karte zum ersten Mal am Kiosk aufgelegt wird; dieses Formular ist "
+"dafür da, eine Karte schon vorab anzulegen."
+
+msgid "Merge members"
+msgstr "Mitglieder zusammenführen"
+
+#, python-format
+msgid ""
+"Use this when someone ended up with two separate accounts - e.g. their old "
+"card broke and a fresh tap started a brand new account instead of using <a "
+"href=\"%(members_url)s\">\"Set alt card\"</a> up front. This moves all "
+"orders/payments from one account onto the other, then removes the duplicate."
+msgstr ""
+"Für den Fall, dass jemand zwei getrennte Konten hat - z. B. weil die alte "
+"Karte kaputtging und eine neue Karte ein ganz neues Konto angelegt hat, "
+"statt vorher <a href=\"%(members_url)s\">\"Weitere Karte\"</a> zu nutzen. "
+"Alle Bestellungen und Zahlungen wandern von einem Konto auf das andere, "
+"danach wird das doppelte entfernt."
+
+msgid "Keep this account"
+msgstr "Dieses Konto behalten"
+
+#, python-format
+msgid "%(name)s (uid %(uid)s)"
+msgstr "%(name)s (UID %(uid)s)"
+
+msgid "Merge and remove this account"
+msgstr "Dieses Konto zusammenführen und entfernen"
+
+msgid "Continue"
+msgstr "Weiter"
+
+msgid "Confirm merge"
+msgstr "Zusammenführen bestätigen"
+
+msgid "Keep:"
+msgstr "Behalten:"
+
+#, python-format
+msgid ""
+"%(name)s (uid %(uid)s) - %(orders)s orders, %(payments)s payments so far."
+msgstr ""
+"%(name)s (UID %(uid)s) - bisher %(orders)s Bestellungen, %(payments)s "
+"Zahlungen."
+
+msgid "Remove:"
+msgstr "Entfernen:"
+
+#, python-format
+msgid "%(name)s (uid %(uid)s) - %(orders)s orders, %(payments)s payments."
+msgstr ""
+"%(name)s (UID %(uid)s) - %(orders)s Bestellungen, %(payments)s Zahlungen."
+
+#, python-format
+msgid ""
+"This will move %(orders)s order(s) and %(payments)s payment(s) from "
+"%(remove_name)s onto %(keep_name)s, link card %(uid)s and its %(cards)s "
+"other linked card(s) to %(keep_name)s so they keep working, and permanently "
+"delete %(remove_name)s's account. This cannot be undone."
+msgstr ""
+"Damit werden %(orders)s Bestellung(en) und %(payments)s Zahlung(en) von "
+"%(remove_name)s auf %(keep_name)s übertragen, Karte %(uid)s und %(cards)s "
+"weitere verknüpfte Karte(n) mit %(keep_name)s verknüpft, damit sie weiter "
+"funktionieren, und das Konto von %(remove_name)s endgültig gelöscht. Das "
+"lässt sich nicht rückgängig machen."
+
+#, python-format
+msgid ""
+"This will move %(orders)s order(s) and %(payments)s payment(s) from "
+"%(remove_name)s onto %(keep_name)s, link card %(uid)s to %(keep_name)s so "
+"they keep working, and permanently delete %(remove_name)s's account. This "
+"cannot be undone."
+msgstr ""
+"Damit werden %(orders)s Bestellung(en) und %(payments)s Zahlung(en) von "
+"%(remove_name)s auf %(keep_name)s übertragen, Karte %(uid)s mit "
+"%(keep_name)s verknüpft, damit sie weiter funktioniert, und das Konto von "
+"%(remove_name)s endgültig gelöscht. Das lässt sich nicht rückgängig machen."
+
+#, python-format
+msgid ""
+"Card %(uid)s (\"%(nickname)s\") was used more recently than %(keep_name)s - "
+"the merged account will be renamed to \"%(nickname)s\"."
+msgstr ""
+"Karte %(uid)s (\"%(nickname)s\") wurde zuletzt später benutzt als "
+"%(keep_name)s - das zusammengeführte Konto wird in \"%(nickname)s\" "
+"umbenannt."
+
+msgid "Merge complete"
+msgstr "Zusammenführung abgeschlossen"
+
+#, python-format
+msgid ""
+"Done - %(name)s now has the combined history (%(orders)s order(s) and "
+"%(payments)s payment(s) moved over)."
+msgstr ""
+"Fertig - %(name)s hat jetzt die gemeinsame Historie (%(orders)s "
+"Bestellung(en) und %(payments)s Zahlung(en) übertragen)."
+
+#, python-format
+msgid ""
+"Card %(uid)s and its %(cards)s other linked card(s) are now linked to their "
+"account."
+msgstr ""
+"Karte %(uid)s und %(cards)s weitere verknüpfte Karte(n) gehören jetzt zu "
+"diesem Konto."
+
+#, python-format
+msgid "Card %(uid)s is now linked to their account."
+msgstr "Karte %(uid)s gehört jetzt zu diesem Konto."
+
+#, python-format
+msgid "Renamed to \"%(name)s\" since that card was used more recently."
+msgstr "Umbenannt in \"%(name)s\", weil diese Karte zuletzt benutzt wurde."
+
+msgid "Back to members"
+msgstr "Zurück zu den Mitgliedern"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "UID"
+msgstr "UID"
+
+msgid "Alt cards"
+msgstr "Weitere Karten"
+
+#, python-format
+msgid "Log out all of %(name)s's linked devices?"
+msgstr "Alle verknüpften Geräte von %(name)s abmelden?"
+
+#, python-format
+msgid ""
+"Mark %(name)s as departed? This writes off their balance and deactivates "
+"their card(s)."
+msgstr ""
+"%(name)s als ausgeschieden markieren? Damit wird der Kontostand ausgebucht "
+"und die Karte(n) deaktiviert."
+
+#, python-format
+msgid "Departed %(date)s"
+msgstr "Ausgeschieden %(date)s"
+
+msgid "Departed"
+msgstr "Ausgeschieden"
+
+msgid "Active"
+msgstr "Aktiv"
+
+msgid "Add card"
+msgstr "Karte hinzufügen"
+
+#, python-format
+msgid "Revoke devices (%(count)s)"
+msgstr "Geräte abmelden (%(count)s)"
+
+msgid "Reactivate"
+msgstr "Reaktivieren"
+
+msgid "Mark as departed"
+msgstr "Als ausgeschieden markieren"
+
+msgid "No members yet."
+msgstr "Noch keine Mitglieder."
+
+msgid "Edit payment method"
+msgstr "Zahlungsmethode bearbeiten"
+
+msgid "Add payment method"
+msgstr "Zahlungsmethode hinzufügen"
+
+msgid ""
+"Cash is always available and isn't listed here. Pick a provider (PayPal, "
+"PayPal Pool or WERO) and fill in just the one identifier it needs so members"
+" can pay/scan-to-pay via the kiosk and their linked phone - or use \"Custom "
+"link\" for anything else."
+msgstr ""
+"Bar ist immer verfügbar und steht hier nicht in der Liste. Wähle einen "
+"Anbieter (PayPal, PayPal Pool oder WERO) und trage nur die eine Kennung ein,"
+" die er braucht, damit Mitglieder über den Kiosk und ihr verknüpftes Handy "
+"bezahlen bzw. per Scan bezahlen können - oder nimm \"Eigener Link\" für "
+"alles andere."
+
+msgid "Identifier / link"
+msgstr "Kennung / Link"
+
+msgctxt "yesno filter: comma-separated, no spaces"
+msgid "Yes,No"
+msgstr "Ja,Nein"
+
+msgid "No payment methods configured yet - members can still pay cash."
+msgstr ""
+"Noch keine Zahlungsmethoden eingerichtet - Mitglieder können trotzdem bar "
+"bezahlen."
+
+msgid "Deposit pillory"
+msgstr "Schuldenpranger"
+
+msgid ""
+"Members with a negative balance, considering all payments and orders up to "
+"(but not including) the current month."
+msgstr ""
+"Mitglieder mit negativem Kontostand, gerechnet mit allen Zahlungen und den "
+"Bestellungen bis (aber ohne) den aktuellen Monat."
+
+msgid "Member"
+msgstr "Mitglied"
+
+msgid "Deposits"
+msgstr "Einzahlungen"
+
+msgid "Balance"
+msgstr "Kontostand"
+
+msgid "Nobody owes anything."
+msgstr "Niemand schuldet etwas."
+
+#, python-format
+msgid ""
+"Deletes <strong>all</strong> coffee data on this machine: members and their "
+"cards and linked phones, orders, payments, coffee sorts, payment methods, "
+"NFC scans and the audit log. Dashboard logins are kept, so you stay signed "
+"in. This cannot be undone - take a <a href=\"%(backup_url)s\">backup</a> "
+"first if the data still matters."
+msgstr ""
+"Löscht <strong>alle</strong> Kaffeedaten auf diesem Gerät: Mitglieder samt "
+"Karten und verknüpften Handys, Bestellungen, Zahlungen, Kaffeesorten, "
+"Zahlungsmethoden, NFC-Scans und das Protokoll. Dashboard-Anmeldungen bleiben"
+" erhalten, du bleibst also angemeldet. Das lässt sich nicht rückgängig "
+"machen - mach vorher ein <a href=\"%(backup_url)s\">Backup</a>, wenn die "
+"Daten noch wichtig sind."
+
+msgid "Currently stored"
+msgstr "Aktuell gespeichert"
+
+msgid "Delete everything"
+msgstr "Alles löschen"
+
+#, python-format
+msgid "Type <code>%(confirmation)s</code> to confirm"
+msgstr "Gib zur Bestätigung <code>%(confirmation)s</code> ein"
+
+msgid "Delete all data"
+msgstr "Alle Daten löschen"
+
+msgid "Delete all coffee data? This cannot be undone."
+msgstr "Alle Kaffeedaten löschen? Das lässt sich nicht rückgängig machen."
+
+msgid "Cups"
+msgstr "Tassen"
+
+msgid "Orders (€)"
+msgstr "Bestellungen (€)"
+
+msgid "Payments (€)"
+msgstr "Zahlungen (€)"
+
+msgid "Last 12 months"
+msgstr "Letzte 12 Monate"
+
+msgid "Coffee sort distribution (all time)"
+msgstr "Verteilung der Kaffeesorten (gesamt)"
+
+#, python-brace-format
+msgid "{label}:00 with {cups} cups"
+msgstr "{label}:00 Uhr mit {cups} Tassen"
+
+#, python-brace-format
+msgid "{label} with {cups} cups"
+msgstr "{label} mit {cups} Tassen"
+
+msgid "no orders yet"
+msgstr "noch keine Bestellungen"
+
+msgid "Hour of day"
+msgstr "Uhrzeit"
+
+msgid "Cups by hour of day (all time) - busiest:"
+msgstr "Tassen nach Uhrzeit (gesamt) - am meisten los:"
+
+msgid "Cups by weekday (all time) - busiest:"
+msgstr "Tassen nach Wochentag (gesamt) - am meisten los:"
+
+msgid "Average order price per quarter"
+msgstr "Durchschnittlicher Bestellpreis pro Quartal"
+
+msgid "Payments received by method (€, all time)"
+msgstr "Eingegangene Zahlungen nach Methode (€, gesamt)"
+
+msgid "Reachable from another device (phone, laptop) at:"
+msgstr "Von anderen Geräten (Handy, Laptop) erreichbar unter:"
+
+msgid "CPU"
+msgstr "CPU"
+
+#, python-format
+msgid "%(cores)s core(s)"
+msgstr "%(cores)s Kern(e)"
+
+msgid "Memory"
+msgstr "Arbeitsspeicher"
+
+msgid "Disk"
+msgstr "Speicherplatz"
+
+msgid ""
+"Only needed as a fallback if the RTC module drifts or isn't fitted - "
+"normally the Raspbian install script keeps the clock correct via the DS3231 "
+"RTC overlay."
+msgstr ""
+"Nur als Notlösung nötig, wenn das RTC-Modul abweicht oder fehlt - "
+"normalerweise hält das Installationsskript die Uhr über das DS3231-RTC-"
+"Overlay richtig."
+
+msgid "Current server time:"
+msgstr "Aktuelle Serverzeit:"
+
+msgid "New date/time"
+msgstr "Neues Datum/Uhrzeit"
+
+msgid "Set system time"
+msgstr "Systemzeit setzen"
+
+msgid "Software update"
+msgstr "Software-Update"
+
+msgid ""
+"Upload a bundle produced by <code>scripts/build_update_bundle.sh</code> - a "
+"<code>.tar</code>/<code>.tar.gz</code> containing every image the app needs "
+"(the Django app, the NFC bridge, Postgres, Mosquitto) plus the current "
+"<code>docker-compose.yml</code>. The host-level update watcher loads the "
+"images, applies the compose file (backing up the previous one), and "
+"recreates whichever services actually changed - including starting any "
+"brand-new container the update adds. No internet connection needed on this "
+"device."
+msgstr ""
+"Lade ein Paket hoch, das <code>scripts/build_update_bundle.sh</code> erzeugt"
+" hat - ein <code>.tar</code>/<code>.tar.gz</code> mit allen Images, die die "
+"App braucht (die Django-App, die NFC-Bridge, Postgres, Mosquitto), plus der "
+"aktuellen <code>docker-compose.yml</code>. Der Update-Wächter auf dem Gerät "
+"lädt die Images, übernimmt die Compose-Datei (die vorherige wird gesichert) "
+"und erstellt die Dienste neu, die sich tatsächlich geändert haben - "
+"inklusive neuer Container, die das Update mitbringt. Auf diesem Gerät ist "
+"dafür kein Internet nötig."
+
+msgid "Upload"
+msgstr "Hochladen"
+
+msgid "Watcher status"
+msgstr "Status des Update-Wächters"
+
+msgid "Waiting for status…"
+msgstr "Warte auf Status…"
+
+msgid "No update processed yet."
+msgstr "Noch kein Update verarbeitet."
+
+#, python-format
+msgid "openssl %(command)s failed"
+msgstr "openssl %(command)s fehlgeschlagen"
+
+msgid "The certificate is not a PEM-encoded X.509 certificate."
+msgstr "Das Zertifikat ist kein PEM-kodiertes X.509-Zertifikat."
+
+msgid "The key is not a PEM-encoded, unencrypted private key."
+msgstr ""
+"Der Schlüssel ist kein PEM-kodierter, unverschlüsselter privater Schlüssel."
+
+msgid "The private key does not belong to this certificate."
+msgstr "Der private Schlüssel gehört nicht zu diesem Zertifikat."
+
+msgid "The certificate has expired."
+msgstr "Das Zertifikat ist abgelaufen."
+
+msgid "The certificate expires within 30 days."
+msgstr "Das Zertifikat läuft innerhalb von 30 Tagen ab."
+
+#, python-format
+msgid "It is not valid for %(host)s - browsers using that address will warn."
+msgstr ""
+"Es gilt nicht für %(host)s - Browser, die diese Adresse nutzen, zeigen eine "
+"Warnung."
+
+#, python-format
+msgid "Timed out - no card was tapped within %(seconds)s seconds."
+msgstr ""
+"Zeit abgelaufen - innerhalb von %(seconds)s Sekunden wurde keine Karte "
+"aufgelegt."
+
+msgid "Try again"
+msgstr "Nochmal versuchen"
+
+msgid "Pick both accounts."
+msgstr "Bitte beide Konten auswählen."
+
+msgid "Pick two different accounts."
+msgstr "Bitte zwei verschiedene Konten auswählen."
+
+msgid "Please choose both the certificate and its private key."
+msgstr "Bitte wähle das Zertifikat und seinen privaten Schlüssel aus."
+
+msgid "Backup completed."
+msgstr "Backup abgeschlossen."
+
+#, python-format
+msgid "Backup failed: %(error)s"
+msgstr "Backup fehlgeschlagen: %(error)s"
+
+msgid "Please upload a .tar or .tar.gz image bundle."
+msgstr "Bitte lade ein .tar- oder .tar.gz-Image-Paket hoch."
+
+#, python-format
+msgid "Uploaded %(name)s. The update watcher will pick it up shortly."
+msgstr "%(name)s hochgeladen. Der Update-Wächter übernimmt es in Kürze."
+
+msgid "Please choose a file to upload."
+msgstr "Bitte wähle eine Datei zum Hochladen aus."
+
+msgid "An import is already running."
+msgstr "Es läuft bereits ein Import."
+
+#, python-format
+msgid "Type %(word)s to confirm - nothing was deleted."
+msgstr "Gib %(word)s zur Bestätigung ein - es wurde nichts gelöscht."
+
+msgid "An import is running - wait for it to finish."
+msgstr "Ein Import läuft - warte, bis er fertig ist."
+
+#, python-format
+msgid "Database reset - deleted %(summary)s."
+msgstr "Datenbank zurückgesetzt - gelöscht: %(summary)s."
+
+msgid "Audit log entries"
+msgstr "Protokolleinträge"
+
+msgid "Link your phone"
+msgstr "Handy verknüpfen"
+
+msgid ""
+"Scan with your phone's camera to get your stats, order history and Pay area "
+"on your own device."
+msgstr ""
+"Scanne mit der Kamera deines Handys, um deine Statistik, deine Bestellungen "
+"und den Bezahlbereich auf dein eigenes Gerät zu holen."
+
+msgid ""
+"The link only opens while your phone is on the coffee machine's network, so "
+"join that first."
+msgstr ""
+"Der Link öffnet sich nur, solange dein Handy im Netz der Kaffeemaschine ist "
+"- verbinde dich also zuerst damit."
+
+msgid "Join WiFi"
+msgstr "WLAN beitreten"
+
+#, python-format
+msgid "Network \"%(ssid)s\""
+msgstr "Netzwerk \"%(ssid)s\""
+
+msgid "Link phone"
+msgstr "Handy verknüpfen"
+
+#, python-format
+msgid "Expires in %(minutes)s minutes and works once"
+msgstr "Läuft in %(minutes)s Minuten ab und funktioniert einmal"
+
+msgid "Setup &amp; network info"
+msgstr "Einrichtung &amp; Netzwerk"
+
+msgid "Scan to join the WiFi or open the dashboard from a phone or PC."
+msgstr ""
+"Scanne, um dem WLAN beizutreten oder das Dashboard auf einem Handy oder PC "
+"zu öffnen."
+
+msgid "Open dashboard"
+msgstr "Dashboard öffnen"
+
+msgid "Manage coffee sorts, members, stats and more"
+msgstr "Kaffeesorten, Mitglieder, Statistik und mehr verwalten"
+
+msgid "Fire"
+msgstr "Feuer"
+
+msgid "Use"
+msgstr "Benutzen"
+
+msgid "Enter"
+msgstr "Enter"
+
+msgid "Exit to Kiosk"
+msgstr "Zurück zum Kiosk"
+
+msgid "CoffeePy Kiosk"
+msgstr "CoffeePy-Kiosk"
+
+msgid "Order"
+msgstr "Bestellen"
+
+msgid "Pay &amp; Stats"
+msgstr "Zahlen &amp; Statistik"
+
+msgid "Settings"
+msgstr "Einstellungen"
+
+msgid "Ranking"
+msgstr "Rangliste"
+
+msgid "Loading…"
+msgstr "Lädt…"
+
+msgid "We'll be right back"
+msgstr "Wir sind gleich wieder da"
+
+msgid "CoffeePy is being updated - ordering is paused for a moment."
+msgstr "CoffeePy wird gerade aktualisiert - Bestellen ist kurz pausiert."
+
+msgid "Keyboard"
+msgstr "Tastatur"
+
+msgid "Space"
+msgstr "Leertaste"
+
+msgid "WLAN Settings"
+msgstr "WLAN-Einstellungen"
+
+msgid "Card reader not available"
+msgstr "Kartenleser nicht verfügbar"
+
+msgid "The NFC reader isn't responding - please tell an admin."
+msgstr "Der NFC-Leser antwortet nicht - bitte sag einem Admin Bescheid."
+
+msgid "Apply your card"
+msgstr "Karte auflegen"
+
+msgid "to see your account or pay"
+msgstr "um dein Konto zu sehen oder zu bezahlen"
+
+msgid "to change your settings"
+msgstr "um deine Einstellungen zu ändern"
+
+msgid "to order a coffee"
+msgstr "um einen Kaffee zu bestellen"
+
+msgid "the scanner is next to the machine"
+msgstr "der Leser ist neben der Maschine"
+
+msgid "What happens next"
+msgstr "Was dann passiert"
+
+msgid "You see your cups this month and in total, and your balance."
+msgstr ""
+"Du siehst deine Tassen in diesem Monat und insgesamt sowie deinen "
+"Kontostand."
+
+msgid "Enter what you paid - or scan a payment QR code, if one is shown."
+msgstr ""
+"Trag ein, was du bezahlt hast - oder scanne einen Bezahl-QR-Code, falls "
+"einer angezeigt wird."
+
+#, python-format
+msgid "You are logged out after %(seconds)s seconds."
+msgstr "Nach %(seconds)s Sekunden wirst du abgemeldet."
+
+msgid "Change your nickname and your favourite coffee."
+msgstr "Ändere deinen Spitznamen und deinen Lieblingskaffee."
+
+msgid "Link your phone to see your stats and pay from there."
+msgstr ""
+"Verknüpfe dein Handy, um deine Statistik zu sehen und von dort zu bezahlen."
+
+msgid "A card the kiosk doesn't know yet is registered here."
+msgstr "Eine Karte, die der Kiosk noch nicht kennt, wird hier angemeldet."
+
+msgid "Your favourite coffee is preselected - tap another one to change it."
+msgstr ""
+"Dein Lieblingskaffee ist vorausgewählt - tippe auf einen anderen, um ihn zu "
+"ändern."
+
+#, python-format
+msgid ""
+"Tap <strong>Order now</strong>, or it is booked after %(seconds)s seconds."
+msgstr ""
+"Tippe auf <strong>Jetzt bestellen</strong>, sonst wird nach %(seconds)s "
+"Sekunden gebucht."
+
+msgid "A card the kiosk doesn't know yet asks for your nickname first."
+msgstr ""
+"Eine Karte, die der Kiosk noch nicht kennt, fragt zuerst nach deinem "
+"Spitznamen."
+
+#, python-format
+msgid "Assigning card to account %(name)s"
+msgstr "Karte wird dem Konto %(name)s zugeordnet"
+
+msgid "Tap the new card now - this closes automatically after 60 seconds."
+msgstr ""
+"Lege jetzt die neue Karte auf - das schließt sich nach 60 Sekunden "
+"automatisch."
+
+msgid "Card not recognized"
+msgstr "Karte nicht erkannt"
+
+msgid "Please try applying your card again."
+msgstr "Bitte leg deine Karte noch einmal auf."
+
+msgid "Account no longer active"
+msgstr "Konto nicht mehr aktiv"
+
+msgid "This card's account has been marked as departed. Please see an admin."
+msgstr ""
+"Das Konto zu dieser Karte wurde als ausgeschieden markiert. Bitte wende dich"
+" an einen Admin."
+
+msgid "Setup needed"
+msgstr "Einrichtung nötig"
+
+msgid ""
+"No coffee sorts configured yet. Finish setup from a phone or PC - the "
+"touchscreen has no keyboard."
+msgstr ""
+"Noch keine Kaffeesorten eingerichtet. Schließe die Einrichtung auf einem "
+"Handy oder PC ab - der Touchscreen hat keine Tastatur."
+
+#, python-format
+msgid "Thank you, %(name)s!"
+msgstr "Danke, %(name)s!"
+
+#, python-format
+msgid "Hi %(name)s!"
+msgstr "Hallo %(name)s!"
+
+msgid "Top 3 all-time"
+msgstr "Top 3 insgesamt"
+
+msgid "Top 3 this month"
+msgstr "Top 3 in diesem Monat"
+
+#, python-format
+msgid ""
+"Reminder: you still owe %(amount)s€ from last month - please settle up soon "
+"(see Pay &amp; Stats)."
+msgstr ""
+"Erinnerung: Du schuldest noch %(amount)s€ aus dem letzten Monat - bitte "
+"begleiche das bald (siehe Zahlen &amp; Statistik)."
+
+#, python-format
+msgid "Automatic checkout in %(seconds)ss"
+msgstr "Automatische Buchung in %(seconds)s s"
+
+msgid "Order now"
+msgstr "Jetzt bestellen"
+
+msgid "Welcome, new card!"
+msgstr "Willkommen, neue Karte!"
+
+#, python-format
+msgid "Hello %(name)s!"
+msgstr "Hallo %(name)s!"
+
+#, python-format
+msgid "Card UID: %(uid)s"
+msgstr "Karten-UID: %(uid)s"
+
+msgid "Link this phone"
+msgstr "Dieses Handy verknüpfen"
+
+msgid "CCT"
+msgstr "CCT"
+
+msgid "CCM"
+msgstr "CCM"
+
+msgid "CC = Cups Count; T/M = Total/Month"
+msgstr "CC = Tassenanzahl (Cups Count); T/M = gesamt/Monat"
+
+msgid "Payment amount"
+msgstr "Betrag"
+
+msgid "Paid via"
+msgstr "Bezahlt per"
+
+msgid "Or scan to pay what you owe directly:"
+msgstr "Oder scanne, um den offenen Betrag direkt zu bezahlen:"
+
+msgid "Pay"
+msgstr "Bezahlen"
+
+msgid "Top 7 - All time"
+msgstr "Top 7 - insgesamt"
+
+msgid "Top 7 - This month"
+msgstr "Top 7 - dieser Monat"
+
+msgid "Pos"
+msgstr "Pl."
+
+msgid "Unpaid"
+msgstr "Offen"
+
+msgid "1st place"
+msgstr "1. Platz"
+
+msgid "2nd place"
+msgstr "2. Platz"
+
+msgid "3rd place"
+msgstr "3. Platz"
+
+msgid "No data yet."
+msgstr "Noch keine Daten."
+
+msgid "Next"
+msgstr "Weiter"
+
+msgid "Enjoy your coffee!"
+msgstr "Lass ihn dir schmecken!"
+
+msgid "Cheers - enjoy!"
+msgstr "Prost - genieß ihn!"
+
+msgid "You're on a roll today!"
+msgstr "Du bist heute gut dabei!"
+
+msgid "Whoa, pace yourself!"
+msgstr "Hoppla, mach mal langsam!"
+
+msgid "Certified caffeine junkie today!"
+msgstr "Heute zertifizierter Koffein-Junkie!"
+
+msgid "100+ cups this week?! Maybe take a break..."
+msgstr "Über 100 Tassen diese Woche?! Vielleicht mal eine Pause..."
+
+msgid "Who are you?! Set a nickname under Settings."
+msgstr "Wer bist du?! Leg unter Einstellungen einen Spitznamen fest."
+
+msgid "Getting started"
+msgstr "Es geht los"
+
+msgid "Checking the device"
+msgstr "Gerät wird geprüft"
+
+msgid "Installing system packages"
+msgstr "Systempakete werden installiert"
+
+msgid "Copying the new version"
+msgstr "Neue Version wird kopiert"
+
+msgid "Setting up the hardware"
+msgstr "Hardware wird eingerichtet"
+
+msgid "Setting up this screen"
+msgstr "Dieser Bildschirm wird eingerichtet"
+
+msgid "Installing services"
+msgstr "Dienste werden installiert"
+
+msgid "Unpacking the update"
+msgstr "Update wird entpackt"
+
+msgid "Preparing the new version"
+msgstr "Neue Version wird vorbereitet"
+
+msgid "Restarting"
+msgstr "Wird neu gestartet"
+
+msgid "Setting up the WiFi"
+msgstr "WLAN wird eingerichtet"
+
+msgid "Starting CoffeePy"
+msgstr "CoffeePy wird gestartet"
+
+msgid ""
+"That card is already linked to another account - please try a different "
+"card."
+msgstr ""
+"Diese Karte ist schon mit einem anderen Konto verknüpft - bitte versuch es "
+"mit einer anderen Karte."
+
+msgid "My CoffeePy"
+msgstr "Mein CoffeePy"
+
+msgid "Log out"
+msgstr "Abmelden"
+
+msgid "Home"
+msgstr "Start"
+
+msgid "Stats"
+msgstr "Statistik"
+
+msgid "Cards"
+msgstr "Karten"
+
+msgid "Devices"
+msgstr "Geräte"
+
+msgid "Linked cards"
+msgstr "Verknüpfte Karten"
+
+msgid "Primary card"
+msgstr "Hauptkarte"
+
+#, python-format
+msgid "Added %(date)s"
+msgstr "Hinzugefügt %(date)s"
+
+msgid "Add a new card"
+msgstr "Neue Karte hinzufügen"
+
+msgid "Waiting for a card to be tapped on the kiosk reader…"
+msgstr "Warte darauf, dass eine Karte an den Kiosk-Leser gehalten wird…"
+
+msgid "Got a new or replacement card? Tap it on the kiosk to link it here."
+msgstr ""
+"Neue Karte oder Ersatzkarte? Halte sie an den Kiosk, um sie hier zu "
+"verknüpfen."
+
+msgid "Linked devices"
+msgstr "Verknüpfte Geräte"
+
+msgid "Log out this device?"
+msgstr "Dieses Gerät abmelden?"
+
+msgid "(this device)"
+msgstr "(dieses Gerät)"
+
+#, python-format
+msgid "Linked %(linked)s &middot; last used %(seen)s"
+msgstr "Verknüpft %(linked)s &middot; zuletzt benutzt %(seen)s"
+
+msgid "Revoke"
+msgstr "Abmelden"
+
+msgid "No linked devices."
+msgstr "Keine verknüpften Geräte."
+
+msgid "Total cups"
+msgstr "Tassen gesamt"
+
+msgid "This month"
+msgstr "Dieser Monat"
+
+#, python-format
+msgid "You owe %(owed)s€."
+msgstr "Du schuldest %(owed)s€."
+
+msgid "Recent orders"
+msgstr "Letzte Bestellungen"
+
+msgid "Coffee"
+msgstr "Kaffee"
+
+msgid "No orders yet."
+msgstr "Noch keine Bestellungen."
+
+msgid "Recent payments"
+msgstr "Letzte Zahlungen"
+
+msgid "No payments yet."
+msgstr "Noch keine Zahlungen."
+
+msgid "Security warning in your browser?"
+msgstr "Sicherheitswarnung im Browser?"
+
+msgid ""
+"This device signs its own certificate. Install it once and the warning is "
+"gone - on iPhone, also enable it under Settings &rsaquo; General &rsaquo; "
+"About &rsaquo; Certificate Trust Settings."
+msgstr ""
+"Dieses Gerät signiert sein Zertifikat selbst. Installiere es einmal, dann "
+"ist die Warnung weg - auf dem iPhone zusätzlich unter Einstellungen &rsaquo;"
+" Allgemein &rsaquo; Info &rsaquo; Zertifikatsvertrauenseinstellungen "
+"aktivieren."
+
+msgid "Link no longer valid"
+msgstr "Link nicht mehr gültig"
+
+msgid "This link is no longer valid"
+msgstr "Dieser Link ist nicht mehr gültig"
+
+msgid ""
+"The link may have expired, already been used, or this device may have been "
+"logged out. Ask an admin for a fresh \"Link this phone\" QR code from the "
+"kiosk's Settings screen."
+msgstr ""
+"Der Link ist vielleicht abgelaufen, wurde schon benutzt, oder dieses Gerät "
+"wurde abgemeldet. Lass dir von einem Admin einen neuen \"Dieses Handy "
+"verknüpfen\"-QR-Code auf dem Einstellungen-Bildschirm des Kiosks zeigen."
+
+#, python-format
+msgid ""
+"Your browser warns about this site? <a href=\"%(certificate_url)s\">Download"
+" the device certificate</a> and install it once."
+msgstr ""
+"Dein Browser warnt vor dieser Seite? <a href=\"%(certificate_url)s\">Lade "
+"das Gerätezertifikat herunter</a> und installiere es einmal."
+
+#, python-format
+msgid "Current balance: <strong>%(balance)s€</strong>"
+msgstr "Aktueller Kontostand: <strong>%(balance)s€</strong>"
+
+msgid "Pay now"
+msgstr "Jetzt bezahlen"
+
+msgid "Opens your payment app, prefilled with what you owe."
+msgstr "Öffnet deine Bezahl-App, vorausgefüllt mit dem offenen Betrag."
+
+#, python-format
+msgid "Pay %(owed)s€ via %(method)s"
+msgstr "%(owed)s€ per %(method)s bezahlen"
+
+#, python-format
+msgid ""
+"%(method)s: no direct link configured, use \"Record a payment\" below once "
+"you've paid."
+msgstr ""
+"%(method)s: kein direkter Link eingerichtet, nutze nach dem Bezahlen unten "
+"\"Zahlung eintragen\"."
+
+msgid "Record a payment"
+msgstr "Zahlung eintragen"
+
+msgid "Already paid? Log it here (cash or any method above)."
+msgstr "Schon bezahlt? Trag es hier ein (bar oder eine der Methoden oben)."
+
+msgid "Amount"
+msgstr "Betrag"
+
+msgid "You vs the others"
+msgstr "Du im Vergleich"
+
+msgid "Your cups"
+msgstr "Deine Tassen"
+
+msgid "Others' average"
+msgstr "Durchschnitt der anderen"
+
+msgid "Your rank"
+msgstr "Dein Rang"
+
+#, python-format
+msgid "You've had %(percent)s%% more coffee than the average member."
+msgstr ""
+"Du hattest %(percent)s%% mehr Kaffee als das durchschnittliche Mitglied."
+
+#, python-format
+msgid "You've had %(percent)s%% less coffee than the average member."
+msgstr ""
+"Du hattest %(percent)s%% weniger Kaffee als das durchschnittliche Mitglied."
+
+msgid "You're spot on the average member."
+msgstr "Du liegst genau beim durchschnittlichen Mitglied."
+
+msgid "You"
+msgstr "Du"
+
+msgid "Others"
+msgstr "Andere"
+
+msgid "Average member"
+msgstr "Durchschnittliches Mitglied"
+
+msgid "cups"
+msgstr "Tassen"
+
+msgid "Cups per month"
+msgstr "Tassen pro Monat"
+
+msgid "When you drink coffee"
+msgstr "Wann du Kaffee trinkst"
+
+msgid "Which weekday"
+msgstr "An welchem Wochentag"
+
+msgid "Which coffee"
+msgstr "Welcher Kaffee"
+
+msgid "CoffeePy is being updated. This page comes back on its own."
+msgstr ""
+"CoffeePy wird gerade aktualisiert. Diese Seite kommt von selbst wieder."

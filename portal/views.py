@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
 from coffee import services
@@ -182,12 +183,17 @@ def card_add_poll(request):
 
     if capture.is_expired():
         capture.delete()
+        timed_out = _("Timed out - no card was tapped within %(seconds)s seconds.") % {
+            "seconds": CARD_ADD_CAPTURE_SECONDS
+        }
         return HttpResponse(
-            '<p class="msg error">Timed out - no card was tapped within '
-            f'{CARD_ADD_CAPTURE_SECONDS} seconds.</p>'
-            f'<p><a href="{reverse("portal:card_add_start")}">Try again</a></p>'
+            f'<p class="msg error">{escape(timed_out)}</p>'
+            f'<p><a href="{reverse("portal:card_add_start")}">{escape(_("Try again"))}</a></p>'
         )
 
     seconds_left = int((capture.expires_at - timezone.now()).total_seconds())
-    error_html = f'<p class="msg error">{escape(capture.last_error)}</p>' if capture.last_error else ""
-    return HttpResponse(f"{error_html}<p>Waiting for a card to be tapped on the kiosk reader… ({seconds_left}s left)</p>")
+    # Stored in English by the kiosk (kiosk.views.CARD_CONFLICT_ERROR) and translated here,
+    # in this device's language.
+    error_html = f'<p class="msg error">{escape(_(capture.last_error))}</p>' if capture.last_error else ""
+    waiting = _("Waiting for a card to be tapped on the kiosk reader… (%(seconds)ss left)") % {"seconds": seconds_left}
+    return HttpResponse(f"{error_html}<p>{escape(waiting)}</p>")

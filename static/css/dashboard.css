@@ -21,11 +21,20 @@ body { user-select: auto; font-size: 16px; }
 
 .logout-form { margin-top: auto; padding: 12px 20px; }
 .logout-form button { width: 100%; min-height: auto; padding: 10px; background: var(--danger); }
+/* The language switch sits at the bottom of the nav, right above Logout. */
+.dash-language { margin-top: auto; padding: 0 20px; }
+.dash-language + .logout-form { margin-top: 0; }
+.language-switch { margin: 0; }
+.language-switch button { min-height: auto; padding: 6px 14px; background: transparent; color: inherit;
+  border: 1px solid currentColor; font-size: 0.85rem; }
+.dash-nav .language-switch button { color: var(--text-inverse); opacity: 0.85; }
 
 .dash-content { flex: 1; padding: 28px; max-width: 1100px; }
 
 .login-wrap {
   display: flex;
+  flex-direction: column;
+  gap: 14px;
   align-items: center;
   justify-content: center;
   min-height: 100vh;

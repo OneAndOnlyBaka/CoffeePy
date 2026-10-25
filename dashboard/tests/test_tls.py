@@ -156,3 +156,23 @@ class CertificateViewsTestCase(TLSDirTestCase):
         })
         self.assertContains(response, "does not belong")
         self.assertFalse(tls.has_custom())
+
+
+class MaintenanceTestCase(TLSDirTestCase):
+    """The "back in a moment" route and page Caddy answers with while the app is down."""
+
+    def test_both_ports_serve_the_status_and_the_page(self):
+        tls.ensure()
+        caddyfile = self.path("Caddyfile").read_text()
+        self.assertIn("handle /maintenance/status.json", caddyfile)
+        self.assertIn("handle_errors 502 503 504", caddyfile)
+        network, kiosk = caddyfile.split(":443 {")[1].split(":8443 {")
+        self.assertIn("import maintenance", network)
+        self.assertIn("import maintenance", kiosk)
+
+    @override_settings(LANGUAGE_CODE="de")
+    def test_page_shows_both_languages_default_first(self):
+        tls.ensure()
+        page = self.path("maintenance.html").read_text()
+        self.assertIn('<html lang="de">', page)
+        self.assertLess(page.index("Wir sind gleich wieder da"), page.index("We'll be right back"))

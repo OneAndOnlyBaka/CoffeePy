@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 {% block title %}:) - CoffeePy{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'vendor/js-dos/js-dos.css' %}">
@@ -22,12 +22,12 @@
             <button type="button" class="dpad-btn dpad-down" data-key="ArrowDown">▼</button>
         </div>
         <div class="dpad-actions">
-            <button type="button" class="btn success dpad-action" data-key="Control">Fire</button>
-            <button type="button" class="btn secondary dpad-action" data-key="Space">Use</button>
-            <button type="button" class="btn secondary dpad-action" data-key="Enter">Enter</button>
+            <button type="button" class="btn success dpad-action" data-key="Control">{% translate "Fire" %}</button>
+            <button type="button" class="btn secondary dpad-action" data-key="Space">{% translate "Use" %}</button>
+            <button type="button" class="btn secondary dpad-action" data-key="Enter">{% translate "Enter" %}</button>
             <button type="button" class="btn danger dpad-action" data-key="Escape">Esc</button>
         </div>
     </div>
-    <a class="btn danger doom-exit" href="{% url 'kiosk:index' %}">✕ Exit to Kiosk</a>
+    <a class="btn danger doom-exit" href="{% url 'kiosk:index' %}">✕ {% translate "Exit to Kiosk" %}</a>
 </div>
 {% endblock %}

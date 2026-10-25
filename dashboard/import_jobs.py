@@ -18,12 +18,26 @@ from contextlib import suppress
 from django.conf import settings
 from django.core.management import call_command
 from django.db import connections
+from django.utils.translation import gettext as _
+from django.utils.translation import gettext_noop
 
 from coffee.management.commands.import_sqlite import Command as ImportSqliteCommand
 
 from . import audit
 
-IDLE = {"state": "idle", "phase": "", "done": 0, "total": 0, "percent": 0, "message": "", "updated": 0.0}
+IDLE = {
+    "state": "idle", "phase": "", "done": 0, "total": 0, "percent": 0, "message": "", "error": "", "updated": 0.0,
+}
+
+# The status file is written by a thread that has no request and so no language, and is read
+# by pages in whatever language each poller chose - so it holds these English msgids and
+# localized() translates them on the way out. The import command's own phases are listed
+# here because the command (and its stdout, the "done" message) is deliberately left English.
+PHASES = [
+    gettext_noop("Starting"), gettext_noop("Reading source"), gettext_noop("Clearing existing data"),
+    gettext_noop("Coffee sorts"), gettext_noop("Members"), gettext_noop("Orders"), gettext_noop("Payments"),
+    gettext_noop("Done"), gettext_noop("Failed"),
+]
 
 # A job whose progress has not moved for this long is treated as gone (its worker was
 # killed mid-import), so a stale status file can never block the next import forever.
@@ -36,6 +50,16 @@ def read_status() -> dict:
             return {**IDLE, **json.load(f)}
     except (OSError, ValueError):
         return dict(IDLE)
+
+
+def localized(status: dict) -> dict:
+    """`status` as the import page shows it, in the active language."""
+    status = dict(status)
+    if status["phase"]:
+        status["phase"] = _(status["phase"])
+    if status["state"] == "error" and status["error"]:
+        status["message"] = _("Import failed: %(error)s") % {"error": status["error"]}
+    return status
 
 
 def write_status(**fields) -> None:
@@ -85,7 +109,7 @@ def _run(path: str, filename: str, actor: str, purge: bool) -> None:
         audit.log_actor(actor, "import.legacy_db", target=filename, details=message)
         write_status(state="done", phase="Done", percent=100, message=message)
     except Exception as exc:  # noqa: BLE001 - surfaced to the admin, not swallowed
-        write_status(state="error", phase="Failed", message=f"Import failed: {exc}")
+        write_status(state="error", phase="Failed", message=f"Import failed: {exc}", error=str(exc))
     finally:
         with suppress(OSError):
             os.unlink(path)

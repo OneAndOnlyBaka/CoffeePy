@@ -1,17 +1,19 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">{% endblock %}
-{% block title %}CoffeePy Dashboard - Login{% endblock %}
+{% block title %}{% translate "CoffeePy Dashboard - Login" %}{% endblock %}
 {% block body %}
 <div class="login-wrap">
     <form method="post" class="card" style="width: 320px;">
         {% csrf_token %}
         <h1>CoffeePy</h1>
-        {% if form.errors %}<p class="msg error">Invalid username or password.</p>{% endif %}
-        <label class="field">Username {{ form.username }}</label>
-        <label class="field">Password {{ form.password }}</label>
-        <button type="submit" class="success">Log in</button>
-        <p class="muted login-cert">Browser warns about this site? <a href="{% url 'certificate_download' %}">Download the device certificate</a> and install it once.</p>
+        {% if form.errors %}<p class="msg error">{% translate "Invalid username or password." %}</p>{% endif %}
+        <label class="field">{% translate "Username" %} {{ form.username }}</label>
+        <label class="field">{% translate "Password" %} {{ form.password }}</label>
+        <button type="submit" class="success">{% translate "Log in" %}</button>
+        {% url 'certificate_download' as download_url %}
+        <p class="muted login-cert">{% blocktranslate trimmed %}Browser warns about this site? <a href="{{ download_url }}">Download the device certificate</a> and install it once.{% endblocktranslate %}</p>
     </form>
+    {% include "includes/language_switch.html" %}
 </div>
 {% endblock %}

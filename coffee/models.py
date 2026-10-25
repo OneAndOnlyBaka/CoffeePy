@@ -2,6 +2,8 @@ import secrets
 
 from django.db import models
 from django.utils import timezone
+from django.utils.formats import number_format
+from django.utils.translation import gettext as _, gettext_lazy
 
 
 class CoffeeSort(models.Model):
@@ -146,6 +148,15 @@ class Order(models.Model):
 CASH_METHOD_NAME = "Cash"
 
 
+def payment_method_label(name: str) -> str:
+    """How a payment method name reads on screen. Cash is stored as "Cash" whatever the
+    language (Payment.method_name is data, and a German "Bar" would no longer match it),
+    so only its label is translated; every other name is the admin's own and shown as is."""
+    from django.utils.translation import gettext
+
+    return gettext("Cash") if not name or name == CASH_METHOD_NAME else name
+
+
 class PaymentMethod(models.Model):
     """Admin-configured way a member can pay, in addition to the always-available cash
     option (CASH_METHOD_NAME, which isn't a row here - it can't be deleted or
@@ -159,10 +170,10 @@ class PaymentMethod(models.Model):
     PROVIDER_WERO = "wero"
     PROVIDER_CUSTOM = "custom"
     PROVIDER_CHOICES = [
-        (PROVIDER_PAYPAL_ME, "PayPal (Friends & Family / paypal.me)"),
+        (PROVIDER_PAYPAL_ME, gettext_lazy("PayPal (Friends & Family / paypal.me)")),
         (PROVIDER_PAYPAL_POOL, "PayPal Pool"),
         (PROVIDER_WERO, "WERO"),
-        (PROVIDER_CUSTOM, "Custom link"),
+        (PROVIDER_CUSTOM, gettext_lazy("Custom link")),
     ]
 
     name = models.CharField(max_length=100, unique=True)
@@ -211,7 +222,10 @@ class PaymentMethod(models.Model):
         "") - e.g. WERO's registered phone number - so there's still something to show
         on the pay screens."""
         if self.provider == self.PROVIDER_WERO and self.identifier:
-            return f"Send {amount:.2f}€ via WERO to {self.identifier}"
+            return _("Send %(amount)s€ via WERO to %(identifier)s") % {
+                "amount": number_format(amount, 2),
+                "identifier": self.identifier,
+            }
         return ""
 
 

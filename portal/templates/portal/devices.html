@@ -1,27 +1,29 @@
 {% extends "portal/base.html" %}
-{% block title %}Devices - CoffeePy{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Devices" %} - CoffeePy{% endblock %}
 {% block portal_content %}
-<h1>Linked devices</h1>
+<h1>{% translate "Linked devices" %}</h1>
+{% translate "Log out this device?" as revoke_confirm %}
 <div class="card">
     <div class="list">
         {% for device in devices %}
         <div class="list-row">
             <div class="list-row-text">
                 <span class="list-row-title">
-                    {{ device.label|default:"Browser" }}{% if device.session_key == current_key %} <span class="muted">(this device)</span>{% endif %}
+                    {{ device.label|default:"Browser" }}{% if device.session_key == current_key %} <span class="muted">{% translate "(this device)" %}</span>{% endif %}
                 </span>
-                <span class="list-row-meta">Linked {{ device.created_at|date:"d.m.Y" }} &middot; last used {{ device.last_seen_at|date:"d.m. H:i" }}</span>
+                <span class="list-row-meta">{% blocktranslate trimmed with linked=device.created_at|date:"d.m.Y" seen=device.last_seen_at|date:"d.m. H:i" %}Linked {{ linked }} &middot; last used {{ seen }}{% endblocktranslate %}</span>
             </div>
             <div class="list-row-actions">
                 <form method="post" action="{% url 'portal:revoke_device' device.pk %}"
-                      onsubmit="return confirm('Log out this device?');">
+                      onsubmit="return confirm('{{ revoke_confirm|escapejs }}');">
                     {% csrf_token %}
-                    <button type="submit" class="danger">Revoke</button>
+                    <button type="submit" class="danger">{% translate "Revoke" %}</button>
                 </form>
             </div>
         </div>
         {% empty %}
-        <p class="muted">No linked devices.</p>
+        <p class="muted">{% translate "No linked devices." %}</p>
         {% endfor %}
     </div>
 </div>

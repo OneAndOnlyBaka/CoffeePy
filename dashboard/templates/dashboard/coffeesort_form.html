@@ -1,7 +1,8 @@
 {% extends "dashboard/base.html" %}
-{% block title %}{% if instance %}Edit{% else %}Add{% endif %} coffee sort - CoffeePy{% endblock %}
+{% load i18n %}
+{% block title %}{% if instance %}{% translate "Edit coffee sort" %}{% else %}{% translate "Add coffee sort" %}{% endif %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>{% if instance %}Edit {{ instance.name }}{% else %}Add coffee sort{% endif %}</h1>
+<h1>{% if instance %}{% blocktranslate with name=instance.name %}Edit {{ name }}{% endblocktranslate %}{% else %}{% translate "Add coffee sort" %}{% endif %}</h1>
 <div class="card">
     <form method="post">
         {% csrf_token %}
@@ -13,8 +14,8 @@
         </label>
         {% endfor %}
         <div class="action-row">
-            <a href="{% url 'dashboard:coffeesorts' %}" class="btn secondary">Cancel</a>
-            <button type="submit" class="success">Save</button>
+            <a href="{% url 'dashboard:coffeesorts' %}" class="btn secondary">{% translate "Cancel" %}</a>
+            <button type="submit" class="success">{% translate "Save" %}</button>
         </div>
     </form>
 </div>

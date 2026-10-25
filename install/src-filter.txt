@@ -39,3 +39,5 @@
 - /data/backups/*
 # The device CA and its certificates - phones trust this CA, so a re-run must keep it.
 - /data/tls/
+# The kiosk's "back in a moment" status - written by this very run (install/maintenance.sh).
+- /data/maintenance/

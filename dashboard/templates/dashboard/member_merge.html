@@ -1,36 +1,38 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Merge members - CoffeePy{% endblock %}
+{% load i18n l10n %}
+{% block title %}{% translate "Merge members" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>Merge members</h1>
-<p>Use this when someone ended up with two separate accounts - e.g. their old card broke
+<h1>{% translate "Merge members" %}</h1>
+{% url 'dashboard:members' as members_url %}
+<p>{% blocktranslate trimmed %}Use this when someone ended up with two separate accounts - e.g. their old card broke
 and a fresh tap started a brand new account instead of using
-<a href="{% url 'dashboard:members' %}">"Set alt card"</a> up front. This moves all
-orders/payments from one account onto the other, then removes the duplicate.</p>
+<a href="{{ members_url }}">"Set alt card"</a> up front. This moves all
+orders/payments from one account onto the other, then removes the duplicate.{% endblocktranslate %}</p>
 {% if error %}<p class="msg error">{{ error }}</p>{% endif %}
 <div class="card">
     <form method="post">
         {% csrf_token %}
         <label class="field">
-            Keep this account
+            {% translate "Keep this account" %}
             <select name="keep" required>
                 <option value="">-</option>
                 {% for m in members %}
-                <option value="{{ m.uid }}">{{ m.display_name }} (uid {{ m.uid }})</option>
+                <option value="{{ m.uid|unlocalize }}">{% blocktranslate with name=m.display_name uid=m.uid|unlocalize %}{{ name }} (uid {{ uid }}){% endblocktranslate %}</option>
                 {% endfor %}
             </select>
         </label>
         <label class="field">
-            Merge and remove this account
+            {% translate "Merge and remove this account" %}
             <select name="remove" required>
                 <option value="">-</option>
                 {% for m in members %}
-                <option value="{{ m.uid }}">{{ m.display_name }} (uid {{ m.uid }})</option>
+                <option value="{{ m.uid|unlocalize }}">{% blocktranslate with name=m.display_name uid=m.uid|unlocalize %}{{ name }} (uid {{ uid }}){% endblocktranslate %}</option>
                 {% endfor %}
             </select>
         </label>
         <div class="action-row">
-            <a href="{% url 'dashboard:members' %}" class="btn secondary">Cancel</a>
-            <button type="submit" class="success">Continue</button>
+            <a href="{% url 'dashboard:members' %}" class="btn secondary">{% translate "Cancel" %}</a>
+            <button type="submit" class="success">{% translate "Continue" %}</button>
         </div>
     </form>
 </div>

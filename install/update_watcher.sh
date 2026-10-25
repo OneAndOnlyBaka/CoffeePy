@@ -21,6 +21,11 @@ STATUS_DIR="$PROJECT_DIR/data/updates/status"
 
 mkdir -p "$INCOMING_DIR" "$PROCESSED_DIR" "$STATUS_DIR"
 
+# The kiosk shows "back in a moment" while a bundle is applied (see maintenance.sh).
+MAINTENANCE_DIR="$PROJECT_DIR/data/maintenance"
+# shellcheck source=maintenance.sh
+. "$(dirname "$0")/maintenance.sh"
+
 # Every failure path returns rather than exits: this runs inside the `inotifywait | while`
 # pipeline's subshell, where an exit ends the loop for good while inotifywait - and with it
 # the service - stays up. One broken upload used to silently swallow every later update.
@@ -32,22 +37,26 @@ process_bundle() {
     # /tmp is a RAM-backed tmpfs on current Raspberry Pi OS and it does not fit.
     workdir="$(mktemp -d "$PROJECT_DIR/data/updates/.work.XXXXXX")"
 
+    maintenance_begin update
     if apply_bundle >"$log" 2>&1; then
         mv "$bundle" "$PROCESSED_DIR/$name"
     else
         # Out of incoming/ either way, so a failed bundle is not tried again forever.
         mv "$bundle" "$PROCESSED_DIR/$name.failed"
     fi
+    maintenance_end
     rm -rf "$workdir"
 }
 
 apply_bundle() {
+    maintenance_step unpack 10
     echo "[$(date -Is)] Unpacking $name ..."
     if ! tar -xf "$bundle" -C "$workdir"; then
         echo "[$(date -Is)] FAILED: could not unpack bundle"
         return 1
     fi
 
+    maintenance_step images 35
     echo "[$(date -Is)] Loading images ..."
     if ! docker load -i "$workdir/images.tar"; then
         echo "[$(date -Is)] FAILED: docker load"
@@ -61,6 +70,7 @@ apply_bundle() {
         cp "$workdir/docker-compose.yml" "$PROJECT_DIR/docker-compose.yml"
     fi
 
+    maintenance_step restart 75
     echo "[$(date -Is)] Recreating any service whose image or definition changed ..."
     if ! (cd "$PROJECT_DIR" && docker compose up -d --remove-orphans); then
         echo "[$(date -Is)] FAILED: docker compose up"

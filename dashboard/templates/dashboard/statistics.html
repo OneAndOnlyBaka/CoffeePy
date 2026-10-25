@@ -1,9 +1,9 @@
 {% extends "dashboard/base.html" %}
-{% load static %}
-{% block title %}Statistics - CoffeePy{% endblock %}
+{% load static i18n %}
+{% block title %}{% translate "Statistics" %} - CoffeePy{% endblock %}
 {% block dashboard_head %}<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>{% endblock %}
 {% block dashboard_content %}
-<h1>Statistics</h1>
+<h1>{% translate "Statistics" %}</h1>
 <div class="chart-grid">
     <div class="card"><canvas id="monthlyChart"></canvas></div>
     <div class="card"><canvas id="distributionChart"></canvas></div>
@@ -13,7 +13,13 @@
     <div class="card" style="grid-column: 1 / -1;"><canvas id="priceTrendChart"></canvas></div>
 </div>
 
+{% comment %}
+The chart data below is json.dumps output passed through as a string, so it keeps its dot
+decimals in every language - a localized number would end the array at the first comma.
+{% endcomment %}
+{% translate "Cups" as cups_label %}
 <script>
+const cupsLabel = "{{ cups_label|escapejs }}";
 const monthly = {{ monthly_totals|safe }};
 const distribution = {{ coffee_distribution|safe }};
 const priceTrend = {{ price_trend|safe }};
@@ -24,11 +30,11 @@ new Chart(document.getElementById('monthlyChart'), {
     data: {
         labels: monthly.labels,
         datasets: [
-            {label: 'Orders (€)', data: monthly.orders, backgroundColor: '#6b3b00'},
-            {label: 'Payments (€)', data: monthly.payments, backgroundColor: '#c98a3d'},
+            {label: "{% translate "Orders (€)" as x %}{{ x|escapejs }}", data: monthly.orders, backgroundColor: '#6b3b00'},
+            {label: "{% translate "Payments (€)" as x %}{{ x|escapejs }}", data: monthly.payments, backgroundColor: '#c98a3d'},
         ]
     },
-    options: {responsive: true, plugins: {title: {display: true, text: 'Last 12 months'}}}
+    options: {responsive: true, plugins: {title: {display: true, text: "{% translate "Last 12 months" as x %}{{ x|escapejs }}"}}}
 });
 
 new Chart(document.getElementById('distributionChart'), {
@@ -37,16 +43,24 @@ new Chart(document.getElementById('distributionChart'), {
         labels: distribution.labels,
         datasets: [{data: distribution.counts, backgroundColor: ['#6b3b00', '#c98a3d', '#a9744f', '#3b2314', '#e6d4c1', '#b3261e', '#2f7a3d']}]
     },
-    options: {responsive: true, plugins: {title: {display: true, text: 'Coffee sort distribution (all time)'}}}
+    options: {responsive: true, plugins: {title: {display: true, text: "{% translate "Coffee sort distribution (all time)" as x %}{{ x|escapejs }}"}}}
 });
 
 const hourly = {{ hourly_distribution|safe }};
 const weekday = {{ weekday_distribution|safe }};
 
+// Placeholders rather than template literals, so a translation can reorder them.
+const hourPeak = "{% translate "{label}:00 with {cups} cups" as x %}{{ x|escapejs }}";
+const weekdayPeak = "{% translate "{label} with {cups} cups" as x %}{{ x|escapejs }}";
+
+function fill(text, label, cups) {
+    return text.replace("{label}", label).replace("{cups}", cups);
+}
+
 function peakLabel(data, format) {
     const max = Math.max(...data.cups);
     if (max <= 0) {
-        return 'no orders yet';
+        return "{% translate "no orders yet" as x %}{{ x|escapejs }}";
     }
     return format(data.labels[data.cups.indexOf(max)], max);
 }
@@ -55,17 +69,17 @@ new Chart(document.getElementById('hourlyChart'), {
     type: 'bar',
     data: {
         labels: hourly.labels,
-        datasets: [{label: 'Cups', data: hourly.cups, backgroundColor: '#6b3b00'}]
+        datasets: [{label: cupsLabel, data: hourly.cups, backgroundColor: '#6b3b00'}]
     },
     options: {
         responsive: true,
-        scales: {x: {title: {display: true, text: 'Hour of day'}}, y: {beginAtZero: true}},
+        scales: {x: {title: {display: true, text: "{% translate "Hour of day" as x %}{{ x|escapejs }}"}}, y: {beginAtZero: true}},
         plugins: {
             legend: {display: false},
             title: {
                 display: true,
-                text: 'Cups by hour of day (all time) - busiest: ' +
-                    peakLabel(hourly, (label, cups) => `${label}:00 with ${cups} cups`),
+                text: "{% translate "Cups by hour of day (all time) - busiest:" as x %}{{ x|escapejs }} " +
+                    peakLabel(hourly, (label, cups) => fill(hourPeak, label, cups)),
             }
         }
     }
@@ -75,7 +89,7 @@ new Chart(document.getElementById('weekdayChart'), {
     type: 'bar',
     data: {
         labels: weekday.labels,
-        datasets: [{label: 'Cups', data: weekday.cups, backgroundColor: '#c98a3d'}]
+        datasets: [{label: cupsLabel, data: weekday.cups, backgroundColor: '#c98a3d'}]
     },
     options: {
         responsive: true,
@@ -84,8 +98,8 @@ new Chart(document.getElementById('weekdayChart'), {
             legend: {display: false},
             title: {
                 display: true,
-                text: 'Cups by weekday (all time) - busiest: ' +
-                    peakLabel(weekday, (label, cups) => `${label} with ${cups} cups`),
+                text: "{% translate "Cups by weekday (all time) - busiest:" as x %}{{ x|escapejs }} " +
+                    peakLabel(weekday, (label, cups) => fill(weekdayPeak, label, cups)),
             }
         }
     }
@@ -100,7 +114,7 @@ new Chart(document.getElementById('priceTrendChart'), {
             label: name, data: values, borderColor: colors[i % colors.length], spanGaps: true,
         }))
     },
-    options: {responsive: true, plugins: {title: {display: true, text: 'Average order price per quarter'}}}
+    options: {responsive: true, plugins: {title: {display: true, text: "{% translate "Average order price per quarter" as x %}{{ x|escapejs }}"}}}
 });
 
 new Chart(document.getElementById('paymentMethodsChart'), {
@@ -109,7 +123,7 @@ new Chart(document.getElementById('paymentMethodsChart'), {
         labels: paymentMethods.labels,
         datasets: [{data: paymentMethods.totals, backgroundColor: ['#6b3b00', '#c98a3d', '#a9744f', '#3b2314', '#e6d4c1', '#b3261e', '#2f7a3d']}]
     },
-    options: {responsive: true, plugins: {title: {display: true, text: 'Payments received by method (€, all time)'}}}
+    options: {responsive: true, plugins: {title: {display: true, text: "{% translate "Payments received by method (€, all time)" as x %}{{ x|escapejs }}"}}}
 });
 </script>
 {% endblock %}

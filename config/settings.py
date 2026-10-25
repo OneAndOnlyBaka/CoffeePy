@@ -45,7 +45,7 @@ TLS_DIR = Path(os.environ.get("TLS_DIR", BASE_DIR / "data" / "tls"))
 # sets this header itself - so is_secure() is true for every request through it.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # Off by default only so a plain `runserver` over http still keeps a login.
-SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", False)
+SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = LANGUAGE_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", False)
 
 
 INSTALLED_APPS = [
@@ -65,6 +65,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "config.language.DeviceLanguageMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -121,7 +122,17 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-LANGUAGE_CODE = "en-us"
+# Every screen is available in both; which one a device shows is its own choice (the
+# kiosk's language button, the switch in dashboard and portal - a cookie per device, see
+# config/language.py). Until a device chooses, it gets the default picked when the Pi was
+# set up (scripts/provision.sh) - never the browser's own language.
+LANGUAGES = [("de", "Deutsch"), ("en", "English")]
+LANGUAGE_CODE = os.environ.get("DJANGO_LANGUAGE_CODE", "en").strip() or "en"
+if LANGUAGE_CODE not in dict(LANGUAGES):
+    LANGUAGE_CODE = "en"
+LOCALE_PATHS = [BASE_DIR / "locale"]
+LANGUAGE_COOKIE_AGE = 10 * 365 * 24 * 3600
+LANGUAGE_COOKIE_SAMESITE = "Lax"
 TIME_ZONE = os.environ.get("DJANGO_TIME_ZONE", "Europe/Berlin")
 USE_I18N = True
 USE_TZ = True

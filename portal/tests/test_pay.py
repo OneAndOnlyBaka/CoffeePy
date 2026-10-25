@@ -1,6 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 
+from django.conf import settings
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -60,3 +61,13 @@ class PortalPayTestCase(TestCase):
         Order.objects.create(member=self.alice, value=Decimal("15.00"), machine_strokes=1)
         response = self.client.get(reverse("portal:pay"))
         self.assertContains(response, "Send 15.00€ via WERO to +49 151 12345678")
+
+    def test_amount_input_keeps_a_dot_decimal_in_german(self):
+        """German renders 15.00 as "15,00", which an <input type="number"> rejects - the
+        field would come up empty instead of prefilled with what is owed."""
+        Order.objects.create(member=self.alice, value=Decimal("15.00"), machine_strokes=1)
+        self.client.cookies[settings.LANGUAGE_COOKIE_NAME] = "de"
+        response = self.client.get(reverse("portal:pay"))
+        self.assertContains(response, 'name="amount" value="15.00"')
+        # The displayed balance is localized, so German really was active.
+        self.assertContains(response, "-15,00€")

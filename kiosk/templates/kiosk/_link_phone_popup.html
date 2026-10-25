@@ -1,20 +1,21 @@
+{% load i18n %}
 <div class="modal-card">
     <button type="button" class="modal-close" hx-on:click="document.getElementById('qr-modal').classList.remove('open')">✕</button>
-    <h1>Link your phone</h1>
-    <p>Scan with your phone's camera to get your stats, order history and Pay area on your own device.
-        {% if wifi_qr_svg %}The link only opens while your phone is on the coffee machine's network, so join that first.{% endif %}</p>
+    <h1>{% translate "Link your phone" %}</h1>
+    <p>{% translate "Scan with your phone's camera to get your stats, order history and Pay area on your own device." %}
+        {% if wifi_qr_svg %}{% translate "The link only opens while your phone is on the coffee machine's network, so join that first." %}{% endif %}</p>
     <div class="qr-row">
         {% if wifi_qr_svg %}
         <div class="qr-card">
-            <h2>1. Join WiFi</h2>
+            <h2>1. {% translate "Join WiFi" %}</h2>
             <div class="qr-image">{{ wifi_qr_svg|safe }}</div>
-            <p class="muted">Network "{{ ap_ssid }}"</p>
+            <p class="muted">{% blocktranslate trimmed with ssid=ap_ssid %}Network "{{ ssid }}"{% endblocktranslate %}</p>
         </div>
         {% endif %}
         <div class="qr-card">
-            <h2>{% if wifi_qr_svg %}2. {% endif %}Link phone</h2>
+            <h2>{% if wifi_qr_svg %}2. {% endif %}{% translate "Link phone" %}</h2>
             <div class="qr-image">{{ link_qr_svg|safe }}</div>
-            <p class="muted">Expires in {{ link_ttl_minutes }} minutes and works once</p>
+            <p class="muted">{% blocktranslate trimmed with minutes=link_ttl_minutes %}Expires in {{ minutes }} minutes and works once{% endblocktranslate %}</p>
         </div>
     </div>
 </div>

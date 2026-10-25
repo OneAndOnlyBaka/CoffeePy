@@ -63,15 +63,31 @@
       loadBytes(container.dataset.wad),
     ]);
 
+    // EXPERIMENT ONLY (performance measurements) - to be removed.
+    const q = new URLSearchParams(location.search);
+    let conf = "";
+    if (q.get("cycles")) conf += "[cpu]\ncycles=" + q.get("cycles") + "\n";
+    if (q.get("sound") === "0") conf += "[mixer]\nnosound=true\n[sblaster]\nsbtype=none\n[speaker]\npcspeaker=false\ntandy=off\n";
+    if (q.get("frameskip")) conf += "[render]\nframeskip=" + q.get("frameskip") + "\n";
+    window.__frames = 0;
+    const cfg = [];
+    if (q.get("detail")) cfg.push("detaillevel " + q.get("detail"));
+    if (q.get("blocks")) cfg.push("screenblocks " + q.get("blocks"));
+    if (q.get("nosfx")) cfg.push("snd_sfxdevice 0", "snd_musicdevice 0");
     Dos(container, {
       pathPrefix: container.dataset.emulatorsPrefix,
       initFs: [
         { path: "DOOM.EXE", contents: exe },
         { path: "DOOM1.WAD", contents: wad },
-      ],
-      dosboxConf: "[autoexec]\nmount c .\nc:\nDOOM.EXE\n",
+      ].concat(cfg.length ? [{ path: "DEFAULT.CFG", contents: new TextEncoder().encode(cfg.join("\r\n") + "\r\n") }] : []),
+      dosboxConf: conf + "[autoexec]\nmount c .\nc:\nDOOM.EXE\n",
       autoStart: true,
       noCursor: true,
+      renderBackend: q.get("render") || "webgl",
+      workerThread: q.get("worker") !== "0",
+      onEvent: (event, ci) => {
+        if (event === "ci-ready") { window.__ci = ci; ci.events().onFrame(() => { window.__frames++; }); }
+      },
     });
   }
 

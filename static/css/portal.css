@@ -14,8 +14,9 @@ body.portal { user-select: auto; font-size: 16px; }
   padding: 12px 16px;
 }
 .portal-topbar .brand { color: var(--text-inverse); text-decoration: none; font-weight: 700; font-size: 1.05em; }
-.portal-topbar .logout-form { margin: 0; }
-.portal-topbar .logout-form button {
+.portal-topbar .topbar-actions { display: flex; gap: 8px; align-items: center; }
+.portal-topbar .logout-form, .portal-topbar .language-switch { margin: 0; }
+.portal-topbar .logout-form button, .portal-topbar .language-switch button {
   min-height: 40px;
   padding: 6px 12px;
   font-size: 0.85em;

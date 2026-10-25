@@ -1,7 +1,9 @@
-{% load static %}<!doctype html>
-<html lang="en">
+{% load static i18n %}{% get_current_language as LANGUAGE_CODE %}<!doctype html>
+{# Every page exists in the reader's language already - no browser translation bar on top. #}
+<html lang="{{ LANGUAGE_CODE }}" translate="no">
 <head>
     <meta charset="utf-8">
+    <meta name="google" content="notranslate">
     <meta name="viewport" content="{% block viewport %}width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no{% endblock %}">
     <title>{% block title %}CoffeePy{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/base.css' %}">

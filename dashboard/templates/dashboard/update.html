@@ -1,25 +1,27 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Update - CoffeePy{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Update" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>Software update</h1>
-<p>Upload a bundle produced by <code>scripts/build_update_bundle.sh</code> - a
+<h1>{% translate "Software update" %}</h1>
+<p>{% blocktranslate trimmed %}Upload a bundle produced by <code>scripts/build_update_bundle.sh</code> - a
 <code>.tar</code>/<code>.tar.gz</code> containing every image the app needs (the Django
 app, the NFC bridge, Postgres, Mosquitto) plus the current <code>docker-compose.yml</code>.
 The host-level update watcher loads the images, applies the compose file (backing up the
 previous one), and recreates whichever services actually changed - including starting
-any brand-new container the update adds. No internet connection needed on this device.</p>
-{% if message %}<p class="msg {% if 'Please' in message %}error{% else %}success{% endif %}">{{ message }}</p>{% endif %}
+any brand-new container the update adds. No internet connection needed on this device.{% endblocktranslate %}</p>
+{% if message %}<p class="msg {% if failed %}error{% else %}success{% endif %}">{{ message }}</p>{% endif %}
 <div class="card">
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="file" name="bundle" accept=".tar,.tar.gz" required>
-        <button type="submit" class="success">Upload</button>
+        <button type="submit" class="success">{% translate "Upload" %}</button>
     </form>
 </div>
 <div class="card" style="margin-top: 20px;">
-    <h2>Watcher status</h2>
-    <pre id="status-log" class="muted">Waiting for status…</pre>
+    <h2>{% translate "Watcher status" %}</h2>
+    <pre id="status-log" class="muted">{% translate "Waiting for status…" %}</pre>
 </div>
+{% translate "No update processed yet." as nothing_yet %}
 <script>
 async function pollStatus() {
     try {
@@ -28,7 +30,7 @@ async function pollStatus() {
         const el = document.getElementById("status-log");
         el.textContent = data.entries.length
             ? data.entries.map(e => `[${e.name}]\n${e.text}`).join("\n\n")
-            : "No update processed yet.";
+            : "{{ nothing_yet|escapejs }}";
     } catch (e) { /* ignore transient errors */ }
 }
 pollStatus();

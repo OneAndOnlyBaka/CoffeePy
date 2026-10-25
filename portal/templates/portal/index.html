@@ -1,58 +1,60 @@
 {% extends "portal/base.html" %}
+{% load i18n coffee_tags %}
 {% block title %}{{ member.display_name }} - CoffeePy{% endblock %}
 {% block portal_content %}
-<h1>Hi {{ member.display_name }}!</h1>
+<h1>{% blocktranslate trimmed with name=member.display_name %}Hi {{ name }}!{% endblocktranslate %}</h1>
 <div class="card stats-card">
     <div class="stats-row">
-        <div class="stat"><span class="label">Total cups</span><span class="value">{{ total_cups }}</span></div>
-        <div class="stat"><span class="label">This month</span><span class="value">{{ month_cups }}</span></div>
-        <div class="stat"><span class="label">Balance</span><span class="value">{{ balance }}€</span></div>
+        <div class="stat"><span class="label">{% translate "Total cups" %}</span><span class="value">{{ total_cups }}</span></div>
+        <div class="stat"><span class="label">{% translate "This month" %}</span><span class="value">{{ month_cups }}</span></div>
+        <div class="stat"><span class="label">{% translate "Balance" %}</span><span class="value">{{ balance }}€</span></div>
     </div>
     {% if balance < 0 %}
-    <p class="msg error">You owe {{ owed }}€.</p>
+    <p class="msg error">{% blocktranslate trimmed %}You owe {{ owed }}€.{% endblocktranslate %}</p>
     {% endif %}
-    <a href="{% url 'portal:pay' %}" class="btn success btn-block">Pay</a>
+    <a href="{% url 'portal:pay' %}" class="btn success btn-block">{% translate "Pay" %}</a>
 </div>
 
 <div class="card">
-    <h2>Recent orders</h2>
+    <h2>{% translate "Recent orders" %}</h2>
+    {% translate "Coffee" as unknown_sort %}
     <div class="list">
         {% for order in recent_orders %}
         <div class="list-row">
             <div class="list-row-text">
-                <span class="list-row-title">{{ order.coffee_sort.name|default:"Coffee" }}</span>
+                <span class="list-row-title">{{ order.coffee_sort.name|default:unknown_sort }}</span>
                 <span class="list-row-meta">{{ order.created_at|date:"d.m. H:i" }}</span>
             </div>
             <span class="list-row-value">{{ order.value }}€</span>
         </div>
         {% empty %}
-        <p class="muted">No orders yet.</p>
+        <p class="muted">{% translate "No orders yet." %}</p>
         {% endfor %}
     </div>
 </div>
 
 <div class="card">
-    <h2>Recent payments</h2>
+    <h2>{% translate "Recent payments" %}</h2>
     <div class="list">
         {% for payment in recent_payments %}
         <div class="list-row">
             <div class="list-row-text">
-                <span class="list-row-title">{{ payment.method_name|default:"Cash" }}</span>
+                <span class="list-row-title">{{ payment.method_name|method_label }}</span>
                 <span class="list-row-meta">{{ payment.created_at|date:"d.m. H:i" }}</span>
             </div>
             <span class="list-row-value">{{ payment.value }}€</span>
         </div>
         {% empty %}
-        <p class="muted">No payments yet.</p>
+        <p class="muted">{% translate "No payments yet." %}</p>
         {% endfor %}
     </div>
 </div>
 
 <div class="card">
-    <h2>Security warning in your browser?</h2>
-    <p class="muted">This device signs its own certificate. Install it once and the warning
+    <h2>{% translate "Security warning in your browser?" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}This device signs its own certificate. Install it once and the warning
     is gone - on iPhone, also enable it under Settings &rsaquo; General &rsaquo; About &rsaquo;
-    Certificate Trust Settings.</p>
-    <a href="{% url 'certificate_download' %}" class="btn secondary btn-block">Download certificate</a>
+    Certificate Trust Settings.{% endblocktranslate %}</p>
+    <a href="{% url 'certificate_download' %}" class="btn secondary btn-block">{% translate "Download certificate" %}</a>
 </div>
 {% endblock %}

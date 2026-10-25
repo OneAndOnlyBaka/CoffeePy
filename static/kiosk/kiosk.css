@@ -145,6 +145,8 @@ html, body.kiosk { overflow: hidden; }
 .rank-badge { font-size: 1.4rem; margin-left: 4px; vertical-align: middle; }
 .rank-badge .icon { width: 1.5em; height: 1.5em; }  /* the ribbon takes a third of it */
 .info-btn .icon { width: 30px; height: 30px; vertical-align: 0; }
+/* The language button sits left of the WiFi one; labelled with the language it switches to. */
+.lang-btn { right: 84px; background: var(--coffee); text-decoration: none; font-weight: 700; font-size: 1.15rem; }
 
 /* Every logged-in screen (order/settings/info_pay/ranking) shares this structure so its
    action buttons always sit in the same place: a fixed-height header, a body that grows
@@ -368,3 +370,25 @@ html, body.kiosk { overflow: hidden; }
 
 .dpad-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 .dpad-action { min-width: 100px; min-height: 56px; opacity: 0.9; touch-action: none; user-select: none; }
+
+/* "We'll be right back" (maintenance.js): above everything, the modal included, so a tap
+   during an install or update lands nowhere. */
+.maintenance {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cream);
+  text-align: center;
+}
+.maintenance[hidden] { display: none; }
+.maintenance-card { max-width: 860px; padding: 24px; }
+.maintenance-card .icon { width: 120px; height: 120px; color: var(--coffee); }
+.maintenance-card h1 { color: var(--coffee); font-size: 2.8rem; margin: 18px 0 8px; }
+.maintenance-card p { font-size: 1.3rem; margin: 0; }
+.maintenance-bar { width: 460px; max-width: 80vw; height: 16px; margin: 28px auto 10px; border-radius: 8px;
+  background: var(--cream-dark); overflow: hidden; visibility: hidden; }
+.maintenance-bar span { display: block; height: 100%; width: 0; background: var(--coffee); transition: width 0.6s; }
+.maintenance-step { color: var(--coffee-light); min-height: 1.5em; }

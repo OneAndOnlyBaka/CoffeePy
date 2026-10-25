@@ -21,6 +21,17 @@ class KioskPayTestCase(TestCase):
         payment = Payment.objects.get(member=self.alice)
         self.assertEqual(payment.method_name, "Cash")
 
+    def test_pay_accepts_a_decimal_comma(self):
+        self.client.post(reverse("kiosk:pay"), {"amount": "1,50"})
+        payment = Payment.objects.get(member=self.alice)
+        self.assertEqual(payment.value, Decimal("1.50"))
+
+    def test_pay_ignores_amounts_that_are_not_numbers(self):
+        for amount in ("NaN", "Infinity", "abc"):
+            response = self.client.post(reverse("kiosk:pay"), {"amount": amount})
+            self.assertEqual(response.status_code, 200, amount)
+        self.assertFalse(Payment.objects.exists())
+
     def test_pay_records_chosen_method(self):
         PaymentMethod.objects.create(name="PayPal", link_template="https://paypal.me/club/{amount}EUR")
         self.client.post(reverse("kiosk:pay"), {"amount": "5.00", "method": "PayPal"})

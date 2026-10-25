@@ -1,0 +1,57 @@
+{% load i18n %}<!doctype html>
+{% comment %}
+Served by Caddy, not by the app (dashboard/tls.py writes it next to the Caddyfile): it is
+what anyone gets while the app is down for an install or update. So it can't use the app's
+static files or its language cookie - the CSS is inline and both languages are shown, the
+device's default first. It reloads itself as soon as the app answers again.
+{% endcomment %}
+<html lang="{{ languages.0 }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoffeePy</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #f7efe6; color: #2a1c12;
+    font-family: -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif; }
+  .wrap { min-height: 100%; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 22px; padding: 24px; box-sizing: border-box; text-align: center; }
+  .cup { width: 96px; height: 96px; color: #6b3b00; }
+  h1 { margin: 0; color: #6b3b00; font-size: 2.2rem; }
+  p { margin: 4px 0; font-size: 1.15rem; }
+  .other { color: #a9744f; }
+  .bar { width: min(420px, 80vw); height: 14px; border-radius: 7px; background: #e6d4c1; overflow: hidden; visibility: hidden; }
+  .bar span { display: block; height: 100%; width: 0; background: #6b3b00; transition: width 0.6s; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <svg class="cup" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 2.8c-1 1.1 1 2 0 3.4M12 2.8c-1 1.1 1 2 0 3.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M3.5 9h13v5.5a5.5 5.5 0 0 1-5.5 5.5H9a5.5 5.5 0 0 1-5.5-5.5z"/><path d="M16.5 10.5h1.3a2.6 2.6 0 0 1 0 5.2h-1.6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="2.5" y="20.8" width="17" height="1.7" rx=".85"/></svg>
+  {% for code in languages %}{% language code %}
+  <div{% if not forloop.first %} class="other" lang="{{ code }}"{% endif %}>
+    <h1>{% translate "We'll be right back" %}</h1>
+    <p>{% translate "CoffeePy is being updated. This page comes back on its own." %}</p>
+  </div>
+  {% endlanguage %}{% endfor %}
+  <div class="bar" id="bar"><span></span></div>
+</div>
+<script>
+  // Progress, if an install or update reports one, and back to the app once it answers.
+  async function check() {
+    try {
+      const status = await fetch("/maintenance/status.json", { cache: "no-store" });
+      if (status.ok) {
+        const data = await status.json();
+        document.getElementById("bar").style.visibility = "visible";
+        document.querySelector("#bar span").style.width = data.percent + "%";
+      }
+    } catch (e) { /* no status - just wait */ }
+    try {
+      const health = await fetch("/health/", { cache: "no-store" });
+      if (health.ok) { location.reload(); return; }
+    } catch (e) { /* still down */ }
+    setTimeout(check, 3000);
+  }
+  setTimeout(check, 3000);
+</script>
+</body>
+</html>

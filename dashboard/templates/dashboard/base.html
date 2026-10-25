@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
 {% block dashboard_head %}{% endblock %}
@@ -8,25 +8,26 @@
 <div class="dash-frame">
     <nav class="dash-nav">
         <a href="{% url 'dashboard:index' %}" class="brand">{% include "icons/cup.svg" %} CoffeePy</a>
-        <a href="{% url 'dashboard:statistics' %}">Statistics</a>
-        <a href="{% url 'dashboard:pillory' %}">Pillory</a>
-        <a href="{% url 'dashboard:coffeesorts' %}">Coffee sorts</a>
-        <a href="{% url 'dashboard:paymentmethods' %}">Payment methods</a>
-        <a href="{% url 'dashboard:members' %}">Members</a>
+        <a href="{% url 'dashboard:statistics' %}">{% translate "Statistics" %}</a>
+        <a href="{% url 'dashboard:pillory' %}">{% translate "Pillory" %}</a>
+        <a href="{% url 'dashboard:coffeesorts' %}">{% translate "Coffee sorts" %}</a>
+        <a href="{% url 'dashboard:paymentmethods' %}">{% translate "Payment methods" %}</a>
+        <a href="{% url 'dashboard:members' %}">{% translate "Members" %}</a>
         {% if user.is_superuser %}
-        <a href="{% url 'dashboard:system_dashboard' %}">System</a>
-        <a href="{% url 'dashboard:backup' %}">Backup</a>
-        <a href="{% url 'dashboard:update' %}">Update</a>
-        <a href="{% url 'dashboard:import_legacy_db' %}">Import legacy DB</a>
-        <a href="{% url 'dashboard:reset_database' %}">Reset database</a>
-        <a href="{% url 'dashboard:system_time' %}">System time</a>
-        <a href="{% url 'dashboard:certificate' %}">Certificate</a>
-        <a href="{% url 'dashboard:audit_log' %}">Audit log</a>
+        <a href="{% url 'dashboard:system_dashboard' %}">{% translate "System" %}</a>
+        <a href="{% url 'dashboard:backup' %}">{% translate "Backup" %}</a>
+        <a href="{% url 'dashboard:update' %}">{% translate "Update" %}</a>
+        <a href="{% url 'dashboard:import_legacy_db' %}">{% translate "Import legacy DB" %}</a>
+        <a href="{% url 'dashboard:reset_database' %}">{% translate "Reset database" %}</a>
+        <a href="{% url 'dashboard:system_time' %}">{% translate "System time" %}</a>
+        <a href="{% url 'dashboard:certificate' %}">{% translate "Certificate" %}</a>
+        <a href="{% url 'dashboard:audit_log' %}">{% translate "Audit log" %}</a>
         {% endif %}
-        <a href="/admin/">Admin</a>
+        <a href="/admin/">{% translate "Admin" %}</a>
+        <div class="dash-language">{% include "includes/language_switch.html" %}</div>
         <form method="post" action="{% url 'dashboard:logout' %}" class="logout-form">
             {% csrf_token %}
-            <button type="submit">Logout</button>
+            <button type="submit">{% translate "Logout" %}</button>
         </form>
     </nav>
     <main class="dash-content">

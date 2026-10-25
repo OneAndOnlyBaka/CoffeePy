@@ -1,27 +1,28 @@
 {% extends "portal/base.html" %}
-{% load static %}
-{% block title %}Stats - CoffeePy{% endblock %}
+{% load i18n static %}
+{% block title %}{% translate "Stats" %} - CoffeePy{% endblock %}
 {% block extra_head %}
 {{ block.super }}
 <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
 {% endblock %}
 {% block portal_content %}
-<h1>You vs the others</h1>
+<h1>{% translate "You vs the others" %}</h1>
 
 <div class="card stats-card">
     <div class="stats-row">
-        <div class="stat"><span class="label">Your cups</span><span class="value">{{ summary.your_cups }}</span></div>
-        <div class="stat"><span class="label">Others' average</span><span class="value">{{ summary.others_average }}</span></div>
-        <div class="stat"><span class="label">Your rank</span><span class="value">{{ summary.rank }}/{{ summary.members }}</span></div>
+        <div class="stat"><span class="label">{% translate "Your cups" %}</span><span class="value">{{ summary.your_cups }}</span></div>
+        <div class="stat"><span class="label">{% translate "Others' average" %}</span><span class="value">{{ summary.others_average }}</span></div>
+        <div class="stat"><span class="label">{% translate "Your rank" %}</span><span class="value">{{ summary.rank }}/{{ summary.members }}</span></div>
     </div>
     {% if summary.percent_of_average is not None %}
     <p class="muted">
         {% if summary.percent_of_average > 0 %}
-        You've had {{ summary.percent_of_average }}% more coffee than the average member.
+        {% blocktranslate trimmed with percent=summary.percent_of_average %}You've had {{ percent }}% more coffee than the average member.{% endblocktranslate %}
         {% elif summary.percent_of_average < 0 %}
-        You've had {{ summary.percent_of_average|cut:"-" }}% less coffee than the average member.
+        {% comment %}floatformat before cut: cut stringifies its input, which would skip the localized decimal comma.{% endcomment %}
+        {% blocktranslate trimmed with percent=summary.percent_of_average|floatformat:1|cut:"-" %}You've had {{ percent }}% less coffee than the average member.{% endblocktranslate %}
         {% else %}
-        You're spot on the average member.
+        {% translate "You're spot on the average member." %}
         {% endif %}
     </p>
     {% endif %}
@@ -32,6 +33,14 @@
 <div class="card"><canvas id="weekdayChart"></canvas></div>
 <div class="card"><canvas id="sortsChart"></canvas></div>
 
+{% translate "You" as you_label %}
+{% translate "Others" as others_label %}
+{% translate "Average member" as average_label %}
+{% translate "cups" as cups_unit %}
+{% translate "Cups per month" as monthly_title %}
+{% translate "When you drink coffee" as hourly_title %}
+{% translate "Which weekday" as weekday_title %}
+{% translate "Which coffee" as sorts_title %}
 <script>
 const YOU = '#6b3b00';
 const OTHERS = '#c98a3d';
@@ -42,13 +51,13 @@ const sorts = {{ sorts|safe }};
 
 // Everything except the monthly chart is a percentage of each side's own total: one
 // member can never out-bar two dozen others in absolute cups, whatever their habits.
-function comparison(canvasId, data, title, {type = 'bar', percent = true, othersLabel = 'Others'} = {}) {
+function comparison(canvasId, data, title, {type = 'bar', percent = true, othersLabel = '{{ others_label|escapejs }}'} = {}) {
     new Chart(document.getElementById(canvasId), {
         type: type,
         data: {
             labels: data.labels,
             datasets: [
-                {label: 'You', data: data.you, backgroundColor: YOU, borderColor: YOU},
+                {label: '{{ you_label|escapejs }}', data: data.you, backgroundColor: YOU, borderColor: YOU},
                 {label: othersLabel, data: data.others, backgroundColor: OTHERS, borderColor: OTHERS},
             ]
         },
@@ -64,7 +73,7 @@ function comparison(canvasId, data, title, {type = 'bar', percent = true, others
                 title: {display: true, text: title},
                 tooltip: {
                     callbacks: {
-                        label: c => `${c.dataset.label}: ${c.parsed.y}${percent ? '%' : ' cups'}`,
+                        label: c => `${c.dataset.label}: ${c.parsed.y}${percent ? '%' : ' {{ cups_unit|escapejs }}'}`,
                     }
                 }
             }
@@ -72,11 +81,11 @@ function comparison(canvasId, data, title, {type = 'bar', percent = true, others
     });
 }
 
-comparison('monthlyChart', monthly, 'Cups per month', {
-    type: 'line', percent: false, othersLabel: 'Average member',
+comparison('monthlyChart', monthly, '{{ monthly_title|escapejs }}', {
+    type: 'line', percent: false, othersLabel: '{{ average_label|escapejs }}',
 });
-comparison('hourlyChart', hourly, 'When you drink coffee');
-comparison('weekdayChart', weekday, 'Which weekday');
-comparison('sortsChart', sorts, 'Which coffee');
+comparison('hourlyChart', hourly, '{{ hourly_title|escapejs }}');
+comparison('weekdayChart', weekday, '{{ weekday_title|escapejs }}');
+comparison('sortsChart', sorts, '{{ sorts_title|escapejs }}');
 </script>
 {% endblock %}

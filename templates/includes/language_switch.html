@@ -1,0 +1,16 @@
+{% load i18n %}{% get_current_language as current %}
+{% comment %}
+Switches this device to the other language (a cookie, see config/language.py) and comes
+back to the same page. The button is labelled in the language it switches to - someone who
+can't read the current one still finds their own. The kiosk has its own button instead
+(kiosk.views.language), since a form's csrf token would change its wait screen per poll.
+{% endcomment %}
+<form method="post" action="{% url 'set_language' %}" class="language-switch">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    {% if current == "de" %}
+    <button type="submit" name="language" value="en" title="Switch to English" lang="en">EN</button>
+    {% else %}
+    <button type="submit" name="language" value="de" title="Auf Deutsch umschalten" lang="de">DE</button>
+    {% endif %}
+</form>

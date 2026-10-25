@@ -1,11 +1,12 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Audit log - CoffeePy{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Audit log" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>Audit log</h1>
-<p class="muted">Last 500 dashboard actions that changed club data, newest first.</p>
+<h1>{% translate "Audit log" %}</h1>
+<p class="muted">{% translate "Last 500 dashboard actions that changed club data, newest first." %}</p>
 <div class="card">
     <table>
-        <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
+        <thead><tr><th>{% translate "When" %}</th><th>{% translate "Who" %}</th><th>{% translate "Action" %}</th><th>{% translate "Target" %}</th><th>{% translate "Details" %}</th></tr></thead>
         <tbody>
         {% for entry in entries %}
             <tr>
@@ -16,7 +17,7 @@
                 <td>{{ entry.details|default:"-" }}</td>
             </tr>
         {% empty %}
-            <tr><td colspan="5" class="muted">No actions recorded yet.</td></tr>
+            <tr><td colspan="5" class="muted">{% translate "No actions recorded yet." %}</td></tr>
         {% endfor %}
         </tbody>
     </table>

@@ -1,17 +1,17 @@
 {% extends "dashboard/base.html" %}
-{% load static %}
-{% block title %}Add alternative card - CoffeePy{% endblock %}
+{% load static i18n %}
+{% block title %}{% translate "Add alternative card" %} - CoffeePy{% endblock %}
 {% block dashboard_head %}
 <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
 {% endblock %}
 {% block dashboard_content %}
-<h1>Add alternative card for {{ member.display_name }}</h1>
-<p>Tap the new card on the kiosk's NFC reader now - it'll be picked up automatically.</p>
+<h1>{% blocktranslate with name=member.display_name %}Add alternative card for {{ name }}{% endblocktranslate %}</h1>
+<p>{% translate "Tap the new card on the kiosk's NFC reader now - it'll be picked up automatically." %}</p>
 <div id="alt-uid-status" class="card"
      hx-get="{% url 'dashboard:member_alt_uid_poll' member.uid %}"
      hx-trigger="load, every 1s"
      hx-swap="innerHTML">
-    <p>Waiting for a card to be tapped on the kiosk reader… ({{ seconds }}s left)</p>
+    <p>{% blocktranslate %}Waiting for a card to be tapped on the kiosk reader… ({{ seconds }}s left){% endblocktranslate %}</p>
 </div>
-<p><a href="{% url 'dashboard:members' %}">Cancel</a></p>
+<p><a href="{% url 'dashboard:members' %}">{% translate "Cancel" %}</a></p>
 {% endblock %}

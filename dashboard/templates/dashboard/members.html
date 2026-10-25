@@ -1,65 +1,75 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Members - CoffeePy{% endblock %}
+{% load i18n l10n %}
+{% block title %}{% translate "Members" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>Members</h1>
+<h1>{% translate "Members" %}</h1>
 <p>
-    <a href="{% url 'dashboard:member_add' %}" class="btn success">+ Add member</a>
-    <a href="{% url 'dashboard:member_merge' %}" class="btn secondary">Merge members</a>
+    <a href="{% url 'dashboard:member_add' %}" class="btn success">+ {% translate "Add member" %}</a>
+    <a href="{% url 'dashboard:member_merge' %}" class="btn secondary">{% translate "Merge members" %}</a>
 </p>
 <div class="card">
     <table>
-        <thead><tr><th>Nickname</th><th>Status</th><th>UID</th><th>Alt cards</th><th>Favourite coffee</th><th></th></tr></thead>
+        <thead><tr><th>{% translate "Nickname" %}</th><th>{% translate "Status" %}</th><th>{% translate "UID" %}</th><th>{% translate "Alt cards" %}</th><th>{% translate "Favourite coffee" %}</th><th></th></tr></thead>
         <tbody>
+        {% comment %}
+        The confirm() texts are built with autoescape off and escapejs'd as a whole: HTML-escaping
+        the name first would show "&#x27;" in the dialog for a nickname with an apostrophe.
+        {% endcomment %}
         {% for member in members %}
+            {% autoescape off %}
+            {% blocktranslate with name=member.display_name asvar confirm_revoke %}Log out all of {{ name }}'s linked devices?{% endblocktranslate %}
+            {% blocktranslate with name=member.display_name asvar confirm_departed %}Mark {{ name }} as departed? This writes off their balance and deactivates their card(s).{% endblocktranslate %}
+            {% blocktranslate with name=member.display_name asvar confirm_delete %}Delete {{ name }}?{% endblocktranslate %}
+            {% endautoescape %}
             <tr{% if member.is_departed %} class="muted"{% endif %}>
                 <td>{{ member.nickname|default:"-" }}</td>
                 <td>
                     {% if member.is_departed %}
-                    <span title="Departed {{ member.departed_at|date:'d.m.Y' }}">Departed</span>
+                    <span title="{% blocktranslate with date=member.departed_at|date:'d.m.Y' %}Departed {{ date }}{% endblocktranslate %}">{% translate "Departed" %}</span>
                     {% else %}
-                    Active
+                    {% translate "Active" %}
                     {% endif %}
                 </td>
-                <td>{{ member.uid }}</td>
+                <td>{{ member.uid|unlocalize }}</td>
                 <td>
-                    {% for card in member.alt_cards.all %}{{ card.uid }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+                    {% for card in member.alt_cards.all %}{{ card.uid|unlocalize }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
                 </td>
                 <td>{{ member.favourite_coffee.name|default:"-" }}</td>
                 <td>
-                    <a href="{% url 'dashboard:member_edit' member.uid %}">Edit</a>
+                    <a href="{% url 'dashboard:member_edit' member.uid %}">{% translate "Edit" %}</a>
                     &middot;
-                    <a href="{% url 'dashboard:member_alt_uid_start' member.uid %}">Add card</a>
+                    <a href="{% url 'dashboard:member_alt_uid_start' member.uid %}">{% translate "Add card" %}</a>
                     {% if member.device_count %}
                     &middot;
                     <form method="post" action="{% url 'dashboard:member_revoke_devices' member.uid %}"
-                          style="display:inline" onsubmit="return confirm('Log out all of {{ member.display_name }}\'s linked devices?');">
+                          style="display:inline" onsubmit="return confirm('{{ confirm_revoke|escapejs }}');">
                         {% csrf_token %}
-                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">Revoke devices ({{ member.device_count }})</button>
+                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">{% blocktranslate with count=member.device_count %}Revoke devices ({{ count }}){% endblocktranslate %}</button>
                     </form>
                     {% endif %}
                     &middot;
                     {% if member.is_departed %}
                     <form method="post" action="{% url 'dashboard:member_reactivate' member.uid %}" style="display:inline">
                         {% csrf_token %}
-                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">Reactivate</button>
+                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">{% translate "Reactivate" %}</button>
                     </form>
                     {% else %}
                     <form method="post" action="{% url 'dashboard:member_mark_departed' member.uid %}"
-                          style="display:inline" onsubmit="return confirm('Mark {{ member.display_name }} as departed? This writes off their balance and deactivates their card(s).');">
+                          style="display:inline" onsubmit="return confirm('{{ confirm_departed|escapejs }}');">
                         {% csrf_token %}
-                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">Mark as departed</button>
+                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">{% translate "Mark as departed" %}</button>
                     </form>
                     {% endif %}
                     &middot;
                     <form method="post" action="{% url 'dashboard:member_delete' member.uid %}"
-                          style="display:inline" onsubmit="return confirm('Delete {{ member.display_name }}?');">
+                          style="display:inline" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
                         {% csrf_token %}
-                        <button type="submit" class="danger" style="min-height:auto; padding:2px 10px;">Delete</button>
+                        <button type="submit" class="danger" style="min-height:auto; padding:2px 10px;">{% translate "Delete" %}</button>
                     </form>
                 </td>
             </tr>
         {% empty %}
-            <tr><td colspan="6" class="muted">No members yet.</td></tr>
+            <tr><td colspan="6" class="muted">{% translate "No members yet." %}</td></tr>
         {% endfor %}
         </tbody>
     </table>

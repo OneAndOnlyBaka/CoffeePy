@@ -10,7 +10,8 @@ from django.db.models import Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.utils import timezone
+from django.utils import timezone, translation
+from django.utils.translation import gettext as _, gettext_lazy, gettext_noop
 from django.views.decorators.http import require_GET, require_POST
 
 from coffee import services
@@ -42,25 +43,45 @@ LINK_TOKEN_TTL_SECONDS = 300
 
 THANK_YOU_SECONDS = 20
 # (max cups today inclusive, gif filename, message) - first match wins; the last row's
-# max_cups is None so it also catches anything above the previous tier.
+# max_cups is None so it also catches anything above the previous tier. The messages (and
+# the two below) are only marked here: they travel through the JSON session as their English
+# msgid and are translated when the panel renders them - see _thank_you_context.
 THANK_YOU_TIERS = [
-    (1, "thankyou_1.gif", "Enjoy your coffee!"),
-    (3, "thankyou_2_3.gif", "Cheers - enjoy!"),
-    (5, "thankyou_4_5.gif", "You're on a roll today!"),
-    (8, "thankyou_6_8.gif", "Whoa, pace yourself!"),
-    (None, "thankyou_9plus.gif", "Certified caffeine junkie today!"),
+    (1, "thankyou_1.gif", gettext_noop("Enjoy your coffee!")),
+    (3, "thankyou_2_3.gif", gettext_noop("Cheers - enjoy!")),
+    (5, "thankyou_4_5.gif", gettext_noop("You're on a roll today!")),
+    (8, "thankyou_6_8.gif", gettext_noop("Whoa, pace yourself!")),
+    (None, "thankyou_9plus.gif", gettext_noop("Certified caffeine junkie today!")),
 ]
 # Overrides the tier above entirely once a member's *weekly* total gets extreme, rather
 # than adding yet another daily-tier row - checked first, in _start_thank_you.
 WEEK_CUPS_GIF_THRESHOLD = 100
 WEEK_CUPS_GIF = "thankyou_week100.gif"
-WEEK_CUPS_MESSAGE = "100+ cups this week?! Maybe take a break..."
+WEEK_CUPS_MESSAGE = gettext_noop("100+ cups this week?! Maybe take a break...")
 # Nags members who are still just a card number (Member.has_placeholder_name) every time
 # they order, so the ranking and the pillory stop being a list of numbers. Takes priority
 # over both the daily tier and the weekly one - it's the only tier that the member can
 # actually do something about, and it stops as soon as they do.
 NO_NICKNAME_GIF = "thankyou_no_nickname.gif"
-NO_NICKNAME_MESSAGE = "Who are you?! Set a nickname under Settings."
+NO_NICKNAME_MESSAGE = gettext_noop("Who are you?! Set a nickname under Settings.")
+
+
+# What the "back in a moment" screen (static/kiosk/maintenance.js) says for each step that
+# install.sh and the update watcher report (install/maintenance.sh).
+MAINTENANCE_STEPS = {
+    "starting": gettext_lazy("Getting started"),
+    "preflight": gettext_lazy("Checking the device"),
+    "packages": gettext_lazy("Installing system packages"),
+    "app": gettext_lazy("Copying the new version"),
+    "hardware": gettext_lazy("Setting up the hardware"),
+    "kiosk": gettext_lazy("Setting up this screen"),
+    "services": gettext_lazy("Installing services"),
+    "unpack": gettext_lazy("Unpacking the update"),
+    "images": gettext_lazy("Preparing the new version"),
+    "restart": gettext_lazy("Restarting"),
+    "ap": gettext_lazy("Setting up the WiFi"),
+    "verify": gettext_lazy("Starting CoffeePy"),
+}
 
 
 def index(request):
@@ -69,7 +90,26 @@ def index(request):
         "last_scan_id", NfcScan.objects.order_by("-id").values_list("id", flat=True).first() or 0
     )
     request.session.setdefault("ranking_view", "alltime")
-    return render(request, "kiosk/index.html", {"mode": request.session["mode"]})
+    return render(request, "kiosk/index.html", {
+        "mode": request.session["mode"],
+        "maintenance_steps": {key: str(label) for key, label in MAINTENANCE_STEPS.items()},
+    })
+
+
+def language(request):
+    """The kiosk's language button: the other of the two languages, from now on, for this
+    kiosk. A plain link rather than django.views.i18n.set_language's POST form - a form's
+    csrf token differs on every render, and the wait screen it sits on must not (panel.html).
+    Only reachable on the device itself, like the rest of /kiosk/."""
+    target = "en" if translation.get_language() == "de" else "de"
+    response = redirect("kiosk:index")
+    response.set_cookie(
+        settings.LANGUAGE_COOKIE_NAME, target,
+        max_age=settings.LANGUAGE_COOKIE_AGE, path=settings.LANGUAGE_COOKIE_PATH,
+        domain=settings.LANGUAGE_COOKIE_DOMAIN, secure=settings.LANGUAGE_COOKIE_SECURE,
+        httponly=settings.LANGUAGE_COOKIE_HTTPONLY, samesite=settings.LANGUAGE_COOKIE_SAMESITE,
+    )
+    return response
 
 
 def nav(request, mode):
@@ -155,8 +195,11 @@ def settings_touch(request):
 def pay(request):
     if request.session.get("logged_in") and request.session.get("mode") == MODE_INFO:
         try:
-            amount = Decimal(request.POST.get("amount", "0"))
+            # A German keyboard - and the German panel's own number format - says "1,50".
+            amount = Decimal(request.POST.get("amount", "0").replace(",", "."))
         except InvalidOperation:
+            amount = Decimal("0")
+        if not amount.is_finite():  # "NaN"/"Infinity" parse fine, then fail every comparison
             amount = Decimal("0")
         method_name = (request.POST.get("method") or CASH_METHOD_NAME).strip() or CASH_METHOD_NAME
         if amount > 0:
@@ -312,7 +355,7 @@ def _thank_you_context(request):
         "state": "thank_you",
         "member_name": request.session.get("thank_you_name"),
         "gif": request.session.get("thank_you_gif"),
-        "message": request.session.get("thank_you_message"),
+        "message": _translated(request.session.get("thank_you_message")),
     }
 
 
@@ -421,6 +464,16 @@ def _active_capture():
     return capture
 
 
+# Stored in the DB as the English msgid, not in the kiosk's language: the dashboard or portal
+# that armed the capture shows the same row, possibly in the other language.
+CARD_CONFLICT_ERROR = gettext_noop("That card is already linked to another account - please try a different card.")
+
+
+def _translated(msgid):
+    # gettext("") would return the catalog's header, not "".
+    return _(msgid) if msgid else msgid
+
+
 def _try_assign_alt_uid(capture, scan):
     """Consumes `scan` for an armed capture. Returns True if it was actually applied
     (capture is deleted on success); an unreadable card, or the account's own primary
@@ -433,7 +486,7 @@ def _try_assign_alt_uid(capture, scan):
         return False
     conflict = Member.objects.filter(Q(uid=new_uid) | Q(alt_cards__uid=new_uid)).exclude(pk=capture.member_id).exists()
     if conflict:
-        capture.last_error = "That card is already linked to another account - please try a different card."
+        capture.last_error = CARD_CONFLICT_ERROR
         capture.save(update_fields=["last_error"])
         return False
     MemberCard.objects.create(member=capture.member, uid=new_uid)
@@ -447,7 +500,7 @@ def _handle_new_scan(request, mode, scan, ctx):
         _try_assign_alt_uid(capture, scan)
         ctx["state"] = "assigning_alt_uid"
         ctx["member"] = capture.member
-        ctx["capture_error"] = capture.last_error
+        ctx["capture_error"] = _translated(capture.last_error)
         return
 
     if mode != MODE_RANKING and CoffeeSort.objects.count() == 0:
@@ -506,7 +559,11 @@ def _state_context(request, mode):
             return {"state": "ranking", **_ranking_context(request)}
         capture = _active_capture()
         if capture is not None:
-            return {"state": "assigning_alt_uid", "member": capture.member, "capture_error": capture.last_error}
+            return {
+                "state": "assigning_alt_uid",
+                "member": capture.member,
+                "capture_error": _translated(capture.last_error),
+            }
         if mode == MODE_ORDER:
             thank_you_ctx = _thank_you_context(request)
             if thank_you_ctx is not None:

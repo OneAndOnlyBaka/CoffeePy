@@ -448,7 +448,8 @@ step_kiosk() {
 	# Managed policies (kiosk/chromium-policies.json - JSON, hence the explanation here):
 	# no password manager, so an admin who logs into the dashboard on the touchscreen is
 	# never offered to leave the password in the kiosk's profile; no leak check, which
-	# would try to reach Google; and no address/card autofill, which would otherwise show
+	# would try to reach Google; no translation bar over a German page in an English
+	# browser; and no address/card autofill, which would otherwise show
 	# the previous person's entries under the nickname and amount fields.
 	run install -d /etc/chromium/policies/managed
 	run install -m 0644 "${SCRIPT_DIR}/kiosk/chromium-policies.json" /etc/chromium/policies/managed/coffeepy.json
@@ -705,6 +706,22 @@ on_error() {
 }
 trap 'on_error ${LINENO}' ERR
 
+# The kiosk shows "back in a moment" while this runs (install/maintenance.sh) - on a re-run
+# its stack is up the whole time, being rebuilt and restarted underneath it.
+step_weight() {
+	case "$1" in
+		preflight) echo 3 ;; packages) echo 8 ;; app) echo 30 ;; hardware) echo 33 ;; kiosk) echo 36 ;;
+		services) echo 40 ;; images) echo 44 ;; ap) echo 88 ;; verify) echo 92 ;; *) echo 0 ;;
+	esac
+}
+if [ "${DRY_RUN}" != "1" ]; then
+	MAINTENANCE_DIR="${TARGET_DIR}/data/maintenance"
+	# shellcheck source=maintenance.sh
+	. "${SCRIPT_DIR}/maintenance.sh"
+	maintenance_begin install
+	trap 'maintenance_end' EXIT
+fi
+
 CURRENT_STEP=""
 for step in ${ALL_STEPS}; do
 	[ -n "${ONLY}" ] && [ "${ONLY}" != "${step}" ] && continue
@@ -714,6 +731,7 @@ for step in ${ALL_STEPS}; do
 	fi
 	CURRENT_STEP="${step}"
 	log "Step ${step}"
+	[ "${DRY_RUN}" = "1" ] || maintenance_step "${step}" "$(step_weight "${step}")"
 	"step_${step}"
 	mark_done "${step}"
 done

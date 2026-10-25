@@ -1,29 +1,35 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Coffee sorts - CoffeePy{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Coffee sorts" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>Coffee sorts</h1>
-<p><a href="{% url 'dashboard:coffeesort_add' %}" class="btn success">+ Add coffee sort</a></p>
+<h1>{% translate "Coffee sorts" %}</h1>
+<p><a href="{% url 'dashboard:coffeesort_add' %}" class="btn success">+ {% translate "Add coffee sort" %}</a></p>
 <div class="card">
     <table>
-        <thead><tr><th>Name</th><th>Price</th><th>Machine strokes</th><th></th></tr></thead>
+        <thead><tr><th>{% translate "Name" %}</th><th>{% translate "Price" %}</th><th>{% translate "Machine strokes" %}</th><th></th></tr></thead>
         <tbody>
+        {% comment %}
+        The confirm() text is built with autoescape off and escapejs'd as a whole: HTML-escaping
+        the name first would show "&#x27;" in the dialog for a name with an apostrophe.
+        {% endcomment %}
         {% for sort in sorts %}
+            {% autoescape off %}{% blocktranslate with name=sort.name asvar confirm_delete %}Delete {{ name }}?{% endblocktranslate %}{% endautoescape %}
             <tr>
                 <td>{{ sort.name }}</td>
                 <td>{{ sort.price }}€</td>
                 <td>{{ sort.machine_strokes }}</td>
                 <td>
-                    <a href="{% url 'dashboard:coffeesort_edit' sort.pk %}">Edit</a>
+                    <a href="{% url 'dashboard:coffeesort_edit' sort.pk %}">{% translate "Edit" %}</a>
                     &middot;
                     <form method="post" action="{% url 'dashboard:coffeesort_delete' sort.pk %}"
-                          style="display:inline" onsubmit="return confirm('Delete {{ sort.name }}?');">
+                          style="display:inline" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
                         {% csrf_token %}
-                        <button type="submit" class="danger" style="min-height:auto; padding:2px 10px;">Delete</button>
+                        <button type="submit" class="danger" style="min-height:auto; padding:2px 10px;">{% translate "Delete" %}</button>
                     </form>
                 </td>
             </tr>
         {% empty %}
-            <tr><td colspan="4" class="muted">No coffee sorts yet.</td></tr>
+            <tr><td colspan="4" class="muted">{% translate "No coffee sorts yet." %}</td></tr>
         {% endfor %}
         </tbody>
     </table>

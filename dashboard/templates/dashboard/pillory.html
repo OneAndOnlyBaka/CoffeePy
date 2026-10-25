@@ -1,12 +1,13 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Deposit pillory - CoffeePy{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Deposit pillory" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>Deposit pillory</h1>
-<p>Members with a negative balance, considering all payments and orders up to (but not
-including) the current month.</p>
+<h1>{% translate "Deposit pillory" %}</h1>
+<p>{% blocktranslate trimmed %}Members with a negative balance, considering all payments and orders up to (but not
+including) the current month.{% endblocktranslate %}</p>
 <div class="card">
     <table>
-        <thead><tr><th>#</th><th>Member</th><th>Payments</th><th>Deposits</th><th>Balance</th></tr></thead>
+        <thead><tr><th>#</th><th>{% translate "Member" %}</th><th>{% translate "Payments" %}</th><th>{% translate "Deposits" %}</th><th>{% translate "Balance" %}</th></tr></thead>
         <tbody>
         {% for entry in entries %}
             <tr>
@@ -17,7 +18,7 @@ including) the current month.</p>
                 <td>{{ entry.balance }}€</td>
             </tr>
         {% empty %}
-            <tr><td colspan="5" class="muted">Nobody owes anything. {% include "icons/party.svg" %}</td></tr>
+            <tr><td colspan="5" class="muted">{% translate "Nobody owes anything." %} {% include "icons/party.svg" %}</td></tr>
         {% endfor %}
         </tbody>
     </table>

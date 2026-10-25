@@ -1,20 +1,21 @@
 {% extends "portal/base.html" %}
-{% block title %}Cards - CoffeePy{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Cards" %} - CoffeePy{% endblock %}
 {% block portal_content %}
-<h1>Linked cards</h1>
+<h1>{% translate "Linked cards" %}</h1>
 <div class="card">
     <div class="list">
         <div class="list-row">
             <div class="list-row-text">
                 <span class="list-row-title">{{ member.uid }}</span>
-                <span class="list-row-meta">Primary card</span>
+                <span class="list-row-meta">{% translate "Primary card" %}</span>
             </div>
         </div>
         {% for alt_card in alt_cards %}
         <div class="list-row">
             <div class="list-row-text">
                 <span class="list-row-title">{{ alt_card.uid }}</span>
-                <span class="list-row-meta">Added {{ alt_card.created_at|date:"d.m.Y" }}</span>
+                <span class="list-row-meta">{% blocktranslate trimmed with date=alt_card.created_at|date:"d.m.Y" %}Added {{ date }}{% endblocktranslate %}</span>
             </div>
         </div>
         {% endfor %}
@@ -22,17 +23,17 @@
 </div>
 
 <div class="card">
-    <h2>Add a new card</h2>
+    <h2>{% translate "Add a new card" %}</h2>
     {% if capture and not capture.is_expired %}
     <div id="card-add-status"
          hx-get="{% url 'portal:card_add_poll' %}"
          hx-trigger="load, every 1s"
          hx-swap="innerHTML">
-        <p>Waiting for a card to be tapped on the kiosk reader…</p>
+        <p>{% translate "Waiting for a card to be tapped on the kiosk reader…" %}</p>
     </div>
     {% else %}
-    <p class="muted">Got a new or replacement card? Tap it on the kiosk to link it here.</p>
-    <a href="{% url 'portal:card_add_start' %}" class="btn success btn-block">Add a new card</a>
+    <p class="muted">{% translate "Got a new or replacement card? Tap it on the kiosk to link it here." %}</p>
+    <a href="{% url 'portal:card_add_start' %}" class="btn success btn-block">{% translate "Add a new card" %}</a>
     {% endif %}
 </div>
 {% endblock %}

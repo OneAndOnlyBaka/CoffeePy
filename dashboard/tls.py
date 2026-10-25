@@ -36,6 +36,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from django.conf import settings
+from django.utils.translation import gettext as _
 
 CA_DAYS = 3650
 # Apple refuses server certificates from user-installed CAs that are valid for longer than
@@ -60,7 +61,8 @@ def _path(name) -> Path:
 def _openssl(*args, input_bytes=None) -> str:
     result = subprocess.run(["openssl", *args], input=input_bytes, capture_output=True)
     if result.returncode != 0:
-        raise TLSError(result.stderr.decode(errors="replace").strip() or f"openssl {args[0]} failed")
+        stderr = result.stderr.decode(errors="replace").strip()
+        raise TLSError(stderr or _("openssl %(command)s failed") % {"command": args[0]})
     return result.stdout.decode(errors="replace")
 
 
@@ -180,6 +182,8 @@ def ensure() -> list[str]:
             done.append("issued the kiosk certificate")
         if _write_caddyfile():
             done.append("rewrote the Caddyfile")
+        if _write_maintenance_page():
+            done.append("rewrote the maintenance page")
     return done
 
 
@@ -215,9 +219,27 @@ def _write_caddyfile() -> bool:
 \tdefault_sni {_primary_hostname(_path(f"{network}.crt"))}
 }}
 
+# While an install or update runs (install/maintenance.sh): its status, straight from disk
+# so it answers with the app down, and a "back in a moment" page instead of Caddy's bare
+# 502 for whatever asks the app meanwhile.
+(maintenance) {{
+\thandle /maintenance/status.json {{
+\t\theader Cache-Control no-store
+\t\troot * /
+\t\tfile_server
+\t}}
+\thandle_errors 502 503 504 {{
+\t\theader Cache-Control no-store
+\t\troot * /tls
+\t\trewrite * /maintenance.html
+\t\tfile_server
+\t}}
+}}
+
 # The network: dashboard, portal, admin. The kiosk is answered only on :8443 below.
 :443 {{
 \ttls /tls/{network}.crt /tls/{network}.key
+\timport maintenance
 \t@kiosk path /kiosk /kiosk/*
 \trespond @kiosk "The kiosk is only available on the device itself." 404
 \t# The app's own / leads to the kiosk - from the network, that is the dashboard.
@@ -228,6 +250,7 @@ def _write_caddyfile() -> bool:
 # The kiosk's own browser. docker-compose.yml publishes this port on 127.0.0.1 only.
 :8443 {{
 \ttls /tls/{kiosk}.crt /tls/{kiosk}.key
+\timport maintenance
 \treverse_proxy web:8000
 }}
 """
@@ -238,6 +261,21 @@ def _write_caddyfile() -> bool:
     for old in tls_dir().glob("live-*"):  # Caddy keeps what it loaded in memory
         if old.stem not in (network, kiosk):
             old.unlink()
+    return True
+
+
+def _write_maintenance_page() -> bool:
+    """maintenance.html, which Caddy shows while the app is down (the Caddyfile's
+    handle_errors). Rendered here because Caddy can't render templates - and in both
+    languages, the device's default first, because it can't read a language cookie either."""
+    from django.template.loader import render_to_string
+
+    others = [code for code, _ in settings.LANGUAGES if code != settings.LANGUAGE_CODE]
+    content = render_to_string("maintenance.html", {"languages": [settings.LANGUAGE_CODE] + others})
+    page = _path("maintenance.html")
+    if page.exists() and page.read_text() == content:
+        return False
+    _write(page, content.encode(), 0o644)
     return True
 
 
@@ -252,24 +290,24 @@ def install_custom(cert_pem: bytes, key_pem: bytes) -> list[str]:
         try:
             cert_pub = _openssl("x509", "-in", str(cert), "-noout", "-pubkey")
         except TLSError:
-            raise TLSError("The certificate is not a PEM-encoded X.509 certificate.") from None
+            raise TLSError(_("The certificate is not a PEM-encoded X.509 certificate.")) from None
         try:
             key_pub = _openssl("pkey", "-in", str(key), "-pubout")
         except TLSError:
-            raise TLSError("The key is not a PEM-encoded, unencrypted private key.") from None
+            raise TLSError(_("The key is not a PEM-encoded, unencrypted private key.")) from None
         if cert_pub.strip() != key_pub.strip():
-            raise TLSError("The private key does not belong to this certificate.")
+            raise TLSError(_("The private key does not belong to this certificate."))
         if not _valid_for(cert, 0):
-            raise TLSError("The certificate has expired.")
+            raise TLSError(_("The certificate has expired."))
         warnings = []
         if not _valid_for(cert, 30):
-            warnings.append("The certificate expires within 30 days.")
+            warnings.append(_("The certificate expires within 30 days."))
         for host in settings.TLS_HOSTNAMES:
             flag = "-checkip" if _san_entry(host).startswith("IP:") else "-checkhost"
             # Not _openssl(): a mismatch is a non-zero exit, and here it is the answer.
             check = subprocess.run(["openssl", "x509", "-in", str(cert), "-noout", flag, host], capture_output=True)
             if b"does match" not in check.stdout:
-                warnings.append(f"It is not valid for {host} - browsers using that address will warn.")
+                warnings.append(_("It is not valid for %(host)s - browsers using that address will warn.") % {"host": host})
         with _locked():
             _write(_path("custom.key"), key_pem, 0o600)
             _write(_path("custom.crt"), cert_pem, 0o644)

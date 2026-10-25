@@ -17,6 +17,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
 from coffee import purge, services
@@ -270,15 +271,19 @@ def member_alt_uid_poll(request, uid):
 
     if capture.is_expired():
         capture.delete()
+        timed_out = _("Timed out - no card was tapped within %(seconds)s seconds.") % {
+            "seconds": ALT_UID_CAPTURE_SECONDS
+        }
         return HttpResponse(
-            '<p class="msg error">Timed out - no card was tapped within '
-            f'{ALT_UID_CAPTURE_SECONDS} seconds.</p>'
-            f'<p><a href="{reverse("dashboard:member_alt_uid_start", args=[uid])}">Try again</a></p>'
+            f'<p class="msg error">{escape(timed_out)}</p>'
+            f'<p><a href="{reverse("dashboard:member_alt_uid_start", args=[uid])}">{escape(_("Try again"))}</a></p>'
         )
 
     seconds_left = int((capture.expires_at - timezone.now()).total_seconds())
-    error_html = f'<p class="msg error">{escape(capture.last_error)}</p>' if capture.last_error else ""
-    return HttpResponse(f"{error_html}<p>Waiting for a card to be tapped on the kiosk reader… ({seconds_left}s left)</p>")
+    # Stored in English by the kiosk (kiosk.views.CARD_CONFLICT_ERROR), translated for whoever looks.
+    error_html = f'<p class="msg error">{escape(_(capture.last_error))}</p>' if capture.last_error else ""
+    waiting = _("Waiting for a card to be tapped on the kiosk reader… (%(seconds)ss left)") % {"seconds": seconds_left}
+    return HttpResponse(f"{error_html}<p>{escape(waiting)}</p>")
 
 
 @login_required
@@ -293,9 +298,9 @@ def member_merge(request):
         keep_uid = request.POST.get("keep")
         remove_uid = request.POST.get("remove")
         if not keep_uid or not remove_uid:
-            error = "Pick both accounts."
+            error = _("Pick both accounts.")
         elif keep_uid == remove_uid:
-            error = "Pick two different accounts."
+            error = _("Pick two different accounts.")
         else:
             return redirect("dashboard:member_merge_confirm", keep_uid=keep_uid, remove_uid=remove_uid)
     return render(
@@ -459,7 +464,7 @@ def certificate(request):
             return redirect("dashboard:certificate")
         cert, key = request.FILES.get("certificate"), request.FILES.get("key")
         if not cert or not key:
-            error = "Please choose both the certificate and its private key."
+            error = _("Please choose both the certificate and its private key.")
         else:
             try:
                 warnings = tls.install_custom(cert.read(), key.read())
@@ -492,13 +497,15 @@ def certificate_download(request):
 def backup(request):
     backup_path = os.environ.get("BACKUP_PATH")
     message = None
+    failed = False
     if request.method == "POST":
         try:
             call_command("backup_db", once=True)
-            message = "Backup completed."
+            message = _("Backup completed.")
             audit.log(request, "backup.trigger")
         except Exception as exc:  # noqa: BLE001
-            message = f"Backup failed: {exc}"
+            message = _("Backup failed: %(error)s") % {"error": exc}
+            failed = True
 
     files = []
     if backup_path and Path(backup_path).is_dir():
@@ -510,7 +517,7 @@ def backup(request):
     return render(
         request,
         "dashboard/backup.html",
-        {"message": message, "files": files, "backup_path": backup_path},
+        {"message": message, "failed": failed, "files": files, "backup_path": backup_path},
     )
 
 
@@ -534,10 +541,12 @@ def backup_download(request, filename):
 @superuser_required
 def update_upload(request):
     message = None
+    failed = False
     if request.method == "POST":
         upload = request.FILES.get("bundle")
         if not upload or not upload.name.endswith((".tar", ".tar.gz")):
-            message = "Please upload a .tar or .tar.gz image bundle."
+            message = _("Please upload a .tar or .tar.gz image bundle.")
+            failed = True
         else:
             settings.UPDATE_INCOMING_DIR.mkdir(parents=True, exist_ok=True)
             tmp_name = settings.UPDATE_INCOMING_DIR / f".uploading-{uuid.uuid4().hex}"
@@ -546,9 +555,9 @@ def update_upload(request):
                     f.write(chunk)
             final_name = settings.UPDATE_INCOMING_DIR / upload.name
             os.replace(tmp_name, final_name)  # atomic rename so the watcher never sees a partial file
-            message = f"Uploaded {upload.name}. The update watcher will pick it up shortly."
+            message = _("Uploaded %(name)s. The update watcher will pick it up shortly.") % {"name": upload.name}
             audit.log(request, "update.upload", target=upload.name)
-    return render(request, "dashboard/update.html", {"message": message})
+    return render(request, "dashboard/update.html", {"message": message, "failed": failed})
 
 
 @login_required
@@ -560,9 +569,9 @@ def import_legacy_db(request):
     if request.method == "POST":
         upload = request.FILES.get("dump")
         if not upload:
-            return JsonResponse({"error": "Please choose a file to upload."}, status=400)
+            return JsonResponse({"error": _("Please choose a file to upload.")}, status=400)
         if import_jobs.is_running():
-            return JsonResponse({"error": "An import is already running."}, status=409)
+            return JsonResponse({"error": _("An import is already running.")}, status=409)
 
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         try:
@@ -576,15 +585,15 @@ def import_legacy_db(request):
             request.user.get_username(),
             purge=request.POST.get("purge") == "1",
         )
-        return JsonResponse(import_jobs.read_status())
-    return render(request, "dashboard/import.html", {"status": import_jobs.read_status()})
+        return JsonResponse(import_jobs.localized(import_jobs.read_status()))
+    return render(request, "dashboard/import.html", {"status": import_jobs.localized(import_jobs.read_status())})
 
 
 @login_required
 @superuser_required
 @require_GET
 def import_status(request):
-    return JsonResponse(import_jobs.read_status())
+    return JsonResponse(import_jobs.localized(import_jobs.read_status()))
 
 
 RESET_CONFIRMATION = "DELETE"
@@ -600,15 +609,15 @@ def reset_database(request):
     error = None
     if request.method == "POST":
         if request.POST.get("confirm", "").strip() != RESET_CONFIRMATION:
-            error = f"Type {RESET_CONFIRMATION} to confirm - nothing was deleted."
+            error = _("Type %(word)s to confirm - nothing was deleted.") % {"word": RESET_CONFIRMATION}
         elif import_jobs.is_running():
-            error = "An import is running - wait for it to finish."
+            error = _("An import is running - wait for it to finish.")
         else:
             summary = purge.describe(purge.purge(purge.FULL_SCOPE))
             # Logged after the wipe on purpose: the audit log is part of what gets
             # deleted, so this entry is what's left to say the box was reset and by whom.
             audit.log(request, "database.reset", details=summary)
-            message = f"Database reset - deleted {summary}."
+            message = _("Database reset - deleted %(summary)s.") % {"summary": summary}
     return render(
         request,
         "dashboard/reset.html",
@@ -617,12 +626,12 @@ def reset_database(request):
             "error": error,
             "confirmation": RESET_CONFIRMATION,
             "counts": [
-                ("Members", Member.objects.count()),
-                ("Orders", Order.objects.count()),
-                ("Payments", Payment.objects.count()),
-                ("Coffee sorts", CoffeeSort.objects.count()),
-                ("Payment methods", PaymentMethod.objects.count()),
-                ("Audit log entries", AuditLogEntry.objects.count()),
+                (_("Members"), Member.objects.count()),
+                (_("Orders"), Order.objects.count()),
+                (_("Payments"), Payment.objects.count()),
+                (_("Coffee sorts"), CoffeeSort.objects.count()),
+                (_("Payment methods"), PaymentMethod.objects.count()),
+                (_("Audit log entries"), AuditLogEntry.objects.count()),
             ],
         },
     )

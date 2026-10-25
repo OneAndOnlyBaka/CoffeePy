@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% load static %}
-{% block title %}Keyboard - CoffeePy{% endblock %}
+{% load static i18n %}
+{% block title %}{% translate "Keyboard" %} - CoffeePy{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'kiosk/kiosk.css' %}">
 <script src="{% static 'kiosk/keyboard_page.js' %}" defer></script>
@@ -13,10 +13,11 @@
         <input type="hidden" name="field" value="{{ field }}">
         <input type="text" {% if numeric %}inputmode="decimal"{% endif %}
                name="value" id="keyboard-input" value="{{ value }}" autocomplete="off">
-        <div id="onscreen-keyboard" class="osk" data-numeric="{{ numeric|yesno:'1,0' }}"></div>
+        <div id="onscreen-keyboard" class="osk" data-numeric="{{ numeric|yesno:'1,0' }}"
+             data-space-label="{% translate "Space" %}"></div>
         <div class="action-row">
-            <a class="btn danger" href="{% url 'kiosk:index' %}">✕ Cancel</a>
-            <button type="submit" class="success">✓ Done</button>
+            <a class="btn danger" href="{% url 'kiosk:index' %}">✕ {% translate "Cancel" %}</a>
+            <button type="submit" class="success">✓ {% translate "Done" %}</button>
         </div>
     </form>
 </div>
