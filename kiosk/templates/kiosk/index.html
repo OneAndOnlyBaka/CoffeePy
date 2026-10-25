@@ -22,22 +22,22 @@
     <nav class="kiosk-nav" hx-target="#panel" hx-swap="innerHTML" hx-sync="#panel:replace">
         <a class="nav-btn {% if mode == 'order' %}active{% endif %}" data-mode="order" href="{% url 'kiosk:nav' 'order' %}"
            hx-get="{% url 'kiosk:nav' 'order' %}">
-            <span class="nav-icon"><img src="{% static 'kiosk/img/Coffee-icon.png' %}" alt="Order"></span>
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/order.svg' %}" alt="Order"></span>
             <span class="nav-label">Order</span>
         </a>
         <a class="nav-btn {% if mode == 'info' %}active{% endif %}" data-mode="info" href="{% url 'kiosk:nav' 'info' %}"
            hx-get="{% url 'kiosk:nav' 'info' %}">
-            <span class="nav-icon"><img src="{% static 'kiosk/img/Books-2-icon.png' %}" alt="Pay & Stats"></span>
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/info.svg' %}" alt="Pay & Stats"></span>
             <span class="nav-label">Pay &amp; Stats</span>
         </a>
         <a class="nav-btn {% if mode == 'settings' %}active{% endif %}" data-mode="settings" href="{% url 'kiosk:nav' 'settings' %}"
            hx-get="{% url 'kiosk:nav' 'settings' %}">
-            <span class="nav-icon"><img src="{% static 'kiosk/img/spur-gear-icon.png' %}" alt="Settings"></span>
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/settings.svg' %}" alt="Settings"></span>
             <span class="nav-label">Settings</span>
         </a>
         <a class="nav-btn {% if mode == 'ranking' %}active{% endif %}" data-mode="ranking" href="{% url 'kiosk:nav' 'ranking' %}"
            hx-get="{% url 'kiosk:nav' 'ranking' %}">
-            <span class="nav-icon"><img src="{% static 'kiosk/img/Badge-Trophy-02-icon.png' %}" alt="Ranking"></span>
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/ranking.svg' %}" alt="Ranking"></span>
             <span class="nav-label">Ranking</span>
         </a>
     </nav>

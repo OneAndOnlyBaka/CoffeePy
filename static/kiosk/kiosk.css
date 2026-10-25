@@ -27,9 +27,10 @@ html, body.kiosk { overflow: hidden; }
 }
 
 /* The icon fills as much of the button as it can - only the label text below it is
-   reserved space, matching the original CoffeePy's near-edge-to-edge nav icons instead
-   of a small icon floating in a mostly-empty cell. */
-.nav-icon { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+   reserved space, so it never shrinks to a small icon floating in a mostly-empty cell.
+   The padding keeps the flat icons (scripts/make_nav_icons.py) off the cell's edges,
+   which the photographic ones they replaced had built in. */
+.nav-icon { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 12px 0 6px; }
 .nav-icon img { width: 100%; height: 100%; object-fit: contain; filter: brightness(0.85); }
 .nav-label { flex: 0 0 auto; text-align: center; }
 .nav-btn.active { background: var(--coffee); }

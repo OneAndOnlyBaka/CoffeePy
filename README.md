@@ -19,8 +19,8 @@ the kiosk/dashboard day to day. This README is the technical/installation refere
 The V1 sources (`CoffeePy.py`, the Tkinter `gui/`, `lib/`, the Flask `web/` dashboard and
 the `setup_*.sh` scripts) are gone from the working tree - V2 replaces all of them and
 nothing in it depends on them. They remain in the git history if you need to look
-something up. What carried over unchanged: the [3D-printable housing](#housing), the kiosk
-nav icons, and your data - see [Migrating existing data](#migrating-existing-data) for
+something up. What carried over unchanged: the [3D-printable housing](#housing) and your
+data - see [Migrating existing data](#migrating-existing-data) for
 importing an old `coffee.db`. There is no in-place upgrade path from a running V1 device:
 install V2 fresh and import the database.
 
@@ -283,5 +283,7 @@ since the hardware did not change:
 
 ## Credits
 
-The kiosk nav icons (`static/kiosk/img/`) are carried over from the original CoffeePy
-(V1) and were obtained from [iconarchive.com](https://iconarchive.com/).
+The kiosk's nav icons (`static/kiosk/img/nav/`) and its "apply your card" animations
+(`static/kiosk/img/wait/`) are drawn by `scripts/make_nav_icons.py` and
+`scripts/make_wait_gifs.py` - change them there and re-run. V1's photographic nav icons
+from [iconarchive.com](https://iconarchive.com/) were replaced to match the flat design.
