@@ -52,8 +52,12 @@ body.portal { user-select: auto; font-size: 16px; }
   font-size: 0.72em;
   min-height: 0;
 }
-.portal-tabbar .tab-icon { font-size: 1.4em; line-height: 1; }
+.portal-tabbar .tab-icon { font-size: 1.4em; line-height: 1; color: var(--coffee-light); }
+.portal-tabbar .tab-icon .icon { display: block; }
 .portal-tabbar a.active { color: var(--coffee); font-weight: 700; }
+/* The emoji told the tabs apart by colour on their own; the one-colour icons need the
+   active tab to stand out. */
+.portal-tabbar a.active .tab-icon { color: var(--coffee); }
 
 .portal-content {
   flex: 1;

@@ -7,7 +7,7 @@
 {% block body %}
 <div class="dash-frame">
     <nav class="dash-nav">
-        <a href="{% url 'dashboard:index' %}" class="brand">☕ CoffeePy</a>
+        <a href="{% url 'dashboard:index' %}" class="brand">{% include "icons/cup.svg" %} CoffeePy</a>
         <a href="{% url 'dashboard:statistics' %}">Statistics</a>
         <a href="{% url 'dashboard:pillory' %}">Pillory</a>
         <a href="{% url 'dashboard:coffeesorts' %}">Coffee sorts</a>

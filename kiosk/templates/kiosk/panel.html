@@ -3,7 +3,7 @@
 {% if state == "wait_for_card" %}
 <button type="button" class="info-btn" title="WLAN Settings"
         hx-get="{% url 'kiosk:qr_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
-        hx-on:click="document.getElementById('qr-modal').classList.add('open')">📡</button>
+        hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/wifi.svg" %}</button>
 {% comment %}
 Nothing on this screen may change from one poll to the next: identical HTML is what lets
 panel_stable_swap.js skip the swap, and only a skipped swap keeps the animation running
@@ -90,8 +90,8 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
     <form hx-target="#panel" hx-swap="innerHTML">
         {% csrf_token %}
         <h1 class="panel-header">Hi {{ member.display_name }}!
-            {% if alltime_badge %}<span class="rank-badge" title="Top 3 all-time">{{ alltime_badge }}</span>{% endif %}
-            {% if month_badge %}<span class="rank-badge" title="Top 3 this month">{{ month_badge }}</span>{% endif %}
+            {% if alltime_badge %}<span class="rank-badge" title="Top 3 all-time">{% include "icons/medal.svg" with place=alltime_badge %}</span>{% endif %}
+            {% if month_badge %}<span class="rank-badge" title="Top 3 this month">{% include "icons/medal.svg" with place=month_badge %}</span>{% endif %}
         </h1>
         <div class="panel-body">
             {% if month_reminder_balance %}
@@ -132,7 +132,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                     <input type="text" name="nickname" value="{{ nickname }}" placeholder="{{ uid }}"
                            id="nickname-input"
                            hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="keyup changed delay:1s" hx-swap="none">
-                    <a class="btn osk-open-btn" href="{% url 'kiosk:keyboard' %}?field=nickname&value={{ nickname|urlencode }}">⌨ Keyboard</a>
+                    <a class="btn osk-open-btn" href="{% url 'kiosk:keyboard' %}?field=nickname&value={{ nickname|urlencode }}">{% include "icons/keyboard.svg" %} Keyboard</a>
                 </div>
             </label>
             <label class="field">
@@ -148,7 +148,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
         <div class="action-row panel-footer">
             <button type="button" class="btn secondary" title="Link this phone"
                     hx-get="{% url 'kiosk:link_phone_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
-                    hx-on:click="document.getElementById('qr-modal').classList.add('open')">📱 Link this phone</button>
+                    hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/phone.svg" %} Link this phone</button>
             {% if seconds_left is not None %}<span class="countdown">Automatic logout in {{ seconds_left }}s</span>{% endif %}
             <button type="submit" class="success primary-action">Save</button>
         </div>
@@ -172,7 +172,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                 <div class="field-with-osk">
                     <input type="text" inputmode="decimal" name="amount" value="{{ pay_default }}"
                            id="pay-amount-input">
-                    <a class="btn osk-open-btn" href="{% url 'kiosk:keyboard' %}?field=amount&value={{ pay_default|urlencode }}">⌨ Keyboard</a>
+                    <a class="btn osk-open-btn" href="{% url 'kiosk:keyboard' %}?field=amount&value={{ pay_default|urlencode }}">{% include "icons/keyboard.svg" %} Keyboard</a>
                 </div>
             </label>
             {% if payment_method_names|length > 1 %}
@@ -227,9 +227,9 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
             {% for row in rows %}
                 <tr>
                     <td>
-                        {% if ranking_view != "pillory" and forloop.counter == 1 %}<span class="rank-badge" title="1st place">🥇</span>
-                        {% elif ranking_view != "pillory" and forloop.counter == 2 %}<span class="rank-badge" title="2nd place">🥈</span>
-                        {% elif ranking_view != "pillory" and forloop.counter == 3 %}<span class="rank-badge" title="3rd place">🥉</span>
+                        {% if ranking_view != "pillory" and forloop.counter == 1 %}<span class="rank-badge" title="1st place">{% include "icons/medal.svg" with place=1 %}</span>
+                        {% elif ranking_view != "pillory" and forloop.counter == 2 %}<span class="rank-badge" title="2nd place">{% include "icons/medal.svg" with place=2 %}</span>
+                        {% elif ranking_view != "pillory" and forloop.counter == 3 %}<span class="rank-badge" title="3rd place">{% include "icons/medal.svg" with place=3 %}</span>
                         {% else %}{{ forloop.counter }}
                         {% endif %}
                     </td>

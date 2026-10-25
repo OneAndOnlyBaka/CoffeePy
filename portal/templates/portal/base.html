@@ -9,7 +9,7 @@
 {% block body %}
 <div class="portal-frame">
     <header class="portal-topbar">
-        <a href="{% url 'portal:index' %}" class="brand">☕ My CoffeePy</a>
+        <a href="{% url 'portal:index' %}" class="brand">{% include "icons/cup.svg" %} My CoffeePy</a>
         <form method="post" action="{% url 'portal:logout' %}" class="logout-form">
             {% csrf_token %}
             <button type="submit">Log out</button>
@@ -20,19 +20,19 @@
     </main>
     <nav class="portal-tabbar">
         <a href="{% url 'portal:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
-            <span class="tab-icon">🏠</span>Home
+            <span class="tab-icon">{% include "icons/home.svg" %}</span>Home
         </a>
         <a href="{% url 'portal:pay' %}" class="{% if request.resolver_match.url_name == 'pay' %}active{% endif %}">
-            <span class="tab-icon">💳</span>Pay
+            <span class="tab-icon">{% include "icons/card.svg" %}</span>Pay
         </a>
         <a href="{% url 'portal:stats' %}" class="{% if request.resolver_match.url_name == 'stats' %}active{% endif %}">
-            <span class="tab-icon">📊</span>Stats
+            <span class="tab-icon">{% include "icons/chart.svg" %}</span>Stats
         </a>
         <a href="{% url 'portal:cards' %}" class="{% if request.resolver_match.url_name == 'cards' %}active{% endif %}">
-            <span class="tab-icon">🪪</span>Cards
+            <span class="tab-icon">{% include "icons/id-card.svg" %}</span>Cards
         </a>
         <a href="{% url 'portal:devices' %}" class="{% if request.resolver_match.url_name == 'devices' %}active{% endif %}">
-            <span class="tab-icon">📱</span>Devices
+            <span class="tab-icon">{% include "icons/phone.svg" %}</span>Devices
         </a>
     </nav>
 </div>

@@ -17,6 +17,11 @@
 
 * { box-sizing: border-box; }
 
+/* The inline SVG icons (templates/icons/) that replaced emoji: sized like a glyph of the
+   text around them and, except the medals, drawn in its colour - so they sit in a button,
+   a tab or a sentence the way the emoji did, but in the same flat style on every device. */
+.icon { display: inline-block; width: 1.25em; height: 1.25em; vertical-align: -0.25em; flex: none; }
+
 html, body {
   margin: 0;
   padding: 0;

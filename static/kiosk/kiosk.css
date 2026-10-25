@@ -143,6 +143,8 @@ html, body.kiosk { overflow: hidden; }
 .thank-you-gif { display: block; margin: 12px auto; max-width: 220px; width: 40vw; height: auto; }
 
 .rank-badge { font-size: 1.4rem; margin-left: 4px; vertical-align: middle; }
+.rank-badge .icon { width: 1.5em; height: 1.5em; }  /* the ribbon takes a third of it */
+.info-btn .icon { width: 30px; height: 30px; vertical-align: 0; }
 
 /* Every logged-in screen (order/settings/info_pay/ranking) shares this structure so its
    action buttons always sit in the same place: a fixed-height header, a body that grows

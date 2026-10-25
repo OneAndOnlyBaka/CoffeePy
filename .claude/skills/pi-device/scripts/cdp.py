@@ -23,7 +23,10 @@ PORT = 9222
 class Page:
     def __init__(self):
         tabs = json.load(urllib.request.urlopen(f"http://localhost:{PORT}/json"))
-        tab = next(t for t in tabs if t.get("type") == "page" and "localhost:8000" in t["url"])
+        pages = [t for t in tabs if t.get("type") == "page"]
+        # The kiosk tab - or whatever page it was navigated to (chrome://policy, say).
+        tab = next((t for t in pages if "localhost:8000" in t["url"]), None) or next(
+            t for t in pages if not t["url"].startswith(("chrome://omnibox", "devtools://")))
         path = tab["webSocketDebuggerUrl"].split(str(PORT), 1)[1]
         self.sock = socket.create_connection(("localhost", PORT))
         key = base64.b64encode(os.urandom(16)).decode()

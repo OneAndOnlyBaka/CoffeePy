@@ -25,15 +25,15 @@ class RankingBadgeTestCase(TestCase):
 
     def test_alltime_ranking_shows_medals_for_top_three_only(self):
         response = self.client.get(reverse("kiosk:panel"))
-        self.assertContains(response, "🥇")
-        self.assertContains(response, "🥈")
-        self.assertContains(response, "🥉")
+        self.assertContains(response, "medal-1")
+        self.assertContains(response, "medal-2")
+        self.assertContains(response, "medal-3")
         self.assertEqual(response.content.decode().count("rank-badge"), 3)
 
     def test_monthly_ranking_also_shows_medals(self):
         self.client.post(reverse("kiosk:ranking_next"))  # alltime -> month
         response = self.client.get(reverse("kiosk:panel"))
-        self.assertContains(response, "🥇")
+        self.assertContains(response, "medal-1")
         self.assertEqual(response.content.decode().count("rank-badge"), 3)
 
     def test_ranking_follows_new_orders_while_the_screen_stays_open(self):
@@ -84,7 +84,7 @@ class OrderScreenBadgeTestCase(TestCase):
 
     def test_top_scorer_sees_both_alltime_and_month_badges(self):
         response = self._log_in("01")  # Alice, uid=1
-        self.assertContains(response, "🥇")
+        self.assertContains(response, "medal-1")
         self.assertContains(response, 'title="Top 3 all-time"')
         self.assertContains(response, 'title="Top 3 this month"')
 

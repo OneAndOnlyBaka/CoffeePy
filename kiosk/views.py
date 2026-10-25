@@ -536,16 +536,13 @@ def _state_context(request, mode):
     return {"state": "wait_for_card"}
 
 
-RANK_BADGES = {1: "🥇", 2: "🥈", 3: "🥉"}
-
-
 def _rank_badge(uid, ranking_rows):
-    """Medal emoji if `uid` is among the top 3 of `ranking_rows` (an "alltime"/"month"
-    _ranking_rows() result), None otherwise - same medals the ranking screen itself shows
-    for these two views."""
+    """`uid`'s place (1-3) if it is among the top 3 of `ranking_rows` (an "alltime"/"month"
+    _ranking_rows() result), None otherwise - the template draws the same medal for it
+    that the ranking screen itself shows (icons/medal.svg)."""
     for position, row in enumerate(ranking_rows[:3], start=1):
         if row["uid"] == uid:
-            return RANK_BADGES.get(position)
+            return position
     return None
 
 

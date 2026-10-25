@@ -444,6 +444,15 @@ step_kiosk() {
 	fi
 	run systemctl set-default multi-user.target
 
+	log "Locking down the kiosk browser"
+	# Managed policies (kiosk/chromium-policies.json - JSON, hence the explanation here):
+	# no password manager, so an admin who logs into the dashboard on the touchscreen is
+	# never offered to leave the password in the kiosk's profile; no leak check, which
+	# would try to reach Google; and no address/card autofill, which would otherwise show
+	# the previous person's entries under the nickname and amount fields.
+	run install -d /etc/chromium/policies/managed
+	run install -m 0644 "${SCRIPT_DIR}/kiosk/chromium-policies.json" /etc/chromium/policies/managed/coffeepy.json
+
 	log "Enabling autologin on tty1"
 	run install -d /etc/systemd/system/getty@tty1.service.d
 	if [ "${DRY_RUN}" = "1" ]; then
@@ -452,6 +461,9 @@ step_kiosk() {
 		sed "s/__FIRST_USER_NAME__/${kiosk_user}/" "${SCRIPT_DIR}/kiosk/getty-autologin.conf" \
 			> /etc/systemd/system/getty@tty1.service.d/autologin.conf
 	fi
+	# A fresh install reboots anyway, but a re-run with --only=kiosk otherwise left systemd
+	# warning that the getty unit changed on disk.
+	run systemctl daemon-reload
 
 	log "Installing the boot splash"
 	backup_once /usr/share/plymouth/themes/pix/splash.png
