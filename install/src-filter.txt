@@ -37,3 +37,5 @@
 - /data/updates/processed/*
 - /data/updates/status/*
 - /data/backups/*
+# The device CA and its certificates - phones trust this CA, so a re-run must keep it.
+- /data/tls/

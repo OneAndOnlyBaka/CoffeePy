@@ -25,7 +25,7 @@ class Page:
         tabs = json.load(urllib.request.urlopen(f"http://localhost:{PORT}/json"))
         pages = [t for t in tabs if t.get("type") == "page"]
         # The kiosk tab - or whatever page it was navigated to (chrome://policy, say).
-        tab = next((t for t in pages if "localhost:8000" in t["url"]), None) or next(
+        tab = next((t for t in pages if "localhost:8443" in t["url"]), None) or next(
             t for t in pages if not t["url"].startswith(("chrome://omnibox", "devtools://")))
         path = tab["webSocketDebuggerUrl"].split(str(PORT), 1)[1]
         self.sock = socket.create_connection(("localhost", PORT))
@@ -160,14 +160,14 @@ def egg(page):
     for sequence in (["ranking", "order", "ranking", "settings", "ranking"],
                      ["ranking", "ranking", "order", "settings", "ranking"]):
         page.call("Page.enable")
-        page.call("Page.navigate", url="http://localhost:8000/kiosk/")
+        page.call("Page.navigate", url="https://localhost:8443/kiosk/")
         page.collect(1, until="Page.loadEventFired")
         for mode in sequence:
             page.tap(mode)
             time.sleep(0.7)
         time.sleep(2)
         print(" -> ".join(sequence), "=>", page.eval("location.pathname"))
-    page.call("Page.navigate", url="http://localhost:8000/kiosk/")
+    page.call("Page.navigate", url="https://localhost:8443/kiosk/")
 
 
 def main():
@@ -182,7 +182,7 @@ def main():
     elif command == "egg":
         egg(page)
     elif command == "cookie":
-        cookies = page.call("Network.getCookies", urls=["http://localhost:8000/"])["cookies"]
+        cookies = page.call("Network.getCookies", urls=["https://localhost:8443/"])["cookies"]
         print(next(c["value"] for c in cookies if c["name"] == "sessionid"))
     else:
         sys.exit(__doc__)

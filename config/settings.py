@@ -26,8 +26,26 @@ ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "loca
 # Either way, it must be in ALLOWED_HOSTS or Django would just reject those requests.
 PUBLIC_HOST = os.environ.get("PUBLIC_HOST", "").strip()
 _public_host = PUBLIC_HOST or detect_local_ip()
-if _public_host not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(_public_host)
+
+# Every name the network certificate is issued for (dashboard/tls.py) - the address QR
+# codes use, plus the Pi's AP address and the name install/dnsmasq.conf.template gives it.
+TLS_HOSTNAMES = list(dict.fromkeys(
+    [_public_host] + [h.strip() for h in os.environ.get("TLS_EXTRA_HOSTNAMES", "192.168.4.1,coffeepy.local").split(",")
+                      if h.strip()]
+))
+for _host in TLS_HOSTNAMES:
+    if _host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host)
+
+# Certificates and the Caddyfile (see dashboard/tls.py); docker-compose.yml mounts
+# ./data/tls there.
+TLS_DIR = Path(os.environ.get("TLS_DIR", BASE_DIR / "data" / "tls"))
+
+# Only Caddy can reach the app (docker-compose.yml publishes no port of web's own), and it
+# sets this header itself - so is_secure() is true for every request through it.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# Off by default only so a plain `runserver` over http still keeps a login.
+SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", False)
 
 
 INSTALLED_APPS = [

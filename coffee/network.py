@@ -47,8 +47,14 @@ def public_host() -> str:
 
 def public_base_url(request) -> str:
     """scheme://public_host()[:port] - same shape as request.build_absolute_uri()'s
-    origin, but with the host swapped for public_host()."""
-    scheme = "https" if request.is_secure() else "http"
+    origin, but with the host swapped for public_host().
+
+    Behind Caddy that is always https on the default port, whatever port this request came
+    in on: the kiosk itself talks to Caddy on 127.0.0.1:8443, which no phone can reach -
+    a QR code carrying that port would lead nowhere."""
+    if request.is_secure():
+        return f"https://{public_host()}"
+    scheme = "http"
     existing_host = request.get_host()
     port = existing_host.rsplit(":", 1)[1] if ":" in existing_host else None
     if port and port not in ("80", "443"):

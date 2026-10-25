@@ -2,7 +2,7 @@
 # Run on a DEV MACHINE with internet access (not on the offline Pi). Cross-builds every
 # image docker-compose.yml defines (coffeepy-web, shared by migrate/web/mqtt-
 # listener/backup, and nfc-bridge from its own Dockerfile under nfc-cardreader/) for the
-# Pi's architecture, pulls the two upstream images (db, mosquitto), and bundles them
+# Pi's architecture, pulls the upstream images (db, mosquitto, caddy), and bundles them
 # together with docker-compose.yml itself into a single tar an admin can carry over (USB
 # stick / laptop joined to the Pi's WiFi AP) and upload via /dashboard/update/.
 #
@@ -34,8 +34,8 @@ fi
 echo "== Building coffeepy-web + nfc-bridge for $PLATFORM (docker-compose.yml is the source of truth) =="
 docker compose build
 
-echo "== Pulling db + mosquitto for $PLATFORM =="
-docker compose pull db mosquitto
+echo "== Pulling every image the compose file does not build, for $PLATFORM =="
+docker compose pull --ignore-buildable
 
 # Every image any service resolves to, built or pulled, deduplicated (web/migrate/
 # mqtt-listener/backup all share the same coffeepy-web:latest tag).

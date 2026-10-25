@@ -24,7 +24,9 @@ FROM python:3.12-slim
 # it dashboard.system_clock's `hwclock -w` is a silent no-op (it tolerates failure). It
 # still only writes the RTC if /dev/rtc0 is mapped into this container - the guaranteed
 # path is the host's coffeepy-rtc-sync.timer (see install/rtc_sync.sh).
+# openssl: dashboard/tls.py creates and checks Caddy's certificates with it.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        openssl \
         postgresql-client \
         util-linux \
         util-linux-extra \

@@ -36,12 +36,18 @@ services:
   migrate:
     build: .
     image: coffeepy-web:latest
-    command: ["true"]
+    # The entrypoint migrates; this then creates the device CA, Caddy's certificates and
+    # the Caddyfile on first start, so caddy (which waits for this) finds them in place.
+    command: ["python", "manage.py", "ensure_tls"]
     restart: "no"
     depends_on:
       db:
         condition: service_healthy
     env_file: .env
+    environment:
+      TLS_DIR: /tls
+    volumes:
+      - ./data/tls:/tls:z
 
   web:
     build: .
@@ -53,6 +59,7 @@ services:
     env_file: .env
     environment:
       BACKUP_PATH: /backups
+      TLS_DIR: /tls
     # Overrides the Dockerfile's own CMD (which defaults to 3, a reasonable default for
     # non-Pi hosts) - each worker is a full separate Django process, so on a 1GB-RAM Pi
     # running Postgres/mosquitto/mqtt-listener/backup alongside it, that's real RAM.
@@ -62,12 +69,12 @@ services:
     # whole upload of an update bundle (~700MB, minutes over the AP's WiFi), and the default
     # 30s killed every such upload half-way through.
     command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "${GUNICORN_WORKERS:-3}", "--preload", "--timeout", "900"]
-    ports:
-      - "8000:8000"
+    # No published port: only caddy reaches this, over the compose network.
     cap_add:
       - SYS_TIME
     volumes:
       - ./data/updates:/app/updates:z
+      - ./data/tls:/tls:z
       - ${BACKUP_HOST_PATH:-./data/backups}:/backups:z
 
   mqtt-listener:
@@ -92,6 +99,9 @@ services:
         python manage.py migrate --noinput
         while true; do
           python manage.py backup_db
+          # Renews the certificates before they expire (dashboard/tls.py) - a box that
+          # never restarts would otherwise outlive its 800-day server certificate.
+          python manage.py ensure_tls || true
           sleep "$$((${BACKUP_INTERVAL_MINUTES:-60} * 60))"
         done
     restart: unless-stopped
@@ -101,8 +111,28 @@ services:
     env_file: .env
     environment:
       BACKUP_PATH: /backups
+      TLS_DIR: /tls
     volumes:
       - ${BACKUP_HOST_PATH:-./data/backups}:/backups:z
+      - ./data/tls:/tls:z
+
+  # The only way in: 443 for the network, 127.0.0.1:8443 for the kiosk's own browser (the
+  # one place /kiosk/ is served). The Caddyfile and certificates are written by the app
+  # (dashboard/tls.py); --watch picks up a changed certificate without a restart.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    command: ["caddy", "run", "--config", "/tls/Caddyfile", "--adapter", "caddyfile", "--watch"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      web:
+        condition: service_started
+    ports:
+      - "443:443"
+      - "127.0.0.1:8443:8443"
+    volumes:
+      - ./data/tls:/tls:ro,z
 
 volumes:
   pg_data:

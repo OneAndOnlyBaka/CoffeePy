@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from dashboard import views as dashboard_views
+
 urlpatterns = [
     path("", RedirectView.as_view(pattern_name="kiosk:index", permanent=False)),
     path("admin/", admin.site.urls),
@@ -9,4 +11,5 @@ urlpatterns = [
     path("dashboard/", include("dashboard.urls")),
     path("portal/", include("portal.urls")),
     path("health/", include("dashboard.health_urls")),
+    path("certificate/", dashboard_views.certificate_download, name="certificate_download"),
 ]

@@ -61,6 +61,28 @@ immediately. Consequences, all of which have already caused bugs:
   reach a logged-in Settings screen in a test: choose the mode first, *then* create the
   `NfcScan`. `NfcScan.uid_as_int()` is little-endian - `"AABBCCDD"` is member `0xDDCCBBAA`.
 
+## Everything goes through Caddy
+
+Only `caddy` publishes ports (`docker-compose.yml`): **443** for the network and
+**127.0.0.1:8443** for the kiosk's own browser. `web:8000` is reachable from the compose
+network only - `curl localhost:8000` on the device finds nothing.
+
+- **`/kiosk/` exists only on 8443.** Caddy answers it with a 404 on 443, which is the whole
+  of the "kiosk only from the device" guarantee - there is no check in Django. Links meant
+  for phones come from `coffee.network.public_base_url`, which drops the request's port
+  behind Caddy: a QR code carrying `:8443` would point at a port no phone can reach.
+- **Certificates and the Caddyfile are written by `dashboard/tls.py`**, never by hand
+  (`data/tls/`, mounted as `/tls`). Caddy runs with `--watch` but only reloads when the
+  *parsed* config changes, so the files it loads are named after their own hash
+  (`live-net-<hash>.crt`) - a new certificate under an old path would simply be ignored.
+- **`data/tls/` holds the device CA that phones have installed.** `install/src-filter.txt`
+  keeps the installer's rsync from deleting it; losing it means every phone has to trust a
+  new one. The CA is created once; `ensure_tls` (migrate, and the backup loop) only
+  re-issues the leaf certificates.
+- On the device, talk to the app as `curl --cacert /opt/coffeepy/data/tls/ca.crt
+  https://localhost:8443/...`. Chromium trusts the CA through the kiosk user's NSS store,
+  filled by `install/kiosk/openbox-autostart` with `certutil` on every session start.
+
 ## Django traps that already cost time here
 
 - **`{# … #}` is only a comment within one line.** Django's lexer runs without `DOTALL`, so a

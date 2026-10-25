@@ -39,6 +39,14 @@ the README documents - `install.sh` disables the desktop's lightdm itself.
 `install.sh --dry-run` runs anywhere and shows the whole plan - do it before a real run
 after changing the installer. The installer's own log is `/var/log/coffeepy-install.log`.
 
+## Reaching the app
+
+Only Caddy is reachable (see CLAUDE.md, "Everything goes through Caddy"): port 443 from the
+network, `127.0.0.1:8443` - the only place `/kiosk/` answers - from the Pi itself. From
+here, `curl --resolve coffeepy.local:443:$PI_HOST --cacert <copy of data/tls/ca.crt>
+https://coffeepy.local/...` checks the real certificate chain; on the Pi, `curl --cacert
+/opt/coffeepy/data/tls/ca.crt https://localhost:8443/...`. Port 8000 is closed on purpose.
+
 ## Looking at the device
 
 - **What is on the screen:** `screenshot.sh OUT.png` (into the scratchpad), then Read the
@@ -62,7 +70,7 @@ about a Pi 3. Report numbers, not impressions.
 - `resources.sh [SECONDS]` - CPU and memory per process group, temperature, throttling.
   (`docker stats` shows 0B: the Pi kernel disables the memory cgroup.)
 - `python3 -I scripts/load.py kiosk|mixed|burst` - HTTP latency/throughput from here. It
-  sends `Host: 192.168.4.1:8000` (PUBLIC_HOST); a wrong host is a fast **400** - check
+  goes through Caddy on 443 with `Host: 192.168.4.1` (PUBLIC_HOST); a wrong host is a fast **400** - check
   the errors column before believing a number.
 - `django.sh perf_data.py seed` → `django.sh page_timings.py` → `django.sh perf_data.py
   cleanup` - every page's server time against five years of synthetic history. An empty

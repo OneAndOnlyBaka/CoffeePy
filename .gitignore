@@ -15,6 +15,8 @@ data/updates/status/*
 !data/updates/status/.gitkeep
 data/backups/*
 !data/backups/.gitkeep
+# The device CA, certificates and Caddyfile (dashboard/tls.py) - per device, never shared.
+data/tls/
 
 # Leftovers from the image build that install/install.sh replaced - delete pi-gen/ once
 # you no longer need the .img it produced (the work tree belongs to root).

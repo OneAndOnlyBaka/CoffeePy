@@ -47,4 +47,12 @@
         {% endfor %}
     </div>
 </div>
+
+<div class="card">
+    <h2>Security warning in your browser?</h2>
+    <p class="muted">This device signs its own certificate. Install it once and the warning
+    is gone - on iPhone, also enable it under Settings &rsaquo; General &rsaquo; About &rsaquo;
+    Certificate Trust Settings.</p>
+    <a href="{% url 'certificate_download' %}" class="btn secondary btn-block">Download certificate</a>
+</div>
 {% endblock %}

@@ -20,7 +20,7 @@ case "$cmd" in
 		"$PI" 'grep -q remote-debugging-port ~/.config/openbox/autostart ||
 			sed -i "s|        --disable-sync|        --disable-sync --remote-debugging-port=9222|" ~/.config/openbox/autostart
 			sudo systemctl restart getty@tty1
-			for i in $(seq 90); do curl -s localhost:9222/json 2>/dev/null | grep -q "localhost:8000" && break; sleep 2; done
+			for i in $(seq 90); do curl -s localhost:9222/json 2>/dev/null | grep -q "localhost:8443" && break; sleep 2; done
 			sleep 5; curl -s localhost:9222/json/version | grep -o "\"Browser\": *\"[^\"]*\""'
 		;;
 	off)

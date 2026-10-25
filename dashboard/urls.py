@@ -10,6 +10,7 @@ urlpatterns = [
     path("login/", auth_views.LoginView.as_view(template_name="dashboard/login.html"), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("statistics/", views.statistics, name="statistics"),
+    path("certificate/", views.certificate, name="certificate"),
     path("pillory/", views.pillory, name="pillory"),
     path("coffee-sorts/", views.coffeesort_list, name="coffeesorts"),
     path("coffee-sorts/add/", views.coffeesort_add, name="coffeesort_add"),

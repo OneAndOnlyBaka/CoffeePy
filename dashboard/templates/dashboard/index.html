@@ -20,7 +20,7 @@ updates, or correct the system time.</p>
         <span class="muted">(never reported in)</span>
         {% endif %}
     </p>
-    <p class="muted">Reachable from another device at http://{{ public_host }}:8000/
+    <p class="muted">Reachable from another device at https://{{ public_host }}/
         {% if user.is_superuser %}(<a href="{% url 'dashboard:system_dashboard' %}">CPU/RAM/disk</a>){% endif %}
     </p>
 </div>

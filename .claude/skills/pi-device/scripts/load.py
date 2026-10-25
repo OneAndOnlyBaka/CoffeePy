@@ -4,12 +4,16 @@
     python3 -I load.py mixed     kiosk poll + 5 phones on the portal + 2 dashboard users
     python3 -I load.py burst     20 clients polling flat out next to the kiosk
 
-Requests go to the Pi's LAN address but carry Host: <PUBLIC_HOST> - Django only accepts
-localhost and PUBLIC_HOST (the AP address on an installed device), and a mismatch is a
-400 that looks exactly like a fast response. Every row reports its errors; read them.
+Requests go to Caddy on the Pi's LAN address (port 443) but carry Host: <PUBLIC_HOST> -
+Django only accepts its own names (the AP address on an installed device), and a mismatch
+is a 400 that looks exactly like a fast response. The certificate is not checked: it is
+issued for the AP address, not the LAN one this connects to. The kiosk's own poll goes
+through the same Caddy, so this is the path it takes too - minus the loopback port.
+Every row reports its errors; read them.
 """
 import http.cookiejar
 import os
+import ssl
 import statistics
 import subprocess
 import sys
@@ -21,12 +25,14 @@ ROOT = subprocess.run(["git", "-C", os.path.dirname(os.path.abspath(__file__)), 
                       capture_output=True, text=True, check=True).stdout.strip()
 ENV = dict(line.strip().split("=", 1) for line in open(os.path.join(ROOT, ".device", "pi.env"))
            if "=" in line and not line.startswith("#"))
-BASE = f"http://{ENV['PI_HOST']}:8000"
-HOST = os.environ.get("PUBLIC_HOST", "192.168.4.1:8000")
+BASE = f"https://{ENV['PI_HOST']}"
+HOST = os.environ.get("PUBLIC_HOST", "192.168.4.1")
+INSECURE = ssl._create_unverified_context()
 
 
 def client():
-    return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+    return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()),
+                                       urllib.request.HTTPSHandler(context=INSECURE))
 
 
 def hit(opener, path, errors):

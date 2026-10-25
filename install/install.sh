@@ -506,12 +506,14 @@ step_images() {
 	fi
 	log "Building the app images - the long part, especially on a Pi 3"
 	if [ "${DRY_RUN}" = "1" ]; then
-		info "[dry-run] docker compose build && docker compose pull db mosquitto"
+		info "[dry-run] docker compose build && docker compose pull --ignore-buildable"
 		return 0
 	fi
 	local attempt
 	for attempt in 1 2 3; do
-		if (cd "${TARGET_DIR}" && docker compose build && docker compose pull db mosquitto); then
+		# Every image the compose file uses but does not build (db, mosquitto, caddy) - a
+		# hand-kept list here is how a new service ends up missing on the device.
+		if (cd "${TARGET_DIR}" && docker compose build && docker compose pull --ignore-buildable); then
 			return 0
 		fi
 		warn "Build attempt ${attempt} failed."
@@ -629,15 +631,16 @@ step_verify() {
 
 	local waited=0
 	while [ "${waited}" -lt 120 ]; do
-		if curl -sf http://localhost:8000/health/ >/dev/null 2>&1; then
-			info "the app answers on http://localhost:8000/"
+		# Through Caddy's kiosk port, checked against the device CA the stack created.
+		if curl -sf --cacert "${TARGET_DIR}/data/tls/ca.crt" https://localhost:8443/health/ >/dev/null 2>&1; then
+			info "the app answers on https://localhost:8443/ (and on port 443 for the network)"
 			break
 		fi
 		sleep 5
 		waited=$((waited + 5))
 	done
 	if [ "${waited}" -ge 120 ]; then
-		warn "No answer from http://localhost:8000/health/ after two minutes."
+		warn "No answer from https://localhost:8443/health/ after two minutes."
 		warn "Look at: docker compose -f ${TARGET_DIR}/docker-compose.yml logs"
 		failures=$((failures + 1))
 	fi
@@ -656,9 +659,10 @@ step_verify() {
 
 	echo
 	log "Done."
-	info "Kiosk:     http://localhost:8000/kiosk/  (and on the touchscreen after a reboot)"
+	info "Kiosk:     https://localhost:8443/kiosk/  (only on this device; on the touchscreen after a reboot)"
 	if [ "${SKIP_AP}" != "1" ]; then
-		info "From a phone: join the WiFi from ${TARGET_DIR}/.env, then http://${AP_ADDRESS}:8000/"
+		info "From a phone: join the WiFi from ${TARGET_DIR}/.env, then https://${AP_ADDRESS}/"
+		info "           (install https://${AP_ADDRESS}/certificate/ once to lose the browser warning)"
 	fi
 	info "Passwords: ${TARGET_DIR}/.env - read them once, then keep them somewhere safe."
 	info "Log:       ${LOG_FILE}"

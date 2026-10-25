@@ -31,8 +31,9 @@ install V2 fresh and import the database.
 | `db`           | Postgres                                                                  |
 | `mosquitto`    | MQTT broker                                                               |
 | `nfc-bridge`   | Existing ACR122U→MQTT bridge (unmodified, see [nfc-cardreader/](nfc-cardreader/)) |
-| `migrate`      | One-shot `manage.py migrate`, gates startup of the services below         |
+| `migrate`      | One-shot `manage.py migrate` + `ensure_tls`, gates startup of the services below |
 | `web`          | Django (gunicorn): kiosk UI (`/kiosk/`) + admin dashboard (`/dashboard/`) |
+| `caddy`        | The only way in: HTTPS on 443, and the kiosk on 127.0.0.1:8443 (see [HTTPS](#https-and-certificates)) |
 | `mqtt-listener`| Subscribes to the bridge's MQTT topic, writes `NfcScan` rows              |
 | `backup`       | Periodic `pg_dump` to a (USB-stick-backed) directory                     |
 
@@ -51,8 +52,10 @@ docker compose up -d
 docker compose exec web python manage.py createsuperuser
 ```
 
-Then open `http://localhost:8000/kiosk/` (touchscreen UI) and
-`http://localhost:8000/dashboard/` (admin, also reachable via `/admin/`).
+Then open `https://localhost:8443/kiosk/` (touchscreen UI - only reachable from the
+machine itself) and `https://localhost/dashboard/` (admin, also reachable via `/admin/`).
+The certificate comes from a CA the stack creates on first start, so the browser warns
+until you install `data/tls/ca.crt` (or download it from `/certificate/`).
 
 ### Migrating existing data
 
@@ -113,6 +116,36 @@ The Pi is meant to run without internet, so updates are pushed manually instead 
 `/dashboard/system-time/` (superuser only) is the offline fallback if the RTC drifts or
 isn't fitted - normally `install/install.sh` enables the DS3231 RTC overlay so NTP
 isn't needed at all.
+
+### HTTPS and certificates
+
+Nothing reaches the app except through Caddy: port 443 for the network, and
+`127.0.0.1:8443` for the kiosk's own browser - the one place `/kiosk/` is served, so the
+touchscreen UI can't be opened from anywhere but the device itself. Port 80 and the app's
+own port 8000 are not published at all.
+
+- **On first start** the stack creates its own CA (10 years) and signs the network
+  certificate with it, for `PUBLIC_HOST`, `192.168.4.1` and `coffeepy.local`
+  (`TLS_EXTRA_HOSTNAMES` in `.env`). Everything lives in `data/tls/` on the host; the
+  installer never touches it on a re-run. Certificates are renewed automatically before
+  they expire, and re-issued when the names change - the CA stays, so phones keep trusting it.
+- **Phones and PCs** install the CA once from `/certificate/` - linked, without a login,
+  on the dashboard and portal pages - and the browser warning is gone for good. On an
+  iPhone it then also has to be enabled under *Settings › General › About › Certificate
+  Trust Settings*.
+- **Your own certificate** (PEM, chain included, plus its unencrypted key) can be uploaded
+  at `/dashboard/certificate/` (superuser only) and replaces the network certificate within
+  seconds; a button goes back to the self-signed one. The kiosk keeps the device's own
+  certificate regardless, so a bad upload can never lock the touchscreen out.
+
+`dashboard/tls.py` explains the moving parts. Rootless Podman can't bind port 443 by
+default - allow it with `sysctl net.ipv4.ip_unprivileged_port_start=443`.
+
+**Devices installed before HTTPS** need two host-side pieces an update bundle cannot
+deliver - the kiosk session now opens `https://localhost:8443` and imports the device CA
+with `certutil`. Run `sudo ./install/install.sh --only=packages` and `--only=kiosk` once
+from a current checkout; with the update alone the kiosk keeps pointing at the old,
+now closed port 8000.
 
 ### Reachable address for QR codes, and the System dashboard
 

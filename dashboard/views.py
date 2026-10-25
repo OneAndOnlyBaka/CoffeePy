@@ -34,7 +34,7 @@ from coffee.models import (
 )
 from coffee.network import public_host
 
-from . import audit, import_jobs, system_clock, system_stats
+from . import audit, import_jobs, system_clock, system_stats, tls
 from .forms import CoffeeSortForm, MemberForm, PaymentMethodForm
 
 superuser_required = user_passes_test(lambda u: u.is_superuser)
@@ -443,6 +443,48 @@ def system_time(request):
             audit.log(request, "system_time.set", details=new_dt.isoformat())
             return redirect("dashboard:system_time")
     return render(request, "dashboard/system_time.html", {"now": timezone.localtime(), "error": error})
+
+
+@login_required
+@superuser_required
+def certificate(request):
+    """What port 443 presents, and the upload that replaces it with the admin's own
+    certificate (or goes back to the device's self-signed one) - see dashboard/tls.py."""
+    error = None
+    warnings = []
+    if request.method == "POST":
+        if request.POST.get("action") == "revert":
+            tls.remove_custom()
+            audit.log(request, "certificate.revert")
+            return redirect("dashboard:certificate")
+        cert, key = request.FILES.get("certificate"), request.FILES.get("key")
+        if not cert or not key:
+            error = "Please choose both the certificate and its private key."
+        else:
+            try:
+                warnings = tls.install_custom(cert.read(), key.read())
+            except tls.TLSError as exc:
+                error = str(exc)
+            else:
+                audit.log(request, "certificate.upload", target=cert.name)
+    return render(request, "dashboard/certificate.html", {
+        "active": tls.active_certificate(),
+        "error": error,
+        "warnings": warnings,
+        "uploaded": request.method == "POST" and not error,
+    })
+
+
+@require_GET
+def certificate_download(request):
+    """No login: a phone needs this before it can open the login page without a warning."""
+    found = tls.download()
+    if found is None:
+        raise Http404("No certificate has been created yet.")
+    data, filename = found
+    response = HttpResponse(data, content_type="application/x-x509-ca-cert")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @login_required

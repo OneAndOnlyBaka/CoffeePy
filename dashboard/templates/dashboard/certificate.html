@@ -1,0 +1,51 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Certificate - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>Certificate</h1>
+<p>Everything on the network is served over HTTPS. Out of the box the device signs its
+own certificate with a CA it created on first start - phones and PCs trust it once that CA
+is installed (<a href="{% url 'certificate_download' %}">download</a>, also offered on the
+login pages). Upload your own certificate to replace it; the kiosk on the device itself
+keeps using the device's own, so it never depends on the upload.</p>
+
+{% if error %}<p class="msg error">{{ error }}</p>{% endif %}
+{% if uploaded %}<p class="msg success">Certificate installed - it is live within a few seconds.</p>{% endif %}
+{% for warning in warnings %}<p class="msg error">{{ warning }}</p>{% endfor %}
+
+<div class="card">
+    <h2>In use now</h2>
+    {% if active %}
+    <table>
+        <tr><th>Source</th><td>{% if active.source == "custom" %}Uploaded certificate{% else %}Self-signed (device CA){% endif %}</td></tr>
+        <tr><th>Valid for</th><td>{{ active.names|join:", " }}</td></tr>
+        <tr><th>Subject</th><td>{{ active.subject }}</td></tr>
+        <tr><th>Issuer</th><td>{{ active.issuer }}</td></tr>
+        <tr><th>Expires</th><td>{{ active.not_after }}</td></tr>
+        <tr><th>SHA-256</th><td><code style="word-break: break-all;">{{ active.fingerprint }}</code></td></tr>
+    </table>
+    <p><a class="btn secondary" href="{% url 'certificate_download' %}">Download {% if active.source == "custom" %}certificate{% else %}device CA{% endif %}</a></p>
+    {% if active.source == "custom" %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="revert">
+        <button type="submit" class="danger">Go back to the self-signed certificate</button>
+    </form>
+    {% endif %}
+    {% else %}
+    <p class="muted">No certificate yet - it is created when the app starts.</p>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <h2>Upload your own</h2>
+    <p class="muted">PEM files: the certificate first, followed by any intermediate certificates,
+    and its unencrypted private key. It should be valid for the address phones use to reach
+    this device.</p>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label class="field">Certificate (with chain) <input type="file" name="certificate" accept=".pem,.crt,.cer" required></label>
+        <label class="field">Private key <input type="file" name="key" accept=".pem,.key" required></label>
+        <button type="submit" class="success">Install certificate</button>
+    </form>
+</div>
+{% endblock %}

@@ -14,9 +14,12 @@ x11-xserver-utils
 openbox
 chromium
 unclutter-xfixes
-# The templates use emoji (ranking medals, 📱, ☕) - without a colour emoji font they are
-# empty boxes on the kiosk. Lite ships none; phones bring their own.
+# The UI's own icons are SVG (templates/icons/), but nicknames entered on a phone or PC
+# can carry emoji - without a colour emoji font those are empty boxes on the kiosk.
 fonts-noto-color-emoji
+# certutil: the kiosk session adds the device CA (dashboard/tls.py) to Chromium's NSS store,
+# so the kiosk's own https://localhost:8443 loads without a certificate warning.
+libnss3-tools
 
 # Boot splash, carried over from the original project's setup.
 plymouth

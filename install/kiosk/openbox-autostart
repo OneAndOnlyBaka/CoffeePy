@@ -8,14 +8,30 @@ xset -dpms
 xset s noblank
 unclutter-xfixes --idle 0.5 --fork
 
+# The kiosk is served by Caddy on 127.0.0.1:8443 only (docker-compose.yml), with a
+# certificate from the device's own CA, which the stack creates on its first start
+# (dashboard/tls.py) in the file below.
+CA=/opt/coffeepy/data/tls/ca.crt
+KIOSK_URL=https://localhost:8443
+
 # Wait for the app container to actually answer before pointing Chromium at it, so the
 # first paint is the kiosk UI rather than a "connection refused" error page. Bounded
 # wait so a genuinely broken/not-yet-built stack still eventually shows *something*
 # (Chromium's own offline page) instead of hanging forever.
 for _ in $(seq 1 60); do
-    curl -sf http://localhost:8000/health/ >/dev/null 2>&1 && break
+    curl -sf --cacert "$CA" "$KIOSK_URL/health/" >/dev/null 2>&1 && break
     sleep 2
 done
+
+# Chromium on Linux takes the CAs it trusts from the user's NSS store, not from the
+# system's CA bundle. Replaced on every start rather than added once: if the CA is ever
+# re-created, the old one must not linger next to it.
+if [ -f "$CA" ]; then
+    mkdir -p "$HOME/.pki/nssdb"
+    [ -f "$HOME/.pki/nssdb/cert9.db" ] || certutil -d "sql:$HOME/.pki/nssdb" -N --empty-password
+    certutil -d "sql:$HOME/.pki/nssdb" -D -n "CoffeePy device CA" 2>/dev/null
+    certutil -d "sql:$HOME/.pki/nssdb" -A -t "C,," -n "CoffeePy device CA" -i "$CA"
+fi
 
 # Relaunch on crash - a kiosk should never just sit at a bare Openbox desktop.
 # Raspberry Pi OS's chromium wrapper forces --force-renderer-accessibility, which rebuilds
@@ -24,7 +40,7 @@ done
 # to ~17% while idle.
 while true; do
     chromium \
-        --kiosk "http://localhost:8000/kiosk/" \
+        --kiosk "$KIOSK_URL/kiosk/" \
         --noerrdialogs \
         --disable-infobars \
         --disable-session-crashed-bubble \

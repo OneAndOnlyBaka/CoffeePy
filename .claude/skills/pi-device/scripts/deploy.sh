@@ -18,8 +18,9 @@ for step in "${steps[@]}"; do
 done
 
 "$DIR/pi.sh" 'cd /opt/coffeepy && sudo docker compose build web 2>&1 | tail -1 && sudo docker compose up -d 2>&1 | tail -1
-for i in $(seq 60); do curl -sf localhost:8000/health/ >/dev/null && break; sleep 2; done
-curl -s -o /dev/null -w "health %{http_code}\n" localhost:8000/health/'
+H="curl -s --cacert /opt/coffeepy/data/tls/ca.crt https://localhost:8443/health/"
+for i in $(seq 60); do $H -f -o /dev/null && break; sleep 2; done
+$H -o /dev/null -w "health %{http_code}\n"'
 
 if printf '%s\n' "$@" | grep -qx kiosk; then
 	"$DIR/pi.sh" 'sudo systemctl restart getty@tty1 && echo "kiosk session restarted (screen is blank/white for up to a minute)"'

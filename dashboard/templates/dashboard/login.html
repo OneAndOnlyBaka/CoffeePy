@@ -11,6 +11,7 @@
         <label class="field">Username {{ form.username }}</label>
         <label class="field">Password {{ form.password }}</label>
         <button type="submit" class="success">Log in</button>
+        <p class="muted login-cert">Browser warns about this site? <a href="{% url 'certificate_download' %}">Download the device certificate</a> and install it once.</p>
     </form>
 </div>
 {% endblock %}

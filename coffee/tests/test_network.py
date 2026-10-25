@@ -35,3 +35,10 @@ class PublicBaseUrlTestCase(TestCase):
     def test_omits_default_http_port(self):
         request = self.factory.get("/kiosk/", SERVER_NAME="localhost", SERVER_PORT="80")
         self.assertEqual(public_base_url(request), "http://192.168.4.1")
+
+    @override_settings(PUBLIC_HOST="192.168.4.1")
+    def test_behind_caddy_drops_the_kiosk_only_port(self):
+        # The kiosk reaches Caddy on 127.0.0.1:8443, which no phone can - its QR codes have
+        # to point at the network side, https on the default port.
+        request = self.factory.get("/kiosk/", SERVER_NAME="localhost", SERVER_PORT="8443", secure=True)
+        self.assertEqual(public_base_url(request), "https://192.168.4.1")

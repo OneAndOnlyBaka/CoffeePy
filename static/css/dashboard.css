@@ -30,6 +30,7 @@ body { user-select: auto; font-size: 16px; }
   justify-content: center;
   min-height: 100vh;
 }
+.login-cert { margin: 16px 0 0; font-size: 0.9rem; }
 
 .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
 @media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
