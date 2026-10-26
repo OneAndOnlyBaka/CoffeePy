@@ -8,6 +8,14 @@ the touchscreen. CoffeePy keeps count, shows everyone their balance, takes payme
 a dashboard in the browser for running it. Members can link their phone to see their stats
 and pay from there.
 
+> **Not a point-of-sale system.** CoffeePy only replaces the paper tally sheet. It is not a cash
+> register and sells nothing: no receipts, no tax handling, no tamper-proof fiscal records, and
+> no payment processing – a payment entered on the kiosk or the phone is a note that someone
+> says they paid, and the pay links merely open the member's own app. The balances are an
+> informal tally among the people sharing the machine, just like the sheet was. Where coffee is
+> sold commercially, a real POS system is needed. CoffeePy comes without any warranty (see the
+> [LICENSE](../LICENSE)).
+
 This manual covers every screen. Technical details (architecture, development, internals)
 are in the [README](../README.md).
 

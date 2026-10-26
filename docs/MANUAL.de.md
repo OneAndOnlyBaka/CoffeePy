@@ -8,6 +8,16 @@ Touchscreen an, was er trinkt. CoffeePy rechnet mit, zeigt jedem seinen Kontosta
 Zahlungen an und hat für die Verwaltung ein Dashboard im Browser. Mitglieder können ihr Handy
 verknüpfen und sehen dort ihre Statistik und zahlen.
 
+> **Kein Kassensystem.** CoffeePy ersetzt nur den Papierzettel als Strichliste. Es ist keine
+> Kasse und verkauft nichts: keine Belege, keine Steuern, keine manipulationssicheren
+> Aufzeichnungen (keine TSE nach KassenSichV, keine GoBD-konforme Buchführung) und keine
+> Zahlungsabwicklung – eine Zahlung, die am Kiosk oder am Handy eingetragen wird, ist ein
+> Vermerk, dass jemand nach eigener Angabe bezahlt hat, und die Bezahl-Links öffnen nur die
+> eigene App des Mitglieds. Die Kontostände sind eine formlose Strichliste unter denen, die sich
+> die Maschine teilen – so wie vorher der Zettel. Wo Kaffee gewerblich verkauft wird, braucht es
+> ein richtiges Kassensystem. CoffeePy kommt ohne jede Gewährleistung (siehe
+> [LICENSE](../LICENSE)).
+
 Diese Anleitung erklärt alle Oberflächen. Technische Details (Aufbau, Entwicklung, Interna)
 stehen in der [README](../README.md).
 

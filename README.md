@@ -11,6 +11,15 @@ both run as web apps (HTMX), and NFC card reads delivered through the
 [`nfc-cardreader`](nfc-cardreader/) ACR122U→MQTT bridge. Everything ships via
 `docker compose`, including on a Raspberry Pi that runs fully offline.
 
+> **Disclaimer – this is not a point-of-sale system.** CoffeePy replaces the paper tally sheet
+> next to a shared coffee machine, nothing more. It does not sell anything and is not a cash
+> register: no receipts, no tax or VAT handling, no tamper-proof fiscal records (no TSE as the
+> German KassenSichV requires, no GoBD-compliant bookkeeping), and it doesn't process payments –
+> a payment entered on the kiosk or the phone is a note that someone says they paid, and the
+> payment links only open the member's own app. Balances are an informal tally among the people
+> sharing the machine. If coffee is sold commercially, that needs a real POS system. CoffeePy
+> is provided as is, without warranty – see [LICENSE](LICENSE).
+
 **New here?** [docs/MANUAL.md](docs/MANUAL.md) covers what hardware to buy and how to use
 the kiosk/dashboard day to day. This README is the technical/installation reference.
 
