@@ -294,6 +294,12 @@ mind before changing it:
 - **Current Raspberry Pi OS drives HDMI through KMS**, where `hdmi_group`/`hdmi_mode`/
   `hdmi_cvt` are ignored. A panel with no usable EDID (the documented 1024x600 one) stays
   black unless the mode is forced with `video=` on the kernel command line.
+- **The Pi 3's GPU has 256MB (CMA), and GPU rasterization fills it with GIF frames**:
+  Chromium keeps every decoded frame of an animated GIF as a texture, the ranking's GIFs
+  are 120-160 frames of ~1MB, and the GPU process then dies (`dmesg`: "Failed to allocate
+  from GEM DMA helper", `gpu-recent-crash-count` in its arguments). Hence
+  `--disable-gpu-rasterization` in `install/kiosk/openbox-autostart`. A new long animation
+  is worth a look at `/sys/kernel/debug/dri/0/bo_stats` on the device while it plays.
 
 ## The device is offline
 

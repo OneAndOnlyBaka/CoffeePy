@@ -38,6 +38,12 @@ fi
 # the accessibility tree on every #panel swap - twice a second here. Turning it (and the
 # background services a kiosk never uses) off took Chromium on a Pi 3 from ~40% of a core
 # to ~17% while idle.
+# --disable-gpu-rasterization: the wrapper also turns GPU rasterization on, and with it
+# Chromium keeps every decoded frame of an animated GIF as a texture in GPU memory. The
+# ranking's GIFs have 120-160 frames of ~1MB each; on a Pi 3 that fills the 256MB the GPU
+# gets (CMA) within one round of the tabs, the GPU process dies ("Failed to allocate from
+# GEM DMA helper" in dmesg) and the screen hangs. Without it, GPU memory stays ~20MB;
+# compositing still runs on the GPU, so taps are as quick as before.
 while true; do
     chromium \
         --kiosk "$KIOSK_URL/kiosk/" \
@@ -52,6 +58,7 @@ while true; do
         --disable-extensions \
         --disable-background-networking \
         --disable-component-update \
-        --disable-sync
+        --disable-sync \
+        --disable-gpu-rasterization
     sleep 2
 done
