@@ -5,12 +5,12 @@ project *is* and how to deploy it; this file covers what bites you while changin
 
 ## Running things
 
-No Django is installed system-wide on the dev box and there is no `.venv` in the tree - make
-one before anything else (see README's Development section). Then:
+No Django is installed system-wide on the dev box - use the git-ignored `.venv`, or make one
+first if the checkout has none (see README's Development section). Then:
 
 ```bash
 export DJANGO_TEST_SQLITE=1 DJANGO_SECRET_KEY=dev   # both are required, also for tests
-python manage.py test                                # ~250 tests, ~35s
+python manage.py test                                # everything; ends with "Ran N tests in Ts"
 python manage.py test kiosk.tests.test_thank_you     # single module
 python manage.py runserver
 ```
@@ -18,6 +18,16 @@ python manage.py runserver
 `DJANGO_TEST_SQLITE=1` swaps Postgres for a local SQLite file; without it every command tries
 to reach the `db` container. CI (`.github/workflows/ci.yml`) runs exactly `python manage.py
 test` with those two variables and nothing else - no linter, no formatter, no type checker.
+The suite only grows, so don't trust a count or a duration written down anywhere: the last
+lines of a run say how many tests ran and how long they took, and `skipped=N` how many need
+something SQLite can't give them.
+
+`scripts/test.sh [labels]` runs the same suite in containers (`docker-compose.test.yml`) against
+a real PostgreSQL and with the image's `pg_dump`/`openssl`, which is where those skipped
+backup/restore tests run - and it ends with a branch-coverage report (`.coveragerc`). The
+backup and update code (`coffee/backups.py`, `dashboard/restore_jobs.py`, `dashboard/views_backup.py`,
+`dashboard/views_update.py`, `install/storage_helper.py`, `install/update_watcher.py`) is kept
+at full line and branch coverage; read the report's Miss/BrPart columns for those files.
 
 ## The four apps
 
@@ -163,7 +173,8 @@ The web container can't touch block devices, so `install/storage_helper.py` does
   multi-line one renders as literal text on the screen. Use `{% comment %}`.
 - **Background threads need `TransactionTestCase`** and their own connection cleanup
   (`connections.close_all()` in a `finally`) - see `dashboard/import_jobs.py`.
-- **Three gunicorn workers** (`docker-compose.yml`), so module-level state is per-process and
+- **Several gunicorn workers** (`GUNICORN_WORKERS` in `.env`, read by `docker-compose.yml`; the
+  provisioning tool picks it by the Pi's RAM), so module-level state is per-process and
   useless for anything the browser polls. The legacy-DB import writes its progress to a JSON
   file (`settings.IMPORT_STATUS_FILE`) for that reason - and also because the import runs in
   one big transaction, so progress written to the *database* would only appear once it ends.
@@ -234,7 +245,10 @@ mind before changing it:
   clock from inside a container, and an offline box never gets the NTP sync that would
   trigger the kernel's own RTC update. `install/rtc_sync.sh` on a timer closes that loop -
   and deliberately only writes on a step of more than a minute, so the accurate RTC does
-  not slowly inherit the Pi's own drift.
+  not slowly inherit the Pi's own drift. It also reports the module's health to
+  `data/storage/rtc.json` (`coffee/rtc.py`: the kiosk's red clock sign, the overview's
+  "Clock module" row); "lost" - a flat battery - only clears once the RTC kept its time
+  across a reboot, which is why it remembers the boot id it was lost in.
 - **The Raspberry Pi archive keys are SHA-1 signed**, and every modern verifier refuses
   them by default: debootstrap picks sqv over gpgv when only sqv is installed, and apt on
   trixie uses sqv outright - both then report the archives as unsigned. The fix is a
@@ -253,8 +267,9 @@ mind before changing it:
   minutes; `coffeepy.service` is ordered after `network-online.target`.
 - **Since trixie `docker` (the client) is the separate `docker-cli` package**, only a
   Recommends of `docker.io`, and the installer runs with `--no-install-recommends`.
-- **`/tmp` is a RAM-backed tmpfs** on trixie (and Fedora) - ~450MB on a Pi 3. An update
-  bundle is ~700MB, so neither `build_update_bundle.sh` nor `update_watcher.py` may stage
+- **`/tmp` is a RAM-backed tmpfs** on trixie (and Fedora) - half the RAM (`df -h /tmp` on the
+  device). An update bundle with its images is bigger than that on a Pi 3 (`ls -l` the output of
+  `build_update_bundle.sh`), so neither `build_update_bundle.sh` nor `update_watcher.py` may stage
   it there.
 - **Updates are signed, checked, and undoable** (`install/update_watcher.py`): the bundle's
   `manifest.json` is signed with the key from `scripts/update_signing_key.sh` (public half in
@@ -264,7 +279,15 @@ mind before changing it:
   `:coffeepy-previous-*`; if `/health/` doesn't answer afterwards, all of it goes back. A new
   `.env` setting reaches existing devices through `env_defaults` in the manifest (taken from
   `.env.example`). The watcher runs `install.sh --only=hardware,services,kiosk` itself, with
-  `COFFEEPY_FROM_WATCHER=1` - that step must never restart the watcher then.
+  `COFFEEPY_FROM_WATCHER=1` - that step must never restart the watcher then. A device can
+  trust its own key instead (`/etc/coffeepy/update-signing.own.pub`, from `provision.sh`; no
+  update replaces it) or check nothing (`UPDATE_VERIFY_SIGNATURE=false`).
+- **Which code runs is `coffeepy-version.json`** (`scripts/write_version.sh`: git describe and
+  the commit), git-ignored and written into the tree by everything that builds or ships it -
+  the image has no `.git`. The dashboard's version list (`dashboard/versions.py`) adds what
+  the host's update watcher sees in `data/updates/system.json`: OS and each container's image
+  id - the only thing that tells two untagged builds apart. A new way of building or
+  shipping the tree has to call `write_version.sh`, or the device reports "dev".
 - **One thing at a time:** update, restore and import check each other through
   `data/maintenance/status.json` (`restore_jobs.maintenance_active`, the watcher's
   `other_maintenance`).

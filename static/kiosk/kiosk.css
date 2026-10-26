@@ -421,5 +421,7 @@ html, body.kiosk { overflow: hidden; }
 @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 /* Left of the language button while backups are disturbed (coffee.backups.health): a red
    circle that pulses, so it is noticed from across the room - and only then. */
-.backup-alarm { right: 152px; background: var(--danger); animation: backup-alarm 1.2s ease-in-out infinite; }
-@keyframes backup-alarm { 50% { opacity: 0.35; } }
+/* Red, blinking, left of the language button: backups stopped, or the RTC is faulty. */
+.device-alarms { position: absolute; top: 16px; right: 152px; display: flex; flex-direction: row-reverse; gap: 12px; }
+.device-alarm { position: static; background: var(--danger); animation: device-alarm 1.2s ease-in-out infinite; }
+@keyframes device-alarm { 50% { opacity: 0.35; } }

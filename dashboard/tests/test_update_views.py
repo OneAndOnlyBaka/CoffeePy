@@ -2,6 +2,7 @@ import json
 import time
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
@@ -9,7 +10,7 @@ from django.urls import reverse
 
 from coffee.models import AuditLogEntry
 from coffee.tests.device import FakeDevice
-from dashboard import restore_jobs
+from dashboard import restore_jobs, versions
 
 
 class UpdatePageTestCase(FakeDevice, TestCase):
@@ -35,7 +36,7 @@ class UpdatePageTestCase(FakeDevice, TestCase):
 
     def test_page_on_a_fresh_device(self):
         response = self.client.get(reverse("dashboard:update"))
-        self.assertContains(response, "dev")  # the version of this checkout
+        self.assertContains(response, settings.COFFEEPY_VERSION)  # the version of this checkout
         self.assertNotContains(response, "Back to")
 
     def test_upload(self):
@@ -87,3 +88,85 @@ class UpdatePageTestCase(FakeDevice, TestCase):
         client = Client()
         client.login(username="helper", password="pw")
         self.assertRedirects(client.get(reverse("dashboard:update")), reverse("dashboard:index"))
+
+
+class VersionListTestCase(FakeDevice, TestCase):
+    """The update page's "Versions": app, container and host, and all of it as text to copy."""
+
+    SYSTEM = {
+        "updated": 1793013212, "model": "Raspberry Pi 3 Model B Rev 1.2", "os": "Raspbian GNU/Linux 13 (trixie)",
+        "kernel": "6.12.47+rpt-rpi-v8", "platform": "linux/arm64", "docker": "26.1.5", "compose": "5.5.0",
+        "signature": {"check": True, "key": "bundled", "fingerprint": "0123456789abcdef"},
+        "containers": [{"service": "web", "image": "coffeepy-web:latest", "image_id": "0123456789ab", "state": "running"},
+                       {"service": "migrate", "image": "coffeepy-web:latest", "image_id": "0123456789ab",
+                        "state": "exited"}],
+    }
+
+    def setUp(self):
+        super().setUp()
+        User.objects.create_superuser(username="boss", password="pw")
+        self.client = Client()
+        self.client.login(username="boss", password="pw")
+        self.updates = self.root / "updates"
+        self.updates.mkdir(parents=True, exist_ok=True)
+
+    def page(self, system=None, build=None):
+        if system is not None:
+            (self.updates / "system.json").write_text(json.dumps(system))
+        with self.settings(COFFEEPY_BUILD=build or {}, COFFEEPY_VERSION=(build or {}).get("version", "dev")):
+            return self.client.get(reverse("dashboard:update"))
+
+    def test_everything_listed_and_copyable(self):
+        (self.updates / "installed.json").write_text(json.dumps({"version": "v2.1", "applied_at": 1793013212}))
+        response = self.page(self.SYSTEM, {"version": "0be2def-dirty", "commit": "0be2def64ad5", "branch": "main"})
+        text = response.context["version_text"]
+        for expected in ("[CoffeePy]", "Version: 0be2def-dirty", "Commit: 0be2def64ad5", "Branch: main",
+                         "Installed by update: v2.1 (applied 2026-", "Python: ", "Django: ",
+                         "Model: Raspberry Pi 3", "Docker Compose: 5.5.0",
+                         "Update signature: CoffeePy's key 0123456789abcdef",
+                         "web: coffeepy-web:latest @0123456789ab", "migrate: coffeepy-web:latest @0123456789ab (exited)"):
+            self.assertIn(expected, text)
+        self.assertNotIn("Committed:", text)  # nothing to say - left out
+        self.assertContains(response, "Copy all")
+        self.assertContains(response, "<code>0be2def64ad5</code>", html=True)
+        self.assertNotContains(response, "appear once the update watcher")
+
+    def test_signature_states(self):
+        for signature, shown in (({"check": False}, "off - every update is installed"),
+                                 ({"check": True, "key": "missing"}, "no key on the device"),
+                                 ({"check": True, "key": "own", "fingerprint": "abc"}, "own key abc"),
+                                 ({}, "CoffeePy's key")):
+            with self.subTest(shown=shown):
+                text = self.page({**self.SYSTEM, "signature": signature}).context["version_text"]
+                self.assertIn(f"Update signature: {shown}", text)
+
+    def test_before_the_watcher_wrote_anything(self):
+        response = self.page()
+        self.assertContains(response, "appear once the update watcher")
+        self.assertNotIn("[Device]", response.context["version_text"])
+        self.assertIn("Version: dev", response.context["version_text"])
+        (self.updates / "system.json").write_text("[]")  # not what the watcher writes
+        self.assertContains(self.client.get(reverse("dashboard:update")), "appear once the update watcher")
+
+    def test_a_device_with_no_containers_yet(self):
+        response = self.page({"updated": 0, "containers": []})
+        self.assertNotIn("[Containers]", response.context["version_text"])
+
+    def test_helpers_when_something_is_missing(self):
+        self.assertEqual(versions._package("no-such-package-here"), "")
+        with mock.patch.object(versions.subprocess, "run", side_effect=OSError):
+            self.assertEqual(versions._pg_dump(), "")
+        with mock.patch.object(versions.subprocess, "run",
+                               return_value=mock.Mock(returncode=0, stdout=b"pg_dump (PostgreSQL) 17.6\n")):
+            self.assertEqual(versions._pg_dump(), "pg_dump (PostgreSQL) 17.6")
+        with mock.patch.object(versions.subprocess, "run", return_value=mock.Mock(returncode=1, stdout=b"")):
+            self.assertEqual(versions._pg_dump(), "")
+
+    def test_database(self):
+        shown = versions._database()
+        if versions.connection.vendor == "postgresql":
+            self.assertTrue(shown.startswith("PostgreSQL "))
+        else:
+            self.assertTrue(shown.startswith("sqlite "))
+        with mock.patch.object(versions, "connection", mock.Mock(vendor="mysql")):
+            self.assertEqual(versions._database(), "")

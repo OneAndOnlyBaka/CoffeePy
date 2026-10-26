@@ -323,6 +323,8 @@ step_packages() {
 step_app() {
 	log "Installing the application into ${TARGET_DIR}"
 	run install -d "${TARGET_DIR}"
+	# Run from a git checkout on the device itself: note which commit (the dashboard shows it).
+	[ -d "${PROJECT_DIR}/.git" ] && run "${PROJECT_DIR}/scripts/write_version.sh" || true
 	# The same filter the image build used: never carry a developer's .env onto a device,
 	# and leave virtualenvs, editor state and build leftovers behind.
 	run rsync -a --delete-after --filter=". ${SCRIPT_DIR}/src-filter.txt" \

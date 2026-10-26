@@ -60,8 +60,18 @@ for lang in "$@"; do
 	keys C-u; text "short"; keys Enter         # a passphrase that is too short
 	shot "${lang}" provision-validation
 	keys Escape
-	keys Up; keys Up; keys Up; keys Enter      # Quit - wraps round to the last line
+	keys Down; keys Down; keys Down; keys Down; keys Enter   # Updates (the signature check)
+	shot "${lang}" provision-updates
+	keys Escape
+	for _ in 1 2 3 4 5 6 7; do keys Up; done; keys Enter     # Quit - wraps round to the last line
 	sleep 1
+
+	# The update package builder shares the provisioning tool's screens.
+	# Only looked at, never answered: Enter on its first screen starts a build.
+	start "UI_LANG=${lang} COFFEEPY_SIGNING_KEY=/home/you/.config/coffeepy/update-signing.key OUTPUT_DIR=/home/you/CoffeePy ./scripts/update_builder.sh"
+	until_screen "linux/"
+	sleep 1; shot "${lang}" update-builder
+	tmux kill-session -t "${SESSION}"
 
 	# Progress and the final summary, drawn with example values.
 	common="source scripts/provision.sh; UI_LANG=${lang}; DEVICE_LANGUAGE=${lang}; tui_init; PI_HOST=192.168.10.13; PI_USER=pi;

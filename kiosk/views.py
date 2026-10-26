@@ -15,7 +15,7 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext as _, gettext_lazy, gettext_noop
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import backups, services
+from coffee import backups, rtc, services
 from coffee.models import (
     AltUidCapture,
     CASH_METHOD_NAME,
@@ -423,6 +423,7 @@ def _render_panel(request):
     ctx["panel_key"] = f"{ctx['state']}:{logged_in_uid}"
     if ctx["state"] in ("wait_for_card", "ranking"):  # the screens with the corner buttons
         ctx["backup_disturbed"] = backups.health()["disturbed"]
+        ctx["rtc_disturbed"] = rtc.health()["disturbed"]
 
     return render(request, "kiosk/panel.html", ctx)
 
@@ -761,7 +762,7 @@ def _ranking_context(request):
     rows = _ranking_rows(request, view)
     context = {"ranking_view": view, "rows": rows}
     if view == "pillory":
-        context["banner"] = "Shame"
+        context["banner"] = "Shame" if rows else "No shame"
         # The ticker under the walk of shame scrolls through every debtor; a longer list
         # scrolls longer rather than faster, so each name stays readable.
         context["ticker_seconds"] = 8 + 4 * len(rows)

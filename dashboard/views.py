@@ -20,7 +20,7 @@ from django.utils.html import escape
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import backups, purge, services
+from coffee import backups, purge, rtc, services
 from coffee.models import (
     AltUidCapture,
     AuditLogEntry,
@@ -59,7 +59,7 @@ def index(request):
         request,
         "dashboard/index.html",
         {"reader_status": reader_status, "public_host": public_host(), "overview": services.dashboard_overview(),
-         "backup_health": backups.health()},
+         "backup_health": backups.health(), "rtc_health": rtc.health()},
     )
 
 

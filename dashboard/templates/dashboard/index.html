@@ -51,6 +51,22 @@
             {% else %}<span class="badge off">● {% translate "no backups" %}</span>{% endif %}
             {% if user.is_superuser %}<a href="{% url 'dashboard:backup' %}" class="btn secondary btn-sm">{% translate "Backup" %}</a>{% endif %}
         </div>
+        {% if rtc_health.state != "unknown" %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "Clock module (RTC)" %}</span>
+                <span class="list-row-meta">
+                    {% if rtc_health.state == "ok" %}{% translate "Keeps the time while the power is off." %}
+                    {% elif rtc_health.state == "missing" %}{% translate "Not found - check that the module is plugged in. After a power cut the clock is wrong until someone sets it." %}
+                    {% elif rtc_health.state == "unreadable" %}{% translate "Does not answer - the module or its connection is faulty. After a power cut the clock is wrong until someone sets it." %}
+                    {% else %}{% translate "Had lost the time - most likely its battery (CR2032) is flat. Check the system time and replace the battery; the warning goes once the module kept the time through a restart." %}{% endif %}
+                </span>
+            </div>
+            {% if rtc_health.state == "ok" %}<span class="badge ok-badge">● {% translate "OK" %}</span>
+            {% else %}<span class="badge off">● {% translate "faulty" %}</span>{% endif %}
+            {% if user.is_superuser %}<a href="{% url 'dashboard:system_time' %}" class="btn secondary btn-sm">{% translate "System time" %}</a>{% endif %}
+        </div>
+        {% endif %}
         <div class="list-row">
             <div class="list-row-text">
                 <span class="list-row-title">{% translate "Address on the network" %}</span>

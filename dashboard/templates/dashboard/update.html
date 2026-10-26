@@ -46,6 +46,22 @@
     </form>
 </div>
 
+<div class="card" id="versions">
+    <div class="card-head">
+        <h2>{% translate "Versions" %}</h2>
+        <button type="button" class="secondary btn-sm" id="copy-versions" data-done="{% translate "Copied" %}">{% translate "Copy all" %}</button>
+    </div>
+    <p class="muted">{% translate "Exactly what runs on this device - the commit, and for every container the id of its image. Paste it into a bug report." %}</p>
+    {% for heading, rows in version_sections %}{% if rows %}
+    <h3>{{ heading }}</h3>
+    <dl class="version-list">
+        {% for label, value in rows %}<dt>{{ label }}</dt><dd><code>{{ value }}</code></dd>{% endfor %}
+    </dl>
+    {% endif %}{% endfor %}
+    {% if system_missing %}<p class="muted">{% translate "The device's own details (operating system, containers) appear once the update watcher has written them - a few seconds after it starts." %}</p>{% endif %}
+    <textarea id="versions-text" hidden readonly>{{ version_text }}</textarea>
+</div>
+
 {% if pre_update %}
 <div class="card">
     <h2>{% translate "Saved before updates" %}</h2>
@@ -55,6 +71,25 @@
 {% endif %}
 
 <script>
+(function () {
+    const button = document.getElementById("copy-versions");
+    const text = document.getElementById("versions-text").value;
+    button.addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch (e) {  // no clipboard API (e.g. an untrusted certificate): the old way
+            const area = document.createElement("textarea");
+            area.value = text;
+            document.body.appendChild(area);
+            area.select();
+            document.execCommand("copy");
+            area.remove();
+        }
+        const label = button.textContent;
+        button.textContent = button.dataset.done;
+        setTimeout(() => { button.textContent = label; }, 1500);
+    });
+})();
 (function () {
     const message = document.getElementById("update-message");
     const log = document.getElementById("update-log");

@@ -7,7 +7,9 @@ A bundle (scripts/build_update_bundle.sh) is a tar with
                      SHA-256 of every other file
   manifest.sig       Ed25519 signature of manifest.json - checked against the public key the
                      installer put in /etc/coffeepy/update-signing.pub (outside data/, where
-                     the app can't change it)
+                     the app can't change it), or the device's own one next to it
+                     (update-signing.own.pub, from scripts/provision.sh), which no update
+                     replaces. UPDATE_VERIFY_SIGNATURE=false in .env turns the check off.
   images.tar         every image docker-compose.yml needs, `docker save`d
   docker-compose.yml
   install.tar        install/ - this watcher, the storage helper, systemd units, the kiosk
@@ -50,9 +52,11 @@ PRE_UPDATE = UPDATES / "pre-update"
 STATE_FILE = UPDATES / "state.json"
 INSTALLED_FILE = UPDATES / "installed.json"
 PREVIOUS_FILE = UPDATES / "previous.json"
+SYSTEM_FILE = UPDATES / "system.json"
 MAINTENANCE_FILE = PROJECT_DIR / "data" / "maintenance" / "status.json"
 EVENTS_FILE = PROJECT_DIR / "data" / "storage" / "events.jsonl"
 PUBLIC_KEY = Path(os.environ.get("COFFEEPY_UPDATE_PUBKEY", "/etc/coffeepy/update-signing.pub"))
+OWN_PUBLIC_KEY = PUBLIC_KEY.with_name("update-signing.own.pub")
 ROLLBACK_REQUEST = "rollback.request"
 FORMAT = 2
 KEEP_PRE_UPDATE = 3
@@ -60,6 +64,7 @@ HEALTH_TIMEOUT = 240
 HEALTH_URL = "https://localhost:8443/health/"
 STALE_UPLOAD_SECONDS = 3600
 POLL_SECONDS = 5
+SYSTEM_SECONDS = 600  # system.json is refreshed this often - an install.sh run rebuilds images too
 PREVIOUS_TAG = "coffeepy-previous"
 # uname -m -> the platform a bundle is built for (docker's names)
 PLATFORMS = {"aarch64": "linux/arm64", "arm64": "linux/arm64", "armv7l": "linux/arm/v7", "x86_64": "linux/amd64"}
@@ -213,13 +218,16 @@ def read_manifest(bundle, workdir):
 
 
 def verify_signature(manifest, signature):
+    if env_values().get("UPDATE_VERIFY_SIGNATURE", "true").lower() == "false":
+        log("Signature check turned off on this device (UPDATE_VERIFY_SIGNATURE=false) - not checked")
+        return
     if not signature.exists():
-        if env_values().get("UPDATE_ALLOW_UNSIGNED", "").lower() == "true":
-            return
-        raise UpdateError("The bundle is not signed - refused (UPDATE_ALLOW_UNSIGNED=true in .env allows it).")
-    if not PUBLIC_KEY.exists():
+        raise UpdateError("The bundle is not signed - refused (UPDATE_VERIFY_SIGNATURE=false in .env turns the "
+                          "check off).")
+    key = OWN_PUBLIC_KEY if OWN_PUBLIC_KEY.exists() else PUBLIC_KEY
+    if not key.exists():
         raise UpdateError(f"No public key at {PUBLIC_KEY} to check the signature with - run the installer.")
-    run("openssl", "pkeyutl", "-verify", "-pubin", "-inkey", str(PUBLIC_KEY), "-rawin",
+    run("openssl", "pkeyutl", "-verify", "-pubin", "-inkey", str(key), "-rawin",
         "-in", str(manifest), "-sigfile", str(signature))
 
 
@@ -446,22 +454,97 @@ def cleanup_uploads():
             path.unlink(missing_ok=True)
 
 
-def cycle():
+# --- what the dashboard's version list shows ------------------------------------------------
+
+def _output(*args, cwd=None):
+    try:
+        result = run(*args, cwd=cwd, check=False)
+    except OSError:
+        return ""
+    return result.stdout.decode(errors="replace").strip() if result.returncode == 0 else ""
+
+
+def _containers():
+    """The compose project's containers: service, image and the image's id. The id is what
+    tells two builds apart that carry the same tag (coffeepy-web:latest, caddy:2-alpine)."""
+    raw = _output("docker", "compose", "ps", "--all", "--format", "json", cwd=PROJECT_DIR)
+    try:  # compose prints one object per line; older releases a single array
+        rows = json.loads(raw) if raw.startswith("[") else [json.loads(line) for line in raw.splitlines() if line]
+    except ValueError:
+        return []
+    ids = [row.get("ID", "") for row in rows if row.get("ID")]
+    image_ids = {}
+    if ids:
+        for line in _output("docker", "inspect", "--format", "{{.Id}} {{.Image}}", *ids).splitlines():
+            container, _, image = line.partition(" ")
+            image_ids[container] = image
+    out = []
+    for row in rows:
+        short = row.get("ID") or "-"  # compose shows the container id abbreviated, inspect in full
+        image_id = next((image for container, image in image_ids.items() if container.startswith(short)), "")
+        out.append({"service": row.get("Service", ""), "image": row.get("Image", ""),
+                    "image_id": image_id.removeprefix("sha256:")[:12], "state": row.get("State", "")})
+    return sorted(out, key=lambda c: c["service"])
+
+
+def _os_release():
+    try:
+        for line in Path("/etc/os-release").read_text().splitlines():
+            if line.startswith("PRETTY_NAME="):
+                return line.partition("=")[2].strip('"')
+    except OSError:
+        pass
+    return ""
+
+
+def _signature():
+    if env_values().get("UPDATE_VERIFY_SIGNATURE", "true").lower() == "false":
+        return {"check": False}
+    key = OWN_PUBLIC_KEY if OWN_PUBLIC_KEY.exists() else PUBLIC_KEY
+    if not key.exists():
+        return {"check": True, "key": "missing"}
+    return {"check": True, "key": "own" if key == OWN_PUBLIC_KEY else "bundled",
+            "fingerprint": hashlib.sha256(key.read_bytes()).hexdigest()[:16]}
+
+
+def write_system_info():
+    try:
+        model = Path("/proc/device-tree/model").read_text().strip("\x00\n ")
+    except OSError:
+        model = ""
+    write_json(SYSTEM_FILE, {
+        "updated": time.time(), "model": model, "os": _os_release(), "kernel": platform.release(),
+        "platform": host_platform(), "docker": _output("docker", "version", "--format", "{{.Server.Version}}"),
+        "compose": _output("docker", "compose", "version", "--short"), "containers": _containers(),
+        "signature": _signature(),
+    })
+
+
+def cycle(last_system=0.0):
+    """One look at incoming/; returns when system.json was last written."""
     cleanup_uploads()
+    changed = False
     request = INCOMING / ROLLBACK_REQUEST
     if request.exists() and not other_maintenance():
         process_rollback_request(request)
+        changed = True
     for bundle in sorted(INCOMING.glob("*.tar")) + sorted(INCOMING.glob("*.tar.gz")):
         process_bundle(bundle)
+        changed = True
+    if changed or time.time() - last_system >= SYSTEM_SECONDS:
+        write_system_info()
+        return time.time()
+    return last_system
 
 
 def main(once=False):
     for directory in (INCOMING, STATUS_DIR, PRE_UPDATE):
         directory.mkdir(parents=True, exist_ok=True)
     log(f"coffeepy-update-watcher: watching {INCOMING}")
+    last_system = 0.0
     while True:
         try:
-            cycle()
+            last_system = cycle(last_system)
         except Exception as exc:  # noqa: BLE001 - keep watching
             log(f"cycle failed: {exc}")
         if once:

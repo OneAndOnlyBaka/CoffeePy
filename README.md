@@ -87,17 +87,21 @@ docker compose exec web python manage.py backfill_order_sorts --path /tmp/coffee
 
 Backups go to a USB stick that an admin sets up under `/dashboard/backup/`: the host service
 `coffeepy-storage` (`install/storage_helper.py`) formats it (ext4, label `COFFEEBAK`), marks it
-with this device's id and remembers it; from then on the `backup` service writes a
-`pg_dump --format=custom` to it every `BACKUP_INTERVAL_MINUTES`, keeping the newest
-`BACKUP_DEPTH`. Pulled out, backups pause (the dashboard's overview says so) and resume when
-the same stick comes back. The same page restores a backup - from the stick, another device's
-stick, or an uploaded file, older `.sql` dumps included - and downloads one without a stick.
+with this device's id and remembers it. From then on the `backup` service writes the whole
+device to it at the interval set on that page - database (`pg_dump --format=custom`), device
+CA and certificates, settings -, optionally encrypted with `BACKUP_PASSPHRASE`, read back and
+checksummed, and thinned out by generations (newest, daily, weekly, monthly). Pulled out,
+backups pause (the dashboard's overview and the kiosk say so) and resume when the same stick
+comes back. The same page restores a backup - all of it or parts, from the stick, another
+device's stick, or an uploaded file, older `.sql` dumps included - and downloads one without
+a stick.
 
 ### Offline updates
 
 The Pi is meant to run without internet, so updates are pushed manually instead of pulled:
 
-1. On a dev machine with internet: `./scripts/build_update_bundle.sh linux/arm/v7` builds
+1. On a dev machine with internet: `./scripts/update_builder.sh` (guided) or
+   `./scripts/build_update_bundle.sh [--platform linux/arm64]` builds and signs a bundle of
    every image `docker-compose.yml` defines for the Pi's architecture - `coffeepy-web`
    (shared by `migrate`/`web`/`mqtt-listener`/`backup`) and `nfc-bridge` (its own
    Dockerfile under [nfc-cardreader/](nfc-cardreader/)) - plus pulls `db`/`mosquitto`,
@@ -107,13 +111,13 @@ The Pi is meant to run without internet, so updates are pushed manually instead 
    whole new container (a new service block), not just update existing ones.
 2. Carry it over (USB stick, or a laptop joined to the Pi's own WiFi AP) and upload it at
    `/dashboard/update/` (superuser only).
-3. A host-level systemd service (`coffeepy-update-watcher.service`, installed by
-   `install/install.sh`) picks it up, `docker load`s the images, drops in the new
-   `docker-compose.yml` (keeping a timestamped backup of the old one), and runs
-   `docker compose up -d --remove-orphans` so every service whose image or definition
-   actually changed gets recreated, new services start, and any service removed from the
-   file is torn down (unaffected ones, e.g. `db` when only the app image changed, are
-   left running). The web container itself never gets Docker/host access.
+3. A host-level systemd service (`coffeepy-update-watcher.service`,
+   `install/update_watcher.py`) checks the signature (against `install/update-signing.pub`,
+   or a device's own key - see the manual's "Your own signing key"), every file's checksum,
+   platform, space and version; saves the database and the running images to the SD card;
+   `docker load`s the images, drops in the new `docker-compose.yml` and runs
+   `docker compose up -d --remove-orphans`. If `/health/` doesn't answer afterwards, it
+   rolls everything back by itself. The web container itself never gets Docker/host access.
 
 ### System time
 

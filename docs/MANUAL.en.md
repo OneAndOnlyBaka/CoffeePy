@@ -33,9 +33,9 @@ are in the [README](../README.md).
 | Power supply | The official one for your model. Cheap supplies are the most common cause of flaky USB devices and touchscreens. |
 | Touchscreen | 1024×600 (e.g. [Adafruit #2396](https://www.adafruit.com/product/2396)). The official 7" display (800×480) works too. |
 | NFC reader | **ACR122U** by Advanced Card Systems – the only supported reader. |
-| Real-time clock | **DS3231** module, so the Pi keeps the right time without internet. Wire it to I²C-1: VCC→pin 1, GND→pin 6, SDA→pin 3, SCL→pin 5. |
+| Real-time clock | **DS3231** module with a CR2032 battery, so the Pi keeps the right time without internet. Wire it to I²C-1: VCC→pin 1, GND→pin 6, SDA→pin 3, SCL→pin 5. CoffeePy checks it regularly and warns when it is missing, doesn't answer or has lost the time. |
 | Cards | Any MIFARE cards or key fobs (ISO 14443A) – one per member. Many company or transit cards work as well. |
-| USB stick (optional) | For automatic backups. Formatted `ext4` and labelled `COFFEEBAK` (`mkfs.ext4 -L COFFEEBAK /dev/sdX1`), it is mounted automatically. |
+| USB stick (recommended) | For automatic backups. Nothing to prepare: you set it up in the dashboard (see [Backups](#backups)) – that erases it. |
 
 ### Housing
 
@@ -55,8 +55,8 @@ You install from a Linux PC with the **provisioning tool**. All the Pi needs is 
 
 ### Preparing the Pi
 
-1. Write **Raspberry Pi OS Lite** to the SD card with the
-   [Raspberry Pi Imager](https://www.raspberrypi.com/software/) (the 32-bit one on a Pi 3).
+1. Write **Raspberry Pi OS Lite (64-bit)** to the SD card with the
+   [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
 2. In the Imager's settings, set a **user name and password** and **enable SSH**. The Pi
    needs internet for the installation – a network cable is easiest, otherwise enter your WiFi there.
 3. Insert the card, connect display, reader and clock, power the Pi on.
@@ -114,7 +114,8 @@ change it:
 | WiFi access point | The Pi opens its own WiFi for phones to reach dashboard and portal. Turn it off if the Pi stays on your existing network. |
 | Address for phones | The address in QR codes and in the certificate. `192.168.4.1` with the access point, otherwise the Pi's (preferably fixed) address on your network. |
 | Time zone | For the clock and the statistics by hour and weekday. |
-| Backups | Regular database backups, by default to a USB stick. |
+| Backups & audit log | Whether the backups on the USB stick are **encrypted** (a passphrase of at least 12 characters – keep it somewhere safe, no backup can be restored without it), and for how many days the **audit log** is kept (90 by default). How often backups are made is set in the dashboard. |
+| Updates | Which **signature** an update has to carry: CoffeePy's key, **your own key**, or **no check** (see [Your own signing key](#your-own-signing-key)). |
 | Display | Screen mode. The documented 1024×600 display doesn't report its resolution, so it needs the preset. |
 | Web workers | Processes serving the web app: 2 for a Pi 3, 3–4 for a Pi 4 or 5. |
 | Install from | Internet, or an offline bundle (for Pis without internet, see the README). |
@@ -124,6 +125,8 @@ Input is checked right away – a WiFi password, for instance, needs at least 8 
 ![WiFi access point](pictures/manual/en/provision-wifi.png)
 
 ![An input being checked](pictures/manual/en/provision-validation.png)
+
+![Updates](pictures/manual/en/provision-updates.png)
 
 **Installing.** *Install CoffeePy* starts it. The installation runs on the Pi itself, the tool
 only shows its progress – if the connection drops or you close the window, it carries on.
@@ -148,7 +151,7 @@ only you can read.
 ### Connecting a phone
 
 With the access point, join the WiFi **CoffeePy** (the tool shows the password at the end,
-and the kiosk shows it as a QR code, see [below](#setup--network-info)). Then open
+and the kiosk shows it as a QR code, see [Admin access](#admin-access)). Then open
 `https://192.168.4.1/` – without the access point, the address you gave during setup.
 
 ### Installing the certificate
@@ -171,7 +174,9 @@ this isn't needed as long as it comes from an authority your devices already tru
 ### Logging in to the dashboard
 
 Open `https://192.168.4.1/` and log in with the admin account. You switch the language below
-the login form, and later at the bottom of the left-hand bar.
+the login form, and later with **DE/EN** at the top right. If the password doesn't meet the
+[login rules](#login--passwords) (any more), the dashboard asks for a new one right after
+logging in.
 
 ![Login](pictures/manual/en/dashboard-login.png)
 
@@ -186,23 +191,34 @@ Before the kiosk takes orders it needs at least one **coffee sort** – until th
    always works.
 3. You don't need to add **members**: an unknown card on the kiosk leads straight to
    signing up with a nickname.
+4. Plug in a **USB stick** and set it up under **Backup** – from then on the device backs
+   itself up (see [Backups](#backups)).
 
 ---
 
 ## 4. The kiosk
 
-The touchscreen has four sections, in the bar on the left. Two round buttons sit top right:
-**DE/EN** switches the kiosk's language, the **wrench** is the admin access – it isn't meant
-for members.
+The touchscreen has four sections, in the bar on the left. Round buttons sit top right:
+the **wrench** is the [admin access](#admin-access) – it isn't meant for members –, **DE/EN**
+switches the kiosk's language, and a **blinking red** button appears when something on the
+device needs looking after:
+
+| Sign | Meaning |
+|---|---|
+| Red, database symbol | **Backups are not running** – the backup stick is missing, or the last backup failed. Details under **Backup** in the dashboard. |
+| Red, clock symbol | **The clock module (RTC) is faulty** – missing, not answering, or its battery is flat. Details on the dashboard's **Overview**. |
+
+![Warning sign on the kiosk](pictures/manual/en/kiosk-device-alarm.png)
 
 Apart from the ranking, every section needs a card. Holding up a card logs you in until you're
 done, or logs you out automatically after 20 seconds without input. Tapping a section in the
-bar logs out too.
+bar logs out too. **Pay & Stats**, **Settings** and the **Ranking** go back to **Order** by
+themselves after 20 seconds without a tap – so the next person always finds the kiosk ready to
+order.
 
 ### Order
 
-The start screen. It explains what happens when you hold up your card and shows the time – if
-it's visibly wrong, the real-time clock's battery is flat.
+The start screen. It explains what happens when you hold up your card and shows the time.
 
 ![Order – apply your card](pictures/manual/en/kiosk-wait-order.png)
 
@@ -252,14 +268,25 @@ access point, the WiFi's QR code sits next to it – the phone has to join that 
 
 ### Ranking
 
-No card needed. **Next** pages through the all-time top 7, this month's top 7 and the
-**deposit pillory** – everyone who still owes money up to last month.
+No card needed. Three tabs at the top, each with its own retro animation; the names are in the
+bar underneath. Counted are cups – a jug is two.
 
-![Ranking all time](pictures/manual/en/kiosk-ranking-alltime.png)
+- **All time** – the podium: the top 3 since the start, first in the middle.
 
-![Ranking this month](pictures/manual/en/kiosk-ranking-month.png)
+  ![Ranking all time](pictures/manual/en/kiosk-ranking-alltime.png)
 
-![Deposit pillory](pictures/manual/en/kiosk-ranking-pillory.png)
+- **This month** – the month isn't over yet: the current top 3 stand by while a fourth runs
+  up, vaults over a swivel chair to the coffee machine and waits for the judges' scores.
+
+  ![Ranking this month](pictures/manual/en/kiosk-ranking-month.png)
+
+- **Pillory** – everyone who still owes money up to last month, as a walk of shame; their
+  names and amounts run through the bar underneath. When everyone has paid, the banner says
+  **NO SHAME** and the executioner stands on an empty scaffold with nothing to do.
+
+  ![Pillory](pictures/manual/en/kiosk-ranking-pillory.png)
+
+Opening the ranking always starts on **All time**.
 
 ### Admin access
 
@@ -271,8 +298,9 @@ after all. Members don't need it; they link their phone under **Settings**.
 
 ### "We'll be right back"
 
-During an installation or an update – and whenever the app briefly doesn't answer – the kiosk
-shows this screen and takes no input. Once the work is done, it reloads by itself.
+During an installation, an update or a restore – and whenever the app briefly doesn't answer –
+the kiosk shows this screen and takes no input. Once the work is done, it reloads by itself;
+the same goes for an error page.
 
 ![Maintenance](pictures/manual/en/kiosk-maintenance.png)
 
@@ -313,14 +341,23 @@ A link that has expired or was already used ends up here – just create a new o
 
 ## 6. The dashboard
 
-The dashboard is at `https://<address>/dashboard/`. Pages that concern the whole device
-(System, Backup, Update, Certificate, Import, Reset, Audit log) are for **superusers** only –
-that is, the admin account from setup.
+The dashboard is at `https://<address>/dashboard/`. On a PC or tablet its pages are in the bar
+on the left; on a phone the everyday ones are tabs at the bottom and everything else is under
+**More**.
 
-**Home** shows the card reader's state, the address for other devices, and the exports (all
-orders or payments as CSV).
+![Dashboard on a phone](pictures/manual/en/dashboard-phone.png)
 
-![Dashboard home](pictures/manual/en/dashboard-home.png)
+There are two roles (see [Dashboard users](#dashboard-users)): **Managers** look after members,
+bookings, coffee sorts and payment methods; **Admins** can also do everything under **System** –
+users, login rules, backups, updates, certificate, audit log and the like. The admin account from
+setup is an admin. There is no other administration interface.
+
+**Overview** shows the most important numbers, buttons to enter a payment or add a member, and
+the **Device** card: is the card reader online, are backups running, is the clock module (RTC)
+fine, and under which address phones reach the device. Something red here needs looking after –
+the same things blink red on the kiosk.
+
+![Overview](pictures/manual/en/dashboard-home.png)
 
 ### Statistics and pillory
 
@@ -334,20 +371,6 @@ machine strokes – a jug is two.
 as on the kiosk.
 
 ![Pillory](pictures/manual/en/dashboard-pillory.png)
-
-### Coffee sorts and payment methods
-
-**Coffee sorts**: what the kiosk offers – name, price and machine strokes.
-
-![Coffee sorts](pictures/manual/en/dashboard-coffee-sorts.png)
-
-**Payment methods**: PayPal needs the paypal.me name, PayPal Pool the pool's URL, WERO the
-phone number; *Custom link* takes any address, optionally with `{amount}` for the amount owed.
-These become the pay links and QR codes on kiosk and phone.
-
-![Payment methods](pictures/manual/en/dashboard-payment-methods.png)
-
-![Add payment method](pictures/manual/en/dashboard-payment-method-form.png)
 
 ### Members
 
@@ -368,22 +391,110 @@ move to the account you keep, the other one is deleted.
 
 ![Merge members](pictures/manual/en/dashboard-merge.png)
 
+### Bookings
+
+Every coffee booked and every payment, newest first, filterable by member (with their balance).
+Here you correct a wrong booking (**Edit**, **Delete**) and record a payment that didn't go
+through the kiosk – **Enter payment**, e.g. cash put in the till. Every change is recorded in
+the audit log.
+
+![Bookings](pictures/manual/en/dashboard-bookings.png)
+
+![Enter payment](pictures/manual/en/dashboard-payment-form.png)
+
+### Coffee sorts and payment methods
+
+**Coffee sorts**: what the kiosk offers – name, price and machine strokes.
+
+![Coffee sorts](pictures/manual/en/dashboard-coffee-sorts.png)
+
+**Payment methods**: PayPal needs the paypal.me name, PayPal Pool the pool's URL, WERO the
+phone number; *Custom link* takes any address, optionally with `{amount}` for the amount owed.
+These become the pay links and QR codes on kiosk and phone.
+
+![Payment methods](pictures/manual/en/dashboard-payment-methods.png)
+
+![Add payment method](pictures/manual/en/dashboard-payment-method-form.png)
+
+### My account
+
+Your name at the top right: your role, your last login, and **Change password**. Your own password is only changed here, never in the user list.
+
+![My account](pictures/manual/en/dashboard-account.png)
+
+### Dashboard users
+
+Who may log in to the dashboard – admins only. **Add user** asks for a user name, the role
+(**Admin** or **Manager**) and a first password; tick *Must set a new password at the first
+login* to hand it over as a one-off password. Per user: **Edit**, **Set password** (for a
+forgotten one), **Delete**. A user locked after too many failed logins is marked *locked*.
+
+![Dashboard users](pictures/manual/en/dashboard-users.png)
+
+![Add user](pictures/manual/en/dashboard-user-form.png)
+
+### Login & passwords
+
+The rules for logging in. The defaults follow the BSI's recommendation and can only be set
+within sensible limits:
+
+| Rule | Default | Possible |
+|---|---|---|
+| Minimum length | 12 characters | 8–64 |
+| Character kinds (lower case, upper case, digits, symbols) | 3 | 1–4 |
+| … or a long passphrase of at least | 20 characters with 2 kinds | off, or up to 128 |
+| Lock after failed logins | 5 | 3–20 |
+| Locked for | 15 minutes | 1–1440 |
+| Logged out when idle for | 30 minutes | 5–480 |
+
+Passwords are at most 128 characters long. When the rules get **stricter**, nobody is locked
+out: whoever's password no longer meets them is asked for a new one at their next login.
+
+![Login & passwords](pictures/manual/en/dashboard-password-policy.png)
+
 ### System
 
 **System** shows the device's CPU, memory and disk.
 
 ![System](pictures/manual/en/dashboard-system.png)
 
-**System time**: only needed when the real-time clock is missing or wrong. The new time is
-also written to the clock within ten minutes.
+**System time**: only needed when the clock module is missing or wrong. The new time is
+also written to the clock module within ten minutes.
 
 ![System time](pictures/manual/en/dashboard-system-time.png)
 
-**Backup**: back up now, or download existing backups.
+#### Backup
+
+Everything about the backup stick (see [Backups](#backups) for how it works):
+
+- **This device's backup stick** – space, whether the backups are encrypted, **Back up now**,
+  **Eject safely**, and the backups on it, each with **Download** and **Restore**. *checked*
+  means its checksum is fine, *damaged* that it isn't.
+- **USB sticks** – a stick that isn't set up yet: **Set up as backup stick**. A stick from
+  before (of this device) or of another CoffeePy can be read, and taken over with **Use for
+  this device**.
+- **When and what is kept** – how often (every 15 minutes to once a day) and how many backups
+  stay: the newest ones, then one per day, week and month.
+- **Restore a backup** – from the stick, or **Restore from a file**.
+- **Download a backup** – the whole device as it is right now, as a file, also without a stick.
 
 ![Backup](pictures/manual/en/dashboard-backup.png)
 
-**Update**: upload an update bundle (see [Updates](#updates)).
+When restoring you choose **what**: the data (members, bookings, coffee sorts, dashboard logins),
+the certificates and device CA (phones keep trusting the device), the device identity (its
+backup stick becomes this device's) and the settings (language, address, time zone, log
+retention). To confirm you type `DELETE`. Before anything changes, the current state is saved
+to the stick; if the restore fails, nothing is changed. An encrypted backup needs the passphrase.
+
+![Restore from a file](pictures/manual/en/dashboard-restore-upload.png)
+
+#### Update
+
+Upload an update bundle and follow it being installed (see [Updates](#updates)). **Back to …**
+returns to the version before the last update. **Versions** lists exactly what runs on the
+device: the CoffeePy version and its commit, Python, Django, the database, the operating
+system, Docker, and every container with the id of its image – **Copy all** puts the whole list
+on the clipboard, ready for a bug report.
 
 ![Update](pictures/manual/en/dashboard-update.png)
 
@@ -397,12 +508,19 @@ own certificate – a bad upload can never lock it out.
 
 ![Certificate](pictures/manual/en/dashboard-certificate.png)
 
+#### More system pages
+
 **Import legacy DB**: takes over the data of an old CoffeePy (V1) – a `coffee.db` or one of
 its backups. The import keeps running in the background even if you close the page.
 
 ![Import](pictures/manual/en/dashboard-import.png)
 
-**Audit log**: the last 500 changes made in the dashboard – who did what, when.
+**Audit log**: everything that happened on the device – logins and failed logins, every change
+in the dashboard, bookings and settings on the kiosk and in the portal, backups, restores,
+updates, the backup stick and the clock module. Per entry: when, who, from where, what, and
+whether it succeeded. **Search** and the filters narrow it down, **Export (CSV)** downloads
+what's shown. Entries are deleted after the retention period (90 days by default, see
+[provisioning tool](#the-provisioning-tool)).
 
 ![Audit log](pictures/manual/en/dashboard-audit-log.png)
 
@@ -411,8 +529,6 @@ payment methods, audit log). Dashboard logins stay. To confirm you have to type 
 take a backup first!
 
 ![Reset database](pictures/manual/en/dashboard-reset.png)
-
-For anything the dashboard doesn't cover there's the Django admin at `/admin/`.
 
 ---
 
@@ -426,29 +542,93 @@ right back" meanwhile. Data, database password and certificate are kept.
 
 ### Backups
 
-With backups on, CoffeePy backs up the database regularly (hourly by default, keeping the last
-48) to the `COFFEEBAK` USB stick. Under **Backup** in the dashboard you can back up right away
-and download backups.
+The device backs itself up to **one USB stick** that you set up for it:
+
+1. Plug in a stick and open **Backup** in the dashboard.
+2. **Set up as backup stick** – after a confirmation the stick is **erased**, formatted and
+   marked as this device's. Backups start right away.
+3. From then on the device makes a backup at the interval you set (hourly by default) and
+   thins them out: the newest 48, then one a day for 14 days, one a week for 8 weeks, one a
+   month for 12 months.
+
+A backup holds the whole device: the data, the device CA and certificates, and its settings –
+so a replacement device can take over completely. Every backup is read back and checked after
+writing. With a passphrase from the [provisioning tool](#the-provisioning-tool) it is
+encrypted (AES-256); without one, anyone who takes the stick can read it – a deliberate choice
+when the stick sits inside the housing.
+
+- **Stick pulled out?** The overview and the kiosk show that backups aren't running. Plug the
+  **same** stick back in, and everything carries on as before.
+- **New stick?** It has to be set up like the first one. The old one is forgotten: the device
+  still reads it, but never writes to it again.
+- **Restoring** is described under [Backup](#backup). A restore also replaces the dashboard
+  logins – you may have to log in again afterwards.
 
 ### Updates
 
-The device needs no internet for updates:
+The device needs no internet for updates. On a PC with internet and Docker (or Podman):
 
-1. On a PC with internet, build an update bundle:
-   `./scripts/build_update_bundle.sh linux/arm64 coffeepy-update.tar` (`linux/arm/v7` for a
-   32-bit system).
-2. Upload it in the dashboard under **Update** (via USB stick on a laptop in the device's WiFi,
-   or directly).
-3. The device applies it by itself. Meanwhile the kiosk shows "We'll be right back" with a
-   progress bar, the update page shows the log.
+```bash
+./scripts/update_builder.sh
+```
 
-An update also works from a PC through the provisioning tool.
+The **update package builder** asks what goes into the bundle – platform, the device's own
+services, operating system packages for an offline device –, which signing key to use (it
+creates one on the first run), and where the bundle goes. It builds and signs the bundle and
+can upload it to a device's dashboard right away and follow it being installed.
+
+![Update package builder](pictures/manual/en/update-builder.png)
+
+Otherwise upload the bundle in the dashboard under **Update**. The device then:
+
+1. checks the **signature** and every file's checksum, that the bundle is meant for this device,
+   that there is room, and that it isn't older than what's installed (unless *Allow installing
+   an older version* is ticked),
+2. saves the database and the running version **to the SD card** (never to the backup stick),
+3. installs it – the kiosk shows "We'll be right back" with a progress bar, the update page the log,
+4. checks that the new version answers. If it doesn't, the previous version **goes back
+   automatically**, data included.
+
+**Back to …** on the update page returns to the version before the last update by hand. The
+data then also goes back to the state before that update.
+
+For scripts there is `./scripts/build_update_bundle.sh` (its options are listed at the top of
+the script); an update also works from a PC through the provisioning tool.
+
+#### Your own signing key
+
+A device only installs updates whose signature matches its key – by default the key that comes
+with CoffeePy (`install/update-signing.pub`). If you build updates yourself, use your own:
+
+1. **Create a key pair** on the PC where you build the updates:
+   `./scripts/update_signing_key.sh` – the private key goes to
+   `~/.config/coffeepy/update-signing.key` (or the path you give it) and **never leaves that
+   PC**; the public key is written to `install/update-signing.pub`.
+2. **Put the public key on the device** – one of two ways:
+   - in the [provisioning tool](#the-provisioning-tool) under **Updates › Own key**, pick the
+     public key file (`.pub`). It ends up on the device as
+     `/etc/coffeepy/update-signing.own.pub`, takes precedence over CoffeePy's key, and **no
+     update replaces it**. **CoffeePy's key** there removes it again.
+   - or install from your own checkout with your `install/update-signing.pub` committed –
+     then it is the device's key from the start, and every update built from that checkout
+     brings the same one along.
+3. Build updates with that key: the builder asks for it (*Signing key*), the script takes
+   `--key FILE`.
+
+The fingerprint of the key in use is shown under **Update › Versions** (*Update signature*).
+
+**Switching the check off completely:** in the provisioning tool **Updates › No check**, or
+`UPDATE_VERIFY_SIGNATURE=false` in `/opt/coffeepy/.env` on the device. The device then
+installs every bundle – signed, signed with another key, or not signed at all
+(`build_update_bundle.sh --unsigned`). The checksums, the platform and the space are still
+checked. Only do this when nobody you don't trust can log in to the dashboard as an admin:
+whoever can upload an update can then run anything on the device.
 
 ### Language
 
 You pick the default language during setup. Every device can switch for itself: the kiosk
-with its **DE/EN** button, phones and PCs at the top right of the portal and at the bottom left
-of the dashboard (or below the login form). Every device remembers its own choice.
+with its **DE/EN** button, phones and PCs at the top right of the portal and of the dashboard
+(or below the login form). Every device remembers its own choice.
 
 ---
 
@@ -461,6 +641,9 @@ of the dashboard (or below the login form). Every device remembers its own choic
 | After switching on, the screen is black, then white, for a minute. | Normal: the Pi starts first, then the browser. The kiosk appears after about a minute. |
 | *Card reader not available* | Check the reader's cable and restart the device. |
 | A card isn't recognised. | Hold it flat and still; a card marked as departed is turned away. |
-| The time is wrong. | Replace the real-time clock's battery, then correct the time under **System time** in the dashboard. |
-| "We'll be right back" doesn't go away. | Is an update running? The dashboard's **Update** page shows its log. A status older than two hours is ignored; when in doubt, restart the device. |
+| Red **database** sign on the kiosk | Backups aren't running: plug the backup stick back in, or look at **Backup** in the dashboard for the error. |
+| Red **clock** sign on the kiosk, or the time is wrong | The overview's *Clock module (RTC)* says why. *Not found* / *Does not answer*: check the module and its wiring. *Had lost the time*: replace its battery (CR2032), then correct the time under **System time** – the sign goes once the module has kept the time through a restart. |
+| "We'll be right back" doesn't go away. | Is an update or a restore running? The dashboard's **Update** or **Backup** page shows its progress. A status older than two hours is ignored; when in doubt, restart the device. |
+| Login refused although the password is right | Too many failed attempts lock the account for a while (15 minutes by default) – wait, or have an admin set a new password under **Dashboard users**. |
+| An update is refused | The update page says why: no or a wrong signature (see [Your own signing key](#your-own-signing-key)), a bundle for another platform, not enough space, or an older version than the installed one. |
 | The phone can't reach the dashboard. | Is it connected to the device's WiFi? Turn mobile data off briefly – some phones leave a WiFi without internet otherwise. |

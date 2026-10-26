@@ -26,3 +26,4 @@ data/usb/
 # you no longer need the .img it produced (the work tree belongs to root).
 pi-gen/
 .coverage
+coffeepy-version.json

@@ -320,11 +320,11 @@ class KioskAlarmTestCase(FakeDevice, TestCase):
 
     def test_shown_only_while_backups_are_disturbed(self):
         CoffeeSort.objects.create(name="Espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.assertNotContains(self.panel(), "backup-alarm")  # never set up: nothing is broken
+        self.assertNotContains(self.panel(), "Backups are not running - see the dashboard")  # never set up: nothing is broken
         (self.storage / "stick.json").write_text(json.dumps({"stick_id": "stick-1"}))
-        self.assertContains(self.panel(), "backup-alarm")  # set up, stick missing
+        self.assertContains(self.panel(), "Backups are not running - see the dashboard")  # set up, stick missing
         self.set_up_stick()
-        self.assertNotContains(self.panel(), "backup-alarm")
+        self.assertNotContains(self.panel(), "Backups are not running - see the dashboard")
 
     def test_overview_names_the_missing_stick(self):
         User.objects.create_user(username="helper", password="pw")

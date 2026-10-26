@@ -17,7 +17,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from . import audit, import_jobs, restore_jobs
+from . import audit, import_jobs, restore_jobs, versions
 from .decorators import superuser_required
 
 # The watcher rewrites state.json at every step; a running job that stops moving is dead.
@@ -60,8 +60,13 @@ def update(request):
     installed = _read("installed.json", {}) or {}
     if installed.get("applied_at"):
         installed["applied"] = datetime.fromtimestamp(installed["applied_at"], tz=timezone.get_current_timezone())
+    system = _read("system.json")
+    version_sections = versions.sections(installed, system if isinstance(system, dict) else None)
     return render(request, "dashboard/update.html", {
         "version": settings.COFFEEPY_VERSION,
+        "version_sections": version_sections,
+        "version_text": versions.as_text(version_sections),
+        "system_missing": not isinstance(system, dict),
         "installed": installed,
         "previous": _read("previous.json"),
         "state": watcher_state(),

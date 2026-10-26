@@ -323,3 +323,15 @@ body.dashboard input[type="date"] { font: inherit; min-height: 44px; padding: 8p
 .audit-row code { font-size: 0.9em; color: var(--coffee); }
 /* Cards inside a form: spaced like the page column spaces its own. */
 .stack { display: flex; flex-direction: column; gap: 16px; }
+/* The update page's version list: label and value side by side, stacked on a phone; hashes wrap. */
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.card-head h2 { margin: 0; }
+#versions h3 { margin: 18px 0 6px; font-size: 1rem; color: var(--coffee); }
+.version-list { display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: 4px 16px; margin: 0; }
+.version-list dt { color: var(--coffee-light); }
+.version-list dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.version-list code { font-size: 0.9em; color: var(--coffee); }
+@media (max-width: 560px) {
+  .version-list { grid-template-columns: 1fr; gap: 0; }
+  .version-list dd { margin-bottom: 8px; }
+}

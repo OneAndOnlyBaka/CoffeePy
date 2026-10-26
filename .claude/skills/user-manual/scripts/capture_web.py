@@ -105,9 +105,18 @@ class Browser:
                 self.js("document.getElementById('qr-modal').classList.remove('open')")
         raise RuntimeError(f"modal never opened from {selector}")
 
-    def shot(self, name, settle=0.6):
+    def shot(self, name, settle=0.6, full=False):
+        """full: the whole page, not only what fits the window - for pages whose point is
+        further down (the update page's version list)."""
         time.sleep(settle)
+        if full:
+            width = self.js("window.innerWidth")
+            height = self.js("Math.ceil(document.documentElement.scrollHeight)")
+            self.viewport(width, height)
+            time.sleep(0.4)
         data = self.page.call("Page.captureScreenshot", format="png")["data"]
+        if full:
+            self.viewport(width, 800)
         with open(f"{OUT}/{self.lang}/{name}.png", "wb") as f:
             f.write(base64.b64decode(data))
         print(f"  {self.lang}/{name}.png")
@@ -121,9 +130,17 @@ def kiosk(b):
         b.wait_state("wait_for_card")
         b.shot(name)
 
-    b.open_modal(".info-btn:not(.lang-btn)")
+    b.open_modal(".admin-btn")
     b.shot("kiosk-setup-popup")
     b.js("document.getElementById('qr-modal').classList.remove('open')")
+
+    # The red warning sign: an RTC check that found no clock module (written by hand here, the
+    # next real check - started right after - puts the true state back).
+    on_pi("echo '{\"state\": \"missing\", \"detail\": \"manual screenshot\", \"checked\": '$(date +%s)'}' "
+          "| sudo tee /opt/coffeepy/data/storage/rtc.json >/dev/null")
+    b.wait("document.querySelector('.device-alarms')", timeout=10)
+    b.shot("kiosk-device-alarm", settle=0.3)
+    on_pi("sudo systemctl start coffeepy-rtc-sync.service")
 
     b.click("a.nav-btn[data-mode=order]")
     b.wait_state("wait_for_card")
@@ -184,7 +201,12 @@ DASHBOARD_PAGES = [
     ("/dashboard/system/", "dashboard-system"), ("/dashboard/system-time/", "dashboard-system-time"),
     ("/dashboard/import/", "dashboard-import"), ("/dashboard/audit-log/", "dashboard-audit-log"),
     ("/dashboard/members/merge/", "dashboard-merge"), ("/dashboard/reset/", "dashboard-reset"),
+    ("/dashboard/bookings/", "dashboard-bookings"), ("/dashboard/bookings/payments/add/", "dashboard-payment-form"),
+    ("/dashboard/users/", "dashboard-users"), ("/dashboard/users/add/", "dashboard-user-form"),
+    ("/dashboard/login-rules/", "dashboard-password-policy"), ("/dashboard/account/", "dashboard-account"),
+    ("/dashboard/backup/restore/upload/", "dashboard-restore-upload"),
 ]
+FULL_PAGE = ("dashboard-update", "dashboard-backup")
 
 
 def dashboard(b, password):
@@ -198,7 +220,11 @@ def dashboard(b, password):
     anna = shell_django("from coffee.models import Member; print(Member.objects.get(nickname='Anna').uid)")
     for path, name in DASHBOARD_PAGES + [(f"/dashboard/members/{anna}/edit/", "dashboard-member-form")]:
         b.go(path)
-        b.shot(name, settle=1.5 if "statistics" in path or "system" in path else 0.6)
+        b.shot(name, settle=1.5 if "statistics" in path or "system" in path else 0.6, full=name in FULL_PAGE)
+    b.viewport(390, 844, scale=2, mobile=True)  # the same dashboard on a phone
+    b.go("/dashboard/")
+    b.shot("dashboard-phone")
+    b.viewport(1280, 800)
     b.js("fetch('/dashboard/logout/', {method: 'POST', headers: {'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)[1]}})")
     time.sleep(1)
 

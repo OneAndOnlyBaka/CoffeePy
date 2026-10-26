@@ -223,8 +223,8 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
     <div class="podium-stage">
         <div class="podium-banner">{{ banner }}</div>
         {% if ranking_view == "pillory" %}
-        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.gif' %}" alt="">
         {% if rows %}
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.gif' %}" alt="">
         {% comment %}
         The list twice in a row, moved left by exactly one copy's width per animation round
         (kiosk.css) - so the band never runs out. A CSS animation, like the GIF, survives the
@@ -243,6 +243,7 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
             </div>
         </div>
         {% else %}
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.gif' %}" alt="">
         <div class="podium-names ticker"><b class="ticker-clear">{% translate "Everyone has paid up!" %}</b></div>
         {% endif %}
         {% else %}

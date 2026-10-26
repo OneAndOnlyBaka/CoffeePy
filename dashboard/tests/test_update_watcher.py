@@ -41,6 +41,8 @@ class FakeDocker:
         self.tags = {}
         self.restored = []
         self.fail = set()
+        self.ps = (b'{"ID":"aaa111","Service":"web","Image":"coffeepy-web:latest","State":"running"}\n'
+                   b'{"ID":"bbb222","Service":"db","Image":"postgres:16-alpine","State":"running"}\n')
 
     def run(self, *args, stdin=None, cwd=None, check=True):
         args = tuple(str(a) for a in args)
@@ -57,7 +59,13 @@ class FakeDocker:
                     raise self.error(f"{failing} failed")
                 return SimpleNamespace(returncode=1, stdout=b"", stderr=b"failed")
         stdout = b""
-        if args[:2] == ("docker", "compose") and "config" in args:
+        if args[:3] == ("docker", "compose", "ps"):
+            stdout = self.ps
+        elif args[:2] == ("docker", "inspect"):
+            stdout = b"aaa111ffffff sha256:0123456789abcdef\nbbb222ffffff sha256:fedcba9876543210\n"
+        elif args[:2] == ("docker", "version") or args[:3] == ("docker", "compose", "version"):
+            stdout = b"28.1.1"
+        elif args[:2] == ("docker", "compose") and "config" in args:
             stdout = "\n".join(self.images).encode()
         elif args[:2] == ("docker", "compose") and "pg_dump" in args:
             stdout = b"PGDMP-dump"
@@ -204,10 +212,21 @@ class UpdateWatcherTestCase(SimpleTestCase):
     def test_unsigned(self):
         self.assert_refused(self.apply(self.bundle(sign=False)), "not signed")
 
-    def test_unsigned_allowed_on_this_device(self):
+    def test_check_turned_off_on_this_device(self):
         with open(self.project / ".env", "a") as f:
-            f.write("UPDATE_ALLOW_UNSIGNED=true\n")
+            f.write("UPDATE_VERIFY_SIGNATURE=false\n")
         self.assertEqual(self.apply(self.bundle(sign=False))["state"], "done")
+        other = self.root / "other.pem"
+        subprocess.run(["openssl", "genpkey", "-algorithm", "ed25519", "-out", str(other)], check=True)
+        self.assertEqual(self.apply(self.bundle(key=other))["state"], "done")  # any signature, or none
+
+    def test_the_devices_own_key_wins(self):
+        own = self.root / "own.pem"
+        subprocess.run(["openssl", "genpkey", "-algorithm", "ed25519", "-out", str(own)], check=True)
+        subprocess.run(["openssl", "pkey", "-in", str(own), "-pubout", "-out", str(self.watcher.OWN_PUBLIC_KEY)],
+                       check=True)
+        self.assert_refused(self.apply(self.bundle()), "openssl")  # the bundled key no longer counts
+        self.assertEqual(self.apply(self.bundle(key=own))["state"], "done")
 
     def test_signed_with_another_key(self):
         other = self.root / "other.pem"
@@ -316,6 +335,82 @@ class UpdateWatcherTestCase(SimpleTestCase):
         self.assertFalse(stale.exists())
         self.assertTrue(fresh.exists())
         self.assertEqual([c.args[0].name for c in process.call_args_list], ["b.tar", "a.tar.gz"])
+
+    # --- system.json, for the dashboard's version list ---
+
+    def system(self):
+        self.watcher.write_system_info()
+        return json.loads(self.watcher.SYSTEM_FILE.read_text())
+
+    def test_system_info(self):
+        info = self.system()
+        self.assertEqual(info["containers"], [
+            {"service": "db", "image": "postgres:16-alpine", "image_id": "fedcba987654", "state": "running"},
+            {"service": "web", "image": "coffeepy-web:latest", "image_id": "0123456789ab", "state": "running"},
+        ])
+        self.assertEqual((info["docker"], info["compose"]), ("28.1.1", "28.1.1"))
+        self.assertEqual(info["signature"]["key"], "bundled")
+        self.assertEqual(len(info["signature"]["fingerprint"]), 16)
+
+    def test_system_info_with_older_compose_and_without_containers(self):
+        self.docker.ps = b'[{"ID":"aaa111","Service":"web","Image":"coffeepy-web:latest"}]'
+        self.assertEqual(self.system()["containers"][0]["state"], "")
+        self.docker.ps = b"no json"
+        self.assertEqual(self.system()["containers"], [])
+        self.docker.ps = b"[]"
+        self.docker.calls.clear()
+        self.assertEqual(self.system()["containers"], [])
+        self.assertNotIn(("docker", "inspect"), [c[:2] for c in self.docker.calls])
+
+    def test_system_info_when_docker_is_missing_or_fails(self):
+        self.docker.fail.add("version")
+        self.assertEqual(self.system()["docker"], "")
+        with mock.patch.object(self.watcher, "run", side_effect=OSError("no docker")):
+            info = self.system()
+        self.assertEqual((info["docker"], info["containers"]), ("", []))
+
+    def test_system_info_reads_the_host(self):
+        files = {"/proc/device-tree/model": "Raspberry Pi 3 Model B Rev 1.2\x00",
+                 "/etc/os-release": 'NAME="Debian"\nPRETTY_NAME="Raspbian GNU/Linux 13 (trixie)"\n'}
+
+        class FakePath(type(self.root)):
+            def read_text(self, *args, **kwargs):
+                if str(self) in files:
+                    return files[str(self)]
+                raise OSError(str(self))
+
+        with mock.patch.object(self.watcher, "Path", FakePath):
+            info = self.system()
+        self.assertEqual((info["model"], info["os"]), ("Raspberry Pi 3 Model B Rev 1.2", "Raspbian GNU/Linux 13 (trixie)"))
+        files["/etc/os-release"] = 'NAME="Debian"\n'
+        files.pop("/proc/device-tree/model")
+        with mock.patch.object(self.watcher, "Path", FakePath):
+            info = self.system()
+        self.assertEqual((info["model"], info["os"]), ("", ""))
+        files.clear()
+        with mock.patch.object(self.watcher, "Path", FakePath):
+            self.assertEqual(self.system()["os"], "")
+
+    def test_system_info_signature(self):
+        self.watcher.OWN_PUBLIC_KEY.write_text(self.pubkey.read_text())
+        self.assertEqual(self.system()["signature"]["key"], "own")
+        self.watcher.OWN_PUBLIC_KEY.unlink()
+        self.pubkey.unlink()
+        self.assertEqual(self.system()["signature"], {"check": True, "key": "missing"})
+        with open(self.project / ".env", "a") as f:
+            f.write("UPDATE_VERIFY_SIGNATURE=false\n")
+        self.assertEqual(self.system()["signature"], {"check": False})
+
+    def test_cycle_refreshes_system_info_when_due_and_after_a_change(self):
+        last = self.watcher.cycle()
+        self.assertTrue(self.watcher.SYSTEM_FILE.exists())
+        self.watcher.SYSTEM_FILE.unlink()
+        self.assertEqual(self.watcher.cycle(last), last)  # not due yet
+        self.assertFalse(self.watcher.SYSTEM_FILE.exists())
+        with mock.patch.object(self.watcher, "process_bundle"):
+            (self.watcher.INCOMING / "b.tar").write_bytes(b"")
+            self.assertGreaterEqual(self.watcher.cycle(last), last)
+        self.assertTrue(self.watcher.SYSTEM_FILE.exists())
 
     def test_main(self):
         with mock.patch.object(self.watcher, "cycle", side_effect=[RuntimeError("boom"), None, KeyboardInterrupt]), \

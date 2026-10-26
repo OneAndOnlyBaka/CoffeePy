@@ -52,8 +52,6 @@ services:
   web:
     build:
       context: .
-      args:
-        COFFEEPY_VERSION: ${COFFEEPY_VERSION:-dev}
     image: coffeepy-web:latest
     restart: unless-stopped
     depends_on:

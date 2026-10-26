@@ -32,11 +32,12 @@
 # comments - text after a rule becomes part of its pattern.)
 - /pi-gen/
 
-# Runtime state of whichever machine built the image; the device makes its own.
-- /data/updates/incoming/*
-- /data/updates/processed/*
-- /data/updates/status/*
-- /data/backups/*
+# The update watcher's state: what is installed, the rollback snapshot (previous.json, the old
+# compose file and install/) and the databases saved before each update. Only some of it was
+# kept once - a re-run then deleted the rest, and with it the way back. The whole directory,
+# like data/storage/ below; the same for the old backup folder.
+- /data/updates/
+- /data/backups/
 # The device CA and its certificates - phones trust this CA, so a re-run must keep it.
 - /data/tls/
 # The kiosk's "back in a moment" status - written by this very run (install/maintenance.sh).

@@ -6,10 +6,14 @@ the ranking. Both are plain links/GETs - nothing here may differ from one poll t
 <button type="button" class="info-btn admin-btn" title="{% translate "Admin access" %}" aria-label="{% translate "Admin access" %}"
         hx-get="{% url 'kiosk:qr_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
         hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/wrench.svg" %}</button>
-{% if backup_disturbed %}
-{% comment %}Backups have stopped (stick missing, failing, ...) - whoever looks after the device sees it right here; the details are on the dashboard's backup page. It only changes when that state does, so the poll stays byte-identical.{% endcomment %}
-<span class="info-btn backup-alarm" role="img" title="{% translate "Backups are not running - see the dashboard" %}"
-      aria-label="{% translate "Backups are not running - see the dashboard" %}">{% include "icons/database.svg" %}</span>
+{% if backup_disturbed or rtc_disturbed %}
+{% comment %}Something on the device is broken - whoever looks after it sees it right here, the details are on the dashboard: backups have stopped (stick missing, failing, ...), or the clock module (RTC) is missing, doesn't answer or lost the time. These only change when that state does, so the poll stays byte-identical.{% endcomment %}
+<div class="device-alarms">
+    {% if backup_disturbed %}<span class="info-btn device-alarm" role="img" title="{% translate "Backups are not running - see the dashboard" %}"
+          aria-label="{% translate "Backups are not running - see the dashboard" %}">{% include "icons/database.svg" %}</span>{% endif %}
+    {% if rtc_disturbed %}<span class="info-btn device-alarm" role="img" title="{% translate "The clock module (RTC) is faulty - see the dashboard" %}"
+          aria-label="{% translate "The clock module (RTC) is faulty - see the dashboard" %}">{% include "icons/clock.svg" %}</span>{% endif %}
+</div>
 {% endif %}
 {% get_current_language as current_language %}
 {% if current_language == "de" %}

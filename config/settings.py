@@ -2,6 +2,7 @@
 Django settings for the CoffeePy project.
 """
 
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -183,9 +184,19 @@ RESTORE_STATUS_FILE = Path(os.environ.get("RESTORE_STATUS_FILE", Path(tempfile.g
 # writes the same file during installs and updates; Caddy serves it).
 MAINTENANCE_DIR = Path(os.environ.get("MAINTENANCE_DIR", BASE_DIR / "data" / "maintenance"))
 
-# Which version this is: set when the image is built (Dockerfile, COFFEEPY_VERSION from
-# scripts/build_update_bundle.sh), "dev" in a checkout. Backups and update bundles carry it.
-COFFEEPY_VERSION = os.environ.get("COFFEEPY_VERSION") or "dev"
+# Which version this is: coffeepy-version.json, written into the tree by scripts/write_version.sh
+# before it is built or shipped (git describe, and the commit) - "dev" without one. Backups and
+# update bundles carry it, the dashboard lists it (dashboard/versions.py).
+def _build_info():
+    try:
+        info = json.loads((BASE_DIR / "coffeepy-version.json").read_text())
+    except (OSError, ValueError):
+        return {}
+    return info if isinstance(info, dict) else {}
+
+
+COFFEEPY_BUILD = _build_info()
+COFFEEPY_VERSION = os.environ.get("COFFEEPY_VERSION") or COFFEEPY_BUILD.get("version") or "dev"
 
 # Standalone WiFi AP credentials (see install/hostapd.conf.template) - only used to render
 # the kiosk setup-wizard's WiFi QR code; blank on deployments that join an existing network.

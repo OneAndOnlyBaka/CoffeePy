@@ -85,7 +85,7 @@ class RankingBadgeTestCase(TestCase):
 
         self.client.get(reverse("kiosk:ranking_view", args=["pillory"]))
         response = self.client.get(reverse("kiosk:panel"))
-        self.assertContains(response, "pillory.gif")
+        self.assertContains(response, "ranking/pillory.gif")
         self.assertNotContains(response, "podium.gif")
         self.assertContains(response, '<div class="podium-banner">Shame</div>', html=False)
         # in the ticker - twice, so the band runs on without a gap
@@ -96,6 +96,10 @@ class RankingBadgeTestCase(TestCase):
         response = self.client.get(reverse("kiosk:panel"))
         self.assertContains(response, "Everyone has paid up!")
         self.assertNotContains(response, "ticker-track")
+        # the executioner with nothing to do instead of the walk of shame
+        self.assertContains(response, "ranking/pillory_empty.gif")
+        self.assertContains(response, '<div class="podium-banner">No shame</div>', html=False)
+        self.assertNotContains(response, "ranking/pillory.gif")
 
     def test_ranking_nav_opens_on_the_podium_again(self):
         self.client.get(reverse("kiosk:ranking_view", args=["pillory"]))

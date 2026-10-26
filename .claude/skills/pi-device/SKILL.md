@@ -114,13 +114,17 @@ about a Pi 3. Report numbers, not impressions.
 
 ## Update bundles
 
-`scripts/build_update_bundle.sh linux/arm64 ~/bundle.tar` can run **on the Pi itself**
+`scripts/build_update_bundle.sh --unsigned --output ~/bundle.tar` can run **on the Pi itself**
 (native arm64, Docker present) - this machine has neither Docker nor arm64 emulation. It
 re-tags `coffeepy-web:latest` on the Pi, though: re-tag the running image back
 (`docker tag <running sha> coffeepy-web:latest`) or the update has nothing to change.
 Upload through `/dashboard/update/` (login + CSRF with curl and a cookie jar, Host header
 as above), or drop the file into `/opt/coffeepy/data/updates/incoming/` directly; results
 land in `data/updates/status/*.log`. Test a broken bundle followed by a good one as well.
+The bundle built there is unsigned and the device refuses it: **never copy the private signing
+key to the Pi** - fetch only `manifest.json`, sign it here (`openssl pkeyutl -sign -rawin -inkey
+~/.config/coffeepy/update-signing.key -in manifest.json -out manifest.sig`) and put `manifest.sig`
+back into the tar.
 
 ## Cleaning up
 

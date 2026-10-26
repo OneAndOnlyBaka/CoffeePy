@@ -11,7 +11,7 @@
 #                           offline device's security updates (slow: resolves them under qemu)
 #     --key FILE            signing key (default ~/.config/coffeepy/update-signing.key,
 #                           create one with scripts/update_signing_key.sh)
-#     --unsigned            no signature - devices refuse it unless UPDATE_ALLOW_UNSIGNED=true
+#     --unsigned            no signature - devices refuse it unless UPDATE_VERIFY_SIGNATURE=false
 #
 # docker-compose.yml is the only source of truth for what's in the bundle and what ends up
 # running on the Pi - nothing here is a hand-maintained list of images. Shipping the compose
@@ -57,10 +57,12 @@ if [ "$SIGN" = "1" ] && [ "${IMAGES_ONLY:-0}" != "1" ] && [ ! -f "$KEY" ]; then
 	exit 2
 fi
 
-VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo "unversioned")"
+# Baked into the image (coffeepy-version.json) as well as named in the manifest.
+VERSION="$("$(dirname "$0")/write_version.sh")"
+VERSION="${VERSION:-unversioned}"
 BUILT_AT="$(date +%s)"
 OUT="${OUT:-coffeepy-update-${VERSION}.tar}"
-export DOCKER_DEFAULT_PLATFORM="$PLATFORM" COFFEEPY_VERSION="$VERSION"
+export DOCKER_DEFAULT_PLATFORM="$PLATFORM"
 
 # Next to the output rather than in /tmp: the image tarball is several hundred MB, and on
 # Debian trixie or Fedora /tmp is a RAM-backed tmpfs that it does not fit into.

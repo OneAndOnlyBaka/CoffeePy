@@ -15,8 +15,8 @@
 # Answer keys (environment variables work too, PI_PASSWORD best that way):
 #   UI_LANG DEVICE_LANGUAGE PI_HOST PI_USER PI_PASSWORD ADMIN_USER ADMIN_PASSWORD
 #   AP_ENABLE AP_SSID AP_PASSPHRASE PUBLIC_HOST TIME_ZONE
-#   BACKUP_PASSPHRASE AUDIT_RETENTION_DAYS GUNICORN_WORKERS DISPLAY_MODE INSTALL_SOURCE
-#   OFFLINE_BUNDLE REBOOT SAVE_SUMMARY
+#   BACKUP_PASSPHRASE AUDIT_RETENTION_DAYS UPDATE_SIGNATURE UPDATE_PUBLIC_KEY GUNICORN_WORKERS
+#   DISPLAY_MODE INSTALL_SOURCE OFFLINE_BUNDLE REBOOT SAVE_SUMMARY
 # PI_SSH_OPTS adds options to every ssh call, e.g. "-p 2222" or "-i ~/.ssh/pi_key".
 #
 # Keep this in step with the app: a new .env setting or installer option belongs here as
@@ -56,6 +56,8 @@ PUBLIC_HOST="${PUBLIC_HOST:-}"
 TIME_ZONE="${TIME_ZONE:-}"
 BACKUP_PASSPHRASE="${BACKUP_PASSPHRASE-__unset__}"
 AUDIT_RETENTION_DAYS="${AUDIT_RETENTION_DAYS:-}"
+UPDATE_SIGNATURE="${UPDATE_SIGNATURE:-}"  # bundled | own | off - what update bundles are checked against
+UPDATE_PUBLIC_KEY="${UPDATE_PUBLIC_KEY:-}"  # own: the public key file on this machine
 GUNICORN_WORKERS="${GUNICORN_WORKERS:-}"
 DISPLAY_MODE="${DISPLAY_MODE:-}"        # panel | auto | a literal video=... string
 INSTALL_SOURCE="${INSTALL_SOURCE:-}"    # internet | offline
@@ -64,8 +66,8 @@ REBOOT="${REBOOT:-}"
 SAVE_SUMMARY="${SAVE_SUMMARY:-}"
 ANSWER_KEYS="UI_LANG DEVICE_LANGUAGE PI_HOST PI_USER PI_PASSWORD ADMIN_USER ADMIN_PASSWORD
 AP_ENABLE AP_SSID AP_PASSPHRASE PUBLIC_HOST TIME_ZONE
-BACKUP_PASSPHRASE AUDIT_RETENTION_DAYS GUNICORN_WORKERS DISPLAY_MODE INSTALL_SOURCE
-OFFLINE_BUNDLE REBOOT SAVE_SUMMARY"
+BACKUP_PASSPHRASE AUDIT_RETENTION_DAYS UPDATE_SIGNATURE UPDATE_PUBLIC_KEY GUNICORN_WORKERS DISPLAY_MODE
+INSTALL_SOURCE OFFLINE_BUNDLE REBOOT SAVE_SUMMARY"
 
 # What the Pi told us (inspect_pi) and what an earlier installation left (load_existing).
 PI_MODEL="" PI_ARCH="" PI_RELEASE="" PI_RAM_MB=0 PI_FREE_MB=0 PI_ONLINE="" PI_IFACE=""
@@ -434,6 +436,11 @@ check_backup_passphrase() { [ "${#1}" -ge 12 ] || { t "At least 12 characters." 
 check_number() { [[ "$1" =~ ^[1-9][0-9]{0,4}$ ]] || { t "A positive whole number." "Eine positive ganze Zahl."; return 1; }; }
 check_tz() { [[ "$1" =~ ^[A-Za-z_]+(/[A-Za-z0-9_+-]+)*$ ]] || { t "Like Europe/Berlin." "Zum Beispiel Europe/Berlin."; return 1; }; }
 check_bundle() { [ -f "$1" ] || { t "No such file." "Diese Datei gibt es nicht."; return 1; }; }
+check_public_key() {
+	check_bundle "$1" || return 1
+	grep -q "BEGIN PUBLIC KEY" "$1" 2>/dev/null || { t "Not a public key (PEM) - a private one does not belong here." \
+		"Kein öffentlicher Schlüssel (PEM) - ein privater gehört nicht hierher."; return 1; }
+}
 
 ask() { # VAR title text check [secret] - re-asks until valid; status 1 on Esc
 	local var=$1 title=$2 text=$3 check=$4 secret=${5:-} problem
@@ -604,6 +611,13 @@ load_existing() {
 	# An empty passphrase is a choice (no encryption), so only an unset one is filled in.
 	[ "${BACKUP_PASSPHRASE}" != "__unset__" ] || BACKUP_PASSPHRASE="$(env_get BACKUP_PASSPHRASE)"
 	: "${AUDIT_RETENTION_DAYS:=$(env_get AUDIT_RETENTION_DAYS)}"
+	if [ -z "${UPDATE_SIGNATURE}" ]; then
+		if [ "$(env_get UPDATE_VERIFY_SIGNATURE)" = false ]; then
+			UPDATE_SIGNATURE=off
+		elif pi_sudo test -f /etc/coffeepy/update-signing.own.pub >/dev/null 2>&1; then
+			UPDATE_SIGNATURE=own  # no file chosen: the one on the Pi stays
+		fi
+	fi
 	: "${GUNICORN_WORKERS:=$(env_get GUNICORN_WORKERS)}"
 	local existing_language
 	existing_language=$(env_get DJANGO_LANGUAGE_CODE)
@@ -628,6 +642,7 @@ defaults() {
 	: "${AP_PASSPHRASE:=$(rand_token 12)}"
 	: "${TIME_ZONE:=$(timedatectl show -p Timezone --value 2>/dev/null || echo Europe/Berlin)}"
 	: "${AUDIT_RETENTION_DAYS:=90}"
+	: "${UPDATE_SIGNATURE:=bundled}"
 	[ "${BACKUP_PASSPHRASE}" != "__unset__" ] || BACKUP_PASSPHRASE=""  # not encrypted unless asked for
 	: "${GUNICORN_WORKERS:=$([ "${PI_RAM_MB}" -ge 1800 ] && echo 3 || echo 2)}"
 	: "${DISPLAY_MODE:=panel}"
@@ -637,6 +652,14 @@ defaults() {
 	if [ -z "${PUBLIC_HOST}" ]; then
 		[ "${AP_ENABLE}" = yes ] && PUBLIC_HOST=192.168.4.1 || PUBLIC_HOST=${PI_HOST}
 	fi
+}
+
+update_label() {
+	case "${UPDATE_SIGNATURE}" in
+		own) printf '%s' "$(t "own key" "eigener Schlüssel")${UPDATE_PUBLIC_KEY:+ · $(basename "${UPDATE_PUBLIC_KEY}")}" ;;
+		off) t "signature not checked" "Signatur nicht geprüft" ;;
+		*)   t "CoffeePy's key" "Schlüssel von CoffeePy" ;;
+	esac
 }
 
 display_label() {
@@ -702,6 +725,28 @@ edit_setting() {
 		ask AUDIT_RETENTION_DAYS "$(t "Audit log kept (days)" "Protokoll aufbewahren (Tage)")" "$(t "Older audit log entries are deleted automatically." \
 			"Ältere Protokolleinträge werden automatisch gelöscht.")" check_number || return 0
 		;;
+	updates)
+		local choices=("$(t "CoffeePy's key|install/update-signing.pub" "Schlüssel von CoffeePy|install/update-signing.pub")"
+			"$(t "Own key|for updates you build yourself" "Eigener Schlüssel|für selbst gebaute Updates")"
+			"$(t "No check|any update is installed" "Keine Prüfung|jedes Update wird eingespielt")")
+		local current=0
+		[ "${UPDATE_SIGNATURE}" = own ] && current=1
+		[ "${UPDATE_SIGNATURE}" = off ] && current=2
+		ui_menu "Updates" "$(t \
+"Update bundles are signed, and the Pi only installs those whose signature matches its key. Your own key replaces CoffeePy's, and no update changes it again (scripts/update_signing_key.sh makes a key pair). Without a check, anyone who can upload in the dashboard can install anything." \
+"Update-Pakete sind signiert, und der Pi spielt nur solche ein, deren Signatur zu seinem Schlüssel passt. Ein eigener Schlüssel ersetzt den von CoffeePy, und kein Update ändert ihn wieder (scripts/update_signing_key.sh erzeugt ein Schlüsselpaar). Ohne Prüfung kann jeder, der im Dashboard hochladen darf, alles einspielen.")" \
+			"${current}" "${choices[@]}" || return 0
+		case "${MENU}" in
+			0) UPDATE_SIGNATURE=bundled ;;
+			1) INPUT_CHECK=check_public_key
+			   ui_input "$(t "Own key" "Eigener Schlüssel")" "$(t \
+				"Path on this machine to the PUBLIC key (.pub, PEM). Never the private one - that stays where you build the updates." \
+				"Pfad auf diesem Rechner zum ÖFFENTLICHEN Schlüssel (.pub, PEM). Nie der private - der bleibt dort, wo du die Updates baust.")" \
+				"${UPDATE_PUBLIC_KEY}" && UPDATE_SIGNATURE=own && UPDATE_PUBLIC_KEY=${INPUT}
+			   INPUT_CHECK="" ;;
+			2) UPDATE_SIGNATURE=off ;;
+		esac
+		;;
 	display)
 		local choices=("$(t "1024x600 HDMI panel|the documented touchscreen" "1024x600-HDMI-Panel|der dokumentierte Touchscreen")"
 			"$(t "Detected by the display|for screens that report their resolution" "Vom Bildschirm erkannt|für Bildschirme, die ihre Auflösung melden")"
@@ -762,6 +807,7 @@ step_settings() {
 			"$(t "Address for phones" "Adresse für Handys")|https://${PUBLIC_HOST}/"
 			"$(t "Time zone" "Zeitzone")|${TIME_ZONE}"
 			"$(t "Backups & audit log" "Backups & Protokoll")|${backup_label}"
+			"Updates|$(update_label)"
 			"Display|$(display_label)"
 			"$(t "Web workers" "Web-Worker")|${GUNICORN_WORKERS}"
 			"$(t "Install from" "Installieren aus")|${source_label}"
@@ -769,13 +815,13 @@ step_settings() {
 			"$(t "Install CoffeePy" "CoffeePy installieren")|${install_label}"
 			"$(t Quit Beenden)|$(t "nothing has been changed on the Pi" "auf dem Pi wurde nichts verändert")"
 		)
-		local keys=(language admin ap address tz backup display workers source "" install quit)
+		local keys=(language admin ap address tz backup updates display workers source "" install quit)
 		if ! ui_menu "$(t Settings Einstellungen)" "$(t "Everything that ends up in the Pi's configuration. Pick a line to change it." \
 			"Alles, was in die Konfiguration des Pi kommt. Wähle eine Zeile, um sie zu ändern.")" "${selected}" "${items[@]}"; then
 			continue
 		fi
 		selected=${MENU}
-		[ "${UNATTENDED}" = 1 ] && selected=10
+		[ "${UNATTENDED}" = 1 ] && selected=11
 		case "${keys[$selected]}" in
 			install)
 				if [ "${INSTALL_SOURCE}" = offline ] && [ ! -f "${OFFLINE_BUNDLE}" ]; then
@@ -827,6 +873,7 @@ build_env() {
 	env_set "${env}" GUNICORN_WORKERS "${GUNICORN_WORKERS}"
 	env_set "${env}" BACKUP_PASSPHRASE "${BACKUP_PASSPHRASE}"
 	env_set "${env}" AUDIT_RETENTION_DAYS "${AUDIT_RETENTION_DAYS}"
+	env_set "${env}" UPDATE_VERIFY_SIGNATURE "$([ "${UPDATE_SIGNATURE}" = off ] && echo false || echo true)"
 	if [ "${AP_ENABLE}" = yes ]; then
 		env_set "${env}" AP_SSID "${AP_SSID}"
 		env_set "${env}" AP_PASSPHRASE "${AP_PASSPHRASE}"
@@ -841,8 +888,10 @@ build_env() {
 # The checkout as git sees it - committed and new files, nothing ignored (.env, .venv,
 # data/, this machine's .device/) - or, outside a git checkout, the tree minus the obvious.
 pack_source() {
+	"${ROOT}/scripts/write_version.sh" >/dev/null || true
 	if git -C "${ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-		(cd "${ROOT}" && git ls-files -z --cached --others --exclude-standard \
+		# coffeepy-version.json is git-ignored, so it is added by name.
+		(cd "${ROOT}" && { git ls-files -z --cached --others --exclude-standard; printf 'coffeepy-version.json\0'; } \
 			| grep -zv '^\.claude/' | xargs -0 -r ls -d 2>/dev/null | tr '\n' '\0' \
 			| tar --null -T - -czf -)
 	else
@@ -898,6 +947,17 @@ step_install() {
 		|| fail "$(t "Could not upload the configuration." "Die Konfiguration konnte nicht hochgeladen werden.")"
 	pi_sudo "sh -c 'install -d /opt/coffeepy && install -m 0600 -o root -g root ~${PI_USER}/.coffeepy-env.tmp /opt/coffeepy/.env && rm -f ~${PI_USER}/.coffeepy-env.tmp'" \
 		>/dev/null || fail "$(t "Could not write /opt/coffeepy/.env." "/opt/coffeepy/.env konnte nicht geschrieben werden.")"
+
+	# The device's own update key lives next to the installer's, where no update replaces it
+	# (install/update_watcher.py). Back to CoffeePy's key means removing it.
+	case "${UPDATE_SIGNATURE}" in
+		own) if [ -n "${UPDATE_PUBLIC_KEY}" ]; then
+				pi 'cat > ~/.coffeepy-update-key.tmp' < "${UPDATE_PUBLIC_KEY}" && \
+				pi_sudo "sh -c 'install -d -m 0755 /etc/coffeepy && install -m 0644 -o root -g root ~${PI_USER}/.coffeepy-update-key.tmp /etc/coffeepy/update-signing.own.pub && rm -f ~${PI_USER}/.coffeepy-update-key.tmp'" \
+					>/dev/null || fail "$(t "Could not store the update key." "Der Update-Schlüssel konnte nicht gespeichert werden.")"
+			 fi ;;
+		bundled) pi_sudo rm -f /etc/coffeepy/update-signing.own.pub >/dev/null ;;
+	esac
 
 	# A re-run repeats every step (--force): new code, a changed WiFi or display mode all
 	# live in steps the installer would otherwise skip as done.
