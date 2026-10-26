@@ -48,8 +48,10 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = LANGUAGE_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", False)
 
 
+# No django.contrib.admin: dashboard users are managed in the dashboard itself (dashboard
+# "Dashboard users"), and corrections to orders and payments happen under "Bookings" -
+# with an audit row each, which the admin never wrote.
 INSTALLED_APPS = [
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -70,6 +72,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "dashboard.security.DashboardSecurityMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -116,7 +119,9 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    # Length and character kinds after the BSI's recommendation (replaces Django's plain
+    # minimum length) - see dashboard/security.py.
+    {"NAME": "dashboard.security.BSIPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
@@ -162,6 +167,17 @@ UPDATE_STATUS_DIR = Path(os.environ.get("UPDATE_STATUS_DIR", BASE_DIR / "updates
 # database would only become visible once it is over. A file is also shared between the
 # gunicorn workers, so the browser's poll sees the job no matter which worker answers it.
 IMPORT_STATUS_FILE = Path(os.environ.get("IMPORT_STATUS_FILE", Path(tempfile.gettempdir()) / "coffeepy-import.json"))
+
+# The USB backup stick (coffee/backups.py): the host's storage helper mounts it under
+# USB_DIR and reports through files in STORAGE_DIR - both mounted into web and backup
+# (docker-compose.yml). A restore runs in the background like the import, so the same
+# reasoning puts its progress in a file.
+USB_DIR = Path(os.environ.get("USB_DIR", BASE_DIR / "data" / "usb"))
+STORAGE_DIR = Path(os.environ.get("STORAGE_DIR", BASE_DIR / "data" / "storage"))
+RESTORE_STATUS_FILE = Path(os.environ.get("RESTORE_STATUS_FILE", Path(tempfile.gettempdir()) / "coffeepy-restore.json"))
+# Written while a restore runs, so the kiosk shows "back in a moment" (install/maintenance.sh
+# writes the same file during installs and updates; Caddy serves it).
+MAINTENANCE_DIR = Path(os.environ.get("MAINTENANCE_DIR", BASE_DIR / "data" / "maintenance"))
 
 # Standalone WiFi AP credentials (see install/hostapd.conf.template) - only used to render
 # the kiosk setup-wizard's WiFi QR code; blank on deployments that join an existing network.

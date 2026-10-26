@@ -1,0 +1,13 @@
+[Unit]
+Description=CoffeePy USB backup stick (install/storage_helper.py)
+After=local-fs.target
+
+[Service]
+Type=simple
+Environment=COFFEEPY_DIR=/opt/coffeepy
+ExecStart=/usr/bin/python3 /opt/coffeepy/install/storage_helper.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

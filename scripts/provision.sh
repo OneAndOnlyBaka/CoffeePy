@@ -14,8 +14,8 @@
 #
 # Answer keys (environment variables work too, PI_PASSWORD best that way):
 #   UI_LANG DEVICE_LANGUAGE PI_HOST PI_USER PI_PASSWORD ADMIN_USER ADMIN_PASSWORD
-#   AP_ENABLE AP_SSID AP_PASSPHRASE PUBLIC_HOST TIME_ZONE BACKUP_ENABLED BACKUP_HOST_PATH
-#   BACKUP_INTERVAL_MINUTES BACKUP_DEPTH GUNICORN_WORKERS DISPLAY_MODE INSTALL_SOURCE
+#   AP_ENABLE AP_SSID AP_PASSPHRASE PUBLIC_HOST TIME_ZONE
+#   BACKUP_INTERVAL_MINUTES BACKUP_DEPTH AUDIT_RETENTION_DAYS GUNICORN_WORKERS DISPLAY_MODE INSTALL_SOURCE
 #   OFFLINE_BUNDLE REBOOT SAVE_SUMMARY
 # PI_SSH_OPTS adds options to every ssh call, e.g. "-p 2222" or "-i ~/.ssh/pi_key".
 #
@@ -54,10 +54,9 @@ AP_SSID="${AP_SSID:-}"
 AP_PASSPHRASE="${AP_PASSPHRASE:-}"
 PUBLIC_HOST="${PUBLIC_HOST:-}"
 TIME_ZONE="${TIME_ZONE:-}"
-BACKUP_ENABLED="${BACKUP_ENABLED:-}"
-BACKUP_HOST_PATH="${BACKUP_HOST_PATH:-}"
 BACKUP_INTERVAL_MINUTES="${BACKUP_INTERVAL_MINUTES:-}"
 BACKUP_DEPTH="${BACKUP_DEPTH:-}"
+AUDIT_RETENTION_DAYS="${AUDIT_RETENTION_DAYS:-}"
 GUNICORN_WORKERS="${GUNICORN_WORKERS:-}"
 DISPLAY_MODE="${DISPLAY_MODE:-}"        # panel | auto | a literal video=... string
 INSTALL_SOURCE="${INSTALL_SOURCE:-}"    # internet | offline
@@ -65,8 +64,8 @@ OFFLINE_BUNDLE="${OFFLINE_BUNDLE:-}"
 REBOOT="${REBOOT:-}"
 SAVE_SUMMARY="${SAVE_SUMMARY:-}"
 ANSWER_KEYS="UI_LANG DEVICE_LANGUAGE PI_HOST PI_USER PI_PASSWORD ADMIN_USER ADMIN_PASSWORD
-AP_ENABLE AP_SSID AP_PASSPHRASE PUBLIC_HOST TIME_ZONE BACKUP_ENABLED BACKUP_HOST_PATH
-BACKUP_INTERVAL_MINUTES BACKUP_DEPTH GUNICORN_WORKERS DISPLAY_MODE INSTALL_SOURCE
+AP_ENABLE AP_SSID AP_PASSPHRASE PUBLIC_HOST TIME_ZONE
+BACKUP_INTERVAL_MINUTES BACKUP_DEPTH AUDIT_RETENTION_DAYS GUNICORN_WORKERS DISPLAY_MODE INSTALL_SOURCE
 OFFLINE_BUNDLE REBOOT SAVE_SUMMARY"
 
 # What the Pi told us (inspect_pi) and what an earlier installation left (load_existing).
@@ -432,7 +431,6 @@ check_passphrase() { check_secret "$1" || return 1; [ "${#1}" -le 63 ] || { t "W
 check_ssid() { [[ "$1" =~ ^[A-Za-z0-9_.-]{1,32}$ ]] || { t "1-32 letters, digits, _ . or -." "1-32 Buchstaben, Ziffern, _ . oder -."; return 1; }; }
 check_number() { [[ "$1" =~ ^[1-9][0-9]{0,4}$ ]] || { t "A positive whole number." "Eine positive ganze Zahl."; return 1; }; }
 check_tz() { [[ "$1" =~ ^[A-Za-z_]+(/[A-Za-z0-9_+-]+)*$ ]] || { t "Like Europe/Berlin." "Zum Beispiel Europe/Berlin."; return 1; }; }
-check_path() { [[ "$1" =~ ^/[A-Za-z0-9/_.-]*$ ]] || { t "An absolute path." "Ein absoluter Pfad."; return 1; }; }
 check_bundle() { [ -f "$1" ] || { t "No such file." "Diese Datei gibt es nicht."; return 1; }; }
 
 ask() { # VAR title text check [secret] - re-asks until valid; status 1 on Esc
@@ -601,10 +599,9 @@ load_existing() {
 	: "${AP_PASSPHRASE:=$(env_get AP_PASSPHRASE)}"
 	: "${PUBLIC_HOST:=$(env_get PUBLIC_HOST)}"
 	: "${TIME_ZONE:=$(env_get DJANGO_TIME_ZONE)}"
-	: "${BACKUP_ENABLED:=$(env_get BACKUP_ENABLED)}"
-	: "${BACKUP_HOST_PATH:=$(env_get BACKUP_HOST_PATH)}"
 	: "${BACKUP_INTERVAL_MINUTES:=$(env_get BACKUP_INTERVAL_MINUTES)}"
 	: "${BACKUP_DEPTH:=$(env_get BACKUP_DEPTH)}"
+	: "${AUDIT_RETENTION_DAYS:=$(env_get AUDIT_RETENTION_DAYS)}"
 	: "${GUNICORN_WORKERS:=$(env_get GUNICORN_WORKERS)}"
 	local existing_language
 	existing_language=$(env_get DJANGO_LANGUAGE_CODE)
@@ -628,10 +625,9 @@ defaults() {
 	: "${AP_SSID:=CoffeePy}"
 	: "${AP_PASSPHRASE:=$(rand_token 12)}"
 	: "${TIME_ZONE:=$(timedatectl show -p Timezone --value 2>/dev/null || echo Europe/Berlin)}"
-	: "${BACKUP_ENABLED:=true}"
-	: "${BACKUP_HOST_PATH:=/mnt/coffeepy-backup}"
 	: "${BACKUP_INTERVAL_MINUTES:=60}"
 	: "${BACKUP_DEPTH:=48}"
+	: "${AUDIT_RETENTION_DAYS:=90}"
 	: "${GUNICORN_WORKERS:=$([ "${PI_RAM_MB}" -ge 1800 ] && echo 3 || echo 2)}"
 	: "${DISPLAY_MODE:=panel}"
 	: "${INSTALL_SOURCE:=$([ "${PI_ONLINE}" = yes ] && echo internet || echo offline)}"
@@ -691,18 +687,14 @@ edit_setting() {
 			"Für Statistiken nach Stunde und Wochentag und für die Uhr des Kiosks.")" check_tz
 		;;
 	backup)
-		if ui_confirm "Backups" "$(t "Back up the database regularly? The default target is a USB stick, mounted automatically when plugged in." \
-			"Die Datenbank regelmäßig sichern? Standardziel ist ein USB-Stick, der beim Einstecken automatisch eingebunden wird.")" \
-			"$([ "${BACKUP_ENABLED}" = true ] && echo yes || echo no)"; then
-			BACKUP_ENABLED=true
-			ask BACKUP_INTERVAL_MINUTES "$(t "Backup interval" "Backup-Intervall")" "$(t "Minutes between two backups." "Minuten zwischen zwei Backups.")" check_number || return 0
-			ask BACKUP_DEPTH "$(t "Backups kept" "Aufbewahrte Backups")" "$(t "How many backups to keep before the oldest is overwritten." \
-				"Wie viele Backups aufbewahrt werden, bevor das älteste überschrieben wird.")" check_number || return 0
-			ask BACKUP_HOST_PATH "$(t "Backup location" "Backup-Ort")" "$(t "Where backups go on the Pi. /mnt/coffeepy-backup is where a USB stick is mounted." \
-				"Wohin die Backups auf dem Pi gehen. Unter /mnt/coffeepy-backup wird ein USB-Stick eingebunden.")" check_path || return 0
-		else
-			BACKUP_ENABLED=false
-		fi
+		# Where backups go is decided in the dashboard (Backup): a USB stick the admin sets up
+		# there. Here only how often, and how many are kept.
+		ask BACKUP_INTERVAL_MINUTES "$(t "Backup interval" "Backup-Intervall")" "$(t "Minutes between two backups to the USB stick set up in the dashboard." \
+			"Minuten zwischen zwei Backups auf den USB-Stick, der im Dashboard eingerichtet wird.")" check_number || return 0
+		ask BACKUP_DEPTH "$(t "Backups kept" "Aufbewahrte Backups")" "$(t "How many backups to keep before the oldest is deleted." \
+			"Wie viele Backups aufbewahrt werden, bevor das älteste gelöscht wird.")" check_number || return 0
+		ask AUDIT_RETENTION_DAYS "$(t "Audit log kept (days)" "Protokoll aufbewahren (Tage)")" "$(t "Older audit log entries are deleted automatically." \
+			"Ältere Protokolleinträge werden automatisch gelöscht.")" check_number || return 0
 		;;
 	display)
 		local choices=("$(t "1024x600 HDMI panel|the documented touchscreen" "1024x600-HDMI-Panel|der dokumentierte Touchscreen")"
@@ -753,8 +745,7 @@ step_settings() {
 		local ap_label backup_label source_label install_label
 		ap_label=$(t "off - stays on your network" "aus - bleibt in deinem Netz")
 		[ "${AP_ENABLE}" = yes ] && ap_label="$(t on an) · ${AP_SSID}"
-		backup_label=$(t off aus)
-		[ "${BACKUP_ENABLED}" = true ] && backup_label="$(t every alle) ${BACKUP_INTERVAL_MINUTES} min · ${BACKUP_DEPTH} $(t kept aufbewahrt)"
+		backup_label="$(t every alle) ${BACKUP_INTERVAL_MINUTES} min · ${BACKUP_DEPTH} $(t kept aufbewahrt) · $(t log Protokoll) ${AUDIT_RETENTION_DAYS} $(t days Tage)"
 		source_label=Internet
 		[ "${INSTALL_SOURCE}" = offline ] && source_label="$(t "offline bundle" "Offline-Paket")${OFFLINE_BUNDLE:+ · $(basename "${OFFLINE_BUNDLE}")}"
 		install_label=$([ "${EXISTING_INSTALL}" = 1 ] && t "update and apply settings" "aktualisieren und Einstellungen anwenden" || printf '%s %s' "$(t on auf)" "${PI_HOST}")
@@ -764,7 +755,7 @@ step_settings() {
 			"$(t "WiFi access point" "WLAN-Access-Point")|${ap_label}"
 			"$(t "Address for phones" "Adresse für Handys")|https://${PUBLIC_HOST}/"
 			"$(t "Time zone" "Zeitzone")|${TIME_ZONE}"
-			"Backups|${backup_label}"
+			"$(t "Backups & audit log" "Backups & Protokoll")|${backup_label}"
 			"Display|$(display_label)"
 			"$(t "Web workers" "Web-Worker")|${GUNICORN_WORKERS}"
 			"$(t "Install from" "Installieren aus")|${source_label}"
@@ -828,10 +819,9 @@ build_env() {
 	case ",${extra},${PUBLIC_HOST}," in *",${PI_HOST},"*) ;; *) extra+=",${PI_HOST}" ;; esac
 	env_set "${env}" TLS_EXTRA_HOSTNAMES "${extra}"
 	env_set "${env}" GUNICORN_WORKERS "${GUNICORN_WORKERS}"
-	env_set "${env}" BACKUP_ENABLED "${BACKUP_ENABLED}"
-	env_set "${env}" BACKUP_HOST_PATH "${BACKUP_HOST_PATH}"
 	env_set "${env}" BACKUP_INTERVAL_MINUTES "${BACKUP_INTERVAL_MINUTES}"
 	env_set "${env}" BACKUP_DEPTH "${BACKUP_DEPTH}"
+	env_set "${env}" AUDIT_RETENTION_DAYS "${AUDIT_RETENTION_DAYS}"
 	if [ "${AP_ENABLE}" = yes ]; then
 		env_set "${env}" AP_SSID "${AP_SSID}"
 		env_set "${env}" AP_PASSPHRASE "${AP_PASSPHRASE}"

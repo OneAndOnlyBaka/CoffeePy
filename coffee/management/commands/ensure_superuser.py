@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
     help = (
-        "Creates the initial Django admin/dashboard superuser from DJANGO_SUPERUSER_* "
+        "Creates the initial dashboard admin (a superuser) from DJANGO_SUPERUSER_* "
         "env vars, if set and no user with that username exists yet. Run on every "
         "container start (see entrypoint.sh); idempotent."
     )

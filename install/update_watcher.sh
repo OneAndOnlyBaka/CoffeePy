@@ -26,6 +26,15 @@ MAINTENANCE_DIR="$PROJECT_DIR/data/maintenance"
 # shellcheck source=maintenance.sh
 . "$(dirname "$0")/maintenance.sh"
 
+# One line for the app's audit log (dashboard/audit.py collects data/storage/events.jsonl).
+# Bundle names are plain file names; anything that would break the JSON is dropped.
+audit_event() {
+    local target="${2//[^A-Za-z0-9._-]/}"
+    mkdir -p "$PROJECT_DIR/data/storage"
+    printf '{"time": %s, "action": "%s", "actor": "update watcher", "target": "%s", "outcome": "%s"}\n' \
+        "$(date +%s)" "$1" "$target" "$3" >> "$PROJECT_DIR/data/storage/events.jsonl"
+}
+
 # Every failure path returns rather than exits: this runs inside the `inotifywait | while`
 # pipeline's subshell, where an exit ends the loop for good while inotifywait - and with it
 # the service - stays up. One broken upload used to silently swallow every later update.
@@ -38,11 +47,14 @@ process_bundle() {
     workdir="$(mktemp -d "$PROJECT_DIR/data/updates/.work.XXXXXX")"
 
     maintenance_begin update
+    audit_event update.start "$name" success
     if apply_bundle >"$log" 2>&1; then
         mv "$bundle" "$PROCESSED_DIR/$name"
+        audit_event update.apply "$name" success
     else
         # Out of incoming/ either way, so a failed bundle is not tried again forever.
         mv "$bundle" "$PROCESSED_DIR/$name.failed"
+        audit_event update.apply "$name" failure
     fi
     maintenance_end
     rm -rf "$workdir"

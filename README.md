@@ -39,9 +39,10 @@ install V2 fresh and import the database.
 
 The kiosk (`/kiosk/`) is an HTMX page that polls every 500ms for new `NfcScan` rows -
 no websockets/Channels/Redis needed. The dashboard (`/dashboard/`) uses Django's built-in
-auth; coffee sorts and members have their own dashboard CRUD pages, orders/payments are
-read-only exports (CSV) - the Django admin at `/admin/` still exists as a superuser
-fallback for anything not covered by the dashboard.
+auth with two roles - admins (superusers: everything, including the system pages and the
+dashboard's own user management) and managers (members, bookings, coffee sorts, payment
+methods). Single orders and payments are corrected under "Bookings", each change with an
+audit-log entry. There is no Django admin (`/admin/` doesn't exist).
 
 ## Quick start
 
@@ -53,7 +54,7 @@ docker compose exec web python manage.py createsuperuser
 ```
 
 Then open `https://localhost:8443/kiosk/` (touchscreen UI - only reachable from the
-machine itself) and `https://localhost/dashboard/` (admin, also reachable via `/admin/`).
+machine itself) and `https://localhost/dashboard/` (admin dashboard).
 The certificate comes from a CA the stack creates on first start, so the browser warns
 until you install `data/tls/ca.crt` (or download it from `/certificate/`).
 
@@ -84,10 +85,13 @@ docker compose exec web python manage.py backfill_order_sorts --path /tmp/coffee
 
 ### Backups
 
-Set `BACKUP_ENABLED=true` and `BACKUP_HOST_PATH` (e.g. a mounted USB stick) in `.env`. The
-`backup` service dumps `coffee_backup_<1..BACKUP_DEPTH>.sql` on a `BACKUP_INTERVAL_MINUTES`
-rotation. Trigger one immediately, or download existing dumps, from
-`/dashboard/backup/` (superuser only).
+Backups go to a USB stick that an admin sets up under `/dashboard/backup/`: the host service
+`coffeepy-storage` (`install/storage_helper.py`) formats it (ext4, label `COFFEEBAK`), marks it
+with this device's id and remembers it; from then on the `backup` service writes a
+`pg_dump --format=custom` to it every `BACKUP_INTERVAL_MINUTES`, keeping the newest
+`BACKUP_DEPTH`. Pulled out, backups pause (the dashboard's overview says so) and resume when
+the same stick comes back. The same page restores a backup - from the stick, another device's
+stick, or an uploaded file, older `.sql` dumps included - and downloads one without a stick.
 
 ### Offline updates
 

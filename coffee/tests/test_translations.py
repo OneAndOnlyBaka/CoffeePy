@@ -57,7 +57,7 @@ class TemplatesMarkedTestCase(SimpleTestCase):
     one shows up in English on a German screen (it happened with the kiosk's logout countdown)."""
 
     # Text that is the same in both languages, or not text at all.
-    ALLOWED = re.compile(r"[\W\d_]*(CoffeePy|SHA-256|CPU|UID|PEM|CSV|Esc|EN|DE|MB|GB|uid|https:///|- &deg;C)?[\W\d_]*")
+    ALLOWED = re.compile(r"[\W\d_]*(CoffeePy|SHA-256|CPU|UID|PEM|CSV|Esc|EN|DE|MB|GB|uid|https:///|- C)?[\W\d_]*")
 
     def test_no_unmarked_text(self):
         unmarked = []
@@ -70,7 +70,7 @@ class TemplatesMarkedTestCase(SimpleTestCase):
             text = re.sub(r"<(script|style|svg)\b.*?</\1>", "", text, flags=re.S)
             text = re.sub(r"{%.*?%}|{{.*?}}|{#.*?#}", "", text, flags=re.S)
             for match in re.finditer(r">([^<>]*[A-Za-z]{3,}[^<>]*)<", text):
-                piece = match.group(1).strip()
+                piece = re.sub(r"&\w+;", "", match.group(1)).strip()  # an entity alone (&times;) is no text
                 if piece and piece != path.parent.name and not self.ALLOWED.fullmatch(piece) and "&middot;" != piece:
                     unmarked.append(f"{path.relative_to(settings.BASE_DIR)}: {piece}")
         self.assertEqual(unmarked, [])

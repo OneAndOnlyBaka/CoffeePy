@@ -1,16 +1,19 @@
 {% extends "base.html" %}
 {% load static i18n %}
+{% block viewport %}width=device-width, initial-scale=1{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">{% endblock %}
+{% block body_class %}dashboard{% endblock %}
 {% block title %}{% translate "CoffeePy Dashboard - Login" %}{% endblock %}
 {% block body %}
 <div class="login-wrap">
-    <form method="post" class="card" style="width: 320px;">
+    <form method="post" class="card">
         {% csrf_token %}
-        <h1>CoffeePy</h1>
-        {% if form.errors %}<p class="msg error">{% translate "Invalid username or password." %}</p>{% endif %}
+        <h1>{% include "icons/cup.svg" %} CoffeePy</h1>
+        {% for message in messages %}<p class="msg {{ message.tags }}">{{ message }}</p>{% endfor %}
+        {% if form.errors %}<p class="msg error">{% if "locked" in form.non_field_errors.as_data.0.code %}{{ form.non_field_errors.0 }}{% else %}{% translate "Invalid username or password." %}{% endif %}</p>{% endif %}
         <label class="field">{% translate "Username" %} {{ form.username }}</label>
         <label class="field">{% translate "Password" %} {{ form.password }}</label>
-        <button type="submit" class="success">{% translate "Log in" %}</button>
+        <button type="submit" class="success btn-block">{% translate "Log in" %}</button>
         {% url 'certificate_download' as download_url %}
         <p class="muted login-cert">{% blocktranslate trimmed %}Browser warns about this site? <a href="{{ download_url }}">Download the device certificate</a> and install it once.{% endblocktranslate %}</p>
     </form>

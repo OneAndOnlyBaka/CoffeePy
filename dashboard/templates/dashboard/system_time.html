@@ -6,7 +6,7 @@
 <p>{% blocktranslate trimmed %}Only needed as a fallback if the RTC module drifts or isn't fitted - normally the
 Raspbian install script keeps the clock correct via the DS3231 RTC overlay.{% endblocktranslate %}</p>
 {% if error %}<p class="msg error">{{ error }}</p>{% endif %}
-<div class="card" style="max-width: 420px;">
+<div class="card">
     <p>{% translate "Current server time:" %} <strong>{{ now }}</strong></p>
     <form method="post">
         {% csrf_token %}

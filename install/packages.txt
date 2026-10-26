@@ -48,3 +48,4 @@ util-linux-extra
 curl
 ca-certificates
 rsync
+python3

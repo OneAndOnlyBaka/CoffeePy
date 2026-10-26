@@ -2,36 +2,37 @@
 {% load i18n %}
 {% block title %}{% translate "Coffee sorts" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>{% translate "Coffee sorts" %}</h1>
-<p><a href="{% url 'dashboard:coffeesort_add' %}" class="btn success">+ {% translate "Add coffee sort" %}</a></p>
+<div class="page-head">
+    <h1>{% translate "Coffee sorts" %}</h1>
+    <div class="page-actions">
+        <a href="{% url 'dashboard:coffeesort_add' %}" class="btn success">{% include "icons/plus.svg" %}{% translate "Add coffee sort" %}</a>
+    </div>
+</div>
 <div class="card">
-    <table>
-        <thead><tr><th>{% translate "Name" %}</th><th>{% translate "Price" %}</th><th>{% translate "Machine strokes" %}</th><th></th></tr></thead>
-        <tbody>
+    <div class="list">
         {% comment %}
         The confirm() text is built with autoescape off and escapejs'd as a whole: HTML-escaping
         the name first would show "&#x27;" in the dialog for a name with an apostrophe.
         {% endcomment %}
         {% for sort in sorts %}
-            {% autoescape off %}{% blocktranslate with name=sort.name asvar confirm_delete %}Delete {{ name }}?{% endblocktranslate %}{% endautoescape %}
-            <tr>
-                <td>{{ sort.name }}</td>
-                <td>{{ sort.price }}€</td>
-                <td>{{ sort.machine_strokes }}</td>
-                <td>
-                    <a href="{% url 'dashboard:coffeesort_edit' sort.pk %}">{% translate "Edit" %}</a>
-                    &middot;
-                    <form method="post" action="{% url 'dashboard:coffeesort_delete' sort.pk %}"
-                          style="display:inline" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
-                        {% csrf_token %}
-                        <button type="submit" class="danger" style="min-height:auto; padding:2px 10px;">{% translate "Delete" %}</button>
-                    </form>
-                </td>
-            </tr>
+        {% autoescape off %}{% blocktranslate with name=sort.name asvar confirm_delete %}Delete {{ name }}?{% endblocktranslate %}{% endautoescape %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ sort.name }}</span>
+                <span class="list-row-meta">{% blocktranslate with cups=sort.machine_strokes %}{{ cups }} cup(s){% endblocktranslate %}</span>
+            </div>
+            <span class="list-row-value">{{ sort.price }}€</span>
+            <div class="list-row-actions">
+                <a href="{% url 'dashboard:coffeesort_edit' sort.pk %}" class="btn secondary btn-sm">{% translate "Edit" %}</a>
+                <form method="post" action="{% url 'dashboard:coffeesort_delete' sort.pk %}" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
+                    {% csrf_token %}
+                    <button type="submit" class="danger btn-sm">{% translate "Delete" %}</button>
+                </form>
+            </div>
+        </div>
         {% empty %}
-            <tr><td colspan="4" class="muted">{% translate "No coffee sorts yet." %}</td></tr>
+        <p class="muted list-empty">{% translate "No coffee sorts yet." %}</p>
         {% endfor %}
-        </tbody>
-    </table>
+    </div>
 </div>
 {% endblock %}

@@ -22,8 +22,7 @@ log. Dashboard logins are kept, so you stay signed in. This cannot be undone - t
     <h2>{% translate "Delete everything" %}</h2>
     <form method="post" id="reset-form">
         {% csrf_token %}
-        <label class="field">
-            {% blocktranslate trimmed %}Type <code>{{ confirmation }}</code> to confirm{% endblocktranslate %}
+        <label class="field"><span>{% blocktranslate trimmed %}Type <code>{{ confirmation }}</code> to confirm{% endblocktranslate %}</span>
             <input type="text" name="confirm" autocomplete="off" required>
         </label>
         <div class="action-row">

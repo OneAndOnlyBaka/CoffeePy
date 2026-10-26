@@ -2,12 +2,14 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import views
+from .security import LockingAuthenticationForm
 
 app_name = "dashboard"
 
 urlpatterns = [
     path("", views.index, name="index"),
-    path("login/", auth_views.LoginView.as_view(template_name="dashboard/login.html"), name="login"),
+    path("login/", auth_views.LoginView.as_view(template_name="dashboard/login.html",
+                                                authentication_form=LockingAuthenticationForm), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("statistics/", views.statistics, name="statistics"),
     path("certificate/", views.certificate, name="certificate"),
@@ -36,11 +38,31 @@ urlpatterns = [
     path("system/", views.system_dashboard, name="system_dashboard"),
     path("system-time/", views.system_time, name="system_time"),
     path("backup/", views.backup, name="backup"),
-    path("backup/download/<str:filename>/", views.backup_download, name="backup_download"),
+    path("backup/status/", views.storage_status, name="storage_status"),
+    path("backup/usb/setup/", views.usb_setup, name="usb_setup"),
+    path("backup/usb/action/", views.usb_action, name="usb_action"),
+    path("backup/export/", views.backup_export, name="backup_export"),
+    path("backup/restore/upload/", views.backup_restore_upload, name="backup_restore_upload"),
+    path("backup/restore/status/", views.restore_status, name="restore_status"),
+    path("backup/<str:source>/<str:filename>/download/", views.backup_download, name="backup_download"),
+    path("backup/<str:source>/<str:filename>/restore/", views.backup_restore, name="backup_restore"),
     path("update/", views.update_upload, name="update"),
     path("update/status/", views.update_status, name="update_status"),
     path("import/", views.import_legacy_db, name="import_legacy_db"),
     path("import/status/", views.import_status, name="import_status"),
     path("reset/", views.reset_database, name="reset_database"),
     path("audit-log/", views.audit_log, name="audit_log"),
+    path("account/", views.account, name="account"),
+    path("users/", views.users, name="users"),
+    path("login-rules/", views.password_policy, name="password_policy"),
+    path("users/add/", views.user_add, name="user_add"),
+    path("users/<int:pk>/edit/", views.user_edit, name="user_edit"),
+    path("users/<int:pk>/password/", views.user_password, name="user_password"),
+    path("users/<int:pk>/delete/", views.user_delete, name="user_delete"),
+    path("bookings/", views.bookings, name="bookings"),
+    path("bookings/orders/<int:pk>/edit/", views.order_edit, name="order_edit"),
+    path("bookings/orders/<int:pk>/delete/", views.order_delete, name="order_delete"),
+    path("bookings/payments/add/", views.payment_add, name="payment_add"),
+    path("bookings/payments/<int:pk>/edit/", views.payment_edit, name="payment_edit"),
+    path("bookings/payments/<int:pk>/delete/", views.payment_delete, name="payment_delete"),
 ]

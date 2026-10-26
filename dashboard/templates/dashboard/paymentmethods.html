@@ -2,36 +2,36 @@
 {% load i18n %}
 {% block title %}{% translate "Payment methods" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>{% translate "Payment methods" %}</h1>
+<div class="page-head">
+    <h1>{% translate "Payment methods" %}</h1>
+    <div class="page-actions">
+        <a href="{% url 'dashboard:paymentmethod_add' %}" class="btn success">{% include "icons/plus.svg" %}{% translate "Add payment method" %}</a>
+    </div>
+</div>
 <p class="muted">{% blocktranslate trimmed %}Cash is always available and isn't listed here. Pick a provider (PayPal, PayPal Pool or WERO) and fill in just the one identifier it needs so members can pay/scan-to-pay via the kiosk and their linked phone - or use "Custom link" for anything else.{% endblocktranslate %}</p>
-<p><a href="{% url 'dashboard:paymentmethod_add' %}" class="btn success">+ {% translate "Add payment method" %}</a></p>
 <div class="card">
-    <table>
-        <thead><tr><th>{% translate "Name" %}</th><th>{% translate "Provider" %}</th><th>{% translate "Identifier / link" %}</th><th>{% translate "Active" %}</th><th></th></tr></thead>
-        <tbody>
-        {% translate "Yes,No" context "yesno filter: comma-separated, no spaces" as yes_no %}
+    <div class="list">
         {% comment %}See coffeesorts.html for why the confirm() text is built this way.{% endcomment %}
         {% for method in methods %}
-            {% autoescape off %}{% blocktranslate with name=method.name asvar confirm_delete %}Delete {{ name }}?{% endblocktranslate %}{% endautoescape %}
-            <tr>
-                <td>{{ method.name }}</td>
-                <td>{{ method.get_provider_display }}</td>
-                <td>{% if method.provider == "custom" %}{{ method.link_template|default:"-" }}{% else %}{{ method.identifier|default:"-" }}{% endif %}</td>
-                <td>{{ method.is_active|yesno:yes_no }}</td>
-                <td>
-                    <a href="{% url 'dashboard:paymentmethod_edit' method.pk %}">{% translate "Edit" %}</a>
-                    &middot;
-                    <form method="post" action="{% url 'dashboard:paymentmethod_delete' method.pk %}"
-                          style="display:inline" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
-                        {% csrf_token %}
-                        <button type="submit" class="danger" style="min-height:auto; padding:2px 10px;">{% translate "Delete" %}</button>
-                    </form>
-                </td>
-            </tr>
+        {% autoescape off %}{% blocktranslate with name=method.name asvar confirm_delete %}Delete {{ name }}?{% endblocktranslate %}{% endautoescape %}
+        <div class="list-row{% if not method.is_active %} muted{% endif %}">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ method.name }}
+                    {% if not method.is_active %}<span class="badge off">{% translate "inactive" %}</span>{% endif %}
+                </span>
+                <span class="list-row-meta">{{ method.get_provider_display }} &middot; {% if method.provider == "custom" %}{{ method.link_template|default:"-" }}{% else %}{{ method.identifier|default:"-" }}{% endif %}</span>
+            </div>
+            <div class="list-row-actions">
+                <a href="{% url 'dashboard:paymentmethod_edit' method.pk %}" class="btn secondary btn-sm">{% translate "Edit" %}</a>
+                <form method="post" action="{% url 'dashboard:paymentmethod_delete' method.pk %}" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
+                    {% csrf_token %}
+                    <button type="submit" class="danger btn-sm">{% translate "Delete" %}</button>
+                </form>
+            </div>
+        </div>
         {% empty %}
-            <tr><td colspan="5" class="muted">{% translate "No payment methods configured yet - members can still pay cash." %}</td></tr>
+        <p class="muted list-empty">{% translate "No payment methods configured yet - members can still pay cash." %}</p>
         {% endfor %}
-        </tbody>
-    </table>
+    </div>
 </div>
 {% endblock %}

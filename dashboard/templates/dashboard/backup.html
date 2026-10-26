@@ -1,26 +1,141 @@
 {% extends "dashboard/base.html" %}
-{% load i18n %}
+{% load i18n l10n %}
 {% block title %}{% translate "Backup" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
 <h1>{% translate "Backup" %}</h1>
-{% if message %}<p class="msg {% if failed %}error{% else %}success{% endif %}">{{ message }}</p>{% endif %}
-{% if not backup_path %}
-<p class="msg error">{% translate "BACKUP_PATH is not configured - set it (and BACKUP_ENABLED) in the environment." %}</p>
-{% endif %}
+
+{% include "dashboard/_backup_health.html" with health=health configured=storage.configured %}
+
+{% comment %}While the host's storage helper formats, adopts or ejects a stick.{% endcomment %}
+<div id="usb-working" class="card" {% if request.GET.working == None and storage.request.state != "running" %}hidden{% endif %}>
+    <div class="action-row"><span class="spinner"></span><span>{% translate "Working on the stick - this takes up to a minute…" %}</span></div>
+</div>
+
+{% if storage.own %}
 <div class="card">
-    <form method="post">
+    <h2>{% translate "This device's backup stick" %}</h2>
+    <div class="list">
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ storage.own.model|default:_("USB stick") }}</span>
+                <span class="list-row-meta">
+                    {% if storage.own.space %}{% blocktranslate with free=storage.own.space.free|filesizeformat total=storage.own.space.total|filesizeformat %}{{ free }} free of {{ total }}{% endblocktranslate %} &middot; {% endif %}
+                    {% blocktranslate with minutes=interval depth=depth %}every {{ minutes }} minutes, the newest {{ depth }} are kept{% endblocktranslate %}
+                </span>
+            </div>
+            <div class="list-row-actions">
+                <form method="post">{% csrf_token %}<button type="submit" class="success btn-sm">{% translate "Back up now" %}</button></form>
+                <form method="post" action="{% url 'dashboard:usb_action' %}">{% csrf_token %}<input type="hidden" name="action" value="eject"><button type="submit" class="secondary btn-sm">{% translate "Eject safely" %}</button></form>
+            </div>
+        </div>
+    </div>
+    <h2 class="sub-heading">{% translate "Backups on the stick" %}</h2>
+    {% include "dashboard/_backup_list.html" with files=own_backups source="own" %}
+</div>
+{% endif %}
+
+{% if storage.foreign %}
+<div class="card">
+    <h2>{% if foreign_is_ours %}{% translate "An earlier backup stick of this device" %}{% else %}{% translate "A backup stick of another CoffeePy" %}{% endif %}</h2>
+    <p class="muted">{% blocktranslate trimmed with name=storage.foreign.meta.device_name when=storage.foreign.meta.set_up_at|slice:":10" %}
+        Set up on {{ name }} on {{ when }}. It is only read - restore one of its backups, or make it this
+        device's backup stick (its backups stay on it).{% endblocktranslate %}</p>
+    <div class="action-row">
+        <form method="post" action="{% url 'dashboard:usb_action' %}" onsubmit="return confirm('{% translate "Use this stick for this device's backups from now on? The stick used so far is forgotten." as q %}{{ q|escapejs }}');">
+            {% csrf_token %}<input type="hidden" name="action" value="adopt">
+            <button type="submit" class="secondary">{% translate "Use for this device" %}</button>
+        </form>
+        <form method="post" action="{% url 'dashboard:usb_action' %}">{% csrf_token %}<input type="hidden" name="action" value="eject"><button type="submit" class="secondary">{% translate "Eject safely" %}</button></form>
+    </div>
+    <h2 class="sub-heading">{% translate "Backups on the stick" %}</h2>
+    {% include "dashboard/_backup_list.html" with files=foreign_backups source="foreign" %}
+</div>
+{% endif %}
+
+{% if storage.available %}
+<div class="card">
+    <h2>{% translate "USB sticks" %}</h2>
+    <p class="muted">{% if storage.configured %}{% blocktranslate trimmed %}Setting up another stick replaces the current
+        backup stick - the old one is forgotten.{% endblocktranslate %}{% else %}{% blocktranslate trimmed %}Set a stick up as the
+        backup stick: it is formatted, marked as this device's, and from then on backups are written to it
+        automatically.{% endblocktranslate %}{% endif %}</p>
+    <div class="list">
+        {% for disk in storage.available %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ disk.vendor }} {{ disk.model }}</span>
+                <span class="list-row-meta">{{ disk.size|filesizeformat }}{% for v in disk.volumes %} &middot; {{ v.fstype|default:"?" }}{% if v.label %} „{{ v.label }}“{% endif %}{% endfor %}</span>
+            </div>
+            <div class="list-row-actions">
+                <a href="{% url 'dashboard:usb_setup' %}?disk={{ disk.path|urlencode }}" class="btn success btn-sm">{% translate "Set up as backup stick" %}</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card" id="restore">
+    <h2>{% translate "Restore a backup" %}</h2>
+    <div id="restore-progress" class="import-progress" {% if not restore_running %}hidden{% endif %}>
+        <div class="action-row"><span class="spinner"></span><span id="restore-phase">{{ restore.phase }}</span></div>
+        <div class="stat-bar-track"><div id="restore-bar" class="stat-bar-fill progress-fill" style="width: {{ restore.percent|unlocalize }}%"></div></div>
+    </div>
+    <p id="restore-msg" class="msg {% if restore.state == 'error' %}error{% else %}success{% endif %}" {% if restore.state != "done" and restore.state != "error" %}hidden{% endif %}>{{ restore.message }}</p>
+    <p class="muted">{% blocktranslate trimmed %}Replaces everything on this device - members, bookings and the dashboard logins -
+        with the state of the backup. The current data is saved first, and put back if the backup can't be
+        loaded. Pick a backup from a stick above, or upload one: a file from "Download a backup" or from a
+        stick read on a PC.{% endblocktranslate %}</p>
+    <form method="post" action="{% url 'dashboard:backup_restore_upload' %}" enctype="multipart/form-data">
         {% csrf_token %}
-        <button type="submit" class="success">{% translate "Backup now" %}</button>
+        <label class="field">{% translate "Backup file" %} <input type="file" name="backup" accept=".dump,.sql" required></label>
+        <label class="field"><span>{% blocktranslate trimmed with word="DELETE" %}Type <code>{{ word }}</code> to confirm{% endblocktranslate %}</span>
+            <input type="text" name="confirm" autocomplete="off" required></label>
+        <button type="submit" class="danger">{% translate "Restore" %}</button>
     </form>
 </div>
-<div class="card" style="margin-top: 20px;">
-    <h2>{% translate "Existing backups" %} {% if backup_path %}({{ backup_path }}){% endif %}</h2>
-    <ul class="file-list">
-        {% for f in files %}
-        <li><a href="{% url 'dashboard:backup_download' f.name %}">{{ f.name }}</a></li>
-        {% empty %}
-        <li class="muted">{% translate "No backups yet." %}</li>
-        {% endfor %}
-    </ul>
+
+<div class="card">
+    <h2>{% translate "Download a backup" %}</h2>
+    <p class="muted">{% translate "The data as it is right now, as a file - also without a stick." %}</p>
+    <a href="{% url 'dashboard:backup_export' %}" class="btn secondary">{% include "icons/download.svg" %}{% translate "Download backup" %}</a>
 </div>
+
+<script>
+(function () {
+    // Stick work: wait for the host helper to finish, then show the new state.
+    const working = document.getElementById("usb-working");
+    if (!working.hidden) {
+        const started = Date.now();
+        const poll = async () => {
+            try {
+                const data = await (await fetch("{% url 'dashboard:storage_status' %}")).json();
+                if (data.request.state === "done" || data.request.state === "error" || Date.now() - started > 120000) {
+                    location.replace(location.pathname);
+                    return;
+                }
+            } catch (e) { /* transient */ }
+            setTimeout(poll, 1500);
+        };
+        setTimeout(poll, 2500);
+    }
+    // A running restore: follow it. The dashboard logins are replaced too, so the page may
+    // end up at the login - that is expected.
+    const progress = document.getElementById("restore-progress");
+    if (!progress.hidden) {
+        const poll = async () => {
+            try {
+                const res = await fetch("{% url 'dashboard:restore_status' %}", {redirect: "manual"});
+                if (res.type === "opaqueredirect" || res.status >= 300) { location.reload(); return; }
+                const data = await res.json();
+                document.getElementById("restore-phase").textContent = data.phase;
+                document.getElementById("restore-bar").style.width = data.percent + "%";
+                if (data.state !== "running") { location.reload(); return; }
+            } catch (e) { /* the app may be briefly unreachable while the database is replaced */ }
+            setTimeout(poll, 1000);
+        };
+        poll();
+    }
+})();
+</script>
 {% endblock %}

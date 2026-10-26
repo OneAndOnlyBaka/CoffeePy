@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 00:52+0100\n"
+"POT-Creation-Date: 2026-10-26 08:40+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -13,6 +13,22 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "No backup stick is plugged in."
+msgstr "Es ist kein Backup-Stick eingesteckt."
+
+msgid "No such backup."
+msgstr "Dieses Backup gibt es nicht."
+
+msgid ""
+"This is an old CoffeePy database, not a backup - use \"Import legacy DB\" "
+"for it."
+msgstr ""
+"Das ist eine alte CoffeePy-Datenbank, kein Backup – nimm dafür „Alte "
+"Datenbank importieren“."
+
+msgid "This file is not a CoffeePy backup."
+msgstr "Diese Datei ist kein CoffeePy-Backup."
 
 msgid "Cash"
 msgstr "Bar"
@@ -58,10 +74,10 @@ msgid ""
 "registered with WERO - WERO has no public link format, so this is shown as a "
 "plain instruction instead of a QR link."
 msgstr ""
-"PayPal: dein paypal.me-Benutzername (z. B. \"kaffeekasse\"). PayPal Pool: die "
-"URL des Pools oder nur die ID an ihrem Ende. WERO: die bei WERO registrierte "
-"Telefonnummer - WERO hat kein öffentliches Linkformat, deshalb wird das als "
-"einfache Anleitung statt als QR-Link angezeigt."
+"PayPal: dein paypal.me-Benutzername (z. B. \"kaffeekasse\"). PayPal Pool: "
+"die URL des Pools oder nur die ID an ihrem Ende. WERO: die bei WERO "
+"registrierte Telefonnummer - WERO hat kein öffentliches Linkformat, deshalb "
+"wird das als einfache Anleitung statt als QR-Link angezeigt."
 
 #, python-brace-format
 msgid ""
@@ -92,6 +108,106 @@ msgstr "Spitzname"
 
 msgid "Favourite coffee"
 msgstr "Lieblingskaffee"
+
+msgid "Admin - everything, including system and users"
+msgstr "Admin – alles, auch System und Benutzer"
+
+msgid "Manager - members, bookings, coffee sorts, payment methods"
+msgstr "Betreuer – Mitglieder, Buchungen, Kaffeesorten, Zahlungsmethoden"
+
+msgid "Role"
+msgstr "Rolle"
+
+msgid "Username"
+msgstr "Benutzername"
+
+msgid "May log in"
+msgstr "Darf sich anmelden"
+
+msgid "Untick to lock the account without deleting it."
+msgstr "Haken entfernen, um das Konto zu sperren, ohne es zu löschen."
+
+msgid "Password"
+msgstr "Passwort"
+
+msgid "Password again"
+msgstr "Passwort wiederholen"
+
+msgid "Must set a new password at the first login"
+msgstr "Muss bei der ersten Anmeldung ein neues Passwort setzen"
+
+msgid "Recommended: then only the new user knows their password."
+msgstr "Empfohlen: Dann kennt nur der neue Benutzer sein Passwort."
+
+msgid "The two passwords don't match."
+msgstr "Die beiden Passwörter stimmen nicht überein."
+
+msgid "Paid via"
+msgstr "Bezahlt per"
+
+msgid "Member"
+msgstr "Mitglied"
+
+msgid "Amount (€)"
+msgstr "Betrag (€)"
+
+msgid "Date and time"
+msgstr "Datum und Uhrzeit"
+
+msgid "Note"
+msgstr "Notiz"
+
+msgid "Enter an amount other than 0."
+msgstr "Gib einen Betrag ungleich 0 ein."
+
+msgid "Coffee sort"
+msgstr "Kaffeesorte"
+
+msgid "Price (€)"
+msgstr "Preis (€)"
+
+msgid "Cups"
+msgstr "Tassen"
+
+msgid "Must set a new password at the next login"
+msgstr "Muss bei der nächsten Anmeldung ein neues Passwort setzen"
+
+msgid "The new password must differ from the current one."
+msgstr "Das neue Passwort muss sich vom bisherigen unterscheiden."
+
+msgid "Minimum length"
+msgstr "Mindestlänge"
+
+msgid "Character kinds needed"
+msgstr "Benötigte Zeichenarten"
+
+msgid "Passphrase: minimum length"
+msgstr "Passphrase: Mindestlänge"
+
+msgid "Passphrase: character kinds needed"
+msgstr "Passphrase: benötigte Zeichenarten"
+
+msgid "Lock after this many failed logins"
+msgstr "Sperren nach so vielen Fehlversuchen"
+
+msgid "Lock for (minutes)"
+msgstr "Sperre für (Minuten)"
+
+msgid "Log out after inactivity (minutes)"
+msgstr "Abmelden nach Inaktivität (Minuten)"
+
+msgid "Of the four: lower case, upper case, digits, other characters."
+msgstr "Von den vier Arten Kleinbuchstaben, Großbuchstaben, Ziffern, Sonderzeichen."
+
+msgid "A long password may make do with fewer kinds. 0 turns this off."
+msgstr "Ein langes Passwort darf mit weniger Zeichenarten auskommen. 0 schaltet das ab."
+
+#, python-format
+msgid "Allowed: %(low)s to %(high)s."
+msgstr "Erlaubt: %(low)s bis %(high)s."
+
+msgid "Longer than the minimum length - or 0."
+msgstr "Länger als die Mindestlänge – oder 0."
 
 msgid "Starting"
 msgstr "Start"
@@ -124,82 +240,426 @@ msgstr "Fehlgeschlagen"
 msgid "Import failed: %(error)s"
 msgstr "Import fehlgeschlagen: %(error)s"
 
-msgid "Audit log"
-msgstr "Protokoll"
+msgid "Saving the current data"
+msgstr "Aktuelle Daten werden gesichert"
 
-msgid "Last 500 dashboard actions that changed any data, newest first."
+msgid "Restoring the backup"
+msgstr "Backup wird eingespielt"
+
+msgid "Updating the database"
+msgstr "Datenbank wird aktualisiert"
+
+#, python-format
+msgid "Restore failed: %(error)s"
+msgstr "Wiederherstellen fehlgeschlagen: %(error)s"
+
+#, python-format
+msgid ""
+"Backup %(name)s restored. Log in again if the dashboard asks you to - the "
+"logins are now the ones from the backup."
 msgstr ""
-"Die letzten 500 Dashboard-Aktionen, die Daten geändert haben, neueste zuerst."
+"Backup %(name)s wiederhergestellt. Melde dich neu an, falls das Dashboard "
+"danach fragt – es gelten jetzt die Anmeldungen aus dem Backup."
 
-msgid "When"
-msgstr "Wann"
+#, python-format
+msgid "At most %(max)s characters."
+msgstr "Höchstens %(max)s Zeichen."
 
-msgid "Who"
-msgstr "Wer"
+#, python-format
+msgid ""
+"At least %(length)s characters using %(kinds)s of the four kinds lower case, "
+"upper case, digits, other characters"
+msgstr "Mindestens %(length)s Zeichen aus %(kinds)s der vier Arten Kleinbuchstaben, Großbuchstaben, Ziffern, Sonderzeichen"
 
-msgid "Action"
-msgstr "Aktion"
+#, python-format
+msgid ""
+"- or a passphrase of at least %(length)s characters using %(kinds)s of them"
+msgstr "– oder eine Passphrase mit mindestens %(length)s Zeichen aus %(kinds)s davon"
 
-msgid "Target"
-msgstr "Ziel"
+#, python-format
+msgid "Too many failed logins - this account is locked until %(time)s."
+msgstr "Zu viele Fehlversuche – dieses Konto ist bis %(time)s Uhr gesperrt."
 
-msgid "Details"
-msgstr "Details"
+#, python-format
+msgid "You were logged out after %(minutes)s minutes without activity."
+msgstr "Du wurdest nach %(minutes)s Minuten ohne Aktivität abgemeldet."
 
-msgid "No actions recorded yet."
-msgstr "Noch keine Aktionen aufgezeichnet."
+msgid "Please set a new password first - it has to meet the current rules."
+msgstr "Bitte setze zuerst ein neues Passwort – es muss die aktuellen Regeln erfüllen."
 
-msgid "Backup"
-msgstr "Backup"
+msgid "Backups are running"
+msgstr "Backups laufen"
+
+#, python-format
+msgid "Last backup %(when)s."
+msgstr "Letztes Backup %(when)s."
+
+msgid "The first backup is made within the hour."
+msgstr "Das erste Backup entsteht innerhalb der nächsten Stunde."
+
+msgid "Backups are not running - the backup stick is missing"
+msgstr "Backups laufen nicht – der Backup-Stick fehlt"
+
+#, python-format
+msgid ""
+"Plug the backup stick (%(model)s, serial %(serial)s) back in - backups then "
+"carry on by themselves. A different stick has to be set up under Backup "
+"first."
+msgstr ""
+"Steck den Backup-Stick (%(model)s, Seriennummer %(serial)s) wieder ein – "
+"dann laufen die Backups von selbst weiter. Ein anderer Stick muss erst unter "
+"Backup eingerichtet werden."
+
+msgid "The last backup failed"
+msgstr "Das letzte Backup ist fehlgeschlagen"
+
+msgid "Backups are not running - the storage service isn't answering"
+msgstr "Backups laufen nicht – der Speicherdienst antwortet nicht"
 
 msgid ""
-"BACKUP_PATH is not configured - set it (and BACKUP_ENABLED) in the "
-"environment."
+"The device's storage service (coffeepy-storage) is not running. Restarting "
+"the device usually helps."
 msgstr ""
-"BACKUP_PATH ist nicht konfiguriert - setze es (und BACKUP_ENABLED) in der "
-"Umgebung."
+"Der Speicherdienst des Geräts (coffeepy-storage) läuft nicht. Ein Neustart "
+"des Geräts hilft meistens."
 
-msgid "Backup now"
-msgstr "Jetzt sichern"
+msgid "No backups yet"
+msgstr "Noch keine Backups"
 
-msgid "Existing backups"
-msgstr "Vorhandene Backups"
+msgid ""
+"Plug in a USB stick and set it up under Backup - from then on the data is "
+"saved to it regularly."
+msgstr ""
+"Steck einen USB-Stick ein und richte ihn unter Backup ein – ab dann werden "
+"die Daten regelmäßig darauf gesichert."
 
-msgid "No backups yet."
-msgstr "Noch keine Backups."
+msgid "Download"
+msgstr "Herunterladen"
 
-msgid "Statistics"
-msgstr "Statistik"
+msgid "Restore"
+msgstr "Wiederherstellen"
 
-msgid "Pillory"
-msgstr "Pranger"
+msgid "No backups on it yet."
+msgstr "Noch keine Backups darauf."
 
-msgid "Payment methods"
-msgstr "Zahlungsmethoden"
-
-msgid "System"
-msgstr "System"
-
-msgid "Update"
-msgstr "Update"
-
-msgid "Import legacy DB"
-msgstr "Alte Datenbank importieren"
-
-msgid "Reset database"
-msgstr "Datenbank zurücksetzen"
-
-msgid "System time"
-msgstr "Systemzeit"
-
-msgid "Certificate"
-msgstr "Zertifikat"
+msgid "My account"
+msgstr "Mein Konto"
 
 msgid "Admin"
 msgstr "Admin"
 
-msgid "Logout"
+msgid "Manager"
+msgstr "Betreuer"
+
+#, python-format
+msgid "last login %(when)s"
+msgstr "zuletzt angemeldet %(when)s"
+
+msgid "Change password"
+msgstr "Passwort ändern"
+
+msgid "Audit log"
+msgstr "Protokoll"
+
+msgid "Export (CSV)"
+msgstr "Export (CSV)"
+
+#, python-format
+msgid ""
+"Everything that happened on the device - logins and failed logins, changes "
+"in the dashboard, card logins, orders and payments at the kiosk, the phones, "
+"backups, sticks and updates - newest first. Entries older than %(days)s days "
+"are deleted automatically."
+msgstr ""
+"Alles, was auf dem Gerät passiert ist – Anmeldungen und Fehlversuche, "
+"Änderungen im Dashboard, Kartenanmeldungen, Bestellungen und Zahlungen am "
+"Kiosk, die Handys, Backups, Sticks und Updates – neueste zuerst. Einträge, "
+"die älter als %(days)s Tage sind, werden automatisch gelöscht."
+
+msgid "Search"
+msgstr "Suche"
+
+msgid "name, action, address…"
+msgstr "Name, Aktion, Adresse…"
+
+msgid "Source"
+msgstr "Quelle"
+
+msgid "All"
+msgstr "Alle"
+
+msgid "Result"
+msgstr "Ergebnis"
+
+msgid "Succeeded"
+msgstr "Erfolgreich"
+
+msgid "From"
+msgstr "Von"
+
+msgid "To"
+msgstr "Bis"
+
+msgid "Filter"
+msgstr "Filtern"
+
+msgid "failed"
+msgstr "fehlgeschlagen"
+
+msgid "No entries match."
+msgstr "Keine passenden Einträge."
+
+msgid "Newer"
+msgstr "Neuere"
+
+#, python-format
+msgid "Page %(number)s of %(total)s"
+msgstr "Seite %(number)s von %(total)s"
+
+msgid "Older"
+msgstr "Ältere"
+
+msgid "Backup"
+msgstr "Backup"
+
+msgid "Working on the stick - this takes up to a minute…"
+msgstr "Der Stick wird bearbeitet – das dauert bis zu einer Minute…"
+
+msgid "This device's backup stick"
+msgstr "Backup-Stick dieses Geräts"
+
+msgid "USB stick"
+msgstr "USB-Stick"
+
+#, python-format
+msgid "%(free)s free of %(total)s"
+msgstr "%(free)s von %(total)s frei"
+
+#, python-format
+msgid "every %(minutes)s minutes, the newest %(depth)s are kept"
+msgstr "alle %(minutes)s Minuten, die neuesten %(depth)s bleiben erhalten"
+
+msgid "Back up now"
+msgstr "Jetzt sichern"
+
+msgid "Eject safely"
+msgstr "Sicher auswerfen"
+
+msgid "Backups on the stick"
+msgstr "Backups auf dem Stick"
+
+msgid "An earlier backup stick of this device"
+msgstr "Ein früherer Backup-Stick dieses Geräts"
+
+msgid "A backup stick of another CoffeePy"
+msgstr "Ein Backup-Stick eines anderen CoffeePy"
+
+#, python-format
+msgid ""
+"Set up on %(name)s on %(when)s. It is only read - restore one of its "
+"backups, or make it this device's backup stick (its backups stay on it)."
+msgstr ""
+"Eingerichtet auf %(name)s am %(when)s. Er wird nur gelesen – stelle eines "
+"seiner Backups wieder her oder mach ihn zum Backup-Stick dieses Geräts "
+"(seine Backups bleiben darauf)."
+
+msgid ""
+"Use this stick for this device's backups from now on? The stick used so far "
+"is forgotten."
+msgstr ""
+"Diesen Stick ab jetzt für die Backups dieses Geräts nutzen? Der bisherige "
+"Stick wird vergessen."
+
+msgid "Use for this device"
+msgstr "Für dieses Gerät nutzen"
+
+msgid "USB sticks"
+msgstr "USB-Sticks"
+
+msgid ""
+"Setting up another stick replaces the current backup stick - the old one is "
+"forgotten."
+msgstr ""
+"Einen anderen Stick einzurichten ersetzt den bisherigen Backup-Stick – der "
+"alte wird vergessen."
+
+msgid ""
+"Set a stick up as the backup stick: it is formatted, marked as this "
+"device's, and from then on backups are written to it automatically."
+msgstr ""
+"Richte einen Stick als Backup-Stick ein: Er wird formatiert, als Stick "
+"dieses Geräts markiert, und ab dann landen die Backups automatisch darauf."
+
+msgid "Set up as backup stick"
+msgstr "Als Backup-Stick einrichten"
+
+msgid "Restore a backup"
+msgstr "Backup wiederherstellen"
+
+msgid ""
+"Replaces everything on this device - members, bookings and the dashboard "
+"logins - with the state of the backup. The current data is saved first, and "
+"put back if the backup can't be loaded. Pick a backup from a stick above, or "
+"upload one: a file from \"Download a backup\" or from a stick read on a PC."
+msgstr ""
+"Ersetzt alles auf diesem Gerät – Mitglieder, Buchungen und die Dashboard-"
+"Anmeldungen – durch den Stand des Backups. Die aktuellen Daten werden vorher "
+"gesichert und zurückgespielt, falls sich das Backup nicht einspielen lässt. "
+"Wähle oben ein Backup von einem Stick oder lade eines hoch: eine Datei aus "
+"„Backup herunterladen“ oder von einem Stick, der am PC gelesen wurde."
+
+msgid "Backup file"
+msgstr "Backup-Datei"
+
+#, python-format
+msgid "Type <code>%(word)s</code> to confirm"
+msgstr "Gib zur Bestätigung <code>%(word)s</code> ein"
+
+msgid "Download a backup"
+msgstr "Backup herunterladen"
+
+msgid "The data as it is right now, as a file - also without a stick."
+msgstr "Die Daten im aktuellen Stand als Datei – auch ohne Stick."
+
+msgid "Download backup"
+msgstr "Backup herunterladen"
+
+msgid ""
+"Everything on this device is replaced by the state of this backup - members, "
+"bookings, coffee sorts and the dashboard logins. The current data is saved "
+"first, and put back if the backup can't be loaded. The kiosk shows \"We'll "
+"be right back\" meanwhile."
+msgstr ""
+"Alles auf diesem Gerät wird durch den Stand dieses Backups ersetzt – "
+"Mitglieder, Buchungen, Kaffeesorten und die Dashboard-Anmeldungen. Die "
+"aktuellen Daten werden vorher gesichert und zurückgespielt, falls sich das "
+"Backup nicht einspielen lässt. Der Kiosk zeigt währenddessen „Wir sind "
+"gleich wieder da“."
+
+#, python-format
+msgid "Type <code>%(confirmation)s</code> to confirm"
+msgstr "Gib zur Bestätigung <code>%(confirmation)s</code> ein"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#, python-format
+msgid ""
+"Serial number %(serial)s. The stick is <strong>formatted</strong> - "
+"everything on it is erased - and marked as this device's backup stick. From "
+"then on the database is backed up to it automatically."
+msgstr ""
+"Seriennummer %(serial)s. Der Stick wird <strong>formatiert</strong> – alles "
+"darauf wird gelöscht – und als Backup-Stick dieses Geräts markiert. Ab dann "
+"wird die Datenbank automatisch darauf gesichert."
+
+#, python-format
+msgid ""
+"This replaces the current backup stick (%(model)s): that one is forgotten, "
+"and no backups go to it any more."
+msgstr ""
+"Das ersetzt den bisherigen Backup-Stick (%(model)s): Er wird vergessen, und "
+"es landen keine Backups mehr darauf."
+
+msgid "Yes - erase this stick and use it for backups."
+msgstr "Ja – diesen Stick löschen und für Backups verwenden."
+
+msgid "Format and set up"
+msgstr "Formatieren und einrichten"
+
+msgid "Log out"
 msgstr "Abmelden"
+
+msgid "Navigation"
+msgstr "Navigation"
+
+msgid "More"
+msgstr "Mehr"
+
+msgid "Close"
+msgstr "Schließen"
+
+msgid "Edit booking"
+msgstr "Buchung bearbeiten"
+
+msgid "Edit payment"
+msgstr "Zahlung bearbeiten"
+
+msgid "Enter payment"
+msgstr "Zahlung erfassen"
+
+#, python-format
+msgid "Coffee of %(name)s"
+msgstr "Kaffee von %(name)s"
+
+#, python-format
+msgid "Payment of %(name)s"
+msgstr "Zahlung von %(name)s"
+
+msgid ""
+"For money handed over in person, or a transfer that arrived outside the "
+"kiosk and the phones."
+msgstr ""
+"Für Geld, das persönlich übergeben wurde, oder eine Überweisung, die nicht "
+"über Kiosk oder Handy kam."
+
+msgid "Save"
+msgstr "Speichern"
+
+msgid "Bookings"
+msgstr "Buchungen"
+
+msgid ""
+"Every coffee booked and every payment, newest first - to correct a wrong "
+"booking, or to enter money handed over in person. Every change is recorded "
+"in the audit log."
+msgstr ""
+"Jeder gebuchte Kaffee und jede Zahlung, neueste zuerst – um eine falsche "
+"Buchung zu korrigieren oder persönlich übergebenes Geld zu erfassen. Jede "
+"Änderung landet im Protokoll."
+
+msgid "All members"
+msgstr "Alle Mitglieder"
+
+msgid "departed"
+msgstr "ausgeschieden"
+
+msgid "Show"
+msgstr "Anzeigen"
+
+#, python-format
+msgid "Balance of %(name)s:"
+msgstr "Kontostand von %(name)s:"
+
+#, python-format
+msgid "Delete %(name)s's coffee from %(when)s?"
+msgstr "Kaffee von %(name)s vom %(when)s löschen?"
+
+msgid "unknown sort"
+msgstr "unbekannte Sorte"
+
+#, python-format
+msgid "%(cups)s cup(s)"
+msgstr "%(cups)s Tasse(n)"
+
+msgid "Edit"
+msgstr "Bearbeiten"
+
+msgid "Delete"
+msgstr "Löschen"
+
+#, python-format
+msgid "Delete %(name)s's payment from %(when)s?"
+msgstr "Zahlung von %(name)s vom %(when)s löschen?"
+
+msgid "No orders yet."
+msgstr "Noch keine Bestellungen."
+
+msgid "No payments yet."
+msgstr "Noch keine Zahlungen."
+
+msgid "Certificate"
+msgstr "Zertifikat"
 
 #, python-format
 msgid ""
@@ -223,9 +683,6 @@ msgstr "Zertifikat installiert - es ist in wenigen Sekunden aktiv."
 
 msgid "In use now"
 msgstr "Aktuell in Verwendung"
-
-msgid "Source"
-msgstr "Quelle"
 
 msgid "Uploaded certificate"
 msgstr "Hochgeladenes Zertifikat"
@@ -288,21 +745,9 @@ msgstr "Kaffeesorte hinzufügen"
 msgid "Edit %(name)s"
 msgstr "%(name)s bearbeiten"
 
-msgid "Cancel"
-msgstr "Abbrechen"
-
-msgid "Save"
-msgstr "Speichern"
-
 #, python-format
 msgid "Delete %(name)s?"
 msgstr "%(name)s löschen?"
-
-msgid "Edit"
-msgstr "Bearbeiten"
-
-msgid "Delete"
-msgstr "Löschen"
 
 msgid "No coffee sorts yet."
 msgstr "Noch keine Kaffeesorten."
@@ -356,24 +801,43 @@ msgid "CoffeePy Dashboard"
 msgstr "CoffeePy-Dashboard"
 
 #, python-format
-msgid "Welcome, %(name)s"
-msgstr "Willkommen, %(name)s"
+msgid "Hello %(name)s!"
+msgstr "Hallo %(name)s!"
 
-msgid ""
-"Use the navigation on the left to review statistics, the deposit pillory, "
-"coffee sorts and members (via the Django admin), and — for superusers — "
-"trigger backups, upload updates, or correct the system time."
-msgstr ""
-"Über die Navigation links siehst du Statistiken, den Schuldenpranger, "
-"Kaffeesorten und Mitglieder (über die Django-Admin-Oberfläche) und kannst - "
-"als Superuser - Backups auslösen, Updates hochladen oder die Systemzeit "
-"korrigieren."
+msgid "Cups today"
+msgstr "Tassen heute"
 
-msgid "System status"
-msgstr "Systemstatus"
+msgid "Cups this month"
+msgstr "Tassen diesen Monat"
 
-msgid "NFC card reader:"
-msgstr "NFC-Kartenleser:"
+msgid "Active members"
+msgstr "Aktive Mitglieder"
+
+msgid "Open from last month"
+msgstr "Offen aus dem Vormonat"
+
+#, python-format
+msgid "%(count)s in the pillory"
+msgstr "%(count)s am Pranger"
+
+msgid "Quick actions"
+msgstr "Schnellzugriff"
+
+msgid "Add member"
+msgstr "Mitglied hinzufügen"
+
+msgid "Device"
+msgstr "Gerät"
+
+msgid "NFC card reader"
+msgstr "NFC-Kartenleser"
+
+#, python-format
+msgid "last update %(when)s"
+msgstr "letzte Meldung %(when)s"
+
+msgid "never reported in"
+msgstr "hat sich noch nie gemeldet"
 
 msgid "online"
 msgstr "online"
@@ -381,16 +845,31 @@ msgstr "online"
 msgid "offline"
 msgstr "offline"
 
-#, python-format
-msgid "(last update %(when)s)"
-msgstr "(letzte Meldung %(when)s)"
-
-msgid "(never reported in)"
-msgstr "(hat sich noch nie gemeldet)"
+msgid "Backup stick"
+msgstr "Backup-Stick"
 
 #, python-format
-msgid "Reachable from another device at https://%(host)s/"
-msgstr "Von anderen Geräten erreichbar unter https://%(host)s/"
+msgid ""
+"Backups are not running - plug the stick (%(model)s, serial %(serial)s) back "
+"in."
+msgstr ""
+"Backups laufen nicht – steck den Stick (%(model)s, Seriennummer %(serial)s) "
+"wieder ein."
+
+msgid "None set up - backups are not running."
+msgstr "Keiner eingerichtet – Backups laufen nicht."
+
+msgid "backing up"
+msgstr "sichert"
+
+msgid "missing"
+msgstr "fehlt"
+
+msgid "no backups"
+msgstr "keine Backups"
+
+msgid "Address on the network"
+msgstr "Adresse im Netzwerk"
 
 msgid "CPU/RAM/disk"
 msgstr "CPU/RAM/Speicher"
@@ -398,23 +877,17 @@ msgstr "CPU/RAM/Speicher"
 msgid "Exports"
 msgstr "Exporte"
 
-msgid "Download all orders (CSV)"
-msgstr "Alle Bestellungen herunterladen (CSV)"
+msgid "All orders (CSV)"
+msgstr "Alle Bestellungen (CSV)"
 
-msgid "Download all payments (CSV)"
-msgstr "Alle Zahlungen herunterladen (CSV)"
+msgid "All payments (CSV)"
+msgstr "Alle Zahlungen (CSV)"
 
 msgid "CoffeePy Dashboard - Login"
 msgstr "CoffeePy-Dashboard - Anmeldung"
 
 msgid "Invalid username or password."
 msgstr "Benutzername oder Passwort ungültig."
-
-msgid "Username"
-msgstr "Benutzername"
-
-msgid "Password"
-msgstr "Passwort"
 
 msgid "Log in"
 msgstr "Anmelden"
@@ -450,9 +923,6 @@ msgstr ""
 
 msgid "Edit member"
 msgstr "Mitglied bearbeiten"
-
-msgid "Add member"
-msgstr "Mitglied hinzufügen"
 
 #, python-format
 msgid ""
@@ -581,15 +1051,6 @@ msgstr "Umbenannt in \"%(name)s\", weil diese Karte zuletzt benutzt wurde."
 msgid "Back to members"
 msgstr "Zurück zu den Mitgliedern"
 
-msgid "Status"
-msgstr "Status"
-
-msgid "UID"
-msgstr "UID"
-
-msgid "Alt cards"
-msgstr "Weitere Karten"
-
 #, python-format
 msgid "Log out all of %(name)s's linked devices?"
 msgstr "Alle verknüpften Geräte von %(name)s abmelden?"
@@ -609,8 +1070,15 @@ msgstr "Ausgeschieden %(date)s"
 msgid "Departed"
 msgstr "Ausgeschieden"
 
-msgid "Active"
-msgstr "Aktiv"
+msgid "UID"
+msgstr "UID"
+
+msgid "Alt cards"
+msgstr "Weitere Karten"
+
+#, python-format
+msgid "%(count)s phone(s)"
+msgstr "%(count)s Handy(s)"
 
 msgid "Add card"
 msgstr "Karte hinzufügen"
@@ -628,11 +1096,31 @@ msgstr "Als ausgeschieden markieren"
 msgid "No members yet."
 msgstr "Noch keine Mitglieder."
 
+msgid "Login & passwords"
+msgstr "Anmeldung & Passwörter"
+
+msgid ""
+"The rules for logging in to this dashboard. The defaults follow the BSI's "
+"recommendation: at least 12 characters from three kinds, or a passphrase of "
+"at least 20 from two. Stricter rules apply to every new password right away "
+"- and to an existing one at its owner's next login, which then has to be "
+"replaced. Passwords longer than 128 characters are never accepted."
+msgstr "Die Regeln für die Anmeldung an diesem Dashboard. Die Voreinstellungen folgen der Empfehlung des BSI: mindestens 12 Zeichen aus drei Zeichenarten oder eine Passphrase mit mindestens 20 Zeichen aus zwei. Strengere Regeln gelten sofort für jedes neue Passwort – und für ein bestehendes bei der nächsten Anmeldung seines Besitzers, der es dann ersetzen muss. Passwörter mit mehr als 128 Zeichen werden nie angenommen."
+
+msgid "Passwords"
+msgstr "Passwörter"
+
+msgid "Logging in"
+msgstr "Anmeldung"
+
 msgid "Edit payment method"
 msgstr "Zahlungsmethode bearbeiten"
 
 msgid "Add payment method"
 msgstr "Zahlungsmethode hinzufügen"
+
+msgid "Payment methods"
+msgstr "Zahlungsmethoden"
 
 msgid ""
 "Cash is always available and isn't listed here. Pick a provider (PayPal, "
@@ -646,12 +1134,8 @@ msgstr ""
 "bezahlen bzw. per Scan bezahlen können - oder nimm \"Eigener Link\" für "
 "alles andere."
 
-msgid "Identifier / link"
-msgstr "Kennung / Link"
-
-msgctxt "yesno filter: comma-separated, no spaces"
-msgid "Yes,No"
-msgstr "Ja,Nein"
+msgid "inactive"
+msgstr "inaktiv"
 
 msgid "No payment methods configured yet - members can still pay cash."
 msgstr ""
@@ -668,17 +1152,15 @@ msgstr ""
 "Mitglieder mit negativem Kontostand, gerechnet mit allen Zahlungen und den "
 "Bestellungen bis (aber ohne) den aktuellen Monat."
 
-msgid "Member"
-msgstr "Mitglied"
-
-msgid "Deposits"
-msgstr "Einzahlungen"
-
-msgid "Balance"
-msgstr "Kontostand"
+#, python-format
+msgid "Paid %(payments)s€ &middot; coffee until last month %(deposits)s€"
+msgstr "Bezahlt %(payments)s€ &middot; Kaffee bis Vormonat %(deposits)s€"
 
 msgid "Nobody owes anything."
 msgstr "Niemand schuldet etwas."
+
+msgid "Reset database"
+msgstr "Datenbank zurücksetzen"
 
 #, python-format
 msgid ""
@@ -701,18 +1183,14 @@ msgstr "Aktuell gespeichert"
 msgid "Delete everything"
 msgstr "Alles löschen"
 
-#, python-format
-msgid "Type <code>%(confirmation)s</code> to confirm"
-msgstr "Gib zur Bestätigung <code>%(confirmation)s</code> ein"
-
 msgid "Delete all data"
 msgstr "Alle Daten löschen"
 
 msgid "Delete all coffee data? This cannot be undone."
 msgstr "Alle Kaffeedaten löschen? Das lässt sich nicht rückgängig machen."
 
-msgid "Cups"
-msgstr "Tassen"
+msgid "Statistics"
+msgstr "Statistik"
 
 msgid "Orders (€)"
 msgstr "Bestellungen (€)"
@@ -752,6 +1230,9 @@ msgstr "Durchschnittlicher Bestellpreis pro Quartal"
 msgid "Payments received by method (€, all time)"
 msgstr "Eingegangene Zahlungen nach Methode (€, gesamt)"
 
+msgid "System"
+msgstr "System"
+
 msgid "Reachable from another device (phone, laptop) at:"
 msgstr "Von anderen Geräten (Handy, Laptop) erreichbar unter:"
 
@@ -767,6 +1248,9 @@ msgstr "Arbeitsspeicher"
 
 msgid "Disk"
 msgstr "Speicherplatz"
+
+msgid "System time"
+msgstr "Systemzeit"
 
 msgid ""
 "Only needed as a fallback if the RTC module drifts or isn't fitted - "
@@ -785,6 +1269,9 @@ msgstr "Neues Datum/Uhrzeit"
 
 msgid "Set system time"
 msgstr "Systemzeit setzen"
+
+msgid "Update"
+msgstr "Update"
 
 msgid "Software update"
 msgstr "Software-Update"
@@ -819,6 +1306,58 @@ msgstr "Warte auf Status…"
 msgid "No update processed yet."
 msgstr "Noch kein Update verarbeitet."
 
+msgid "Edit user"
+msgstr "Benutzer bearbeiten"
+
+msgid "Add user"
+msgstr "Benutzer anlegen"
+
+msgid "Set password"
+msgstr "Passwort setzen"
+
+#, python-format
+msgid "New password for %(name)s"
+msgstr "Neues Passwort für %(name)s"
+
+msgid "Dashboard users"
+msgstr "Dashboard-Benutzer"
+
+msgid ""
+"Who may log in to this dashboard. Admins can do everything, including the "
+"system pages and this one; managers look after members, bookings, coffee "
+"sorts and payment methods. Members themselves need no account - they use the "
+"kiosk and their phone."
+msgstr ""
+"Wer sich an diesem Dashboard anmelden darf. Admins dürfen alles, auch die "
+"System-Seiten und diese hier; Betreuer kümmern sich um Mitglieder, "
+"Buchungen, Kaffeesorten und Zahlungsmethoden. Mitglieder selbst brauchen "
+"kein Konto – sie nutzen den Kiosk und ihr Handy."
+
+#, python-format
+msgid "Delete the dashboard user %(name)s?"
+msgstr "Dashboard-Benutzer %(name)s löschen?"
+
+msgid "locked"
+msgstr "gesperrt"
+
+msgid "you"
+msgstr "du"
+
+msgid "never logged in"
+msgstr "noch nie angemeldet"
+
+msgid "Overview"
+msgstr "Übersicht"
+
+msgid "Pillory"
+msgstr "Pranger"
+
+msgid "Manage"
+msgstr "Verwalten"
+
+msgid "Import legacy DB"
+msgstr "Alte Datenbank importieren"
+
 #, python-format
 msgid "openssl %(command)s failed"
 msgstr "openssl %(command)s fehlgeschlagen"
@@ -845,6 +1384,9 @@ msgstr ""
 "Es gilt nicht für %(host)s - Browser, die diese Adresse nutzen, zeigen eine "
 "Warnung."
 
+msgid "Only admins may open that page."
+msgstr "Diese Seite dürfen nur Admins öffnen."
+
 #, python-format
 msgid "Timed out - no card was tapped within %(seconds)s seconds."
 msgstr ""
@@ -863,12 +1405,28 @@ msgstr "Bitte zwei verschiedene Konten auswählen."
 msgid "Please choose both the certificate and its private key."
 msgstr "Bitte wähle das Zertifikat und seinen privaten Schlüssel aus."
 
-msgid "Backup completed."
-msgstr "Backup abgeschlossen."
-
 #, python-format
 msgid "Backup failed: %(error)s"
 msgstr "Backup fehlgeschlagen: %(error)s"
+
+msgid "Backup completed."
+msgstr "Backup abgeschlossen."
+
+msgid "That stick is no longer there."
+msgstr "Dieser Stick ist nicht mehr da."
+
+msgid "Tick the box to confirm that the stick may be erased."
+msgstr "Setz den Haken, um zu bestätigen, dass der Stick gelöscht werden darf."
+
+#, python-format
+msgid "Type %(word)s to confirm - nothing was changed."
+msgstr "Gib zur Bestätigung %(word)s ein – es wurde nichts geändert."
+
+msgid "A restore or an import is already running."
+msgstr "Es läuft schon eine Wiederherstellung oder ein Import."
+
+msgid "Please choose a backup file."
+msgstr "Bitte wähle eine Backup-Datei."
 
 msgid "Please upload a .tar or .tar.gz image bundle."
 msgstr "Bitte lade ein .tar- oder .tar.gz-Image-Paket hoch."
@@ -896,6 +1454,50 @@ msgstr "Datenbank zurückgesetzt - gelöscht: %(summary)s."
 
 msgid "Audit log entries"
 msgstr "Protokolleinträge"
+
+msgid "Password changed."
+msgstr "Passwort geändert."
+
+msgid ""
+"You can't remove your own admin rights, lock or delete your own account."
+msgstr ""
+"Du kannst dir nicht selbst die Admin-Rechte nehmen und dein eigenes Konto "
+"nicht sperren oder löschen."
+
+#, python-format
+msgid "User %(name)s created."
+msgstr "Benutzer %(name)s angelegt."
+
+msgid "Saved."
+msgstr "Gespeichert."
+
+#, python-format
+msgid "Password for %(name)s changed."
+msgstr "Passwort von %(name)s geändert."
+
+#, python-format
+msgid "User %(name)s deleted."
+msgstr "Benutzer %(name)s gelöscht."
+
+msgid "Booking saved."
+msgstr "Buchung gespeichert."
+
+msgid "Booking deleted."
+msgstr "Buchung gelöscht."
+
+msgid "Payment entered."
+msgstr "Zahlung erfasst."
+
+msgid "Payment saved."
+msgstr "Zahlung gespeichert."
+
+msgid "Payment deleted."
+msgstr "Zahlung gelöscht."
+
+msgid ""
+"Saved. Anyone whose password doesn't meet the new rules has to set a new one "
+"at their next login."
+msgstr "Gespeichert. Wessen Passwort die neuen Regeln nicht erfüllt, muss bei der nächsten Anmeldung ein neues setzen."
 
 msgid "Admin access"
 msgstr "Admin-Zugang"
@@ -1104,10 +1706,6 @@ msgid "Welcome, new card!"
 msgstr "Willkommen, neue Karte!"
 
 #, python-format
-msgid "Hello %(name)s!"
-msgstr "Hallo %(name)s!"
-
-#, python-format
 msgid "Card UID: %(uid)s"
 msgstr "Karten-UID: %(uid)s"
 
@@ -1124,14 +1722,14 @@ msgstr "CCT"
 msgid "CCM"
 msgstr "CCM"
 
+msgid "Balance"
+msgstr "Kontostand"
+
 msgid "CC = Cups Count; T/M = Total/Month"
 msgstr "CC = Tassenanzahl (Cups Count); T/M = gesamt/Monat"
 
 msgid "Payment amount"
 msgstr "Betrag"
-
-msgid "Paid via"
-msgstr "Bezahlt per"
 
 msgid "Or scan to pay what you owe directly:"
 msgstr "Oder scanne, um den offenen Betrag direkt zu bezahlen:"
@@ -1211,6 +1809,9 @@ msgstr "WLAN wird eingerichtet"
 msgid "Starting CoffeePy"
 msgstr "CoffeePy wird gestartet"
 
+msgid "Restoring a backup"
+msgstr "Ein Backup wird eingespielt"
+
 msgid ""
 "That card is already linked to another account - please try a different card."
 msgstr ""
@@ -1219,9 +1820,6 @@ msgstr ""
 
 msgid "My CoffeePy"
 msgstr "Mein CoffeePy"
-
-msgid "Log out"
-msgstr "Abmelden"
 
 msgid "Home"
 msgstr "Start"
@@ -1288,14 +1886,8 @@ msgstr "Letzte Bestellungen"
 msgid "Coffee"
 msgstr "Kaffee"
 
-msgid "No orders yet."
-msgstr "Noch keine Bestellungen."
-
 msgid "Recent payments"
 msgstr "Letzte Zahlungen"
-
-msgid "No payments yet."
-msgstr "Noch keine Zahlungen."
 
 msgid "Security warning in your browser?"
 msgstr "Sicherheitswarnung im Browser?"

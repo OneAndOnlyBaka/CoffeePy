@@ -58,8 +58,10 @@ services:
         condition: service_completed_successfully
     env_file: .env
     environment:
-      BACKUP_PATH: /backups
       TLS_DIR: /tls
+      USB_DIR: /usb
+      STORAGE_DIR: /storage
+      MAINTENANCE_DIR: /maintenance
     # Overrides the Dockerfile's own CMD (which defaults to 3, a reasonable default for
     # non-Pi hosts) - each worker is a full separate Django process, so on a 1GB-RAM Pi
     # running Postgres/mosquitto/mqtt-listener/backup alongside it, that's real RAM.
@@ -75,7 +77,17 @@ services:
     volumes:
       - ./data/updates:/app/updates:z
       - ./data/tls:/tls:z
-      - ${BACKUP_HOST_PATH:-./data/backups}:/backups:z
+      # The USB backup stick, mounted by the host (install/storage_helper.py) - rslave, so a
+      # stick plugged in after the container started still shows up in it.
+      - type: bind
+        source: /srv/coffeepy-usb
+        target: /usb
+        bind:
+          propagation: rslave
+          create_host_path: true
+      - ./data/storage:/storage:z
+      # A restore writes the kiosk's "back in a moment" status here (coffee/backups.py).
+      - ./data/maintenance:/maintenance:z
 
   mqtt-listener:
     build: .
@@ -98,7 +110,10 @@ services:
         set -e
         python manage.py migrate --noinput
         while true; do
-          python manage.py backup_db
+          # Only writes when this device's backup stick is plugged in (coffee/backups.py).
+          python manage.py backup_db || true
+          # The host's events into the audit log, and entries past AUDIT_RETENTION_DAYS out.
+          python manage.py audit_housekeeping || true
           # Renews the certificates before they expire (dashboard/tls.py) - a box that
           # never restarts would otherwise outlive its 800-day server certificate.
           python manage.py ensure_tls || true
@@ -110,10 +125,19 @@ services:
         condition: service_completed_successfully
     env_file: .env
     environment:
-      BACKUP_PATH: /backups
       TLS_DIR: /tls
+      USB_DIR: /usb
+      STORAGE_DIR: /storage
     volumes:
-      - ${BACKUP_HOST_PATH:-./data/backups}:/backups:z
+      # The USB backup stick, mounted by the host (install/storage_helper.py) - rslave, so a
+      # stick plugged in after the container started still shows up in it.
+      - type: bind
+        source: /srv/coffeepy-usb
+        target: /usb
+        bind:
+          propagation: rslave
+          create_host_path: true
+      - ./data/storage:/storage:z
       - ./data/tls:/tls:z
 
   # The only way in: 443 for the network, 127.0.0.1:8443 for the kiosk's own browser (the

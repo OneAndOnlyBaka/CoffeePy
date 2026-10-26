@@ -285,11 +285,21 @@ class AuditLogEntry(models.Model):
     the acting user or the affected row (a deleted/merged member, a removed coffee sort)
     no longer exists."""
 
-    action = models.CharField(max_length=100)
+    SOURCE_DASHBOARD, SOURCE_KIOSK, SOURCE_PORTAL, SOURCE_SYSTEM = "dashboard", "kiosk", "portal", "system"
+    SOURCE_CHOICES = [(SOURCE_DASHBOARD, "Dashboard"), (SOURCE_KIOSK, "Kiosk"), (SOURCE_PORTAL, "Portal"),
+                      (SOURCE_SYSTEM, "System")]
+    OUTCOME_SUCCESS, OUTCOME_FAILURE = "success", "failure"
+
+    action = models.CharField(max_length=100, db_index=True)
     actor = models.CharField(max_length=150, blank=True)
     target = models.CharField(max_length=200, blank=True)
     details = models.CharField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    # Where it happened and from which address (BSI OPS.1.1.5: who, what, when, where, and
+    # whether it worked) - a failed login matters as much as a successful one.
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default=SOURCE_DASHBOARD)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    outcome = models.CharField(max_length=10, default=OUTCOME_SUCCESS)
 
     class Meta:
         ordering = ["-created_at"]

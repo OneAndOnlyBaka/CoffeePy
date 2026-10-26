@@ -35,8 +35,22 @@ Rules that hold across all four:
 - **"Cups" means `Order.machine_strokes`**, not `Order` rows - a jug is two cups. Every
   ranking, statistic and comparison counts strokes. Getting this wrong is invisible in tests
   with one-stroke fixtures.
-- **Dashboard mutations get an audit row** via `dashboard.audit.log(request, "noun.verb", …)`,
-  right after the change succeeds. Background work uses `audit.log_actor(username, …)`.
+- **Everything that changes data gets an audit row** via `dashboard.audit.log(request,
+  "noun.verb", …)`, right after the change succeeds - in the dashboard, the kiosk and the
+  portal alike (the latter two pass the member as `actor`). Source and client address are
+  filled in from the request; failures get `outcome="failure"`. Background work uses
+  `audit.log_actor(...)`, the host's processes append to `data/storage/events.jsonl`. The log
+  is the BSI-style record of what happened on the device - a new action that doesn't write
+  one is a gap. Login locking counts failed logins *in this table* (`dashboard/security.py`),
+  so a reset or a restore also clears running locks. The login rules themselves live in the
+  database (`dashboard.models.PasswordPolicy`, "Login & passwords"), within `POLICY_LIMITS`;
+  a password that a stricter rule outdates is caught at its owner's next login.
+  The kiosk's ranking cache relies on it: `services.ranking_fingerprint()` includes the
+  newest audit id, which is the only thing that moves when an old booking is corrected.
+- **There is no Django admin.** Dashboard users and their roles (admin = superuser, manager)
+  live in the dashboard's "Dashboard users"; corrections to orders/payments in "Bookings".
+  A new page goes into `dashboard/templatetags/dashboard_nav.py` - sidebar, phone tabs and
+  the "More" sheet are all drawn from that one list.
 - Tests live in `<app>/tests/test_*.py`. UI text is bilingual - see "Two languages" below.
 - **A change users can see also changes the manual** (`docs/MANUAL.de.md` + `.en.md`, with
   screenshots in both languages) - the `user-manual` skill in `.claude/skills/` has the
@@ -122,6 +136,26 @@ answers 502s with `data/tls/maintenance.html` (both languages, rendered by `dash
 A new installer step or watcher phase needs a label in `kiosk.views.MAINTENANCE_STEPS`; the
 installer's rsync keeps `data/maintenance/` (`src-filter.txt`) or it would delete the status
 mid-run.
+
+## Backups go to one USB stick
+
+The web container can't touch block devices, so `install/storage_helper.py` does, on the host
+(`coffeepy-storage.service`), and talks to the dashboard through files in `data/storage/`:
+`status.json` (what's plugged in), `requests/*.json` (format/adopt/eject), `device-id` and
+`stick.json` (the one stick this device backs up to). `coffee/backups.py` is the app side.
+
+- **Only the stick in `stick.json` is ever written.** Its metadata must carry this device's
+  id *and* that stick id - an older stick of the same device is read-only. The mount point
+  is a plain directory on the SD card while no stick is in; anything that writes there
+  without checking the metadata first fills the card instead.
+- **The stick reaches the containers through an `rslave` bind of `/srv/coffeepy-usb`**
+  (`docker-compose.yml`) - a stick plugged in after the container started still shows up.
+- **`pg_dump`/`pg_restore` in the image are newer than the server** (17 against 16). A 17 dump
+  has `SET transaction_timeout`, which 16 rejects; `backups.restore` filters it. A restore
+  is one psql transaction (drop + load): a broken backup rolls back instead of leaving an
+  empty database - which is exactly what happened once with a two-step restore.
+- A restore replaces the dashboard logins and sessions too - the restoring admin may be
+  logged out afterwards.
 
 ## Django traps that already cost time here
 

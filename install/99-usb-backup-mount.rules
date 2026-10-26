@@ -1,6 +1,0 @@
-# Installed to /etc/udev/rules.d/ by install/install.sh (hardware step).
-# Auto-mounts a USB stick labeled COFFEEBAK (format it with e.g. `mkfs.ext4 -L COFFEEBAK
-# /dev/sdX1`) at /mnt/coffeepy-backup whenever it's plugged in, so BACKUP_HOST_PATH in
-# .env has somewhere real to write to.
-ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_LABEL}=="COFFEEBAK", \
-    RUN+="/usr/bin/systemd-mount --no-block --collect $devnode /mnt/coffeepy-backup"

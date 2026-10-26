@@ -1,5 +1,6 @@
 import csv
 import json
+from functools import wraps
 import os
 import tempfile
 import uuid
@@ -7,12 +8,15 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from django.conf import settings
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.contrib.auth import get_user_model, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
 from django.contrib.sessions.models import Session
 from django.core.management import call_command
+from django.core.paginator import Paginator
 from django.db import connection, transaction
-from django.db.models import Count
-from django.http import Http404, HttpResponse, JsonResponse
+from django.db.models import Count, Q
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -20,7 +24,7 @@ from django.utils.html import escape
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import purge, services
+from coffee import backups, purge, services
 from coffee.models import (
     AltUidCapture,
     AuditLogEntry,
@@ -35,10 +39,33 @@ from coffee.models import (
 )
 from coffee.network import public_host
 
-from . import audit, import_jobs, system_clock, system_stats, tls
-from .forms import CoffeeSortForm, MemberForm, PaymentMethodForm
+from . import audit, import_jobs, restore_jobs, system_clock, system_stats, tls
+from .models import AccountSecurity, PasswordPolicy
+from .forms import (
+    ROLE_ADMIN,
+    AdminSetPasswordForm,
+    CoffeeSortForm,
+    DashboardUserForm,
+    MemberForm,
+    OrderForm,
+    OwnPasswordChangeForm,
+    PasswordPolicyForm,
+    PaymentForm,
+    PaymentMethodForm,
+    UserCreateForm,
+)
 
-superuser_required = user_passes_test(lambda u: u.is_superuser)
+def superuser_required(view):
+    """Admin-only pages. A manager who gets here anyway (an old link, a guessed URL) lands
+    on the overview - and the attempt is logged."""
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if not request.user.is_superuser:
+            audit.log(request, "access.denied", target=request.path, outcome="failure")
+            messages.error(request, _("Only admins may open that page."))
+            return redirect("dashboard:index")
+        return view(request, *args, **kwargs)
+    return wrapped
 
 
 @login_required
@@ -47,7 +74,8 @@ def index(request):
     return render(
         request,
         "dashboard/index.html",
-        {"reader_status": reader_status, "public_host": public_host()},
+        {"reader_status": reader_status, "public_host": public_host(), "overview": services.dashboard_overview(),
+         "backup_health": backups.health()},
     )
 
 
@@ -495,46 +523,159 @@ def certificate_download(request):
 @login_required
 @superuser_required
 def backup(request):
-    backup_path = os.environ.get("BACKUP_PATH")
-    message = None
-    failed = False
+    """The USB backup stick - setting one up, its backups, restoring them - plus a backup
+    straight to the browser for a device without a stick."""
     if request.method == "POST":
         try:
             call_command("backup_db", once=True)
-            message = _("Backup completed.")
+        except Exception as exc:  # noqa: BLE001 - surfaced to the admin
+            messages.error(request, _("Backup failed: %(error)s") % {"error": exc})
+        else:
             audit.log(request, "backup.trigger")
-        except Exception as exc:  # noqa: BLE001
-            message = _("Backup failed: %(error)s") % {"error": exc}
-            failed = True
-
-    files = []
-    if backup_path and Path(backup_path).is_dir():
-        files = sorted(
-            (p for p in Path(backup_path).glob("coffee_backup_*.sql")),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True,
-        )
-    return render(
-        request,
-        "dashboard/backup.html",
-        {"message": message, "failed": failed, "files": files, "backup_path": backup_path},
-    )
+            messages.success(request, _("Backup completed."))
+        return redirect("dashboard:backup")
+    status = backups.storage_status()
+    return render(request, "dashboard/backup.html", {
+        "storage": status,
+        "health": backups.health(),
+        "own_backups": backups.list_backups(backups.own_backup_dir()),
+        "foreign_backups": backups.list_backups(backups.foreign_backup_dir()),
+        "foreign_is_ours": (status.get("foreign") or {}).get("meta", {}).get("device_id") == backups.device_id(),
+        "interval": os.environ.get("BACKUP_INTERVAL_MINUTES", "60"),
+        "depth": os.environ.get("BACKUP_DEPTH", "48"),
+        "restore": restore_jobs.localized(restore_jobs.read_status()),
+        "restore_running": restore_jobs.is_running(),
+    })
 
 
 @login_required
 @superuser_required
-def backup_download(request, filename):
-    backup_path = os.environ.get("BACKUP_PATH")
-    if not backup_path:
+@require_GET
+def storage_status(request):
+    """Polled by the backup page while the host helper works on a stick."""
+    status = backups.storage_status()
+    return JsonResponse({"request": status.get("request", {}), "helper_running": status.get("helper_running")})
+
+
+@login_required
+@superuser_required
+def usb_setup(request):
+    """Setting a stick up as this device's backup stick: it is formatted - so this page names
+    the stick and asks once more before the host helper is told to."""
+    status = backups.storage_status()
+    path = request.GET.get("disk") or request.POST.get("disk", "")
+    disk = next((d for d in status.get("available", []) if d["path"] == path), None)
+    if disk is None:
+        messages.error(request, _("That stick is no longer there."))
+        return redirect("dashboard:backup")
+    if request.method == "POST":
+        if not request.POST.get("confirm"):
+            messages.error(request, _("Tick the box to confirm that the stick may be erased."))
+        else:
+            backups.storage_request("format", path=disk["path"], serial=disk["serial"],
+                                    requested_by=request.user.get_username())
+            audit.log(request, "backup.stick_setup", target=f"{disk['vendor']} {disk['model']}".strip(),
+                      details=f"serial {disk['serial']}")
+            return redirect(f"{reverse('dashboard:backup')}?working=format")
+    return render(request, "dashboard/backup_usb_setup.html", {"disk": disk, "configured": backups.configured_stick()})
+
+
+@login_required
+@superuser_required
+@require_POST
+def usb_action(request):
+    action = request.POST.get("action")
+    if action not in ("adopt", "eject"):
         raise Http404
-    target = (Path(backup_path) / filename).resolve()
-    if target.parent != Path(backup_path).resolve() or not target.is_file():
-        raise Http404
-    return HttpResponse(
-        target.read_bytes(),
-        content_type="application/sql",
-        headers={"Content-Disposition": f'attachment; filename="{target.name}"'},
-    )
+    backups.storage_request(action, requested_by=request.user.get_username())
+    audit.log(request, f"backup.stick_{action}")
+    return redirect(f"{reverse('dashboard:backup')}?working={action}")
+
+
+def _backup_dir(source):
+    return backups.own_backup_dir() if source == "own" else backups.foreign_backup_dir()
+
+
+@login_required
+@superuser_required
+def backup_download(request, source, filename):
+    try:
+        target = backups.resolve(_backup_dir(source), filename)
+    except backups.BackupError:
+        raise Http404 from None
+    return FileResponse(open(target, "rb"), as_attachment=True, filename=target.name)
+
+
+@login_required
+@superuser_required
+def backup_export(request):
+    """A backup of right now, straight into the browser - also without a stick."""
+    with tempfile.TemporaryDirectory(dir=settings.STORAGE_DIR) as tmp:
+        stamp = timezone.localtime().strftime("%Y-%m-%d_%H%M%S")
+        target = backups.dump(Path(tmp) / f"coffeepy_{stamp}.dump")
+        data = target.read_bytes()
+    audit.log(request, "backup.export")
+    return HttpResponse(data, content_type="application/octet-stream",
+                        headers={"Content-Disposition": f'attachment; filename="{target.name}"'})
+
+
+@login_required
+@superuser_required
+def backup_restore(request, source, filename):
+    """Restoring a backup from a stick: what will happen, then a confirmation."""
+    try:
+        target = backups.resolve(_backup_dir(source), filename)
+    except backups.BackupError:
+        raise Http404 from None
+    if request.method == "POST":
+        if request.POST.get("confirm", "").strip() != RESET_CONFIRMATION:
+            messages.error(request, _("Type %(word)s to confirm - nothing was changed.") % {"word": RESET_CONFIRMATION})
+        elif restore_jobs.is_running() or import_jobs.is_running():
+            messages.error(request, _("A restore or an import is already running."))
+        else:
+            restore_jobs.start_restore(target, target.name, request.user.get_username())
+            return redirect(f"{reverse('dashboard:backup')}#restore")
+    return render(request, "dashboard/backup_restore.html", {
+        "name": target.name, "source": source, "size": target.stat().st_size, "confirmation": RESET_CONFIRMATION,
+    })
+
+
+@login_required
+@superuser_required
+@require_POST
+def backup_restore_upload(request):
+    """A backup file from elsewhere (a download, another device's stick read on a PC)."""
+    upload = request.FILES.get("backup")
+    if not upload:
+        messages.error(request, _("Please choose a backup file."))
+    elif request.POST.get("confirm", "").strip() != RESET_CONFIRMATION:
+        messages.error(request, _("Type %(word)s to confirm - nothing was changed.") % {"word": RESET_CONFIRMATION})
+    elif restore_jobs.is_running() or import_jobs.is_running():
+        messages.error(request, _("A restore or an import is already running."))
+    else:
+        # On the data partition, not /tmp: a RAM-backed tmpfs on the Pi.
+        directory = settings.STORAGE_DIR / "uploads"
+        directory.mkdir(parents=True, exist_ok=True)
+        target = directory / f"{uuid.uuid4().hex}{Path(upload.name).suffix}"
+        with open(target, "wb") as f:
+            for chunk in upload.chunks():
+                f.write(chunk)
+        try:
+            backups.check_restorable(target)
+        except backups.BackupError as exc:
+            target.unlink(missing_ok=True)
+            messages.error(request, _(str(exc)))
+        else:
+            restore_jobs.start_restore(target, upload.name, request.user.get_username(), delete_after=True)
+            return redirect(f"{reverse('dashboard:backup')}#restore")
+    return redirect("dashboard:backup")
+
+
+@login_required
+@superuser_required
+@require_GET
+def restore_status(request):
+    return JsonResponse(restore_jobs.localized(restore_jobs.read_status()))
 
 
 @login_required
@@ -637,11 +778,52 @@ def reset_database(request):
     )
 
 
+AUDIT_PER_PAGE = 100
+
+
+def _audit_entries(request):
+    """The audit log filtered as the page's form says: free text over who/what/target/
+    details/address, the source, the outcome, and a date range."""
+    entries = AuditLogEntry.objects.all()
+    q = request.GET.get("q", "").strip()
+    if q:
+        for word in q.split():
+            entries = entries.filter(Q(action__icontains=word) | Q(actor__icontains=word) | Q(target__icontains=word)
+                                     | Q(details__icontains=word) | Q(ip__icontains=word))
+    if request.GET.get("source") in dict(AuditLogEntry.SOURCE_CHOICES):
+        entries = entries.filter(source=request.GET["source"])
+    if request.GET.get("outcome") in (AuditLogEntry.OUTCOME_SUCCESS, AuditLogEntry.OUTCOME_FAILURE):
+        entries = entries.filter(outcome=request.GET["outcome"])
+    for param, lookup in (("from", "created_at__date__gte"), ("to", "created_at__date__lte")):
+        try:
+            entries = entries.filter(**{lookup: datetime.strptime(request.GET.get(param, ""), "%Y-%m-%d").date()})
+        except ValueError:
+            pass
+    return entries.order_by("-created_at", "-id")
+
+
 @login_required
 @superuser_required
 def audit_log(request):
-    entries = AuditLogEntry.objects.all()[:500]
-    return render(request, "dashboard/audit_log.html", {"entries": entries})
+    audit.ingest_host_events()  # what happened on the host since the backup service last collected it
+    entries = _audit_entries(request)
+    if request.GET.get("format") == "csv":
+        audit.log(request, "audit.export", details=request.GET.urlencode()[:500])
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="audit-log.csv"'
+        writer = csv.writer(response)
+        writer.writerow(["time", "source", "actor", "action", "target", "details", "ip", "outcome"])
+        for e in entries.iterator():
+            writer.writerow([timezone.localtime(e.created_at).isoformat(), e.source, e.actor, e.action, e.target,
+                             e.details, e.ip or "", e.outcome])
+        return response
+    page = Paginator(entries, AUDIT_PER_PAGE).get_page(request.GET.get("page"))
+    query = request.GET.copy()
+    query.pop("page", None)
+    return render(request, "dashboard/audit_log.html", {
+        "page": page, "query": query.urlencode(), "sources": AuditLogEntry.SOURCE_CHOICES,
+        "retention_days": os.environ.get("AUDIT_RETENTION_DAYS", "90"),
+    })
 
 
 @login_required
@@ -666,3 +848,226 @@ def health(request):
         db_ok = False
     status = "ok" if db_ok else "error"
     return JsonResponse({"status": status, "time": timezone.now().isoformat()}, status=200 if db_ok else 503)
+
+
+@login_required
+def account(request):
+    """Everyone's own page: change the password. The session survives the change
+    (update_session_auth_hash) - otherwise it would log the user straight out."""
+    form = OwnPasswordChangeForm(request.user, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
+        update_session_auth_hash(request, user)
+        AccountSecurity.objects.filter(user=user).update(must_change_password=False)
+        audit.log(request, "account.password_change", target=user.get_username())
+        messages.success(request, _("Password changed."))
+        return redirect("dashboard:account")
+    return render(request, "dashboard/account.html", {"form": form})
+
+
+# --- dashboard users ----------------------------------------------------------------------
+
+def _lockout_error(request, user, *, admin, active, deleting=False):
+    """Why a change to `user` must not happen, or None: nobody takes their own admin rights
+    away, locks or deletes themselves. That alone keeps the device from ending up without an
+    admin who can log in - whoever edits users here is one - which would otherwise take a
+    shell on the Pi to undo."""
+    if user.pk == request.user.pk and (deleting or not admin or not active):
+        return _("You can't remove your own admin rights, lock or delete your own account.")
+    return None
+
+
+@login_required
+@superuser_required
+def users(request):
+    return render(request, "dashboard/users.html", {
+        "users": get_user_model().objects.order_by("-is_superuser", "username"),
+    })
+
+
+@login_required
+@superuser_required
+def user_add(request):
+    form = UserCreateForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
+        AccountSecurity.objects.update_or_create(
+            user=user, defaults={"must_change_password": form.cleaned_data["must_change_password"]})
+        audit.log(request, "user.create", target=user.get_username(),
+                  details=form.cleaned_data["role"] + (", must change password" if form.cleaned_data["must_change_password"] else ""))
+        messages.success(request, _("User %(name)s created.") % {"name": user.get_username()})
+        return redirect("dashboard:users")
+    return render(request, "dashboard/user_form.html", {"form": form, "instance": None})
+
+
+@login_required
+@superuser_required
+def user_edit(request, pk):
+    instance = get_object_or_404(get_user_model(), pk=pk)
+    form = DashboardUserForm(request.POST or None, instance=instance)
+    error = None
+    if request.method == "POST" and form.is_valid():
+        error = _lockout_error(request, instance, admin=form.cleaned_data["role"] == ROLE_ADMIN,
+                               active=form.cleaned_data["is_active"])
+        if error is None:
+            user = form.save()
+            audit.log(request, "user.update", target=user.get_username(),
+                      details=f"{form.cleaned_data['role']}, {'active' if user.is_active else 'locked'}")
+            messages.success(request, _("Saved."))
+            return redirect("dashboard:users")
+        instance.refresh_from_db()
+    return render(request, "dashboard/user_form.html", {"form": form, "instance": instance, "error": error})
+
+
+@login_required
+@superuser_required
+def user_password(request, pk):
+    instance = get_object_or_404(get_user_model(), pk=pk)
+    if instance.pk == request.user.pk:
+        return redirect("dashboard:account")  # your own: with the current one, on your account page
+    form = AdminSetPasswordForm(instance, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        must_change = form.cleaned_data["must_change_password"]
+        AccountSecurity.objects.update_or_create(user=instance, defaults={"must_change_password": must_change})
+        audit.log(request, "user.set_password", target=instance.get_username(),
+                  details="must change at next login" if must_change else "")
+        messages.success(request, _("Password for %(name)s changed.") % {"name": instance.get_username()})
+        return redirect("dashboard:users")
+    return render(request, "dashboard/user_password.html", {"form": form, "instance": instance})
+
+
+@login_required
+@superuser_required
+@require_POST
+def user_delete(request, pk):
+    instance = get_object_or_404(get_user_model(), pk=pk)
+    error = _lockout_error(request, instance, admin=False, active=False, deleting=True)
+    if error:
+        messages.error(request, error)
+    else:
+        name = instance.get_username()
+        instance.delete()
+        audit.log(request, "user.delete", target=name)
+        messages.success(request, _("User %(name)s deleted.") % {"name": name})
+    return redirect("dashboard:users")
+
+
+# --- bookings: orders and payments, one by one --------------------------------------------
+
+BOOKINGS_PER_PAGE = 50
+
+
+def _bookings_url(kind, member_uid=None):
+    url = f"{reverse('dashboard:bookings')}?kind={kind}"
+    return f"{url}&member={member_uid}" if member_uid else url
+
+
+@login_required
+def bookings(request):
+    """Every order or every payment, newest first, optionally for one member - the place
+    to correct a mis-booked coffee or a mistyped payment, and to enter cash handed over in
+    person. Replaces what the Django admin was used for."""
+    kind = "payments" if request.GET.get("kind") == "payments" else "orders"
+    member = None
+    if request.GET.get("member", "").isdigit():
+        member = Member.objects.filter(pk=int(request.GET["member"])).first()
+    if kind == "orders":
+        rows = Order.objects.select_related("member", "coffee_sort")
+    else:
+        rows = Payment.objects.select_related("member")
+    if member:
+        rows = rows.filter(member=member)
+    page = Paginator(rows.order_by("-created_at", "-id"), BOOKINGS_PER_PAGE).get_page(request.GET.get("page"))
+    return render(request, "dashboard/bookings.html", {
+        "kind": kind,
+        "member": member,
+        "members": Member.objects.order_by("nickname", "uid"),
+        "page": page,
+        "balance": services.account_balance(member) if member else None,
+    })
+
+
+@login_required
+def order_edit(request, pk):
+    order = get_object_or_404(Order.objects.select_related("member"), pk=pk)
+    form = OrderForm(request.POST or None, instance=order)
+    if request.method == "POST" and form.is_valid():
+        order = form.save()
+        audit.log(request, "order.update", target=order.member.display_name(),
+                  details=f"#{order.pk}: {order.value} EUR, {order.machine_strokes} cup(s)")
+        messages.success(request, _("Booking saved."))
+        return redirect(_bookings_url("orders", order.member_id))
+    return render(request, "dashboard/booking_form.html", {"form": form, "instance": order, "kind": "orders"})
+
+
+@login_required
+@require_POST
+def order_delete(request, pk):
+    order = get_object_or_404(Order.objects.select_related("member"), pk=pk)
+    member = order.member
+    details = f"#{order.pk}: {order.value} EUR, {order.created_at:%Y-%m-%d %H:%M}"
+    order.delete()
+    audit.log(request, "order.delete", target=member.display_name(), details=details)
+    messages.success(request, _("Booking deleted."))
+    return redirect(_bookings_url("orders", member.pk))
+
+
+@login_required
+def payment_add(request):
+    initial = {}
+    if request.GET.get("member", "").isdigit():
+        initial["member"] = request.GET["member"]
+    form = PaymentForm(request.POST or None, initial=initial)
+    if request.method == "POST" and form.is_valid():
+        payment = form.save()
+        audit.log(request, "payment.create", target=payment.member.display_name(),
+                  details=f"#{payment.pk}: {payment.value} EUR ({payment.method_name})")
+        messages.success(request, _("Payment entered."))
+        return redirect(_bookings_url("payments", payment.member_id))
+    return render(request, "dashboard/booking_form.html", {"form": form, "instance": None, "kind": "payments"})
+
+
+@login_required
+def payment_edit(request, pk):
+    payment = get_object_or_404(Payment.objects.select_related("member"), pk=pk)
+    form = PaymentForm(request.POST or None, instance=payment)
+    if request.method == "POST" and form.is_valid():
+        payment = form.save()
+        audit.log(request, "payment.update", target=payment.member.display_name(),
+                  details=f"#{payment.pk}: {payment.value} EUR ({payment.method_name})")
+        messages.success(request, _("Payment saved."))
+        return redirect(_bookings_url("payments", payment.member_id))
+    return render(request, "dashboard/booking_form.html", {"form": form, "instance": payment, "kind": "payments"})
+
+
+@login_required
+@require_POST
+def payment_delete(request, pk):
+    payment = get_object_or_404(Payment.objects.select_related("member"), pk=pk)
+    member = payment.member
+    details = f"#{payment.pk}: {payment.value} EUR ({payment.method_name}), {payment.created_at:%Y-%m-%d %H:%M}"
+    payment.delete()
+    audit.log(request, "payment.delete", target=member.display_name(), details=details)
+    messages.success(request, _("Payment deleted."))
+    return redirect(_bookings_url("payments", member.pk))
+
+
+@login_required
+@superuser_required
+def password_policy(request):
+    """The login rules. Stricter ones apply to every password set from now on - and to an
+    existing one at its owner's next login, which then has to replace it (dashboard/security.py)."""
+    policy = PasswordPolicy.current()
+    before = {name: getattr(policy, name) for name in PasswordPolicyForm.Meta.fields}
+    form = PasswordPolicyForm(request.POST or None, instance=policy)
+    if request.method == "POST" and form.is_valid():
+        policy = form.save()
+        changes = ", ".join(f"{name} {before[name]} -> {getattr(policy, name)}"
+                            for name in before if before[name] != getattr(policy, name))
+        if changes:
+            audit.log(request, "security.policy_update", details=changes)
+        messages.success(request, _("Saved. Anyone whose password doesn't meet the new rules has to set a new one "
+                                     "at their next login."))
+        return redirect("dashboard:password_policy")
+    return render(request, "dashboard/password_policy.html", {"form": form})

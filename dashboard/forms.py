@@ -1,7 +1,12 @@
 from django import forms
+from django.contrib.auth import get_user_model, password_validation
+from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.utils import timezone
 from django.utils.translation import gettext_lazy, pgettext_lazy
 
-from coffee.models import CoffeeSort, Member, PaymentMethod
+from .models import POLICY_LIMITS, PasswordPolicy
+from coffee.models import CASH_METHOD_NAME, CoffeeSort, Member, Order, Payment, PaymentMethod, payment_method_label
 
 
 class CoffeeSortForm(forms.ModelForm):
@@ -68,3 +73,204 @@ class MemberForm(forms.ModelForm):
             # (order/payment history is tied to the old one), so only allow setting it
             # once, at creation.
             self.fields["uid"].disabled = True
+
+
+ROLE_ADMIN, ROLE_MANAGER = "admin", "manager"
+ROLE_CHOICES = [
+    # An admin is a Django superuser: everything, including the System pages and this one.
+    (ROLE_ADMIN, gettext_lazy("Admin - everything, including system and users")),
+    (ROLE_MANAGER, gettext_lazy("Manager - members, bookings, coffee sorts, payment methods")),
+]
+
+
+class DashboardUserForm(forms.ModelForm):
+    """Name, role and whether the account may log in. The password is set separately
+    (UserCreateForm adds it for a new account, SetPasswordForm changes it)."""
+
+    role = forms.ChoiceField(label=gettext_lazy("Role"), choices=ROLE_CHOICES, widget=forms.RadioSelect)
+
+    class Meta:
+        model = get_user_model()
+        fields = ["username", "is_active"]
+        labels = {
+            "username": gettext_lazy("Username"),
+            "is_active": gettext_lazy("May log in"),
+        }
+        help_texts = {
+            "username": "",
+            "is_active": gettext_lazy("Untick to lock the account without deleting it."),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"].initial = ROLE_ADMIN if self.instance.pk and self.instance.is_superuser else ROLE_MANAGER
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.is_superuser = user.is_staff = self.cleaned_data["role"] == ROLE_ADMIN
+        if commit:
+            user.save()
+        return user
+
+
+class UserCreateForm(DashboardUserForm):
+    password1 = forms.CharField(label=gettext_lazy("Password"), strip=False, widget=forms.PasswordInput,
+                                help_text=password_validation.password_validators_help_text_html)
+    password2 = forms.CharField(label=gettext_lazy("Password again"), strip=False, widget=forms.PasswordInput)
+    must_change_password = forms.BooleanField(
+        label=gettext_lazy("Must set a new password at the first login"), required=False, initial=True,
+        help_text=gettext_lazy("Recommended: then only the new user knows their password."))
+
+    class Meta(DashboardUserForm.Meta):
+        fields = ["username"]
+
+    def clean_password2(self):
+        first, second = self.cleaned_data.get("password1"), self.cleaned_data.get("password2")
+        if first and second and first != second:
+            raise forms.ValidationError(gettext_lazy("The two passwords don't match."))
+        password_validation.validate_password(second, self.instance)
+        return second
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data["password2"])
+        if commit:
+            user.save()
+        return user
+
+
+def _payment_method_choices():
+    """Cash, every configured method, and - when editing - whatever the payment was
+    recorded with, even if that method has since been renamed or removed."""
+    names = [CASH_METHOD_NAME] + list(PaymentMethod.objects.values_list("name", flat=True))
+    return [(name, payment_method_label(name)) for name in dict.fromkeys(names)]
+
+
+class CommaDecimalField(forms.DecimalField):
+    """An amount typed either way, "1,50" or "1.50" - German fingers type the comma, and a
+    number input would refuse it (the kiosk's pay view does the same)."""
+
+    widget = forms.TextInput(attrs={"inputmode": "decimal"})
+
+    def to_python(self, value):
+        if isinstance(value, str):
+            value = value.strip().replace(",", ".")
+        return super().to_python(value)
+
+
+class LocalDateTimeInput(forms.DateTimeInput):
+    input_type = "datetime-local"
+
+    def __init__(self, **kwargs):
+        super().__init__(format="%Y-%m-%dT%H:%M", **kwargs)
+
+
+class PaymentForm(forms.ModelForm):
+    """A payment entered or corrected by hand - e.g. cash handed over in person."""
+
+    method_name = forms.ChoiceField(label=gettext_lazy("Paid via"))
+
+    class Meta:
+        model = Payment
+        fields = ["member", "value", "method_name", "created_at", "info"]
+        labels = {
+            "member": gettext_lazy("Member"),
+            "value": gettext_lazy("Amount (€)"),
+            "created_at": gettext_lazy("Date and time"),
+            "info": gettext_lazy("Note"),
+        }
+        widgets = {"created_at": LocalDateTimeInput()}
+        field_classes = {"value": CommaDecimalField}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = _payment_method_choices()
+        current = self.instance.method_name if self.instance.pk else None
+        if current and current not in dict(choices):
+            choices.append((current, payment_method_label(current)))
+        self.fields["method_name"].choices = choices
+        self.fields["member"].queryset = Member.objects.order_by("nickname", "uid")
+        self.fields["created_at"].input_formats = ["%Y-%m-%dT%H:%M"]
+        if not self.instance.pk:
+            self.fields["created_at"].initial = timezone.localtime().replace(second=0, microsecond=0)
+
+    def clean_value(self):
+        value = self.cleaned_data["value"]
+        if value == 0:
+            raise forms.ValidationError(gettext_lazy("Enter an amount other than 0."))
+        return value
+
+
+class OrderForm(forms.ModelForm):
+    """Correcting a booked coffee - the wrong sort, a price, the number of cups."""
+
+    class Meta:
+        model = Order
+        fields = ["coffee_sort", "value", "machine_strokes", "created_at"]
+        labels = {
+            "coffee_sort": gettext_lazy("Coffee sort"),
+            "value": gettext_lazy("Price (€)"),
+            "machine_strokes": gettext_lazy("Cups"),
+            "created_at": gettext_lazy("Date and time"),
+        }
+        widgets = {"created_at": LocalDateTimeInput()}
+        field_classes = {"value": CommaDecimalField}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["created_at"].input_formats = ["%Y-%m-%dT%H:%M"]
+
+
+class AdminSetPasswordForm(SetPasswordForm):
+    """An admin setting someone else's password - by default they have to replace it at
+    their next login, so it stays theirs alone."""
+
+    must_change_password = forms.BooleanField(
+        label=gettext_lazy("Must set a new password at the next login"), required=False, initial=True)
+
+
+class OwnPasswordChangeForm(PasswordChangeForm):
+    def clean(self):
+        cleaned = super().clean()
+        password = cleaned.get("new_password2")
+        if password and self.user.check_password(password):
+            self.add_error("new_password2", gettext_lazy("The new password must differ from the current one."))
+        return cleaned
+
+
+class PasswordPolicyForm(forms.ModelForm):
+    """The login rules, each kept within POLICY_LIMITS."""
+
+    class Meta:
+        model = PasswordPolicy
+        fields = list(POLICY_LIMITS)
+        labels = {
+            "min_length": gettext_lazy("Minimum length"),
+            "min_kinds": gettext_lazy("Character kinds needed"),
+            "passphrase_length": gettext_lazy("Passphrase: minimum length"),
+            "passphrase_kinds": gettext_lazy("Passphrase: character kinds needed"),
+            "lock_after_failures": gettext_lazy("Lock after this many failed logins"),
+            "lock_minutes": gettext_lazy("Lock for (minutes)"),
+            "idle_logout_minutes": gettext_lazy("Log out after inactivity (minutes)"),
+        }
+        help_texts = {
+            "min_kinds": gettext_lazy("Of the four: lower case, upper case, digits, other characters."),
+            "passphrase_length": gettext_lazy("A long password may make do with fewer kinds. 0 turns this off."),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, (low, high) in POLICY_LIMITS.items():
+            field = self.fields[name]
+            field.min_value, field.max_value = low, high
+            field.validators += [MinValueValidator(low), MaxValueValidator(high)]
+            field.widget.attrs.update(min=low, max=high)
+            extra = gettext_lazy("Allowed: %(low)s to %(high)s.") % {"low": low, "high": high}
+            field.help_text = f"{field.help_text} {extra}".strip()
+
+    def clean(self):
+        cleaned = super().clean()
+        passphrase, minimum = cleaned.get("passphrase_length"), cleaned.get("min_length")
+        if passphrase and minimum and passphrase <= minimum:
+            self.add_error("passphrase_length", gettext_lazy("Longer than the minimum length - or 0."))
+        return cleaned

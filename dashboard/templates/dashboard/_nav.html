@@ -1,0 +1,10 @@
+{% for group in groups %}
+<div class="nav-group">
+    {% if group.heading %}<p class="nav-heading">{{ group.heading }}</p>{% endif %}
+    {% for item in group.items %}
+    <a href="{% url 'dashboard:'|add:item.url_name %}" class="nav-item{% if item.active %} active{% endif %}">
+        {% include item.icon %}<span>{{ item.label }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% endfor %}

@@ -1,0 +1,17 @@
+{% load i18n %}
+<div class="list">
+    {% for f in files %}
+    <div class="list-row">
+        <div class="list-row-text">
+            <span class="list-row-title">{{ f.created|date:"d.m.Y H:i" }}</span>
+            <span class="list-row-meta">{{ f.name }} &middot; {{ f.size|filesizeformat }}</span>
+        </div>
+        <div class="list-row-actions">
+            <a href="{% url 'dashboard:backup_download' source f.name %}" class="btn secondary btn-sm">{% translate "Download" %}</a>
+            <a href="{% url 'dashboard:backup_restore' source f.name %}" class="btn secondary btn-sm">{% translate "Restore" %}</a>
+        </div>
+    </div>
+    {% empty %}
+    <p class="muted list-empty">{% translate "No backups on it yet." %}</p>
+    {% endfor %}
+</div>

@@ -24,7 +24,7 @@ class AuditLogTestCase(TestCase):
         response = self.client.get(reverse("dashboard:audit_log"))
         self.assertContains(response, "member.create")
         self.assertContains(response, "member.delete")
-        actions = [e.action for e in response.context["entries"]]
+        actions = [e.action for e in response.context["page"]]
         self.assertEqual(actions[:2], ["member.delete", "member.create"])
 
     def test_coffee_sort_crud_is_logged(self):

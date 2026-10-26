@@ -14,6 +14,8 @@ from django.views.decorators.http import require_GET, require_POST
 from coffee import services
 from coffee.models import AltUidCapture, CASH_METHOD_NAME, MemberDevice, MemberLinkToken, Payment, PaymentMethod
 
+from dashboard import audit
+
 from .decorators import ROLLING_SESSION_SECONDS, portal_login_required
 
 CARD_ADD_CAPTURE_SECONDS = 60
@@ -30,6 +32,7 @@ def _label_for_device(request) -> str:
 def link(request, token):
     link_token = MemberLinkToken.objects.select_related("member").filter(token=token).first()
     if link_token is None or link_token.is_expired():
+        audit.log(request, "portal.login", actor="", details="link unknown or expired", outcome="failure")
         return render(request, "portal/link_invalid.html", status=410)
 
     member = link_token.member
@@ -44,6 +47,8 @@ def link(request, token):
     MemberDevice.objects.create(
         member=member, session_key=request.session.session_key, label=_label_for_device(request)
     )
+    who = audit.member_actor(member)
+    audit.log(request, "portal.login", target=who, actor=who, details=f"phone linked ({_label_for_device(request)})")
     return redirect("portal:index")
 
 
@@ -109,7 +114,9 @@ def pay(request):
         except InvalidOperation:
             value = None
         if value is not None and value > 0:
-            Payment.objects.create(member=member, value=value, method_name=method_name)
+            payment = Payment.objects.create(member=member, value=value, method_name=method_name)
+            who = audit.member_actor(member)
+            audit.log(request, "payment.create", target=who, actor=who, details=f"#{payment.pk}: {value} EUR ({method_name})")
             return redirect("portal:index")
     default_suggestion = -balance if balance < 0 else Decimal("0.00")
     ctx = {"member": member, "balance": balance, "pay_default": default_suggestion}
@@ -132,6 +139,8 @@ def revoke_device(request, device_id):
     device = get_object_or_404(MemberDevice, pk=device_id, member=request.member)
     Session.objects.filter(pk=device.session_key).delete()
     device.delete()
+    who = audit.member_actor(request.member)
+    audit.log(request, "portal.device_revoke", target=who, actor=who, details=device.label)
     return redirect("portal:devices")
 
 
@@ -139,6 +148,8 @@ def revoke_device(request, device_id):
 @require_POST
 def logout_view(request):
     MemberDevice.objects.filter(session_key=request.session.session_key).delete()
+    who = audit.member_actor(request.member)
+    audit.log(request, "portal.logout", target=who, actor=who)
     request.session.flush()
     return redirect("portal:link_invalid")
 
@@ -167,6 +178,8 @@ def card_add_start(request):
     AltUidCapture.objects.create(
         member=request.member, expires_at=timezone.now() + timedelta(seconds=CARD_ADD_CAPTURE_SECONDS)
     )
+    who = audit.member_actor(request.member)
+    audit.log(request, "member.card_capture", target=who, actor=who, details="waiting for a new card at the kiosk")
     return redirect("portal:cards")
 
 

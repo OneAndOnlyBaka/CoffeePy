@@ -2,76 +2,72 @@
 {% load i18n l10n %}
 {% block title %}{% translate "Members" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>{% translate "Members" %}</h1>
-<p>
-    <a href="{% url 'dashboard:member_add' %}" class="btn success">+ {% translate "Add member" %}</a>
-    <a href="{% url 'dashboard:member_merge' %}" class="btn secondary">{% translate "Merge members" %}</a>
-</p>
+<div class="page-head">
+    <h1>{% translate "Members" %}</h1>
+    <div class="page-actions">
+        <a href="{% url 'dashboard:member_add' %}" class="btn success">{% include "icons/plus.svg" %}{% translate "Add member" %}</a>
+        <a href="{% url 'dashboard:member_merge' %}" class="btn secondary">{% translate "Merge members" %}</a>
+    </div>
+</div>
 <div class="card">
-    <table>
-        <thead><tr><th>{% translate "Nickname" %}</th><th>{% translate "Status" %}</th><th>{% translate "UID" %}</th><th>{% translate "Alt cards" %}</th><th>{% translate "Favourite coffee" %}</th><th></th></tr></thead>
-        <tbody>
+    <div class="list">
         {% comment %}
         The confirm() texts are built with autoescape off and escapejs'd as a whole: HTML-escaping
         the name first would show "&#x27;" in the dialog for a nickname with an apostrophe.
         {% endcomment %}
         {% for member in members %}
-            {% autoescape off %}
-            {% blocktranslate with name=member.display_name asvar confirm_revoke %}Log out all of {{ name }}'s linked devices?{% endblocktranslate %}
-            {% blocktranslate with name=member.display_name asvar confirm_departed %}Mark {{ name }} as departed? This writes off their balance and deactivates their card(s).{% endblocktranslate %}
-            {% blocktranslate with name=member.display_name asvar confirm_delete %}Delete {{ name }}?{% endblocktranslate %}
-            {% endautoescape %}
-            <tr{% if member.is_departed %} class="muted"{% endif %}>
-                <td>{{ member.nickname|default:"-" }}</td>
-                <td>
-                    {% if member.is_departed %}
-                    <span title="{% blocktranslate with date=member.departed_at|date:'d.m.Y' %}Departed {{ date }}{% endblocktranslate %}">{% translate "Departed" %}</span>
-                    {% else %}
-                    {% translate "Active" %}
-                    {% endif %}
-                </td>
-                <td>{{ member.uid|unlocalize }}</td>
-                <td>
-                    {% for card in member.alt_cards.all %}{{ card.uid|unlocalize }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
-                </td>
-                <td>{{ member.favourite_coffee.name|default:"-" }}</td>
-                <td>
-                    <a href="{% url 'dashboard:member_edit' member.uid %}">{% translate "Edit" %}</a>
-                    &middot;
-                    <a href="{% url 'dashboard:member_alt_uid_start' member.uid %}">{% translate "Add card" %}</a>
-                    {% if member.device_count %}
-                    &middot;
-                    <form method="post" action="{% url 'dashboard:member_revoke_devices' member.uid %}"
-                          style="display:inline" onsubmit="return confirm('{{ confirm_revoke|escapejs }}');">
-                        {% csrf_token %}
-                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">{% blocktranslate with count=member.device_count %}Revoke devices ({{ count }}){% endblocktranslate %}</button>
-                    </form>
-                    {% endif %}
-                    &middot;
-                    {% if member.is_departed %}
-                    <form method="post" action="{% url 'dashboard:member_reactivate' member.uid %}" style="display:inline">
-                        {% csrf_token %}
-                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">{% translate "Reactivate" %}</button>
-                    </form>
-                    {% else %}
-                    <form method="post" action="{% url 'dashboard:member_mark_departed' member.uid %}"
-                          style="display:inline" onsubmit="return confirm('{{ confirm_departed|escapejs }}');">
-                        {% csrf_token %}
-                        <button type="submit" class="secondary" style="min-height:auto; padding:2px 10px;">{% translate "Mark as departed" %}</button>
-                    </form>
-                    {% endif %}
-                    &middot;
-                    <form method="post" action="{% url 'dashboard:member_delete' member.uid %}"
-                          style="display:inline" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
-                        {% csrf_token %}
-                        <button type="submit" class="danger" style="min-height:auto; padding:2px 10px;">{% translate "Delete" %}</button>
-                    </form>
-                </td>
-            </tr>
+        {% autoescape off %}
+        {% blocktranslate with name=member.display_name asvar confirm_revoke %}Log out all of {{ name }}'s linked devices?{% endblocktranslate %}
+        {% blocktranslate with name=member.display_name asvar confirm_departed %}Mark {{ name }} as departed? This writes off their balance and deactivates their card(s).{% endblocktranslate %}
+        {% blocktranslate with name=member.display_name asvar confirm_delete %}Delete {{ name }}?{% endblocktranslate %}
+        {% endautoescape %}
+        <div class="list-row{% if member.is_departed %} muted{% endif %}">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ member.nickname|default:"-" }}
+                    {% if member.is_departed %}<span class="badge off" title="{% blocktranslate with date=member.departed_at|date:'d.m.Y' %}Departed {{ date }}{% endblocktranslate %}">{% translate "Departed" %}</span>{% endif %}
+                </span>
+                <span class="list-row-meta">
+                    {% translate "UID" %} {{ member.uid|unlocalize }}{% for card in member.alt_cards.all %}{% if forloop.first %} &middot; {% translate "Alt cards" %}{% endif %} {{ card.uid|unlocalize }}{% if not forloop.last %},{% endif %}{% endfor %}
+                    {% if member.favourite_coffee %} &middot; {{ member.favourite_coffee.name }}{% endif %}
+                    {% if member.device_count %} &middot; {% blocktranslate with count=member.device_count %}{{ count }} phone(s){% endblocktranslate %}{% endif %}
+                </span>
+            </div>
+            <div class="list-row-actions">
+                <a href="{% url 'dashboard:member_edit' member.uid %}" class="btn secondary btn-sm">{% translate "Edit" %}</a>
+                <a href="{% url 'dashboard:bookings' %}?member={{ member.uid|unlocalize }}" class="btn secondary btn-sm">{% translate "Bookings" %}</a>
+                {% comment %}The rarer actions behind "...", so a row stays short on a phone.{% endcomment %}
+                <details class="row-more">
+                    <summary class="btn secondary btn-sm" title="{% translate "More" %}">{% include "icons/dots.svg" %}</summary>
+                    <div class="row-more-menu">
+                <a href="{% url 'dashboard:member_alt_uid_start' member.uid %}" class="btn secondary btn-sm">{% translate "Add card" %}</a>
+                {% if member.device_count %}
+                <form method="post" action="{% url 'dashboard:member_revoke_devices' member.uid %}" onsubmit="return confirm('{{ confirm_revoke|escapejs }}');">
+                    {% csrf_token %}
+                    <button type="submit" class="secondary btn-sm">{% blocktranslate with count=member.device_count %}Revoke devices ({{ count }}){% endblocktranslate %}</button>
+                </form>
+                {% endif %}
+                {% if member.is_departed %}
+                <form method="post" action="{% url 'dashboard:member_reactivate' member.uid %}">
+                    {% csrf_token %}
+                    <button type="submit" class="secondary btn-sm">{% translate "Reactivate" %}</button>
+                </form>
+                {% else %}
+                <form method="post" action="{% url 'dashboard:member_mark_departed' member.uid %}" onsubmit="return confirm('{{ confirm_departed|escapejs }}');">
+                    {% csrf_token %}
+                    <button type="submit" class="secondary btn-sm">{% translate "Mark as departed" %}</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{% url 'dashboard:member_delete' member.uid %}" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
+                    {% csrf_token %}
+                    <button type="submit" class="danger btn-sm">{% translate "Delete" %}</button>
+                </form>
+                    </div>
+                </details>
+            </div>
+        </div>
         {% empty %}
-            <tr><td colspan="6" class="muted">{% translate "No members yet." %}</td></tr>
+        <p class="muted list-empty">{% translate "No members yet." %}</p>
         {% endfor %}
-        </tbody>
-    </table>
+    </div>
 </div>
 {% endblock %}

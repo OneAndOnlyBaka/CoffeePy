@@ -9,7 +9,7 @@ from django.db.models.functions import ExtractHour, ExtractIsoWeekDay, TruncMont
 from django.utils import timezone
 from django.utils.dates import WEEKDAYS_ABBR
 
-from .models import CoffeeSort, Member, Order, Payment, payment_method_label
+from .models import AuditLogEntry, CoffeeSort, Member, Order, Payment, payment_method_label
 
 
 def current_month_start() -> datetime:
@@ -110,14 +110,14 @@ def ranking_current_month(limit: int = 7):
 def ranking_fingerprint() -> str:
     """Changes whenever what the ranking/pillory screens show could have: a new order or
     payment, a member added, renamed, marked departed or merged away, the month rolling
-    over. Index lookups and one small table instead of the full-history aggregates those
-    screens run - on a Pi 3 with five years of orders, ~10ms against 100-200ms.
-
-    Not covered: editing or deleting an older order/payment through /admin/ (the max id
-    stays put) - the dashboard itself never does that, and the next order catches up."""
+    over, or anything changed in the dashboard - a corrected or deleted booking leaves the
+    max ids where they were, but every dashboard change writes an audit row. Index lookups
+    and one small table instead of the full-history aggregates those screens run - on a Pi
+    3 with five years of orders, ~10ms against 100-200ms."""
     parts = (
         Order.objects.aggregate(m=Max("id"))["m"],
         Payment.objects.aggregate(m=Max("id"))["m"],
+        AuditLogEntry.objects.aggregate(m=Max("id"))["m"],
         list(Member.objects.order_by("uid").values_list("uid", "nickname", "departed_at")),
         current_month_start(),
     )
@@ -175,6 +175,22 @@ def deposit_pillory(limit: int = 7):
             )
     entries.sort(key=lambda e: e["balance"])
     return entries[:limit]
+
+
+def dashboard_overview() -> dict:
+    """The tiles at the top of the dashboard's overview: cups today and this month (machine
+    strokes, like everywhere), active members, and what the pillory adds up to."""
+    def cups(since):
+        return Order.objects.filter(created_at__gte=since).aggregate(n=Sum("machine_strokes"))["n"] or 0
+
+    debtors = deposit_pillory(limit=None)
+    return {
+        "cups_today": cups(today_start()),
+        "cups_month": cups(current_month_start()),
+        "active_members": Member.objects.filter(departed_at__isnull=True).count(),
+        "debtors": len(debtors),
+        "open_amount": -sum((e["balance"] for e in debtors), Decimal("0")),
+    }
 
 
 def orders_in_span(days: int | None = None):

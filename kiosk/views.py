@@ -30,6 +30,7 @@ from coffee.models import (
     PaymentMethod,
 )
 from coffee.network import public_base_url
+from dashboard import audit
 
 MODE_ORDER = "order"
 MODE_INFO = "info"
@@ -82,6 +83,10 @@ MAINTENANCE_STEPS = {
     "restart": gettext_lazy("Restarting"),
     "ap": gettext_lazy("Setting up the WiFi"),
     "verify": gettext_lazy("Starting CoffeePy"),
+    # dashboard/restore_jobs.py
+    "restore_safety": gettext_lazy("Saving the current data"),
+    "restore": gettext_lazy("Restoring a backup"),
+    "migrate": gettext_lazy("Updating the database"),
 }
 
 
@@ -177,13 +182,15 @@ def settings_save(request):
         uid = request.session["uid"]
         nickname = (request.POST.get("nickname") or str(uid)).strip()
         favourite_id = request.POST.get("favourite_coffee_id") or None
-        Member.objects.update_or_create(
+        member, created = Member.objects.update_or_create(
             uid=uid,
             defaults={
                 "nickname": nickname,
                 "favourite_coffee_id": favourite_id,
             },
         )
+        audit.log(request, "member.create" if created else "member.update", target=audit.member_actor(member),
+                  actor=audit.member_actor(member), details="own settings at the kiosk")
         _reset_session_state(request)
     return _render_panel(request)
 
@@ -210,7 +217,9 @@ def pay(request):
             amount = Decimal("0")
         method_name = (request.POST.get("method") or CASH_METHOD_NAME).strip() or CASH_METHOD_NAME
         if amount > 0:
-            Payment.objects.create(member_id=request.session["uid"], value=amount, method_name=method_name)
+            payment = Payment.objects.create(member_id=request.session["uid"], value=amount, method_name=method_name)
+            who = audit.member_actor(payment.member)
+            audit.log(request, "payment.create", target=who, actor=who, details=f"#{payment.pk}: {amount} EUR ({method_name})")
         request.session.pop("pending_amount", None)
         request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
     return _render_panel(request)
@@ -302,13 +311,17 @@ def _place_order(request):
         coffee_sort = CoffeeSort.objects.first()
     if coffee_sort is None:
         return None
-    return Order.objects.create(
+    order = Order.objects.create(
         member_id=uid,
         coffee_sort=coffee_sort,
         value=coffee_sort.price,
         machine_strokes=coffee_sort.machine_strokes,
         info=f"Ordered [{coffee_sort.pk}] {coffee_sort.name}",
     )
+    who = audit.member_actor(member)
+    audit.log(request, "order.create", target=who, actor=who,
+              details=f"#{order.pk}: {coffee_sort.name}, {order.value} EUR, {order.machine_strokes} cup(s)")
+    return order
 
 
 def _thank_you_tier(cups_today):
@@ -436,6 +449,7 @@ def link_phone_popup(request):
     if member is None:
         return HttpResponseForbidden()
     member.link_tokens.all().delete()
+    audit.log(request, "portal.link_issued", target=audit.member_actor(member), actor=audit.member_actor(member))
     token = MemberLinkToken.objects.create(
         member=member, expires_at=timezone.now() + timedelta(seconds=LINK_TOKEN_TTL_SECONDS)
     )
@@ -497,7 +511,10 @@ def _try_assign_alt_uid(capture, scan):
 def _handle_new_scan(request, mode, scan, ctx):
     capture = _active_capture()
     if capture is not None:
-        _try_assign_alt_uid(capture, scan)
+        member = capture.member
+        if _try_assign_alt_uid(capture, scan):
+            audit.log(request, "member.card_add", target=audit.member_actor(member), actor="kiosk card reader",
+                      details=f"card {scan.uid_as_int()}")
         ctx["state"] = "assigning_alt_uid"
         ctx["member"] = capture.member
         ctx["capture_error"] = _translated(capture.last_error)
@@ -510,12 +527,21 @@ def _handle_new_scan(request, mode, scan, ctx):
     uid = scan.uid_as_int()
     if uid is None:
         ctx["state"] = "card_not_recognized"
+        audit.log(request, "kiosk.card_login", target=scan.uid or "", actor="", details="card not readable",
+                  outcome="failure")
         return
 
     member = Member.objects.filter(Q(uid=uid) | Q(alt_cards__uid=uid)).distinct().first()
     if member is not None and member.is_departed:
         ctx["state"] = "account_departed"
+        audit.log(request, "kiosk.card_login", target=audit.member_actor(member), actor=audit.member_actor(member),
+                  details="account marked as departed", outcome="failure")
         return
+    if member is None:
+        audit.log(request, "kiosk.card_login", target=f"card {uid}", actor=f"card {uid}", details="new card")
+    else:
+        audit.log(request, "kiosk.card_login", target=audit.member_actor(member), actor=audit.member_actor(member),
+                  details=mode)
 
     # A tap via an alt card must still resolve to the member's real primary key -
     # every other lookup (order/settings/info context, _place_order, settings_save, pay)

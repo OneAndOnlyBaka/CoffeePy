@@ -2,24 +2,61 @@
 {% load i18n %}
 {% block title %}{% translate "Audit log" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
-<h1>{% translate "Audit log" %}</h1>
-<p class="muted">{% translate "Last 500 dashboard actions that changed any data, newest first." %}</p>
-<div class="card">
-    <table>
-        <thead><tr><th>{% translate "When" %}</th><th>{% translate "Who" %}</th><th>{% translate "Action" %}</th><th>{% translate "Target" %}</th><th>{% translate "Details" %}</th></tr></thead>
-        <tbody>
-        {% for entry in entries %}
-            <tr>
-                <td>{{ entry.created_at|date:"d.m.Y H:i:s" }}</td>
-                <td>{{ entry.actor|default:"-" }}</td>
-                <td>{{ entry.action }}</td>
-                <td>{{ entry.target|default:"-" }}</td>
-                <td>{{ entry.details|default:"-" }}</td>
-            </tr>
-        {% empty %}
-            <tr><td colspan="5" class="muted">{% translate "No actions recorded yet." %}</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+<div class="page-head">
+    <h1>{% translate "Audit log" %}</h1>
+    <div class="page-actions">
+        <a href="?{{ query }}{% if query %}&amp;{% endif %}format=csv" class="btn secondary">{% include "icons/download.svg" %}{% translate "Export (CSV)" %}</a>
+    </div>
 </div>
+<p class="muted">{% blocktranslate trimmed with days=retention_days %}Everything that happened on the device - logins and failed logins, changes in the
+dashboard, card logins, orders and payments at the kiosk, the phones, backups, sticks and updates -
+newest first. Entries older than {{ days }} days are deleted automatically.{% endblocktranslate %}</p>
+
+<div class="card">
+    <form method="get" class="filter-row">
+        <label class="field">{% translate "Search" %}
+            <input type="text" name="q" value="{{ request.GET.q }}" placeholder="{% translate "name, action, address…" %}"></label>
+        <label class="field">{% translate "Source" %}
+            <select name="source">
+                <option value="">{% translate "All" %}</option>
+                {% for value, label in sources %}<option value="{{ value }}"{% if request.GET.source == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select></label>
+        <label class="field">{% translate "Result" %}
+            <select name="outcome">
+                <option value="">{% translate "All" %}</option>
+                <option value="success"{% if request.GET.outcome == "success" %} selected{% endif %}>{% translate "Succeeded" %}</option>
+                <option value="failure"{% if request.GET.outcome == "failure" %} selected{% endif %}>{% translate "Failed" %}</option>
+            </select></label>
+        <label class="field">{% translate "From" %} <input type="date" name="from" value="{{ request.GET.from }}"></label>
+        <label class="field">{% translate "To" %} <input type="date" name="to" value="{{ request.GET.to }}"></label>
+        <button type="submit" class="success">{% translate "Filter" %}</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="list">
+        {% for entry in page %}
+        <div class="list-row audit-row">
+            <div class="list-row-text">
+                <span class="list-row-title">
+                    <span class="badge">{{ entry.get_source_display }}</span>
+                    {% if entry.outcome == "failure" %}<span class="badge off">{% translate "failed" %}</span>{% endif %}
+                    <code>{{ entry.action }}</code>{% if entry.target %} &middot; {{ entry.target }}{% endif %}
+                </span>
+                <span class="list-row-meta">{{ entry.created_at|date:"d.m.Y H:i:s" }} &middot; {{ entry.actor|default:"-" }}{% if entry.ip %} &middot; {{ entry.ip }}{% endif %}{% if entry.details %} &middot; {{ entry.details }}{% endif %}</span>
+            </div>
+        </div>
+        {% empty %}
+        <p class="muted list-empty">{% translate "No entries match." %}</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% if page.paginator.num_pages > 1 %}
+<div class="pagination">
+    {% if page.has_previous %}<a class="btn secondary btn-sm" href="?{{ query }}{% if query %}&amp;{% endif %}page={{ page.previous_page_number }}">&lsaquo; {% translate "Newer" %}</a>{% endif %}
+    <span class="muted">{% blocktranslate with number=page.number total=page.paginator.num_pages %}Page {{ number }} of {{ total }}{% endblocktranslate %}</span>
+    {% if page.has_next %}<a class="btn secondary btn-sm" href="?{{ query }}{% if query %}&amp;{% endif %}page={{ page.next_page_number }}">{% translate "Older" %} &rsaquo;</a>{% endif %}
+</div>
+{% endif %}
 {% endblock %}

@@ -371,8 +371,10 @@ step_hardware() {
 
 	log "Installing the udev rules"
 	run install -m 0644 "${SCRIPT_DIR}/99-acr122u.rules" /etc/udev/rules.d/
-	run install -m 0644 "${SCRIPT_DIR}/99-usb-backup-mount.rules" /etc/udev/rules.d/
-	run install -d /mnt/coffeepy-backup
+	# The backup stick is no longer mounted by udev but by coffeepy-storage.service, which
+	# checks it really is this device's stick first (install/storage_helper.py).
+	run rm -f /etc/udev/rules.d/99-usb-backup-mount.rules
+	run install -d /srv/coffeepy-usb
 	run udevadm control --reload-rules
 
 	if [ -n "${VIDEO_MODE}" ]; then
@@ -481,7 +483,7 @@ step_kiosk() {
 step_services() {
 	log "Installing the systemd units"
 	local unit
-	for unit in coffeepy.service coffeepy-update-watcher.service \
+	for unit in coffeepy.service coffeepy-update-watcher.service coffeepy-storage.service \
 	            coffeepy-rtc-sync.service coffeepy-rtc-sync.timer; do
 		if [ "${DRY_RUN}" = "1" ]; then
 			info "[dry-run] install ${unit} (paths pointing at ${TARGET_DIR})"
@@ -492,6 +494,8 @@ step_services() {
 	done
 	run systemctl daemon-reload
 	run systemctl enable coffeepy.service coffeepy-update-watcher.service
+	run systemctl enable --now coffeepy-storage.service
+	run systemctl restart coffeepy-storage.service  # a re-run brings a changed helper in
 	run systemctl enable --now coffeepy-rtc-sync.timer
 
 	if [ "${DRY_RUN}" != "1" ]; then
