@@ -81,6 +81,28 @@ export MANUAL_PYTHON=/tmp/manual/bin/python
   the logout countdown, the portal's stat tiles). `coffee/tests/test_translations.py` now
   catches unmarked template text, not overflow.
 
+## Real data never ends up in a screenshot
+
+The test Pi may hold **real member data** next to the demo members (the user imports real
+databases onto it). Nothing personal may reach `docs/pictures/` - nicknames, member uids, card
+ids. This is automatic, not something to ask about:
+
+- `capture_web.py` blurs it: before every dashboard shot and the kiosk's ranking shots it runs
+  `BLUR_JS`, which blurs every element holding a number of six or more digits or the nickname of
+  a member that isn't one of `demo_data.py`'s (`private_names()`). **A new capture step that
+  can show members** - a new dashboard page, a kiosk screen with names, the portal - **calls
+  `b.js(blur)` before `b.shot(...)`** like the others; a new demo member goes into the exclusion
+  list in `private_names()` as well as into `demo_data.py`.
+- Before anything is shown to the user or committed, **look at every retaken image** that can
+  contain members (contact sheet, see above): only the demo names (Anna, Ben, Clara, David,
+  Emma, Felix) may be legible, no uid or card number at all. If something slipped through, fix
+  the blur and retake - never edit the image by hand, the next retake would bring it back.
+- The same goes for any other screenshot of the device: one taken to show the user something
+  (pi-device `screenshot.sh`, a headless browser) stays in the scratchpad, and if it goes
+  anywhere else, blur first.
+- Aggregates (cups, turnover, balances without a name), coffee sort names, the admin's own
+  user name and IP addresses on the local network are fine.
+
 ## Traps
 
 - **Demo scans log the real kiosk in** - that is how the kiosk screens get a logged-in member.

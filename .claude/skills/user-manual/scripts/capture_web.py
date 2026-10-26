@@ -177,10 +177,13 @@ def kiosk(b):
 
     b.click("a.nav-btn[data-mode=ranking]")
     b.wait_state("ranking")
+    blur = BLUR_JS % json.dumps(private_names())  # real members can make the top 3, or the pillory
+    b.js(blur)
     b.shot("kiosk-ranking-alltime")
     for view in ("month", "pillory"):
         b.click(f".ranking-tabs a[href$='/ranking/{view}/']")
         b.wait(f"document.querySelector(\".ranking-tabs a.active[href$='/ranking/{view}/']\")")
+        b.js(blur)
         b.shot(f"kiosk-ranking-{view}")
 
     b.click("a.nav-btn[data-mode=order]")
@@ -209,6 +212,40 @@ DASHBOARD_PAGES = [
 FULL_PAGE = ("dashboard-update", "dashboard-backup")
 
 
+# Run before every dashboard shot: the device may hold real data next to the demo members
+# (an imported database), and the manual must not show it. Every element whose text holds a
+# long number (member uids, card ids) or the name of a member that isn't one of the demo
+# ones is blurred - a <select> by the option it shows.
+BLUR_JS = """
+(() => {
+  const names = %s.filter(n => n && n.length > 1);
+  const hit = text => /\\d{6,}/.test(text) || names.some(n => text.includes(n));
+  const blur = el => { el.style.filter = "blur(6px)"; };
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const found = new Set();
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (hit(node.textContent) && node.parentElement && !node.parentElement.closest("script,style,option")) found.add(node.parentElement);
+  }
+  found.forEach(blur);
+  document.querySelectorAll("select").forEach(s => { const o = s.options[s.selectedIndex]; if (o && hit(o.text)) blur(s); });
+  document.querySelectorAll("input").forEach(i => { if (hit(i.value || "")) blur(i); });
+  return found.size;
+})()
+"""
+
+
+def private_names():
+    """Nicknames of the members that are not demo data (demo_data.py MEMBERS)."""
+    out = shell_django("import json; from coffee.models import Member; "
+                       "print(json.dumps(list(Member.objects.exclude(nickname__in=['Anna','Ben','Clara','David','Emma','Felix'])"
+                       ".exclude(nickname='').values_list('nickname', flat=True))))")
+    try:
+        return json.loads(out)
+    except ValueError:
+        return []
+
+
 def dashboard(b, password):
     b.viewport(1280, 800)
     b.go("/dashboard/login/")
@@ -218,11 +255,14 @@ def dashboard(b, password):
          f"document.querySelector('form').submit()")
     b.page.collect(0.5, until="Page.loadEventFired")
     anna = shell_django("from coffee.models import Member; print(Member.objects.get(nickname='Anna').uid)")
+    blur = BLUR_JS % json.dumps(private_names())
     for path, name in DASHBOARD_PAGES + [(f"/dashboard/members/{anna}/edit/", "dashboard-member-form")]:
         b.go(path)
+        b.js(blur)
         b.shot(name, settle=1.5 if "statistics" in path or "system" in path else 0.6, full=name in FULL_PAGE)
     b.viewport(390, 844, scale=2, mobile=True)  # the same dashboard on a phone
     b.go("/dashboard/")
+    b.js(blur)
     b.shot("dashboard-phone")
     b.viewport(1280, 800)
     b.js("fetch('/dashboard/logout/', {method: 'POST', headers: {'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)[1]}})")

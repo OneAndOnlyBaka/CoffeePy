@@ -210,9 +210,10 @@ body.dashboard .topbar-btn, body.dashboard .language-switch button {
 }
 .login-wrap .card { width: 100%; max-width: 360px; }
 .login-wrap h1 { display: flex; align-items: center; gap: 10px; color: var(--coffee); }
-.login-wrap .language-switch button { min-height: 40px; padding: 6px 14px; background: transparent; color: var(--coffee);
+body.dashboard .login-wrap .language-switch button { min-height: 40px; padding: 6px 14px; background: transparent; color: var(--coffee);
   border: 1px solid var(--coffee-light); }
 .login-cert { margin: 16px 0 0; font-size: 0.9rem; }
+.login-wrap .login-msg { margin-top: 12px; }
 
 /* --- existing page parts --------------------------------------------------------------- */
 .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
