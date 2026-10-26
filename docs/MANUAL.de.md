@@ -353,6 +353,44 @@ einen neuen erzeugen.
 
 ![Link ungültig](pictures/manual/de/portal-link-invalid.png)
 
+### Wie das Verknüpfen funktioniert – und warum es unbedenklich ist
+
+Das Portal kommt ohne Passwörter aus. Stattdessen übergibt der Kiosk dem Handy einen
+**Einmal-Link**:
+
+1. **Nur mit deiner Karte, nur am Gerät.** Den QR-Code unter **Dieses Handy verknüpfen** gibt
+   es nur, solange du am Kiosk mit deiner Karte angemeldet bist. Den Kiosk selbst erreicht man
+   nur über den Touchscreen, nicht über das Netz – niemand kann von seinem Handy oder PC aus
+   einen Link für jemand anderen anfordern.
+2. **Ein Zufallswert, kein Passwort.** Der Link enthält 256 Bit aus einem kryptografischen
+   Zufallsgenerator (43 Zeichen). Er lässt sich nicht erraten oder ausrechnen, auch nicht mit
+   beliebig vielen Versuchen in den fünf Minuten, die er gilt.
+3. **Fünf Minuten, einmal.** Der Link verfällt nach fünf Minuten und wird gelöscht, sobald er
+   geöffnet wird – ein zweiter Scan landet bei *Link ungültig*. Ein neuer Link ersetzt einen
+   älteren, den das Mitglied noch nicht benutzt hat.
+4. **Das Handy bekommt eine eigene Anmeldung.** Das Öffnen des Links startet auf diesem Handy
+   eine neue Sitzung: ein Cookie, das nur über HTTPS übertragen wird (verschlüsselt, geprüft
+   gegen das Gerätezertifikat) und das die Scripte der Seite nicht lesen können. Es gilt sechs
+   Monate und verlängert sich bei jeder Nutzung; der Link selbst ist ab da wertlos.
+5. **Alles lässt sich zurücknehmen.** Jedes verknüpfte Handy steht im Portal unter **Geräte**
+   und lässt sich dort abmelden; ein Admin macht das mit **Geräte abmelden** für alle Handys
+   eines Mitglieds, und ein als ausgeschieden markiertes Mitglied ist überall abgemeldet. Das
+   Ausgeben des Links, jede Anmeldung und jeder Fehlversuch stehen im
+   [Protokoll](#weitere-systemseiten).
+
+**Was ein Handy dort darf** – und damit, was ein Fremder mit dem Handy eines anderen könnte:
+Tassen, Kontostand und Buchungen dieses Mitglieds sehen, sie mit den Summen der anderen
+vergleichen, eine Zahlung eintragen, die man *nach eigener Angabe* gemacht hat, und das
+Hinzufügen einer Karte starten – die dann trotzdem an den Kiosk gehalten werden muss. Geld
+fließt dabei keines: Eine im Portal eingetragene Zahlung ist ein Vermerk wie am Kiosk, sie
+erscheint unter **Buchungen** und im Protokoll, und ein Admin kann sie korrigieren. Dashboard
+und Kiosk sind mit einer Portal-Anmeldung nicht erreichbar.
+
+**Das Einzige, worauf man achten sollte:** Wer den QR-Code in diesen fünf Minuten abfotografiert
+und als Erster öffnet, bekommt statt des Mitglieds dessen Portal. Das Mitglied merkt es sofort
+(sein eigener Scan meldet *Link ungültig*), das Handy steht unter **Geräte**, und ein Tipp
+meldet es wieder ab. Also: selbst scannen, gleich, und das Fenster danach schließen.
+
 ---
 
 ## 6. Das Dashboard

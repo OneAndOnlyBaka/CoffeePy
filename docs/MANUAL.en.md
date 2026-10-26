@@ -337,6 +337,41 @@ A link that has expired or was already used ends up here – just create a new o
 
 ![Link no longer valid](pictures/manual/en/portal-link-invalid.png)
 
+### How linking works – and why it is safe
+
+The portal has no passwords. Instead the kiosk hands the phone a **one-time link**:
+
+1. **Only with your card, only at the device.** The QR code under **Link this phone** only
+   exists while you are logged in on the kiosk with your card. The kiosk itself can only be
+   reached from the touchscreen, not over the network – nobody can request a link for
+   someone else from their phone or PC.
+2. **A random token, not a password.** The link contains 256 bits from a cryptographic random
+   generator (43 characters). It can't be guessed or worked out, not even with unlimited
+   attempts in the five minutes it is valid.
+3. **Five minutes, once.** The link expires after five minutes and is deleted the moment it is
+   opened – a second scan gets *Link no longer valid*. A new link replaces any older one the
+   member hasn't used yet.
+4. **The phone gets its own login.** Opening the link starts a fresh session on that phone:
+   a cookie that only travels over HTTPS (encrypted, checked against the device certificate)
+   and that the page's scripts can't read. It stays valid for six months and is extended
+   every time it's used; the link itself is worthless from then on.
+5. **Everything can be undone.** Every linked phone appears under **Devices** in the portal
+   and can be logged out there; an admin does it for all of a member's phones with **Revoke
+   devices**, and a member marked as departed is logged out everywhere. Issuing the link,
+   every login and every failed attempt land in the [audit log](#more-system-pages).
+
+**What a phone can do there** – and therefore what a stranger could do with someone else's
+phone: see that member's cups, balance and bookings, compare them with the others' totals,
+record a payment *they say* they made, and start adding a card – which then still has to be
+held to the kiosk. No money moves: a payment entered in the portal is a note like on the
+kiosk, it shows up under **Bookings** and in the audit log, and an admin can correct it.
+Dashboard and kiosk can't be reached with a portal login.
+
+**The one thing to keep in mind:** whoever photographs the QR code within those five minutes
+and opens it first gets that member's portal instead of them. The member notices right away
+(their own scan says *Link no longer valid*), the phone shows up under **Devices**, and one tap
+logs it out again. So: scan it yourself, right away, and close the window afterwards.
+
 ---
 
 ## 6. The dashboard
