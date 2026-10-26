@@ -506,7 +506,10 @@ step_services() {
 	run install -m 0644 "${SCRIPT_DIR}/update-signing.pub" /etc/coffeepy/update-signing.pub
 	# The watcher runs this step itself after an update - restarting it then would cut the
 	# update short; it hands over to its new version on its own once it is done.
-	[ "${COFFEEPY_FROM_WATCHER:-0}" = "1" ] || run systemctl restart coffeepy-update-watcher.service
+	# try-restart, not restart: the watcher Requires coffeepy.service, so starting it on a
+	# fresh device would start the stack - and `compose up` would build the images itself,
+	# before step_images, until systemd's start timeout kills it. step_verify starts it.
+	[ "${COFFEEPY_FROM_WATCHER:-0}" = "1" ] || run systemctl try-restart coffeepy-update-watcher.service
 	run systemctl enable --now coffeepy-storage.service
 	run systemctl restart coffeepy-storage.service  # a re-run brings a changed helper in
 	run systemctl enable --now coffeepy-rtc-sync.timer
@@ -652,6 +655,7 @@ step_verify() {
 		info "starting the stack ..."
 		systemctl start coffeepy.service || true
 	fi
+	systemctl start coffeepy-update-watcher.service || true
 
 	local waited=0
 	while [ "${waited}" -lt 120 ]; do

@@ -626,10 +626,10 @@ load_existing() {
 		[ -n "$(env_get AP_SSID)" ] && AP_ENABLE=yes || AP_ENABLE=no
 	fi
 	ui_message "$(t "Existing installation" "Bestehende Installation")" "$(t \
-"CoffeePy is already installed on this Pi. Its settings are the defaults on the next screen, and its database password and secret key stay as they are.
+"CoffeePy is already installed on this Pi. Its settings are kept unless you change them, and its database password and secret key stay as they are.
 
 The admin password in the settings only applies to a newly created account - change an existing one in the dashboard." \
-"CoffeePy ist auf diesem Pi schon installiert. Seine Einstellungen sind die Vorgaben auf der nächsten Seite, Datenbankpasswort und Secret Key bleiben unverändert.
+"CoffeePy ist auf diesem Pi schon installiert. Seine Einstellungen bleiben, solange du sie nicht änderst, Datenbankpasswort und Secret Key bleiben unverändert.
 
 Das Admin-Passwort in den Einstellungen gilt nur für ein neu angelegtes Konto - ein bestehendes änderst du im Dashboard.")"
 }
@@ -1063,6 +1063,13 @@ $(t "Phones reach the dashboard and their portal through the address above" "Han
 $(t "Members link their phone from the kiosk's Settings screen." "Mitglieder verknüpfen ihr Handy über den Einstellungen-Bildschirm des Kiosks.")"
 }
 
+# Whether the Pi's port 443 answers with a certificate from its own CA, under the name the
+# certificate is issued for.
+https_answers() {
+	command -v curl >/dev/null && [ -s "$1" ] && curl -sf --max-time 5 --cacert "$1" \
+		--connect-to "coffeepy.local:443:${PI_HOST}:443" https://coffeepy.local/health/ >/dev/null 2>&1
+}
+
 step_done() {
 	CURRENT_STEP=4
 	local ca="${WORK}/ca.crt" https_ok
@@ -1078,8 +1085,7 @@ step_done() {
 		sleep 10
 		while [ "${waited}" -lt 300 ]; do
 			ui_progress $(( waited * 100 / 300 )) "$(t "Waiting for the Pi to come back" "Warte, bis der Pi wieder da ist")" "${waited}s"
-			if command -v curl >/dev/null && [ -s "${ca}" ] && curl -sf --max-time 5 --cacert "${ca}" \
-				--connect-to "coffeepy.local:443:${PI_HOST}:443" https://coffeepy.local/health/ >/dev/null 2>&1; then
+			if https_answers "${ca}"; then
 				https_ok="$(t "yes" "ja") - https://${PI_HOST}/ $(t "answers with a valid certificate" "antwortet mit gültigem Zertifikat")"
 				break
 			fi
@@ -1088,6 +1094,9 @@ step_done() {
 		done
 		[ "${waited}" -ge 300 ] && https_ok=$(t "no answer after 5 minutes - expected if the Pi's WiFi replaced the network you reach it on" \
 			"keine Antwort nach 5 Minuten - zu erwarten, wenn das WLAN des Pi das Netz ersetzt hat, über das du ihn erreichst")
+	elif https_answers "${ca}"; then
+		# No reboot, but the installer's verify step left the stack running - worth one look.
+		https_ok="$(t "yes" "ja") - https://${PI_HOST}/ $(t "answers with a valid certificate" "antwortet mit gültigem Zertifikat")"
 	fi
 
 	local summary
