@@ -15,7 +15,7 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext as _, gettext_lazy, gettext_noop
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import services
+from coffee import backups, services
 from coffee.models import (
     AltUidCapture,
     CASH_METHOD_NAME,
@@ -396,6 +396,8 @@ def _render_panel(request):
     # panel moved on without it - an auto-logout, or the next member's card.
     logged_in_uid = request.session.get("uid") if request.session.get("logged_in") else ""
     ctx["panel_key"] = f"{ctx['state']}:{logged_in_uid}"
+    if ctx["state"] in ("wait_for_card", "ranking"):  # the screens with the corner buttons
+        ctx["backup_disturbed"] = backups.health()["disturbed"]
 
     return render(request, "kiosk/panel.html", ctx)
 

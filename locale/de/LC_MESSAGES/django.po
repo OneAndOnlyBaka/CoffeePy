@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 08:40+0100\n"
+"POT-Creation-Date: 2026-10-26 10:40+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -20,6 +20,9 @@ msgstr "Es ist kein Backup-Stick eingesteckt."
 msgid "No such backup."
 msgstr "Dieses Backup gibt es nicht."
 
+msgid "The backup could not be decrypted - wrong passphrase?"
+msgstr "Das Backup ließ sich nicht entschlüsseln – falsche Passphrase?"
+
 msgid ""
 "This is an old CoffeePy database, not a backup - use \"Import legacy DB\" "
 "for it."
@@ -29,6 +32,14 @@ msgstr ""
 
 msgid "This file is not a CoffeePy backup."
 msgstr "Diese Datei ist kein CoffeePy-Backup."
+
+msgid "This backup is encrypted - enter its passphrase."
+msgstr "Dieses Backup ist verschlüsselt – gib seine Passphrase ein."
+
+msgid ""
+"This backup comes from a newer version of CoffeePy - update this device "
+"first, then restore it."
+msgstr "Dieses Backup stammt aus einer neueren CoffeePy-Version – aktualisiere zuerst dieses Gerät und stelle es dann wieder her."
 
 msgid "Cash"
 msgstr "Bar"
@@ -42,6 +53,9 @@ msgstr "Eigener Link"
 #, python-format
 msgid "Send %(amount)s€ via WERO to %(identifier)s"
 msgstr "Sende %(amount)s€ per WERO an %(identifier)s"
+
+msgid "Only admins may open that page."
+msgstr "Diese Seite dürfen nur Admins öffnen."
 
 msgid "Name"
 msgstr "Name"
@@ -197,10 +211,13 @@ msgid "Log out after inactivity (minutes)"
 msgstr "Abmelden nach Inaktivität (Minuten)"
 
 msgid "Of the four: lower case, upper case, digits, other characters."
-msgstr "Von den vier Arten Kleinbuchstaben, Großbuchstaben, Ziffern, Sonderzeichen."
+msgstr ""
+"Von den vier Arten Kleinbuchstaben, Großbuchstaben, Ziffern, Sonderzeichen."
 
 msgid "A long password may make do with fewer kinds. 0 turns this off."
-msgstr "Ein langes Passwort darf mit weniger Zeichenarten auskommen. 0 schaltet das ab."
+msgstr ""
+"Ein langes Passwort darf mit weniger Zeichenarten auskommen. 0 schaltet das "
+"ab."
 
 #, python-format
 msgid "Allowed: %(low)s to %(high)s."
@@ -208,6 +225,50 @@ msgstr "Erlaubt: %(low)s bis %(high)s."
 
 msgid "Longer than the minimum length - or 0."
 msgstr "Länger als die Mindestlänge – oder 0."
+
+msgid "Back up every (minutes)"
+msgstr "Sichern alle (Minuten)"
+
+msgid "Keep the newest"
+msgstr "Die neuesten behalten"
+
+msgid "Then one a day, for (days)"
+msgstr "Danach eines pro Tag, für (Tage)"
+
+msgid "Then one a week, for (weeks)"
+msgstr "Danach eines pro Woche, für (Wochen)"
+
+msgid "Then one a month, for (months)"
+msgstr "Danach eines pro Monat, für (Monate)"
+
+msgid "Data: members, bookings, coffee sorts, dashboard logins"
+msgstr "Daten: Mitglieder, Buchungen, Kaffeesorten, Dashboard-Anmeldungen"
+
+msgid "Certificates and the device CA - phones keep trusting the device"
+msgstr "Zertifikate und Geräte-CA – Handys vertrauen dem Gerät weiter"
+
+msgid "Device identity - its backup stick becomes this device's"
+msgstr "Geräte-Identität – sein Backup-Stick wird der dieses Geräts"
+
+msgid "Settings: language, address, time zone, log retention"
+msgstr "Einstellungen: Sprache, Adresse, Zeitzone, Protokoll-Aufbewahrung"
+
+msgid "Restore"
+msgstr "Wiederherstellen"
+
+msgid "Passphrase"
+msgstr "Passphrase"
+
+msgid ""
+"Only for an encrypted backup made with a different passphrase than this "
+"device's."
+msgstr "Nur für ein verschlüsseltes Backup mit einer anderen Passphrase als der dieses Geräts."
+
+msgid "Type DELETE to confirm"
+msgstr "Zur Bestätigung DELETE eingeben"
+
+msgid "Type DELETE to confirm - nothing was changed."
+msgstr "Zur Bestätigung DELETE eingeben – es wurde nichts geändert."
 
 msgid "Starting"
 msgstr "Start"
@@ -240,6 +301,9 @@ msgstr "Fehlgeschlagen"
 msgid "Import failed: %(error)s"
 msgstr "Import fehlgeschlagen: %(error)s"
 
+msgid "Checking the backup"
+msgstr "Backup wird geprüft"
+
 msgid "Saving the current data"
 msgstr "Aktuelle Daten werden gesichert"
 
@@ -269,12 +333,15 @@ msgstr "Höchstens %(max)s Zeichen."
 msgid ""
 "At least %(length)s characters using %(kinds)s of the four kinds lower case, "
 "upper case, digits, other characters"
-msgstr "Mindestens %(length)s Zeichen aus %(kinds)s der vier Arten Kleinbuchstaben, Großbuchstaben, Ziffern, Sonderzeichen"
+msgstr ""
+"Mindestens %(length)s Zeichen aus %(kinds)s der vier Arten Kleinbuchstaben, "
+"Großbuchstaben, Ziffern, Sonderzeichen"
 
 #, python-format
 msgid ""
 "- or a passphrase of at least %(length)s characters using %(kinds)s of them"
-msgstr "– oder eine Passphrase mit mindestens %(length)s Zeichen aus %(kinds)s davon"
+msgstr ""
+"– oder eine Passphrase mit mindestens %(length)s Zeichen aus %(kinds)s davon"
 
 #, python-format
 msgid "Too many failed logins - this account is locked until %(time)s."
@@ -285,7 +352,9 @@ msgid "You were logged out after %(minutes)s minutes without activity."
 msgstr "Du wurdest nach %(minutes)s Minuten ohne Aktivität abgemeldet."
 
 msgid "Please set a new password first - it has to meet the current rules."
-msgstr "Bitte setze zuerst ein neues Passwort – es muss die aktuellen Regeln erfüllen."
+msgstr ""
+"Bitte setze zuerst ein neues Passwort – es muss die aktuellen Regeln "
+"erfüllen."
 
 msgid "Backups are running"
 msgstr "Backups laufen"
@@ -313,6 +382,14 @@ msgstr ""
 msgid "The last backup failed"
 msgstr "Das letzte Backup ist fehlgeschlagen"
 
+msgid "No backup for a long time"
+msgstr "Seit langem kein Backup"
+
+msgid ""
+"The backup service doesn't seem to be running - restarting the device "
+"usually helps."
+msgstr "Der Backup-Dienst scheint nicht zu laufen – ein Neustart des Geräts hilft meistens."
+
 msgid "Backups are not running - the storage service isn't answering"
 msgstr "Backups laufen nicht – der Speicherdienst antwortet nicht"
 
@@ -333,11 +410,20 @@ msgstr ""
 "Steck einen USB-Stick ein und richte ihn unter Backup ein – ab dann werden "
 "die Daten regelmäßig darauf gesichert."
 
+msgid "damaged"
+msgstr "beschädigt"
+
+msgid "checked"
+msgstr "geprüft"
+
+msgid "encrypted"
+msgstr "verschlüsselt"
+
+msgid "data only"
+msgstr "nur Daten"
+
 msgid "Download"
 msgstr "Herunterladen"
-
-msgid "Restore"
-msgstr "Wiederherstellen"
 
 msgid "No backups on it yet."
 msgstr "Noch keine Backups darauf."
@@ -431,19 +517,24 @@ msgstr "Backup-Stick dieses Geräts"
 msgid "USB stick"
 msgstr "USB-Stick"
 
+msgid "not encrypted"
+msgstr "unverschlüsselt"
+
 #, python-format
 msgid "%(free)s free of %(total)s"
 msgstr "%(free)s von %(total)s frei"
-
-#, python-format
-msgid "every %(minutes)s minutes, the newest %(depth)s are kept"
-msgstr "alle %(minutes)s Minuten, die neuesten %(depth)s bleiben erhalten"
 
 msgid "Back up now"
 msgstr "Jetzt sichern"
 
 msgid "Eject safely"
 msgstr "Sicher auswerfen"
+
+msgid ""
+"The backups are not encrypted: anyone who takes the stick can read them. To "
+"encrypt them, set a backup passphrase with the provisioning tool "
+"(BACKUP_PASSPHRASE)."
+msgstr "Die Backups sind nicht verschlüsselt: Wer den Stick nimmt, kann sie lesen. Zum Verschlüsseln setze mit dem Provisioning-Tool eine Backup-Passphrase (BACKUP_PASSPHRASE)."
 
 msgid "Backups on the stick"
 msgstr "Backups auf dem Stick"
@@ -493,55 +584,61 @@ msgstr ""
 msgid "Set up as backup stick"
 msgstr "Als Backup-Stick einrichten"
 
+msgid "When and what is kept"
+msgstr "Wann gesichert und was aufbewahrt wird"
+
+msgid ""
+"Each backup holds the whole device: the data, the device CA and "
+"certificates, and its settings. The newest ones are all kept, after that one "
+"a day, a week and a month - so a mistake noticed only days later can still "
+"be undone."
+msgstr "Jedes Backup enthält das ganze Gerät: die Daten, die Geräte-CA und Zertifikate und seine Einstellungen. Die neuesten bleiben alle erhalten, danach je eines pro Tag, Woche und Monat – so lässt sich auch ein Fehler, der erst Tage später auffällt, noch rückgängig machen."
+
+msgid "Save"
+msgstr "Speichern"
+
 msgid "Restore a backup"
 msgstr "Backup wiederherstellen"
 
 msgid ""
-"Replaces everything on this device - members, bookings and the dashboard "
-"logins - with the state of the backup. The current data is saved first, and "
-"put back if the backup can't be loaded. Pick a backup from a stick above, or "
-"upload one: a file from \"Download a backup\" or from a stick read on a PC."
-msgstr ""
-"Ersetzt alles auf diesem Gerät – Mitglieder, Buchungen und die Dashboard-"
-"Anmeldungen – durch den Stand des Backups. Die aktuellen Daten werden vorher "
-"gesichert und zurückgespielt, falls sich das Backup nicht einspielen lässt. "
-"Wähle oben ein Backup von einem Stick oder lade eines hoch: eine Datei aus "
-"„Backup herunterladen“ oder von einem Stick, der am PC gelesen wurde."
+"Pick a backup from a stick above - or upload one: a file from \"Download a "
+"backup\", or from a stick read on a PC. On a replacement device, restore "
+"everything of the old one's latest backup."
+msgstr "Wähle oben ein Backup von einem Stick – oder lade eines hoch: eine Datei aus „Backup herunterladen“ oder von einem Stick, der am PC gelesen wurde. Auf einem Ersatzgerät stellst du alles aus dem neuesten Backup des alten Geräts wieder her."
 
-msgid "Backup file"
-msgstr "Backup-Datei"
-
-#, python-format
-msgid "Type <code>%(word)s</code> to confirm"
-msgstr "Gib zur Bestätigung <code>%(word)s</code> ein"
+msgid "Restore from a file"
+msgstr "Aus einer Datei wiederherstellen"
 
 msgid "Download a backup"
 msgstr "Backup herunterladen"
 
-msgid "The data as it is right now, as a file - also without a stick."
-msgstr "Die Daten im aktuellen Stand als Datei – auch ohne Stick."
+msgid "The whole device as it is right now, as a file - also without a stick."
+msgstr "Das ganze Gerät im aktuellen Stand als Datei – auch ohne Stick."
 
 msgid "Download backup"
 msgstr "Backup herunterladen"
 
-msgid ""
-"Everything on this device is replaced by the state of this backup - members, "
-"bookings, coffee sorts and the dashboard logins. The current data is saved "
-"first, and put back if the backup can't be loaded. The kiosk shows \"We'll "
-"be right back\" meanwhile."
-msgstr ""
-"Alles auf diesem Gerät wird durch den Stand dieses Backups ersetzt – "
-"Mitglieder, Buchungen, Kaffeesorten und die Dashboard-Anmeldungen. Die "
-"aktuellen Daten werden vorher gesichert und zurückgespielt, falls sich das "
-"Backup nicht einspielen lässt. Der Kiosk zeigt währenddessen „Wir sind "
-"gleich wieder da“."
+msgid "This backup no longer matches its checksum - it is probably damaged."
+msgstr "Dieses Backup passt nicht mehr zu seiner Prüfsumme – es ist wahrscheinlich beschädigt."
 
-#, python-format
-msgid "Type <code>%(confirmation)s</code> to confirm"
-msgstr "Gib zur Bestätigung <code>%(confirmation)s</code> ein"
+msgid ""
+"What you tick is replaced by the state of this backup - the data includes "
+"the dashboard logins. The device is backed up first. The kiosk shows \"We'll "
+"be right back\" meanwhile."
+msgstr "Was du ankreuzt, wird durch den Stand dieses Backups ersetzt – zu den Daten gehören auch die Dashboard-Anmeldungen. Das Gerät wird vorher gesichert. Der Kiosk zeigt währenddessen „Wir sind gleich wieder da“."
 
 msgid "Cancel"
 msgstr "Abbrechen"
+
+msgid ""
+"A backup file - from \"Download a backup\", or from a backup stick read on a "
+"PC (older .dump and .sql backups too). It is checked before anything "
+"changes: that it is a backup, that it can be opened, and that it isn't from "
+"a newer CoffeePy. The device is backed up first."
+msgstr "Eine Backup-Datei – aus „Backup herunterladen“ oder von einem Backup-Stick, der am PC gelesen wurde (auch ältere .dump- und .sql-Backups). Bevor sich etwas ändert, wird geprüft, dass es ein Backup ist, dass es sich öffnen lässt und dass es nicht aus einer neueren CoffeePy-Version stammt. Das Gerät wird vorher gesichert."
+
+msgid "Backup file"
+msgstr "Backup-Datei"
 
 #, python-format
 msgid ""
@@ -602,9 +699,6 @@ msgid ""
 msgstr ""
 "Für Geld, das persönlich übergeben wurde, oder eine Überweisung, die nicht "
 "über Kiosk oder Handy kam."
-
-msgid "Save"
-msgstr "Speichern"
 
 msgid "Bookings"
 msgstr "Buchungen"
@@ -1105,7 +1199,13 @@ msgid ""
 "at least 20 from two. Stricter rules apply to every new password right away "
 "- and to an existing one at its owner's next login, which then has to be "
 "replaced. Passwords longer than 128 characters are never accepted."
-msgstr "Die Regeln für die Anmeldung an diesem Dashboard. Die Voreinstellungen folgen der Empfehlung des BSI: mindestens 12 Zeichen aus drei Zeichenarten oder eine Passphrase mit mindestens 20 Zeichen aus zwei. Strengere Regeln gelten sofort für jedes neue Passwort – und für ein bestehendes bei der nächsten Anmeldung seines Besitzers, der es dann ersetzen muss. Passwörter mit mehr als 128 Zeichen werden nie angenommen."
+msgstr ""
+"Die Regeln für die Anmeldung an diesem Dashboard. Die Voreinstellungen "
+"folgen der Empfehlung des BSI: mindestens 12 Zeichen aus drei Zeichenarten "
+"oder eine Passphrase mit mindestens 20 Zeichen aus zwei. Strengere Regeln "
+"gelten sofort für jedes neue Passwort – und für ein bestehendes bei der "
+"nächsten Anmeldung seines Besitzers, der es dann ersetzen muss. Passwörter "
+"mit mehr als 128 Zeichen werden nie angenommen."
 
 msgid "Passwords"
 msgstr "Passwörter"
@@ -1182,6 +1282,10 @@ msgstr "Aktuell gespeichert"
 
 msgid "Delete everything"
 msgstr "Alles löschen"
+
+#, python-format
+msgid "Type <code>%(confirmation)s</code> to confirm"
+msgstr "Gib zur Bestätigung <code>%(confirmation)s</code> ein"
 
 msgid "Delete all data"
 msgstr "Alle Daten löschen"
@@ -1276,35 +1380,55 @@ msgstr "Update"
 msgid "Software update"
 msgstr "Software-Update"
 
+msgid "Installed version"
+msgstr "Installierte Version"
+
+#, python-format
+msgid "applied %(when)s"
+msgstr "eingespielt %(when)s"
+
 msgid ""
-"Upload a bundle produced by <code>scripts/build_update_bundle.sh</code> - a "
-"<code>.tar</code>/<code>.tar.gz</code> containing every image the app needs "
-"(the Django app, the NFC bridge, Postgres, Mosquitto) plus the current "
-"<code>docker-compose.yml</code>. The host-level update watcher loads the "
-"images, applies the compose file (backing up the previous one), and "
-"recreates whichever services actually changed - including starting any brand-"
-"new container the update adds. No internet connection needed on this device."
-msgstr ""
-"Lade ein Paket hoch, das <code>scripts/build_update_bundle.sh</code> erzeugt "
-"hat - ein <code>.tar</code>/<code>.tar.gz</code> mit allen Images, die die "
-"App braucht (die Django-App, die NFC-Bridge, Postgres, Mosquitto), plus der "
-"aktuellen <code>docker-compose.yml</code>. Der Update-Wächter auf dem Gerät "
-"lädt die Images, übernimmt die Compose-Datei (die vorherige wird gesichert) "
-"und erstellt die Dienste neu, die sich tatsächlich geändert haben - "
-"inklusive neuer Container, die das Update mitbringt. Auf diesem Gerät ist "
-"dafür kein Internet nötig."
+"Go back to the previous version? The data goes back to the state before the "
+"last update."
+msgstr "Zur vorigen Version zurück? Die Daten gehen auf den Stand vor dem letzten Update zurück."
 
-msgid "Upload"
-msgstr "Hochladen"
+#, python-format
+msgid "Back to %(version)s"
+msgstr "Zurück zu %(version)s"
 
-msgid "Watcher status"
-msgstr "Status des Update-Wächters"
-
-msgid "Waiting for status…"
-msgstr "Warte auf Status…"
+msgid "Status"
+msgstr "Status"
 
 msgid "No update processed yet."
 msgstr "Noch kein Update verarbeitet."
+
+msgid "Upload an update"
+msgstr "Update hochladen"
+
+msgid ""
+"A bundle from the update package builder (<code>scripts/update_builder.sh</"
+"code>). Before anything changes, the device checks its signature, that it is "
+"for this device and that there is room for it, and saves the database to the "
+"SD card. If the new version doesn't come up, the previous one is put back "
+"automatically. The kiosk shows \"We'll be right back\" meanwhile."
+msgstr "Ein Paket aus dem Update-Paket-Builder (<code>scripts/update_builder.sh</code>). Bevor sich etwas ändert, prüft das Gerät die Signatur, dass das Paket zu diesem Gerät passt und genug Platz da ist, und sichert die Datenbank auf die SD-Karte. Startet die neue Version nicht, wird automatisch die vorige wiederhergestellt. Der Kiosk zeigt währenddessen „Wir sind gleich wieder da“."
+
+msgid "Update bundle"
+msgstr "Update-Paket"
+
+msgid "Allow installing an older version than the installed one"
+msgstr "Installation einer älteren Version als der installierten erlauben"
+
+msgid "Upload and install"
+msgstr "Hochladen und installieren"
+
+msgid "Saved before updates"
+msgstr "Vor Updates gesichert"
+
+msgid ""
+"The database as it was before each of the last updates - on the SD card, for "
+"going back."
+msgstr "Die Datenbank im Stand vor jedem der letzten Updates – auf der SD-Karte, für den Weg zurück."
 
 msgid "Edit user"
 msgstr "Benutzer bearbeiten"
@@ -1384,9 +1508,6 @@ msgstr ""
 "Es gilt nicht für %(host)s - Browser, die diese Adresse nutzen, zeigen eine "
 "Warnung."
 
-msgid "Only admins may open that page."
-msgstr "Diese Seite dürfen nur Admins öffnen."
-
 #, python-format
 msgid "Timed out - no card was tapped within %(seconds)s seconds."
 msgstr ""
@@ -1404,36 +1525,6 @@ msgstr "Bitte zwei verschiedene Konten auswählen."
 
 msgid "Please choose both the certificate and its private key."
 msgstr "Bitte wähle das Zertifikat und seinen privaten Schlüssel aus."
-
-#, python-format
-msgid "Backup failed: %(error)s"
-msgstr "Backup fehlgeschlagen: %(error)s"
-
-msgid "Backup completed."
-msgstr "Backup abgeschlossen."
-
-msgid "That stick is no longer there."
-msgstr "Dieser Stick ist nicht mehr da."
-
-msgid "Tick the box to confirm that the stick may be erased."
-msgstr "Setz den Haken, um zu bestätigen, dass der Stick gelöscht werden darf."
-
-#, python-format
-msgid "Type %(word)s to confirm - nothing was changed."
-msgstr "Gib zur Bestätigung %(word)s ein – es wurde nichts geändert."
-
-msgid "A restore or an import is already running."
-msgstr "Es läuft schon eine Wiederherstellung oder ein Import."
-
-msgid "Please choose a backup file."
-msgstr "Bitte wähle eine Backup-Datei."
-
-msgid "Please upload a .tar or .tar.gz image bundle."
-msgstr "Bitte lade ein .tar- oder .tar.gz-Image-Paket hoch."
-
-#, python-format
-msgid "Uploaded %(name)s. The update watcher will pick it up shortly."
-msgstr "%(name)s hochgeladen. Der Update-Wächter übernimmt es in Kürze."
 
 msgid "Please choose a file to upload."
 msgstr "Bitte wähle eine Datei zum Hochladen aus."
@@ -1497,10 +1588,56 @@ msgstr "Zahlung gelöscht."
 msgid ""
 "Saved. Anyone whose password doesn't meet the new rules has to set a new one "
 "at their next login."
-msgstr "Gespeichert. Wessen Passwort die neuen Regeln nicht erfüllt, muss bei der nächsten Anmeldung ein neues setzen."
+msgstr ""
+"Gespeichert. Wessen Passwort die neuen Regeln nicht erfüllt, muss bei der "
+"nächsten Anmeldung ein neues setzen."
+
+msgid "A restore or an import is already running."
+msgstr "Es läuft schon eine Wiederherstellung oder ein Import."
+
+msgid "The device is being updated - try again when it is done."
+msgstr "Das Gerät wird gerade aktualisiert – versuch es danach noch einmal."
+
+#, python-format
+msgid "Backup failed: %(error)s"
+msgstr "Backup fehlgeschlagen: %(error)s"
+
+msgid "Backup completed."
+msgstr "Backup abgeschlossen."
+
+msgid "That stick is no longer there."
+msgstr "Dieser Stick ist nicht mehr da."
+
+msgid "Tick the box to confirm that the stick may be erased."
+msgstr "Setz den Haken, um zu bestätigen, dass der Stick gelöscht werden darf."
+
+msgid "Please choose a backup file."
+msgstr "Bitte wähle eine Backup-Datei."
+
+msgid "An update is already being applied."
+msgstr "Es wird schon ein Update eingespielt."
+
+msgid "A restore or an import is running - try again when it is done."
+msgstr "Eine Wiederherstellung oder ein Import läuft – versuch es danach noch einmal."
+
+msgid "Please upload a .tar update bundle."
+msgstr "Bitte lade ein .tar-Update-Paket hoch."
+
+#, python-format
+msgid "Uploaded %(name)s - it is checked and applied now."
+msgstr "%(name)s hochgeladen – es wird jetzt geprüft und eingespielt."
+
+msgid "There is no previous version to go back to."
+msgstr "Es gibt keine vorige Version, zu der man zurückkönnte."
+
+msgid "Going back to the previous version - this takes a few minutes."
+msgstr "Zurück zur vorigen Version – das dauert ein paar Minuten."
 
 msgid "Admin access"
 msgstr "Admin-Zugang"
+
+msgid "Backups are not running - see the dashboard"
+msgstr "Backups laufen nicht – siehe Dashboard"
 
 msgid "Link your phone"
 msgstr "Handy verknüpfen"
@@ -2005,3 +2142,5 @@ msgstr "Welcher Kaffee"
 msgid "CoffeePy is being updated. This page comes back on its own."
 msgstr ""
 "CoffeePy wird gerade aktualisiert. Diese Seite kommt von selbst wieder."
+
+#, python-format

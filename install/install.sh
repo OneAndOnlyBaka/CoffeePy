@@ -265,6 +265,10 @@ step_packages() {
 			-o APT::Get::List-Cleanup=0 update
 		run apt-get -o Dir::Etc::sourcelist="${list}" -o Dir::Etc::sourceparts=/dev/null \
 			install -y --no-install-recommends "${packages[@]}"
+		# An update bundle's packages are newer versions of what is installed (security
+		# updates for an offline device): only this source counts, so only they move.
+		run apt-get -o Dir::Etc::sourcelist="${list}" -o Dir::Etc::sourceparts=/dev/null \
+			upgrade -y
 	else
 		log "Refreshing the package lists"
 		run apt-get update
@@ -494,6 +498,13 @@ step_services() {
 	done
 	run systemctl daemon-reload
 	run systemctl enable coffeepy.service coffeepy-update-watcher.service
+	# What update bundles are checked against (install/update_watcher.py) - outside data/,
+	# root's, so nothing running in a container can swap it for its own.
+	run install -d -m 0755 /etc/coffeepy
+	run install -m 0644 "${SCRIPT_DIR}/update-signing.pub" /etc/coffeepy/update-signing.pub
+	# The watcher runs this step itself after an update - restarting it then would cut the
+	# update short; it hands over to its new version on its own once it is done.
+	[ "${COFFEEPY_FROM_WATCHER:-0}" = "1" ] || run systemctl restart coffeepy-update-watcher.service
 	run systemctl enable --now coffeepy-storage.service
 	run systemctl restart coffeepy-storage.service  # a re-run brings a changed helper in
 	run systemctl enable --now coffeepy-rtc-sync.timer

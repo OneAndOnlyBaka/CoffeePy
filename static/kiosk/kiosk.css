@@ -419,3 +419,7 @@ html, body.kiosk { overflow: hidden; }
 .ticker-hint { color: var(--accent); font-weight: 700; }
 .ticker-clear { margin: 0 auto; color: var(--text-inverse); font-size: 1.3rem; }
 @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+/* Left of the language button while backups are disturbed (coffee.backups.health): a red
+   circle that pulses, so it is noticed from across the room - and only then. */
+.backup-alarm { right: 152px; background: var(--danger); animation: backup-alarm 1.2s ease-in-out infinite; }
+@keyframes backup-alarm { 50% { opacity: 0.35; } }

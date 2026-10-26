@@ -15,7 +15,7 @@
 # Answer keys (environment variables work too, PI_PASSWORD best that way):
 #   UI_LANG DEVICE_LANGUAGE PI_HOST PI_USER PI_PASSWORD ADMIN_USER ADMIN_PASSWORD
 #   AP_ENABLE AP_SSID AP_PASSPHRASE PUBLIC_HOST TIME_ZONE
-#   BACKUP_INTERVAL_MINUTES BACKUP_DEPTH AUDIT_RETENTION_DAYS GUNICORN_WORKERS DISPLAY_MODE INSTALL_SOURCE
+#   BACKUP_PASSPHRASE AUDIT_RETENTION_DAYS GUNICORN_WORKERS DISPLAY_MODE INSTALL_SOURCE
 #   OFFLINE_BUNDLE REBOOT SAVE_SUMMARY
 # PI_SSH_OPTS adds options to every ssh call, e.g. "-p 2222" or "-i ~/.ssh/pi_key".
 #
@@ -54,8 +54,7 @@ AP_SSID="${AP_SSID:-}"
 AP_PASSPHRASE="${AP_PASSPHRASE:-}"
 PUBLIC_HOST="${PUBLIC_HOST:-}"
 TIME_ZONE="${TIME_ZONE:-}"
-BACKUP_INTERVAL_MINUTES="${BACKUP_INTERVAL_MINUTES:-}"
-BACKUP_DEPTH="${BACKUP_DEPTH:-}"
+BACKUP_PASSPHRASE="${BACKUP_PASSPHRASE-__unset__}"
 AUDIT_RETENTION_DAYS="${AUDIT_RETENTION_DAYS:-}"
 GUNICORN_WORKERS="${GUNICORN_WORKERS:-}"
 DISPLAY_MODE="${DISPLAY_MODE:-}"        # panel | auto | a literal video=... string
@@ -65,7 +64,7 @@ REBOOT="${REBOOT:-}"
 SAVE_SUMMARY="${SAVE_SUMMARY:-}"
 ANSWER_KEYS="UI_LANG DEVICE_LANGUAGE PI_HOST PI_USER PI_PASSWORD ADMIN_USER ADMIN_PASSWORD
 AP_ENABLE AP_SSID AP_PASSPHRASE PUBLIC_HOST TIME_ZONE
-BACKUP_INTERVAL_MINUTES BACKUP_DEPTH AUDIT_RETENTION_DAYS GUNICORN_WORKERS DISPLAY_MODE INSTALL_SOURCE
+BACKUP_PASSPHRASE AUDIT_RETENTION_DAYS GUNICORN_WORKERS DISPLAY_MODE INSTALL_SOURCE
 OFFLINE_BUNDLE REBOOT SAVE_SUMMARY"
 
 # What the Pi told us (inspect_pi) and what an earlier installation left (load_existing).
@@ -160,10 +159,12 @@ frame() {
 	local hints=$1
 	local steps=("$(t Connect Verbinden)" "$(t Check Prüfen)" "$(t Settings Einstellungen)" \
 		"$(t Install Installieren)" "$(t Done Fertig)")
+	# A tool that sources this one for its screens (update_builder.sh) brings its own.
+	[ -n "${FRAME_STEPS+x}" ] && steps=("${FRAME_STEPS[@]}")
 	printf '%s%s\e[2J' "${C_CREAM}" "${F_TEXT}"
 	at 1 1
 	printf '%s%s%s' "${C_DARK_BG}${F_ACCENT}${BOLD}" "  CoffeePy" "${R}${C_DARK_BG}${F_INVERSE}"
-	printf '%s' "$(fit $((COLS - 10)) "  ·  $(t "Raspberry Pi setup" "Raspberry-Pi-Einrichtung")")"
+	printf '%s' "$(fit $((COLS - 10)) "  ·  ${FRAME_TITLE:-$(t "Raspberry Pi setup" "Raspberry-Pi-Einrichtung")}")"
 	if [ -n "${PI_HOST}" ]; then
 		local target="${PI_USER:+${PI_USER}@}${PI_HOST}  "
 		at 1 $((COLS - ${#target} + 1)); printf '%s' "${target}"
@@ -394,8 +395,8 @@ ui_progress() { # percent headline detail
 	fi
 	local key="${PROGRESS_TITLE}:${COLS}x${ROWS}"
 	if [ "${PROGRESS_SHOWN}" != "${key}" ]; then
-		frame "$(t "the installation runs on the Pi itself - closing this does not stop it" \
-			"die Installation läuft auf dem Pi selbst - dieses Fenster zu schließen hält sie nicht an")"
+		frame "${PROGRESS_HINT:-$(t "the installation runs on the Pi itself - closing this does not stop it" \
+			"die Installation läuft auf dem Pi selbst - dieses Fenster zu schließen hält sie nicht an")}"
 		card "${PROGRESS_TITLE}" 9
 		PROGRESS_SHOWN=${key}
 	fi
@@ -429,6 +430,7 @@ check_secret() {
 }
 check_passphrase() { check_secret "$1" || return 1; [ "${#1}" -le 63 ] || { t "WPA2 allows 63 characters at most." "WPA2 erlaubt höchstens 63 Zeichen."; return 1; }; }
 check_ssid() { [[ "$1" =~ ^[A-Za-z0-9_.-]{1,32}$ ]] || { t "1-32 letters, digits, _ . or -." "1-32 Buchstaben, Ziffern, _ . oder -."; return 1; }; }
+check_backup_passphrase() { [ "${#1}" -ge 12 ] || { t "At least 12 characters." "Mindestens 12 Zeichen."; return 1; }; }
 check_number() { [[ "$1" =~ ^[1-9][0-9]{0,4}$ ]] || { t "A positive whole number." "Eine positive ganze Zahl."; return 1; }; }
 check_tz() { [[ "$1" =~ ^[A-Za-z_]+(/[A-Za-z0-9_+-]+)*$ ]] || { t "Like Europe/Berlin." "Zum Beispiel Europe/Berlin."; return 1; }; }
 check_bundle() { [ -f "$1" ] || { t "No such file." "Diese Datei gibt es nicht."; return 1; }; }
@@ -599,8 +601,8 @@ load_existing() {
 	: "${AP_PASSPHRASE:=$(env_get AP_PASSPHRASE)}"
 	: "${PUBLIC_HOST:=$(env_get PUBLIC_HOST)}"
 	: "${TIME_ZONE:=$(env_get DJANGO_TIME_ZONE)}"
-	: "${BACKUP_INTERVAL_MINUTES:=$(env_get BACKUP_INTERVAL_MINUTES)}"
-	: "${BACKUP_DEPTH:=$(env_get BACKUP_DEPTH)}"
+	# An empty passphrase is a choice (no encryption), so only an unset one is filled in.
+	[ "${BACKUP_PASSPHRASE}" != "__unset__" ] || BACKUP_PASSPHRASE="$(env_get BACKUP_PASSPHRASE)"
 	: "${AUDIT_RETENTION_DAYS:=$(env_get AUDIT_RETENTION_DAYS)}"
 	: "${GUNICORN_WORKERS:=$(env_get GUNICORN_WORKERS)}"
 	local existing_language
@@ -625,9 +627,8 @@ defaults() {
 	: "${AP_SSID:=CoffeePy}"
 	: "${AP_PASSPHRASE:=$(rand_token 12)}"
 	: "${TIME_ZONE:=$(timedatectl show -p Timezone --value 2>/dev/null || echo Europe/Berlin)}"
-	: "${BACKUP_INTERVAL_MINUTES:=60}"
-	: "${BACKUP_DEPTH:=48}"
 	: "${AUDIT_RETENTION_DAYS:=90}"
+	[ "${BACKUP_PASSPHRASE}" != "__unset__" ] || BACKUP_PASSPHRASE=""  # not encrypted unless asked for
 	: "${GUNICORN_WORKERS:=$([ "${PI_RAM_MB}" -ge 1800 ] && echo 3 || echo 2)}"
 	: "${DISPLAY_MODE:=panel}"
 	: "${INSTALL_SOURCE:=$([ "${PI_ONLINE}" = yes ] && echo internet || echo offline)}"
@@ -687,12 +688,17 @@ edit_setting() {
 			"Für Statistiken nach Stunde und Wochentag und für die Uhr des Kiosks.")" check_tz
 		;;
 	backup)
-		# Where backups go is decided in the dashboard (Backup): a USB stick the admin sets up
-		# there. Here only how often, and how many are kept.
-		ask BACKUP_INTERVAL_MINUTES "$(t "Backup interval" "Backup-Intervall")" "$(t "Minutes between two backups to the USB stick set up in the dashboard." \
-			"Minuten zwischen zwei Backups auf den USB-Stick, der im Dashboard eingerichtet wird.")" check_number || return 0
-		ask BACKUP_DEPTH "$(t "Backups kept" "Aufbewahrte Backups")" "$(t "How many backups to keep before the oldest is deleted." \
-			"Wie viele Backups aufbewahrt werden, bevor das älteste gelöscht wird.")" check_number || return 0
+		# Where backups go, how often and how many are kept is set in the dashboard (Backup).
+		# Here only whether they are encrypted - the passphrase is a secret, so it lives in
+		# .env, and a replacement device needs the same one to read the old backups.
+		if ui_confirm "Backups" "$(t "Encrypt the backups on the USB stick? Without, anyone who takes the stick can read them - with, keep the passphrase somewhere safe: a backup can't be restored without it." \
+			"Die Backups auf dem USB-Stick verschlüsseln? Ohne kann sie jeder lesen, der den Stick nimmt - mit musst du die Passphrase sicher aufbewahren: Ohne sie lässt sich kein Backup wiederherstellen.")" \
+			"$([ -n "${BACKUP_PASSPHRASE}" ] && echo yes || echo no)"; then
+			ask BACKUP_PASSPHRASE "$(t "Backup passphrase" "Backup-Passphrase")" "$(t "At least 12 characters." "Mindestens 12 Zeichen.")" \
+				check_backup_passphrase secret || return 0
+		else
+			BACKUP_PASSPHRASE=""
+		fi
 		ask AUDIT_RETENTION_DAYS "$(t "Audit log kept (days)" "Protokoll aufbewahren (Tage)")" "$(t "Older audit log entries are deleted automatically." \
 			"Ältere Protokolleinträge werden automatisch gelöscht.")" check_number || return 0
 		;;
@@ -745,7 +751,7 @@ step_settings() {
 		local ap_label backup_label source_label install_label
 		ap_label=$(t "off - stays on your network" "aus - bleibt in deinem Netz")
 		[ "${AP_ENABLE}" = yes ] && ap_label="$(t on an) · ${AP_SSID}"
-		backup_label="$(t every alle) ${BACKUP_INTERVAL_MINUTES} min · ${BACKUP_DEPTH} $(t kept aufbewahrt) · $(t log Protokoll) ${AUDIT_RETENTION_DAYS} $(t days Tage)"
+		backup_label="$([ -n "${BACKUP_PASSPHRASE}" ] && t encrypted verschlüsselt || t "not encrypted" unverschlüsselt) · $(t log Protokoll) ${AUDIT_RETENTION_DAYS} $(t days Tage)"
 		source_label=Internet
 		[ "${INSTALL_SOURCE}" = offline ] && source_label="$(t "offline bundle" "Offline-Paket")${OFFLINE_BUNDLE:+ · $(basename "${OFFLINE_BUNDLE}")}"
 		install_label=$([ "${EXISTING_INSTALL}" = 1 ] && t "update and apply settings" "aktualisieren und Einstellungen anwenden" || printf '%s %s' "$(t on auf)" "${PI_HOST}")
@@ -819,8 +825,7 @@ build_env() {
 	case ",${extra},${PUBLIC_HOST}," in *",${PI_HOST},"*) ;; *) extra+=",${PI_HOST}" ;; esac
 	env_set "${env}" TLS_EXTRA_HOSTNAMES "${extra}"
 	env_set "${env}" GUNICORN_WORKERS "${GUNICORN_WORKERS}"
-	env_set "${env}" BACKUP_INTERVAL_MINUTES "${BACKUP_INTERVAL_MINUTES}"
-	env_set "${env}" BACKUP_DEPTH "${BACKUP_DEPTH}"
+	env_set "${env}" BACKUP_PASSPHRASE "${BACKUP_PASSPHRASE}"
 	env_set "${env}" AUDIT_RETENTION_DAYS "${AUDIT_RETENTION_DAYS}"
 	if [ "${AP_ENABLE}" = yes ]; then
 		env_set "${env}" AP_SSID "${AP_SSID}"

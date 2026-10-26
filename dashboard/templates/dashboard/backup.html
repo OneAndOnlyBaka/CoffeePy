@@ -17,18 +17,18 @@
     <div class="list">
         <div class="list-row">
             <div class="list-row-text">
-                <span class="list-row-title">{{ storage.own.model|default:_("USB stick") }}</span>
-                <span class="list-row-meta">
-                    {% if storage.own.space %}{% blocktranslate with free=storage.own.space.free|filesizeformat total=storage.own.space.total|filesizeformat %}{{ free }} free of {{ total }}{% endblocktranslate %} &middot; {% endif %}
-                    {% blocktranslate with minutes=interval depth=depth %}every {{ minutes }} minutes, the newest {{ depth }} are kept{% endblocktranslate %}
-                </span>
+                <span class="list-row-title">{{ storage.own.model|default:_("USB stick") }}
+                    {% if health.encrypted %}<span class="badge ok-badge">{% translate "encrypted" %}</span>{% else %}<span class="badge">{% translate "not encrypted" %}</span>{% endif %}</span>
+                <span class="list-row-meta">{% if storage.own.space %}{% blocktranslate with free=storage.own.space.free|filesizeformat total=storage.own.space.total|filesizeformat %}{{ free }} free of {{ total }}{% endblocktranslate %}{% endif %}</span>
             </div>
             <div class="list-row-actions">
-                <form method="post">{% csrf_token %}<button type="submit" class="success btn-sm">{% translate "Back up now" %}</button></form>
+                <form method="post" action="{% url 'dashboard:backup_now' %}">{% csrf_token %}<button type="submit" class="success btn-sm">{% translate "Back up now" %}</button></form>
                 <form method="post" action="{% url 'dashboard:usb_action' %}">{% csrf_token %}<input type="hidden" name="action" value="eject"><button type="submit" class="secondary btn-sm">{% translate "Eject safely" %}</button></form>
             </div>
         </div>
     </div>
+    {% if not health.encrypted %}<p class="muted">{% blocktranslate trimmed %}The backups are not encrypted: anyone who takes the stick can read them. To encrypt them,
+        set a backup passphrase with the provisioning tool (BACKUP_PASSPHRASE).{% endblocktranslate %}</p>{% endif %}
     <h2 class="sub-heading">{% translate "Backups on the stick" %}</h2>
     {% include "dashboard/_backup_list.html" with files=own_backups source="own" %}
 </div>
@@ -75,6 +75,18 @@
 </div>
 {% endif %}
 
+<div class="card">
+    <h2>{% translate "When and what is kept" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}Each backup holds the whole device: the data, the device CA and certificates, and its
+        settings. The newest ones are all kept, after that one a day, a week and a month - so a mistake
+        noticed only days later can still be undone.{% endblocktranslate %}</p>
+    <form method="post" action="{% url 'dashboard:backup_settings' %}">
+        {% csrf_token %}
+        {% for field in settings_form %}{% include "dashboard/_field.html" %}{% endfor %}
+        <button type="submit" class="success">{% translate "Save" %}</button>
+    </form>
+</div>
+
 <div class="card" id="restore">
     <h2>{% translate "Restore a backup" %}</h2>
     <div id="restore-progress" class="import-progress" {% if not restore_running %}hidden{% endif %}>
@@ -82,22 +94,15 @@
         <div class="stat-bar-track"><div id="restore-bar" class="stat-bar-fill progress-fill" style="width: {{ restore.percent|unlocalize }}%"></div></div>
     </div>
     <p id="restore-msg" class="msg {% if restore.state == 'error' %}error{% else %}success{% endif %}" {% if restore.state != "done" and restore.state != "error" %}hidden{% endif %}>{{ restore.message }}</p>
-    <p class="muted">{% blocktranslate trimmed %}Replaces everything on this device - members, bookings and the dashboard logins -
-        with the state of the backup. The current data is saved first, and put back if the backup can't be
-        loaded. Pick a backup from a stick above, or upload one: a file from "Download a backup" or from a
-        stick read on a PC.{% endblocktranslate %}</p>
-    <form method="post" action="{% url 'dashboard:backup_restore_upload' %}" enctype="multipart/form-data">
-        {% csrf_token %}
-        <label class="field">{% translate "Backup file" %} <input type="file" name="backup" accept=".dump,.sql" required></label>
-        <label class="field"><span>{% blocktranslate trimmed with word="DELETE" %}Type <code>{{ word }}</code> to confirm{% endblocktranslate %}</span>
-            <input type="text" name="confirm" autocomplete="off" required></label>
-        <button type="submit" class="danger">{% translate "Restore" %}</button>
-    </form>
+    <p class="muted">{% blocktranslate trimmed %}Pick a backup from a stick above - or upload one: a file from "Download a backup", or
+        from a stick read on a PC. On a replacement device, restore everything of the old one's latest
+        backup.{% endblocktranslate %}</p>
+    <a href="{% url 'dashboard:backup_restore_upload' %}" class="btn secondary">{% include "icons/upload.svg" %}{% translate "Restore from a file" %}</a>
 </div>
 
 <div class="card">
     <h2>{% translate "Download a backup" %}</h2>
-    <p class="muted">{% translate "The data as it is right now, as a file - also without a stick." %}</p>
+    <p class="muted">{% translate "The whole device as it is right now, as a file - also without a stick." %}</p>
     <a href="{% url 'dashboard:backup_export' %}" class="btn secondary">{% include "icons/download.svg" %}{% translate "Download backup" %}</a>
 </div>
 

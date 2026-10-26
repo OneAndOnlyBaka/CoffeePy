@@ -1,0 +1,17 @@
+# What the coverage target is about: backups and updates, app and host side.
+[run]
+branch = True
+source =
+    coffee
+    dashboard
+    install
+omit =
+    */tests/*
+    */migrations/*
+
+[report]
+show_missing = True
+skip_covered = False
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:

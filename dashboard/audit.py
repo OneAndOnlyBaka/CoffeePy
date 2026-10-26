@@ -87,7 +87,7 @@ def _login_failed(sender, credentials, request=None, **kwargs):
 
 def ingest_host_events() -> int:
     """Moves the host's events (data/storage/events.jsonl, appended by storage_helper.py and
-    update_watcher.sh) into the log. The file is renamed before it is read, so a line the
+    update_watcher.py) into the log. The file is renamed before it is read, so a line the
     host appends meanwhile goes to a fresh file and is collected next time."""
     path = settings.STORAGE_DIR / "events.jsonl"
     claimed = path.with_name(f"events.{os.getpid()}.ingesting")

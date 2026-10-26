@@ -159,8 +159,10 @@ KIOSK_ORDER_AUTO_CHECKOUT_SECONDS = 20
 KIOSK_AUTO_LOGOUT_SECONDS = 20
 
 # Where uploaded update bundles are written for the host-level watcher to pick up.
-UPDATE_INCOMING_DIR = Path(os.environ.get("UPDATE_INCOMING_DIR", BASE_DIR / "updates" / "incoming"))
-UPDATE_STATUS_DIR = Path(os.environ.get("UPDATE_STATUS_DIR", BASE_DIR / "updates" / "status"))
+# What the watcher reports back (state.json, installed.json, previous.json, pre-update/).
+UPDATE_DIR = Path(os.environ.get("UPDATE_DIR", BASE_DIR / "updates"))
+UPDATE_INCOMING_DIR = Path(os.environ.get("UPDATE_INCOMING_DIR", UPDATE_DIR / "incoming"))
+UPDATE_STATUS_DIR = Path(os.environ.get("UPDATE_STATUS_DIR", UPDATE_DIR / "status"))
 
 # Progress of a running legacy-DB import. Deliberately in the container's temp dir and not
 # in the database: the import itself runs in one big transaction, so progress written to the
@@ -174,10 +176,16 @@ IMPORT_STATUS_FILE = Path(os.environ.get("IMPORT_STATUS_FILE", Path(tempfile.get
 # reasoning puts its progress in a file.
 USB_DIR = Path(os.environ.get("USB_DIR", BASE_DIR / "data" / "usb"))
 STORAGE_DIR = Path(os.environ.get("STORAGE_DIR", BASE_DIR / "data" / "storage"))
+# The device's .env, read-only - a backup carries it (docker-compose.yml mounts it).
+COFFEEPY_ENV_FILE = Path(os.environ.get("COFFEEPY_ENV_FILE", BASE_DIR / ".env"))
 RESTORE_STATUS_FILE = Path(os.environ.get("RESTORE_STATUS_FILE", Path(tempfile.gettempdir()) / "coffeepy-restore.json"))
 # Written while a restore runs, so the kiosk shows "back in a moment" (install/maintenance.sh
 # writes the same file during installs and updates; Caddy serves it).
 MAINTENANCE_DIR = Path(os.environ.get("MAINTENANCE_DIR", BASE_DIR / "data" / "maintenance"))
+
+# Which version this is: set when the image is built (Dockerfile, COFFEEPY_VERSION from
+# scripts/build_update_bundle.sh), "dev" in a checkout. Backups and update bundles carry it.
+COFFEEPY_VERSION = os.environ.get("COFFEEPY_VERSION") or "dev"
 
 # Standalone WiFi AP credentials (see install/hostapd.conf.template) - only used to render
 # the kiosk setup-wizard's WiFi QR code; blank on deployments that join an existing network.

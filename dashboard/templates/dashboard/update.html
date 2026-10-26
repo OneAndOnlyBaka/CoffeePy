@@ -3,37 +3,74 @@
 {% block title %}{% translate "Update" %} - CoffeePy{% endblock %}
 {% block dashboard_content %}
 <h1>{% translate "Software update" %}</h1>
-<p>{% blocktranslate trimmed %}Upload a bundle produced by <code>scripts/build_update_bundle.sh</code> - a
-<code>.tar</code>/<code>.tar.gz</code> containing every image the app needs (the Django
-app, the NFC bridge, Postgres, Mosquitto) plus the current <code>docker-compose.yml</code>.
-The host-level update watcher loads the images, applies the compose file (backing up the
-previous one), and recreates whichever services actually changed - including starting
-any brand-new container the update adds. No internet connection needed on this device.{% endblocktranslate %}</p>
-{% if message %}<p class="msg {% if failed %}error{% else %}success{% endif %}">{{ message }}</p>{% endif %}
+
 <div class="card">
-    <form method="post" enctype="multipart/form-data">
+    <div class="list">
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "Installed version" %}</span>
+                <span class="list-row-meta">{{ installed.version|default:version }}{% if installed.applied %} &middot; {% blocktranslate with when=installed.applied|date:"d.m.Y H:i" %}applied {{ when }}{% endblocktranslate %}{% endif %}</span>
+            </div>
+            {% if previous %}
+            <form method="post" action="{% url 'dashboard:update_rollback' %}" onsubmit="return confirm('{% translate "Go back to the previous version? The data goes back to the state before the last update." as q %}{{ q|escapejs }}');">
+                {% csrf_token %}
+                <button type="submit" class="secondary btn-sm">{% blocktranslate with version=previous.installed.version|default:"?" %}Back to {{ version }}{% endblocktranslate %}</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card" id="update-state">
+    <h2>{% translate "Status" %}</h2>
+    <p id="update-message" class="msg {% if state.state == 'failed' or state.state == 'rolled_back' %}error{% elif state.state == 'done' %}success{% endif %}">
+        {% if state.state == "running" %}<span class="spinner"></span> {{ state.message }}
+        {% elif state.message %}{{ state.message }}
+        {% else %}{% translate "No update processed yet." %}{% endif %}
+    </p>
+    <pre id="update-log" class="muted"></pre>
+</div>
+
+<div class="card">
+    <h2>{% translate "Upload an update" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}A bundle from the update package builder (<code>scripts/update_builder.sh</code>).
+    Before anything changes, the device checks its signature, that it is for this device and that there is
+    room for it, and saves the database to the SD card. If the new version doesn't come up, the previous
+    one is put back automatically. The kiosk shows "We'll be right back" meanwhile.{% endblocktranslate %}</p>
+    <form method="post" action="{% url 'dashboard:update_upload' %}" enctype="multipart/form-data">
         {% csrf_token %}
-        <input type="file" name="bundle" accept=".tar,.tar.gz" required>
-        <button type="submit" class="success">{% translate "Upload" %}</button>
+        <label class="field">{% translate "Update bundle" %} <input type="file" name="bundle" accept=".tar,.tar.gz" required></label>
+        <label class="checkbox-row"><input type="checkbox" name="allow_downgrade" value="1">
+            <span>{% translate "Allow installing an older version than the installed one" %}</span></label>
+        <button type="submit" class="success" {% if state.state == "running" or pending %}disabled{% endif %}>{% translate "Upload and install" %}</button>
     </form>
 </div>
+
+{% if pre_update %}
 <div class="card">
-    <h2>{% translate "Watcher status" %}</h2>
-    <pre id="status-log" class="muted">{% translate "Waiting for status…" %}</pre>
+    <h2>{% translate "Saved before updates" %}</h2>
+    <p class="muted">{% translate "The database as it was before each of the last updates - on the SD card, for going back." %}</p>
+    <ul class="file-list">{% for f in pre_update %}<li>{{ f.name }} &middot; {{ f.size|filesizeformat }}</li>{% endfor %}</ul>
 </div>
-{% translate "No update processed yet." as nothing_yet %}
+{% endif %}
+
 <script>
-async function pollStatus() {
-    try {
-        const res = await fetch("{% url 'dashboard:update_status' %}");
-        const data = await res.json();
-        const el = document.getElementById("status-log");
-        el.textContent = data.entries.length
-            ? data.entries.map(e => `[${e.name}]\n${e.text}`).join("\n\n")
-            : "{{ nothing_yet|escapejs }}";
-    } catch (e) { /* ignore transient errors */ }
-}
-pollStatus();
-setInterval(pollStatus, 3000);
+(function () {
+    const message = document.getElementById("update-message");
+    const log = document.getElementById("update-log");
+    let wasRunning = {% if state.state == "running" or pending %}true{% else %}false{% endif %};
+    async function poll() {
+        try {
+            const data = await (await fetch("{% url 'dashboard:update_status' %}")).json();
+            log.textContent = data.log;
+            const running = data.state.state === "running" || data.pending;
+            if (wasRunning && !running) { location.reload(); return; }
+            if (running && data.state.message) { message.textContent = data.state.message; }
+            wasRunning = running;
+        } catch (e) { /* the app restarts during an update - keep asking */ }
+        setTimeout(poll, 3000);
+    }
+    poll();
+})();
 </script>
 {% endblock %}

@@ -1,3 +1,4 @@
+import os
 import secrets
 
 from django.db import models
@@ -321,3 +322,31 @@ class NfcReaderStatus(models.Model):
 
     def __str__(self):
         return "online" if self.is_online else "offline"
+
+
+def _env_int(name, default):
+    try:
+        return int(os.environ.get(name, default))
+    except ValueError:
+        return default
+
+
+class BackupSettings(models.Model):
+    """How often the backup service backs up to the stick, and which backups it keeps -
+    set on the dashboard's backup page. One row; its first values come from what the
+    device was installed with (BACKUP_INTERVAL_MINUTES / BACKUP_DEPTH in .env)."""
+
+    interval_minutes = models.PositiveIntegerField(default=60)
+    # Generations (coffee.backups.rotate): the newest few, then one per day, per week, per
+    # month - so a mistake noticed only days later can still be undone.
+    keep_recent = models.PositiveIntegerField(default=48)
+    keep_daily = models.PositiveIntegerField(default=14)
+    keep_weekly = models.PositiveIntegerField(default=8)
+    keep_monthly = models.PositiveIntegerField(default=12)
+
+    @classmethod
+    def current(cls):
+        return cls.objects.get_or_create(pk=1, defaults={
+            "interval_minutes": _env_int("BACKUP_INTERVAL_MINUTES", 60),
+            "keep_recent": _env_int("BACKUP_DEPTH", 48),
+        })[0]

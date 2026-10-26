@@ -6,7 +6,7 @@ After=coffeepy.service
 [Service]
 Type=simple
 Environment=COFFEEPY_DIR=/opt/coffeepy
-ExecStart=/opt/coffeepy/install/update_watcher.sh
+ExecStart=/usr/bin/python3 /opt/coffeepy/install/update_watcher.py
 Restart=on-failure
 RestartSec=5
 

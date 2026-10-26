@@ -34,6 +34,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# Which version this is (scripts/build_update_bundle.sh passes git describe) - the dashboard
+# shows it, backups and the update watcher compare it.
+ARG COFFEEPY_VERSION=dev
+ENV COFFEEPY_VERSION=${COFFEEPY_VERSION}
+
 COPY requirements.txt .
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \

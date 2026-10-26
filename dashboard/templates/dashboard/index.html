@@ -41,6 +41,7 @@
                     {% if backup_health.state == "ok" %}{% if backup_health.last_ok %}{% blocktranslate with when=backup_health.last_ok|date:"d.m.Y H:i" %}Last backup {{ when }}.{% endblocktranslate %}{% else %}{% translate "The first backup is made within the hour." %}{% endif %}
                     {% elif backup_health.state == "missing" %}{% blocktranslate trimmed with model=backup_health.configured.model|default:"USB" serial=backup_health.configured.serial %}Backups are not running - plug the stick ({{ model }}, serial {{ serial }}) back in.{% endblocktranslate %}
                     {% elif backup_health.state == "failing" %}{% translate "The last backup failed" %}: {{ backup_health.error }}
+                    {% elif backup_health.state == "stale" %}{% translate "No backup for a long time" %}
                     {% elif backup_health.state == "helper" %}{% translate "Backups are not running - the storage service isn't answering" %}
                     {% else %}{% translate "None set up - backups are not running." %}{% endif %}
                 </span>

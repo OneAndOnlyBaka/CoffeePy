@@ -3,20 +3,16 @@ import json
 from functools import wraps
 import os
 import tempfile
-import uuid
 from datetime import datetime, timedelta
-from pathlib import Path
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.sessions.models import Session
-from django.core.management import call_command
 from django.core.paginator import Paginator
 from django.db import connection, transaction
 from django.db.models import Count, Q
-from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -39,7 +35,8 @@ from coffee.models import (
 )
 from coffee.network import public_host
 
-from . import audit, import_jobs, restore_jobs, system_clock, system_stats, tls
+from . import audit, import_jobs, system_clock, system_stats, tls
+from .decorators import superuser_required
 from .models import AccountSecurity, PasswordPolicy
 from .forms import (
     ROLE_ADMIN,
@@ -54,19 +51,6 @@ from .forms import (
     PaymentMethodForm,
     UserCreateForm,
 )
-
-def superuser_required(view):
-    """Admin-only pages. A manager who gets here anyway (an old link, a guessed URL) lands
-    on the overview - and the attempt is logged."""
-    @wraps(view)
-    def wrapped(request, *args, **kwargs):
-        if not request.user.is_superuser:
-            audit.log(request, "access.denied", target=request.path, outcome="failure")
-            messages.error(request, _("Only admins may open that page."))
-            return redirect("dashboard:index")
-        return view(request, *args, **kwargs)
-    return wrapped
-
 
 @login_required
 def index(request):
@@ -522,187 +506,6 @@ def certificate_download(request):
 
 @login_required
 @superuser_required
-def backup(request):
-    """The USB backup stick - setting one up, its backups, restoring them - plus a backup
-    straight to the browser for a device without a stick."""
-    if request.method == "POST":
-        try:
-            call_command("backup_db", once=True)
-        except Exception as exc:  # noqa: BLE001 - surfaced to the admin
-            messages.error(request, _("Backup failed: %(error)s") % {"error": exc})
-        else:
-            audit.log(request, "backup.trigger")
-            messages.success(request, _("Backup completed."))
-        return redirect("dashboard:backup")
-    status = backups.storage_status()
-    return render(request, "dashboard/backup.html", {
-        "storage": status,
-        "health": backups.health(),
-        "own_backups": backups.list_backups(backups.own_backup_dir()),
-        "foreign_backups": backups.list_backups(backups.foreign_backup_dir()),
-        "foreign_is_ours": (status.get("foreign") or {}).get("meta", {}).get("device_id") == backups.device_id(),
-        "interval": os.environ.get("BACKUP_INTERVAL_MINUTES", "60"),
-        "depth": os.environ.get("BACKUP_DEPTH", "48"),
-        "restore": restore_jobs.localized(restore_jobs.read_status()),
-        "restore_running": restore_jobs.is_running(),
-    })
-
-
-@login_required
-@superuser_required
-@require_GET
-def storage_status(request):
-    """Polled by the backup page while the host helper works on a stick."""
-    status = backups.storage_status()
-    return JsonResponse({"request": status.get("request", {}), "helper_running": status.get("helper_running")})
-
-
-@login_required
-@superuser_required
-def usb_setup(request):
-    """Setting a stick up as this device's backup stick: it is formatted - so this page names
-    the stick and asks once more before the host helper is told to."""
-    status = backups.storage_status()
-    path = request.GET.get("disk") or request.POST.get("disk", "")
-    disk = next((d for d in status.get("available", []) if d["path"] == path), None)
-    if disk is None:
-        messages.error(request, _("That stick is no longer there."))
-        return redirect("dashboard:backup")
-    if request.method == "POST":
-        if not request.POST.get("confirm"):
-            messages.error(request, _("Tick the box to confirm that the stick may be erased."))
-        else:
-            backups.storage_request("format", path=disk["path"], serial=disk["serial"],
-                                    requested_by=request.user.get_username())
-            audit.log(request, "backup.stick_setup", target=f"{disk['vendor']} {disk['model']}".strip(),
-                      details=f"serial {disk['serial']}")
-            return redirect(f"{reverse('dashboard:backup')}?working=format")
-    return render(request, "dashboard/backup_usb_setup.html", {"disk": disk, "configured": backups.configured_stick()})
-
-
-@login_required
-@superuser_required
-@require_POST
-def usb_action(request):
-    action = request.POST.get("action")
-    if action not in ("adopt", "eject"):
-        raise Http404
-    backups.storage_request(action, requested_by=request.user.get_username())
-    audit.log(request, f"backup.stick_{action}")
-    return redirect(f"{reverse('dashboard:backup')}?working={action}")
-
-
-def _backup_dir(source):
-    return backups.own_backup_dir() if source == "own" else backups.foreign_backup_dir()
-
-
-@login_required
-@superuser_required
-def backup_download(request, source, filename):
-    try:
-        target = backups.resolve(_backup_dir(source), filename)
-    except backups.BackupError:
-        raise Http404 from None
-    return FileResponse(open(target, "rb"), as_attachment=True, filename=target.name)
-
-
-@login_required
-@superuser_required
-def backup_export(request):
-    """A backup of right now, straight into the browser - also without a stick."""
-    with tempfile.TemporaryDirectory(dir=settings.STORAGE_DIR) as tmp:
-        stamp = timezone.localtime().strftime("%Y-%m-%d_%H%M%S")
-        target = backups.dump(Path(tmp) / f"coffeepy_{stamp}.dump")
-        data = target.read_bytes()
-    audit.log(request, "backup.export")
-    return HttpResponse(data, content_type="application/octet-stream",
-                        headers={"Content-Disposition": f'attachment; filename="{target.name}"'})
-
-
-@login_required
-@superuser_required
-def backup_restore(request, source, filename):
-    """Restoring a backup from a stick: what will happen, then a confirmation."""
-    try:
-        target = backups.resolve(_backup_dir(source), filename)
-    except backups.BackupError:
-        raise Http404 from None
-    if request.method == "POST":
-        if request.POST.get("confirm", "").strip() != RESET_CONFIRMATION:
-            messages.error(request, _("Type %(word)s to confirm - nothing was changed.") % {"word": RESET_CONFIRMATION})
-        elif restore_jobs.is_running() or import_jobs.is_running():
-            messages.error(request, _("A restore or an import is already running."))
-        else:
-            restore_jobs.start_restore(target, target.name, request.user.get_username())
-            return redirect(f"{reverse('dashboard:backup')}#restore")
-    return render(request, "dashboard/backup_restore.html", {
-        "name": target.name, "source": source, "size": target.stat().st_size, "confirmation": RESET_CONFIRMATION,
-    })
-
-
-@login_required
-@superuser_required
-@require_POST
-def backup_restore_upload(request):
-    """A backup file from elsewhere (a download, another device's stick read on a PC)."""
-    upload = request.FILES.get("backup")
-    if not upload:
-        messages.error(request, _("Please choose a backup file."))
-    elif request.POST.get("confirm", "").strip() != RESET_CONFIRMATION:
-        messages.error(request, _("Type %(word)s to confirm - nothing was changed.") % {"word": RESET_CONFIRMATION})
-    elif restore_jobs.is_running() or import_jobs.is_running():
-        messages.error(request, _("A restore or an import is already running."))
-    else:
-        # On the data partition, not /tmp: a RAM-backed tmpfs on the Pi.
-        directory = settings.STORAGE_DIR / "uploads"
-        directory.mkdir(parents=True, exist_ok=True)
-        target = directory / f"{uuid.uuid4().hex}{Path(upload.name).suffix}"
-        with open(target, "wb") as f:
-            for chunk in upload.chunks():
-                f.write(chunk)
-        try:
-            backups.check_restorable(target)
-        except backups.BackupError as exc:
-            target.unlink(missing_ok=True)
-            messages.error(request, _(str(exc)))
-        else:
-            restore_jobs.start_restore(target, upload.name, request.user.get_username(), delete_after=True)
-            return redirect(f"{reverse('dashboard:backup')}#restore")
-    return redirect("dashboard:backup")
-
-
-@login_required
-@superuser_required
-@require_GET
-def restore_status(request):
-    return JsonResponse(restore_jobs.localized(restore_jobs.read_status()))
-
-
-@login_required
-@superuser_required
-def update_upload(request):
-    message = None
-    failed = False
-    if request.method == "POST":
-        upload = request.FILES.get("bundle")
-        if not upload or not upload.name.endswith((".tar", ".tar.gz")):
-            message = _("Please upload a .tar or .tar.gz image bundle.")
-            failed = True
-        else:
-            settings.UPDATE_INCOMING_DIR.mkdir(parents=True, exist_ok=True)
-            tmp_name = settings.UPDATE_INCOMING_DIR / f".uploading-{uuid.uuid4().hex}"
-            with open(tmp_name, "wb") as f:
-                for chunk in upload.chunks():
-                    f.write(chunk)
-            final_name = settings.UPDATE_INCOMING_DIR / upload.name
-            os.replace(tmp_name, final_name)  # atomic rename so the watcher never sees a partial file
-            message = _("Uploaded %(name)s. The update watcher will pick it up shortly.") % {"name": upload.name}
-            audit.log(request, "update.upload", target=upload.name)
-    return render(request, "dashboard/update.html", {"message": message, "failed": failed})
-
-
-@login_required
-@superuser_required
 def import_legacy_db(request):
     """GET renders the upload page; POST (sent by its JavaScript) stores the upload and
     kicks off the import in the background, so the page can show a spinner and progress
@@ -824,18 +627,6 @@ def audit_log(request):
         "page": page, "query": query.urlencode(), "sources": AuditLogEntry.SOURCE_CHOICES,
         "retention_days": os.environ.get("AUDIT_RETENTION_DAYS", "90"),
     })
-
-
-@login_required
-@superuser_required
-@require_GET
-def update_status(request):
-    status_dir = settings.UPDATE_STATUS_DIR
-    entries = []
-    if status_dir.is_dir():
-        for p in sorted(status_dir.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True)[:10]:
-            entries.append({"name": p.name, "text": p.read_text(errors="replace")})
-    return JsonResponse({"entries": entries})
 
 
 @require_GET

@@ -254,12 +254,20 @@ mind before changing it:
 - **Since trixie `docker` (the client) is the separate `docker-cli` package**, only a
   Recommends of `docker.io`, and the installer runs with `--no-install-recommends`.
 - **`/tmp` is a RAM-backed tmpfs** on trixie (and Fedora) - ~450MB on a Pi 3. An update
-  bundle is ~700MB, so neither `build_update_bundle.sh` nor `update_watcher.sh` may stage
+  bundle is ~700MB, so neither `build_update_bundle.sh` nor `update_watcher.py` may stage
   it there.
-- **`update_watcher.sh` processes bundles inside a `while` fed by `inotifywait`**, i.e. in a
-  subshell: an `exit` there ends the loop while the service still reports active. Failure
-  paths `return`. The dashboard upload itself holds a gunicorn sync worker for minutes,
-  hence `--timeout` in `docker-compose.yml`.
+- **Updates are signed, checked, and undoable** (`install/update_watcher.py`): the bundle's
+  `manifest.json` is signed with the key from `scripts/update_signing_key.sh` (public half in
+  `install/update-signing.pub`, installed to `/etc/coffeepy/`), names the platform, the space
+  it needs and every file's checksum. Before an update the database goes to the SD card
+  (`data/updates/pre-update/`, never the backup stick) and the running images are tagged
+  `:coffeepy-previous-*`; if `/health/` doesn't answer afterwards, all of it goes back. A new
+  `.env` setting reaches existing devices through `env_defaults` in the manifest (taken from
+  `.env.example`). The watcher runs `install.sh --only=hardware,services,kiosk` itself, with
+  `COFFEEPY_FROM_WATCHER=1` - that step must never restart the watcher then.
+- **One thing at a time:** update, restore and import check each other through
+  `data/maintenance/status.json` (`restore_jobs.maintenance_active`, the watcher's
+  `other_maintenance`).
 - **Current Raspberry Pi OS drives HDMI through KMS**, where `hdmi_group`/`hdmi_mode`/
   `hdmi_cvt` are ignored. A panel with no usable EDID (the documented 1024x600 one) stays
   black unless the mode is forced with `video=` on the kernel command line.

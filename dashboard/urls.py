@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views
+from . import views, views_backup, views_update
 from .security import LockingAuthenticationForm
 
 app_name = "dashboard"
@@ -37,17 +37,21 @@ urlpatterns = [
     path("export/payments.csv", views.export_payments, name="export_payments"),
     path("system/", views.system_dashboard, name="system_dashboard"),
     path("system-time/", views.system_time, name="system_time"),
-    path("backup/", views.backup, name="backup"),
-    path("backup/status/", views.storage_status, name="storage_status"),
-    path("backup/usb/setup/", views.usb_setup, name="usb_setup"),
-    path("backup/usb/action/", views.usb_action, name="usb_action"),
-    path("backup/export/", views.backup_export, name="backup_export"),
-    path("backup/restore/upload/", views.backup_restore_upload, name="backup_restore_upload"),
-    path("backup/restore/status/", views.restore_status, name="restore_status"),
-    path("backup/<str:source>/<str:filename>/download/", views.backup_download, name="backup_download"),
-    path("backup/<str:source>/<str:filename>/restore/", views.backup_restore, name="backup_restore"),
-    path("update/", views.update_upload, name="update"),
-    path("update/status/", views.update_status, name="update_status"),
+    path("backup/", views_backup.backup, name="backup"),
+    path("backup/now/", views_backup.backup_now, name="backup_now"),
+    path("backup/settings/", views_backup.backup_settings, name="backup_settings"),
+    path("backup/status/", views_backup.storage_status, name="storage_status"),
+    path("backup/usb/setup/", views_backup.usb_setup, name="usb_setup"),
+    path("backup/usb/action/", views_backup.usb_action, name="usb_action"),
+    path("backup/export/", views_backup.backup_export, name="backup_export"),
+    path("backup/restore/upload/", views_backup.backup_restore_upload, name="backup_restore_upload"),
+    path("backup/restore/status/", views_backup.restore_status, name="restore_status"),
+    path("backup/<str:source>/<str:filename>/download/", views_backup.backup_download, name="backup_download"),
+    path("backup/<str:source>/<str:filename>/restore/", views_backup.backup_restore, name="backup_restore"),
+    path("update/", views_update.update, name="update"),
+    path("update/upload/", views_update.update_upload, name="update_upload"),
+    path("update/rollback/", views_update.update_rollback, name="update_rollback"),
+    path("update/status/", views_update.update_status, name="update_status"),
     path("import/", views.import_legacy_db, name="import_legacy_db"),
     path("import/status/", views.import_status, name="import_status"),
     path("reset/", views.reset_database, name="reset_database"),

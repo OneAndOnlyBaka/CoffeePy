@@ -2,7 +2,7 @@
 """Runs on the HOST (not in a container) as coffeepy-storage.service: the USB backup stick.
 
 The dashboard can't touch block devices - the web container has no host privileges, on
-purpose (see update_watcher.sh). So this service does the device work, and the two talk
+purpose (see update_watcher.py). So this service does the device work, and the two talk
 through files in data/storage/, which both see:
 
   status.json        written here every few seconds: the USB disks plugged in, which of
@@ -235,6 +235,44 @@ def mount_sticks(disks, mount_table, our_id):
                 log(f"mount {volume['path']}: {exc}")
 
 
+def reconcile(mount_table, our_id):
+    """A stick mounted in the wrong role: the foreign one that a restored device identity
+    made this device's own again, or the own one a newer stick replaced - unmounted, so the
+    next mount_sticks() puts it where it now belongs."""
+    for target, belongs_here in ((FOREIGN, False), (OWN, True)):
+        if str(target) in mount_table and is_own(read_meta(target), our_id) != belongs_here:
+            log(f"{mount_table[str(target)]} changed role - remounting")
+            run("umount", str(target))
+            del mount_table[str(target)]
+
+
+SETTINGS_KEYS = ("DJANGO_LANGUAGE_CODE", "PUBLIC_HOST", "TLS_EXTRA_HOSTNAMES", "TIME_ZONE", "AUDIT_RETENTION_DAYS",
+                 "GUNICORN_WORKERS", "DJANGO_SECURE_COOKIES")
+
+
+def do_apply_settings(request):
+    """Settings from a restored backup into .env (only SETTINGS_KEYS - the database password
+    and the secret key stay this installation's), then the containers are recreated with them."""
+    values = {k: str(v) for k, v in (request.get("values") or {}).items() if k in SETTINGS_KEYS and "\n" not in str(v)}
+    if not values:
+        raise RuntimeError("No settings to apply.")
+    env = PROJECT_DIR / ".env"
+    lines = env.read_text().splitlines() if env.exists() else []
+    seen = set()
+    for index, line in enumerate(lines):
+        key = line.partition("=")[0].strip()
+        if key in values:
+            lines[index] = f"{key}={values[key]}"
+            seen.add(key)
+    lines += [f"{key}={value}" for key, value in values.items() if key not in seen]
+    tmp = env.with_name(".env.tmp")
+    tmp.write_text("\n".join(lines) + "\n")
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, env)
+    run("docker", "compose", "--project-directory", str(PROJECT_DIR), "up", "-d")
+    return "applied " + ", ".join(sorted(values))
+
+
 def mounted_info(target, mount_table, disks):
     source = mount_table.get(str(target))
     if not source:
@@ -363,6 +401,8 @@ def handle_requests(disks, mount_table, our_id, last):
                 outcome = do_adopt(request, disks, mount_table, our_id)
             elif action == "eject":
                 outcome = do_eject(request, disks, mount_table)
+            elif action == "apply_settings":
+                outcome = do_apply_settings(request)
             else:
                 raise RuntimeError(f"Unknown request {action!r}.")
             last.update(state="done", message=outcome, finished=now_iso())
@@ -395,7 +435,8 @@ def write_status(disks, mount_table, our_id, last):
     })
 
 
-def cycle(our_id, last):
+def cycle(last):
+    our_id = device_id()  # every time: a restore may have brought the device's old id back
     devices = lsblk()
     mount_table = mounts()
     disks = usb_disks(devices, mount_table)
@@ -408,21 +449,23 @@ def cycle(our_id, last):
     if last.get("state") == "done":
         devices = lsblk()
         disks = usb_disks(devices, mount_table)
+    reconcile(mount_table, our_id)
     mount_sticks(disks, mount_table, our_id)
     write_status(disks, mounts(), our_id, last)
 
 
-def main():
+def main(once=False):
     for directory in (REQUESTS_DIR, OWN, FOREIGN):
         directory.mkdir(parents=True, exist_ok=True)
-    our_id = device_id()
-    log(f"storage helper up, device {our_id}")
+    log(f"storage helper up, device {device_id()}")
     last = {}
     while True:
         try:
-            cycle(our_id, last)
+            cycle(last)
         except Exception as exc:  # noqa: BLE001 - keep serving; the next cycle tries again
             log(f"cycle failed: {exc}")
+        if once:
+            return 0
         time.sleep(INTERVAL)
 
 

@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Sourced by install.sh and update_watcher.sh: tells the kiosk that the device is being
+# Sourced by install.sh (update_watcher.py writes the same file itself): tells the kiosk that the device is being
 # worked on, so it shows "back in a moment" instead of taking orders - or failing to, while
 # the app restarts underneath it.
 #

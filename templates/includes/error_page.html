@@ -1,0 +1,54 @@
+{% comment %}
+The body of the error pages (500.html, 404.html, 403_csrf.html). Django renders them with
+no request context and nothing else that could fail - so everything is inline, and both
+languages are shown. On the kiosk the page must not stay: nobody there can reload it. So it
+asks /health/ until the app answers again and goes back to the kiosk's start screen. Anywhere
+else it only offers the way back - reloading a page whose request was a form post would send
+the form again.
+{% endcomment %}<!doctype html>
+<html lang="de" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoffeePy</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+         background: #f7efe6; color: #2a1c12; font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .box { max-width: 520px; margin: 24px; padding: 28px 32px; background: #fff; border-radius: 14px;
+         box-shadow: 0 6px 18px rgba(59, 35, 20, 0.12); text-align: center; }
+  h1 { color: #6b3b00; margin: 0 0 8px; font-size: 1.6rem; }
+  p { margin: 6px 0; color: #a9744f; }
+  a { display: inline-block; margin-top: 16px; padding: 10px 20px; border-radius: 14px; background: #6b3b00;
+      color: #fbf3ea; text-decoration: none; }
+  #kiosk { display: none; }
+  .kiosk #kiosk { display: block; } .kiosk #elsewhere { display: none; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>{{ title_de }}</h1>
+  <p>{{ title_en }}</p>
+  <div id="kiosk"><p>Gleich geht es weiter - der Bildschirm lädt von selbst neu.</p><p>Back in a moment - the screen reloads by itself.</p></div>
+  <div id="elsewhere"><a id="back" href="/">Zurück / Back</a></div>
+</div>
+<script>
+(function () {
+  var path = location.pathname;
+  var start = path.indexOf("/kiosk/") === 0 ? "/kiosk/" : path.indexOf("/portal/") === 0 ? "/portal/"
+    : path.indexOf("/dashboard/") === 0 ? "/dashboard/" : "/";
+  document.getElementById("back").href = start;
+  if (start !== "/kiosk/") return;
+  document.documentElement.className = "kiosk";
+  function retry() {
+    var request = new XMLHttpRequest();
+    request.open("GET", "/health/");
+    request.timeout = 5000;
+    request.onload = function () { request.status === 200 ? location.replace("/kiosk/") : setTimeout(retry, 5000); };
+    request.onerror = request.ontimeout = function () { setTimeout(retry, 5000); };
+    request.send();
+  }
+  setTimeout(retry, 3000);
+})();
+</script>
+</body>
+</html>

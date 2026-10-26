@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy, pgettext_lazy
 
 from .models import POLICY_LIMITS, PasswordPolicy
-from coffee.models import CASH_METHOD_NAME, CoffeeSort, Member, Order, Payment, PaymentMethod, payment_method_label
+from coffee.models import CASH_METHOD_NAME, BackupSettings, CoffeeSort, Member, Order, Payment, PaymentMethod, payment_method_label
 
 
 class CoffeeSortForm(forms.ModelForm):
@@ -274,3 +274,65 @@ class PasswordPolicyForm(forms.ModelForm):
         if passphrase and minimum and passphrase <= minimum:
             self.add_error("passphrase_length", gettext_lazy("Longer than the minimum length - or 0."))
         return cleaned
+
+
+BACKUP_LIMITS = {
+    "interval_minutes": (15, 1440),
+    "keep_recent": (1, 500),
+    "keep_daily": (0, 90),
+    "keep_weekly": (0, 52),
+    "keep_monthly": (0, 60),
+}
+
+
+class BackupSettingsForm(forms.ModelForm):
+    class Meta:
+        model = BackupSettings
+        fields = list(BACKUP_LIMITS)
+        labels = {
+            "interval_minutes": gettext_lazy("Back up every (minutes)"),
+            "keep_recent": gettext_lazy("Keep the newest"),
+            "keep_daily": gettext_lazy("Then one a day, for (days)"),
+            "keep_weekly": gettext_lazy("Then one a week, for (weeks)"),
+            "keep_monthly": gettext_lazy("Then one a month, for (months)"),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, (low, high) in BACKUP_LIMITS.items():
+            field = self.fields[name]
+            field.validators += [MinValueValidator(low), MaxValueValidator(high)]
+            field.widget.attrs.update(min=low, max=high)
+            field.help_text = gettext_lazy("Allowed: %(low)s to %(high)s.") % {"low": low, "high": high}
+
+
+RESTORE_PART_CHOICES = [
+    ("database", gettext_lazy("Data: members, bookings, coffee sorts, dashboard logins")),
+    ("certificates", gettext_lazy("Certificates and the device CA - phones keep trusting the device")),
+    ("identity", gettext_lazy("Device identity - its backup stick becomes this device's")),
+    ("settings", gettext_lazy("Settings: language, address, time zone, log retention")),
+]
+
+
+class RestoreForm(forms.Form):
+    """What to bring back from a backup, and the confirmation. The parts beyond the data are
+    for a replacement device; on the same device the data alone is the usual choice."""
+
+    parts = forms.MultipleChoiceField(label=gettext_lazy("Restore"), choices=RESTORE_PART_CHOICES,
+                                      widget=forms.CheckboxSelectMultiple, initial=["database"])
+    passphrase = forms.CharField(
+        label=gettext_lazy("Passphrase"), required=False, strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "off"}),
+        help_text=gettext_lazy("Only for an encrypted backup made with a different passphrase than this device's."))
+    confirm = forms.CharField(label=gettext_lazy("Type DELETE to confirm"), widget=forms.TextInput(
+        attrs={"autocomplete": "off"}))
+
+    def __init__(self, *args, device_backup=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not device_backup:  # an older database dump has nothing else in it
+            self.fields["parts"].choices = RESTORE_PART_CHOICES[:1]
+
+    def clean_confirm(self):
+        if self.cleaned_data["confirm"].strip() != "DELETE":
+            raise forms.ValidationError(gettext_lazy("Type DELETE to confirm - nothing was changed."))
+        return "DELETE"

@@ -5,13 +5,12 @@
 <h1>{% translate "Restore a backup" %}</h1>
 <div class="card danger-zone">
     <h2>{{ name }} &middot; {{ size|filesizeformat }}</h2>
-    <p>{% blocktranslate trimmed %}Everything on this device is replaced by the state of this backup - members, bookings,
-        coffee sorts and the dashboard logins. The current data is saved first, and put back if the backup
-        can't be loaded. The kiosk shows "We'll be right back" meanwhile.{% endblocktranslate %}</p>
+    {% if check == "damaged" %}<p class="msg error">{% translate "This backup no longer matches its checksum - it is probably damaged." %}</p>{% endif %}
+    <p>{% blocktranslate trimmed %}What you tick is replaced by the state of this backup - the data includes the dashboard
+        logins. The device is backed up first. The kiosk shows "We'll be right back" meanwhile.{% endblocktranslate %}</p>
     <form method="post">
         {% csrf_token %}
-        <label class="field"><span>{% blocktranslate trimmed %}Type <code>{{ confirmation }}</code> to confirm{% endblocktranslate %}</span>
-            <input type="text" name="confirm" autocomplete="off" required></label>
+        {% include "dashboard/_restore_form.html" %}
         <div class="action-row">
             <a href="{% url 'dashboard:backup' %}" class="btn secondary">{% translate "Cancel" %}</a>
             <button type="submit" class="danger">{% translate "Restore" %}</button>

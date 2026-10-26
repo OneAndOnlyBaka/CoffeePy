@@ -36,11 +36,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 INSTALL_DIR="${PROJECT_DIR}/install"
 
-PLATFORM="${1:-linux/arm/v7}"
+# The same default as build_update_bundle.sh: a bundle for the wrong architecture leaves a
+# device that can't start a single container.
+PLATFORM="${1:-linux/arm64}"
 OUTPUT="${2:-${PROJECT_DIR}/coffeepy-offline-$(date +%Y%m%d).tar}"
 RELEASE="${RELEASE:-trixie}"
 DOCKER="${DOCKER:-docker}"
 SKIP_IMAGES="${SKIP_IMAGES:-0}"
+# DEBS_ONLY=1: just the packages and the Compose plugin, as one tar at OUTPUT - what an
+# update bundle carries for an offline device's security updates (build_update_bundle.sh).
+DEBS_ONLY="${DEBS_ONLY:-0}"
 
 # shellcheck source=../install/versions.env
 . "${INSTALL_DIR}/versions.env"
@@ -159,13 +164,19 @@ curl -fsSL -o "${BUNDLE}/docker-compose" \
 echo "${COMPOSE_SHA}  ${BUNDLE}/docker-compose" | sha256sum -c - >/dev/null \
 	|| die "Compose download failed its checksum."
 
+if [ "${DEBS_ONLY}" = "1" ]; then
+	tar -cf "${OUTPUT}" -C "${BUNDLE}" debs docker-compose
+	log "Done: ${OUTPUT} ($(du -h "${OUTPUT}" | cut -f1))"
+	exit 0
+fi
+
 # --------------------------------------------------------------------------- images
 
 if [ "${SKIP_IMAGES}" = "1" ]; then
 	log "SKIP_IMAGES=1 - leaving images.tar out (the bundle will be incomplete)"
 else
 	log "Building the app images for ${PLATFORM} - the slow part, they cross-build under qemu"
-	"${SCRIPT_DIR}/build_update_bundle.sh" "${PLATFORM}" "${BUNDLE}/images.tar"
+	IMAGES_ONLY=1 DOCKER="${DOCKER}" "${SCRIPT_DIR}/build_update_bundle.sh" "${PLATFORM}" "${BUNDLE}/images.tar"
 fi
 
 # --------------------------------------------------------------------------- source
