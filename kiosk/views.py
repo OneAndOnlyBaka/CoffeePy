@@ -44,6 +44,9 @@ RANKING_VIEWS = ["alltime", "month", "pillory"]
 LINK_TOKEN_TTL_SECONDS = 300
 
 THANK_YOU_SECONDS = 20
+# Settings, Pay & Stats and the ranking go back to ordering when nobody used them for this long -
+# otherwise the next person walks up to an "apply your card" screen that won't order anything.
+IDLE_RETURN_SECONDS = 20
 # (max cups today inclusive, gif filename, message) - first match wins; the last row's
 # max_cups is None so it also catches anything above the previous tier. The messages (and
 # the two below) are only marked here: they travel through the JSON session as their English
@@ -108,6 +111,7 @@ def language(request):
     csrf token differs on every render, and the wait screen it sits on must not (panel.html).
     Only reachable on the device itself, like the rest of /kiosk/."""
     target = "en" if translation.get_language() == "de" else "de"
+    _touched(request)
     response = redirect("kiosk:index")
     response.set_cookie(
         settings.LANGUAGE_COOKIE_NAME, target,
@@ -144,6 +148,7 @@ def ranking_view(request, view):
     animation restart with it (panel.html)."""
     if view in RANKING_VIEWS:
         request.session["ranking_view"] = view
+    _touched(request)
     if request.headers.get("HX-Request"):
         return _render_panel(request)
     return redirect("kiosk:index")
@@ -263,6 +268,23 @@ def _reset_session_state(request):
         "pending_nickname", "pending_amount",
     ):
         request.session.pop(key, None)
+    _touched(request)
+
+
+def _touched(request):
+    """Restarts the idle countdown of _idle_return - every tap and every logout ends up here."""
+    request.session["idle_since"] = time.time()
+
+
+def _idle_return(request):
+    """Falls back from Settings, Pay & Stats or the ranking to ordering after IDLE_RETURN_SECONDS
+    without a tap. Not while a card is being added: that screen waits for a second card."""
+    if request.session.get("logged_in") or request.session.get("mode", MODE_ORDER) == MODE_ORDER:
+        return
+    idle_since = request.session.setdefault("idle_since", time.time())
+    if time.time() - idle_since >= IDLE_RETURN_SECONDS and _active_capture() is None:
+        request.session["mode"] = MODE_ORDER
+        request.session["ranking_view"] = "alltime"
 
 
 def _start_session(request, mode, uid, is_new_user=False):
@@ -379,7 +401,10 @@ def _render_panel(request):
     if not request.session.get("logged_in"):
         scan = _consume_new_scan(request)
         if scan is not None:
+            _touched(request)  # also a card that is refused
             _handle_new_scan(request, mode, scan, ctx)
+        else:
+            _idle_return(request)
     else:
         _tick(request)
 
