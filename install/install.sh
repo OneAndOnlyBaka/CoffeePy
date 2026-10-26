@@ -597,6 +597,12 @@ step_ap() {
 		[Service]
 		ExecStartPost=-/usr/sbin/iw dev wlan0 set power_save off
 	EOF
+	# The channel is chosen anew at every start, from a scan only possible before the radio
+	# becomes the access point (install/ap_channel.sh).
+	write_file /etc/systemd/system/hostapd.service.d/coffeepy-channel.conf <<-EOF
+		[Service]
+		ExecStartPre=-${TARGET_DIR}/install/ap_channel.sh
+	EOF
 
 	backup_once /etc/dnsmasq.conf
 	if ! grep -q "coffeepy" /etc/dnsmasq.conf 2>/dev/null; then

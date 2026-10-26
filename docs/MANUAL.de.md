@@ -113,7 +113,7 @@ auswählen, um sie zu ändern:
 |---|---|
 | Sprache | Die Sprache, in der Kiosk, Dashboard und Portal starten. Jedes Gerät kann trotzdem selbst umschalten. |
 | Admin-Konto | Benutzername und Passwort für das Dashboard. Vorgeschlagen wird ein zufälliges Passwort, das am Ende angezeigt wird. Gilt nur beim **ersten** Anlegen – ein bestehendes Konto änderst du im Dashboard. |
-| WLAN-Access-Point | Der Pi spannt ein eigenes WLAN auf, über das Handys Dashboard und Portal erreichen. Ausschalten, wenn der Pi in deinem bestehenden Netz bleibt. |
+| WLAN-Access-Point | Der Pi spannt ein eigenes WLAN auf, über das Handys Dashboard und Portal erreichen. Ausschalten, wenn der Pi in deinem bestehenden Netz bleibt. Bei jedem Start wählt er den Kanal (1, 6 oder 11), den die Nachbarnetze am wenigsten stören, mit der höchsten erlaubten Sendeleistung. |
 | Adresse für Handys | Die Adresse in den QR-Codes und im Zertifikat. Mit Access Point `192.168.4.1`, sonst die (am besten feste) Adresse des Pi in deinem Netz. |
 | Zeitzone | Für die Uhr und die Statistiken nach Stunde und Wochentag. |
 | Backups & Protokoll | Ob die Backups auf dem USB-Stick **verschlüsselt** werden (eine Passphrase mit mindestens 12 Zeichen – bewahre sie sicher auf, ohne sie lässt sich kein Backup wiederherstellen), und wie viele Tage das **Protokoll** aufbewahrt wird (standardmäßig 90). Wie oft gesichert wird, stellst du im Dashboard ein. |

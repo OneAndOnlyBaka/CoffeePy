@@ -265,6 +265,10 @@ mind before changing it:
   (the default when the Imager set up no WiFi) and re-applies the rfkill block every boot.
   Enabling systemd-networkd also enables its wait-online, which then stalls boot by two
   minutes; `coffeepy.service` is ordered after `network-online.target`.
+- **The AP's channel is picked at every hostapd start** (`install/ap_channel.sh`, an
+  `ExecStartPre`): as an access point the radio only hears its own channel, so the scan has
+  to happen before. Transmit power needs no setting - the Pi 3 already runs at the
+  regulatory maximum (20 dBm in DE); `iw` lives in `/usr/sbin`, not in a user's PATH.
 - **Since trixie `docker` (the client) is the separate `docker-cli` package**, only a
   Recommends of `docker.io`, and the installer runs with `--no-install-recommends`.
 - **`/tmp` is a RAM-backed tmpfs** on trixie (and Fedora) - half the RAM (`df -h /tmp` on the

@@ -7,7 +7,9 @@ interface=wlan0
 driver=nl80211
 ssid=__AP_SSID__
 hw_mode=g
-channel=7
+# Only the starting point: install/ap_channel.sh replaces it before every hostapd start with
+# whichever of 1, 6 and 11 the neighbouring networks disturb least.
+channel=6
 # The regulatory domain also caps the transmit power (20 dBm on 2.4GHz in DE) - the
 # Pi 3's radio already runs at that maximum, there is nothing to turn up. Unblocking the
 # radio itself is install.sh's job (rfkill + NetworkManager), not this file's.
@@ -20,6 +22,10 @@ ieee80211n=1
 # instead of 65 Mbit/s.
 ht_capab=[SHORT-GI-20]
 wmm_enabled=1
+# hostapd drops a phone whose frames go unacknowledged a few times in a row - exactly what
+# happens at the edge of the range, or behind a wall, and the phone then has to reconnect
+# from scratch. Kept connected, it just runs at a lower rate.
+disassoc_low_ack=0
 macaddr_acl=0
 auth_algs=1
 ignore_broadcast_ssid=0

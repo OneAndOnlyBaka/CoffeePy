@@ -111,7 +111,7 @@ change it:
 |---|---|
 | Language | The language kiosk, dashboard and portal start in. Every device can still switch for itself. |
 | Admin account | User name and password for the dashboard. A random password is suggested and shown at the end. Only applies when the account is **first** created – change an existing one in the dashboard. |
-| WiFi access point | The Pi opens its own WiFi for phones to reach dashboard and portal. Turn it off if the Pi stays on your existing network. |
+| WiFi access point | The Pi opens its own WiFi for phones to reach dashboard and portal. Turn it off if the Pi stays on your existing network. At every start it picks the channel (1, 6 or 11) the neighbouring networks disturb least, at the highest transmit power allowed. |
 | Address for phones | The address in QR codes and in the certificate. `192.168.4.1` with the access point, otherwise the Pi's (preferably fixed) address on your network. |
 | Time zone | For the clock and the statistics by hour and weekday. |
 | Backups & audit log | Whether the backups on the USB stick are **encrypted** (a passphrase of at least 12 characters – keep it somewhere safe, no backup can be restored without it), and for how many days the **audit log** is kept (90 by default). How often backups are made is set in the dashboard. |
