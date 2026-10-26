@@ -21,6 +21,12 @@ class MaintenanceOverlayTestCase(TestCase):
         self.client.cookies[settings.LANGUAGE_COOKIE_NAME] = "de"
         self.assertContains(self.client.get(reverse("kiosk:index")), "Wird neu gestartet")
 
+    def test_a_page_without_its_scripts_reloads_itself(self):
+        # Inline, not a static file: it is what is left when the static files didn't load.
+        html = self.client.get(reverse("kiosk:index")).content.decode()
+        inline = [s for s in html.split("<script")[1:] if not s.lstrip().startswith("src=")]
+        self.assertTrue(any("window.htmx" in s and "location.reload()" in s for s in inline))
+
 
 class MaintenanceScriptTestCase(TestCase):
     """install/maintenance.sh, which install.sh and the update watcher source."""

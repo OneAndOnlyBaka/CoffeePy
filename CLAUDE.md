@@ -147,6 +147,12 @@ A new installer step or watcher phase needs a label in `kiosk.views.MAINTENANCE_
 installer's rsync keeps `data/maintenance/` (`src-filter.txt`) or it would delete the status
 mid-run.
 
+When the status ends, the kiosk reloads - so **every container restart belongs inside the
+maintenance window**. A `compose up` after it (the provisioning tool once had one) hits the
+freshly reloaded page: its HTML arrives, its CSS and scripts don't, and without htmx nothing
+ever reloads it. `install.sh`'s verify step recreates the containers for that reason; the
+inline script in `kiosk/index.html` is the safety net.
+
 ## Backups go to one USB stick
 
 The web container can't touch block devices, so `install/storage_helper.py` does, on the host

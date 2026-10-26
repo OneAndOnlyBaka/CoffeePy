@@ -654,6 +654,12 @@ step_verify() {
 	if ! systemctl is-active coffeepy.service >/dev/null 2>&1; then
 		info "starting the stack ..."
 		systemctl start coffeepy.service || true
+	else
+		# A re-run that rebuilt the images or changed .env leaves the old containers running.
+		# Recreate them here, while the maintenance screen is still up: once it ends the kiosk
+		# reloads, and a reload into a restarting stack loses its CSS and scripts for good.
+		info "recreating the containers whose image or configuration changed ..."
+		(cd "${TARGET_DIR}" && docker compose up -d --remove-orphans) || true
 	fi
 	systemctl start coffeepy-update-watcher.service || true
 

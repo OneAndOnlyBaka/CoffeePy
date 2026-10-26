@@ -1031,10 +1031,8 @@ $(tail -n 8 "${LOCAL_LOG}")
 $(t "Full log: ${HOME}/coffeepy-install-${PI_HOST}.log - on the Pi: /var/log/coffeepy-install.log. Running this tool again resumes where it stopped." \
 "Vollständiges Log: ${HOME}/coffeepy-install-${PI_HOST}.log - auf dem Pi: /var/log/coffeepy-install.log. Ein erneuter Aufruf dieses Tools setzt dort fort, wo es abgebrochen ist.")"
 	fi
-	# A re-run leaves running containers alone; this recreates those whose image or
-	# configuration changed.
-	ui_progress 95 "$(t "Applying the configuration" "Konfiguration wird angewendet")" "docker compose up -d"
-	pi_sudo "sh -c 'cd /opt/coffeepy && docker compose up -d --remove-orphans'" >/dev/null 2>&1 || true
+	# No `compose up` here: install.sh's verify step recreates changed containers while its
+	# maintenance screen is still up - after it, the kiosk has already reloaded into them.
 	ui_progress 100 "$(t Installed Installiert)" ""
 }
 
@@ -1076,28 +1074,33 @@ step_done() {
 	https_ok=$(t "not checked" "nicht geprüft")
 	pi_sudo cat /opt/coffeepy/data/tls/ca.crt > "${ca}" 2>/dev/null || true
 
+	# Either way the stack is (re)starting - after a reboot, or after step_install's
+	# `compose up -d` recreated containers, which takes the web app a minute on a Pi 3.
+	local limit=120 waiting
+	waiting="$(t "Waiting for the app to answer" "Warte, bis die App antwortet")"
+	PROGRESS_TITLE="$(t "Checking" "Prüfe") https://${PI_HOST}/"
 	if ui_confirm "$(t Reboot Neustart)" "$(t "The clock, the display mode and the kiosk screen only take effect after a reboot. Reboot the Pi now?" \
 		"Uhr, Display-Modus und Kiosk-Bildschirm greifen erst nach einem Neustart. Den Pi jetzt neu starten?")" "${REBOOT}"; then
 		pi_sudo "systemctl reboot" >/dev/null 2>&1 || true
 		ssh -S "${CONTROL}" -O exit "${PI_USER}@${PI_HOST}" >/dev/null 2>&1 || true
 		PROGRESS_TITLE="$(t "Rebooting" "Neustart von") ${PI_HOST}"
-		local waited=0
+		waiting="$(t "Waiting for the Pi to come back" "Warte, bis der Pi wieder da ist")"
+		limit=300
 		sleep 10
-		while [ "${waited}" -lt 300 ]; do
-			ui_progress $(( waited * 100 / 300 )) "$(t "Waiting for the Pi to come back" "Warte, bis der Pi wieder da ist")" "${waited}s"
-			if https_answers "${ca}"; then
-				https_ok="$(t "yes" "ja") - https://${PI_HOST}/ $(t "answers with a valid certificate" "antwortet mit gültigem Zertifikat")"
-				break
-			fi
-			sleep 5
-			waited=$((waited + 5))
-		done
-		[ "${waited}" -ge 300 ] && https_ok=$(t "no answer after 5 minutes - expected if the Pi's WiFi replaced the network you reach it on" \
-			"keine Antwort nach 5 Minuten - zu erwarten, wenn das WLAN des Pi das Netz ersetzt hat, über das du ihn erreichst")
-	elif https_answers "${ca}"; then
-		# No reboot, but the installer's verify step left the stack running - worth one look.
-		https_ok="$(t "yes" "ja") - https://${PI_HOST}/ $(t "answers with a valid certificate" "antwortet mit gültigem Zertifikat")"
 	fi
+	local waited=0
+	[ -s "${ca}" ] || waited=-1  # no CA to check against: "not checked" it is
+	while [ "${waited}" -ge 0 ] && [ "${waited}" -lt "${limit}" ]; do
+		ui_progress $(( waited * 100 / limit )) "${waiting}" "${waited}s"
+		if https_answers "${ca}"; then
+			https_ok="$(t "yes" "ja") - https://${PI_HOST}/ $(t "answers with a valid certificate" "antwortet mit gültigem Zertifikat")"
+			break
+		fi
+		sleep 5
+		waited=$((waited + 5))
+	done
+	[ "${waited}" -ge "${limit}" ] && https_ok=$(t "no answer after $((limit / 60)) minutes - expected if the Pi's WiFi replaced the network you reach it on" \
+		"keine Antwort nach $((limit / 60)) Minuten - zu erwarten, wenn das WLAN des Pi das Netz ersetzt hat, über das du ihn erreichst")
 
 	local summary
 	summary=$(summary_text "${https_ok}")

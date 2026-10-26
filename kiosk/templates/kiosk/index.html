@@ -10,6 +10,18 @@
 <script src="{% static 'kiosk/nav_state.js' %}" defer></script>
 <script src="{% static 'kiosk/clock.js' %}" defer></script>
 <script src="{% static 'kiosk/maintenance.js' %}" defer></script>
+{% comment %}
+Inline on purpose: a page loaded while the stack restarts can get its HTML but lose the CSS
+and scripts above - and then nothing polls, nothing reloads, and the touchscreen shows bare
+links until someone restarts the browser. This is the one part that can't be lost that way.
+{% endcomment %}
+<script>
+window.addEventListener("load", function () {
+  var frame = document.querySelector(".kiosk-frame");
+  var styled = frame && getComputedStyle(frame).display === "flex";
+  if (!window.htmx || !styled) setTimeout(function () { location.reload(); }, 5000);
+});
+</script>
 {% endblock %}
 {% block body_class %}kiosk{% endblock %}
 {% block body %}
