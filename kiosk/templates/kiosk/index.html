@@ -39,8 +39,8 @@ window.addEventListener("load", function () {
         </a>
         <a class="nav-btn {% if mode == 'info' %}active{% endif %}" data-mode="info" href="{% url 'kiosk:nav' 'info' %}"
            hx-get="{% url 'kiosk:nav' 'info' %}">
-            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/info.svg' %}" alt="{% translate "Pay &amp; Stats" %}"></span>
-            <span class="nav-label">{% translate "Pay &amp; Stats" %}</span>
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/info.svg' %}" alt="{% translate "Pay" %}"></span>
+            <span class="nav-label">{% translate "Pay" %}</span>
         </a>
         <a class="nav-btn {% if mode == 'settings' %}active{% endif %}" data-mode="settings" href="{% url 'kiosk:nav' 'settings' %}"
            hx-get="{% url 'kiosk:nav' 'settings' %}">

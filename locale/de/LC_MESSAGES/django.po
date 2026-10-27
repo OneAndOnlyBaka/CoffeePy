@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 20:38+0100\n"
+"POT-Creation-Date: 2026-10-28 00:36+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -1932,8 +1932,8 @@ msgstr "CoffeePy-Kiosk"
 msgid "Order"
 msgstr "Bestellen"
 
-msgid "Pay &amp; Stats"
-msgstr "Zahlen &amp; Statistik"
+msgid "Pay"
+msgstr "Bezahlen"
 
 msgid "Settings"
 msgstr "Einstellungen"
@@ -1974,8 +1974,8 @@ msgstr "um deine Einstellungen zu ändern"
 msgid "to order a coffee"
 msgstr "um einen Kaffee zu bestellen"
 
-msgid "the scanner is next to the machine"
-msgstr "der Leser ist neben der Maschine"
+msgid "the scanner is at the marked spot"
+msgstr "der Leser ist an der markierten Stelle"
 
 msgid "What happens next"
 msgstr "Was dann passiert"
@@ -2015,9 +2015,12 @@ msgstr ""
 "Tippe auf <strong>Jetzt bestellen</strong>, sonst wird nach %(seconds)s "
 "Sekunden gebucht."
 
-msgid "A card the kiosk doesn't know yet asks for your name first."
+msgid ""
+"A new card, or a name that doesn't fit the rules yet, is asked for a name "
+"first."
 msgstr ""
-"Eine Karte, die der Kiosk noch nicht kennt, fragt zuerst nach deinem Namen."
+"Bei einer neuen Karte oder einem Namen, der noch nicht passt, fragt der "
+"Kiosk zuerst nach deinem Namen."
 
 #, python-format
 msgid "Assigning card to account %(name)s"
@@ -2069,10 +2072,10 @@ msgstr "Top 3 in diesem Monat"
 #, python-format
 msgid ""
 "Reminder: you still owe %(amount)s€ from last month - please settle up soon "
-"(see Pay &amp; Stats)."
+"(see Pay)."
 msgstr ""
 "Erinnerung: Du schuldest noch %(amount)s€ aus dem letzten Monat - bitte "
-"begleiche das bald (siehe Zahlen &amp; Statistik)."
+"begleiche das bald (siehe Bezahlen)."
 
 #, python-format
 msgid "Automatic checkout in %(seconds)ss"
@@ -2128,17 +2131,14 @@ msgstr "Betrag"
 msgid "Or scan to pay what you owe directly:"
 msgstr "Oder scanne, um den offenen Betrag direkt zu bezahlen:"
 
-msgid "Pay"
-msgstr "Bezahlen"
-
 msgid "All time"
 msgstr "Gesamt"
 
 msgid "This month"
 msgstr "Dieser Monat"
 
-msgid "Settle up under “Pay &amp; Stats”"
-msgstr "Bezahlen unter „Zahlen &amp; Statistik“"
+msgid "Settle up under “Pay”"
+msgstr "Begleiche deine Schulden unter „Bezahlen“"
 
 msgid "Everyone has paid up!"
 msgstr "Alle haben bezahlt!"
@@ -2399,6 +2399,9 @@ msgstr "Welcher Kaffee"
 msgid "CoffeePy is being updated. This page comes back on its own."
 msgstr ""
 "CoffeePy wird gerade aktualisiert. Diese Seite kommt von selbst wieder."
+
+#~ msgid "Pay &amp; Stats"
+#~ msgstr "Zahlen &amp; Statistik"
 
 #~ msgid "Nickname"
 #~ msgstr "Spitzname"

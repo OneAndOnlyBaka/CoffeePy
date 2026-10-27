@@ -18,7 +18,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
     <h1>{% translate "Apply your card" %}</h1>
     <p class="wait-purpose">
         {% if wait_mode == "info" %}{% translate "to see your account or pay" %}{% elif wait_mode == "settings" %}{% translate "to change your settings" %}{% else %}{% translate "to order a coffee" %}{% endif %}
-        &middot; {% translate "the scanner is next to the machine" %}
+        &middot; {% translate "the scanner is at the marked spot" %}
     </p>
     <div class="wait-body">
         <img class="wait-gif" src="{% static 'kiosk/img/wait/wait_'|add:wait_mode|add:'.gif' %}" alt="">
@@ -36,7 +36,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                 {% else %}
                 <li>{% translate "Your favourite coffee is preselected - tap another one to change it." %}</li>
                 <li>{% blocktranslate trimmed with seconds=checkout_seconds %}Tap <strong>Order now</strong>, or it is booked after {{ seconds }} seconds.{% endblocktranslate %}</li>
-                <li>{% translate "A card the kiosk doesn't know yet asks for your name first." %}</li>
+                <li>{% translate "A new card, or a name that doesn't fit the rules yet, is asked for a name first." %}</li>
                 {% endif %}
             </ul>
         </div>
@@ -93,7 +93,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
         </h1>
         <div class="panel-body">
             {% if month_reminder_balance %}
-            <p class="msg error">{% blocktranslate trimmed with amount=month_reminder_balance %}Reminder: you still owe {{ amount }}€ from last month - please settle up soon (see Pay &amp; Stats).{% endblocktranslate %}</p>
+            <p class="msg error">{% blocktranslate trimmed with amount=month_reminder_balance %}Reminder: you still owe {{ amount }}€ from last month - please settle up soon (see Pay).{% endblocktranslate %}</p>
             {% endif %}
             <div class="coffee-list">
                 {% for sort in coffee_sorts %}
@@ -240,7 +240,7 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
                     {% for row in rows %}
                     <span class="ticker-item"><span class="podium-place">{{ forloop.counter }}.</span> <b>{{ row.name }}</b> <span class="ticker-debt">{{ row.balance }}€</span></span>
                     {% endfor %}
-                    <span class="ticker-item ticker-hint">{% translate "Settle up under “Pay &amp; Stats”" %}</span>
+                    <span class="ticker-item ticker-hint">{% translate "Settle up under “Pay”" %}</span>
                 </span>
                 {% endfor %}
             </div>

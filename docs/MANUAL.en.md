@@ -3,7 +3,7 @@
 *[Deutsche Fassung](MANUAL.de.md)*
 
 CoffeePy is the tally sheet for a shared coffee machine – without the sheet: whoever takes
-a coffee holds their card to the reader next to the machine and taps what they're having on
+a coffee holds their card to the marked spot and taps what they're having on
 the touchscreen. CoffeePy keeps count, shows everyone their balance, takes payments, and has
 a dashboard in the browser for running it. Members can link their phone to see their stats
 and pay from there.
@@ -250,8 +250,8 @@ device needs looking after:
 
 Apart from the ranking, every section needs a card. Holding up a card logs you in until you're
 done, or logs you out automatically after 20 seconds without input. Tapping a section in the
-bar logs out too. **Pay & Stats**, **Settings** and the **Ranking** go back to **Order** by
-themselves after 20 seconds without a tap – so the next person always finds the kiosk ready to
+bar logs out too. **Pay**, **Settings** and the **Ranking** go back to **Order** by
+themselves after 30 seconds without a tap – so the next person always finds the kiosk ready to
 order.
 
 ### Order
@@ -272,16 +272,17 @@ Then a thank-you – with a different animation depending on how many cups it's 
 
 ![Thank you](pictures/manual/en/kiosk-thank-you.png)
 
-### Pay & Stats
+### Pay
 
-![Pay & Stats – apply your card](pictures/manual/en/kiosk-wait-pay.png)
+![Pay – apply your card](pictures/manual/en/kiosk-wait-pay.png)
 
-Shows your cups in total (**CCT**) and this month (**CCM**) and your **balance**. If it's
+This is where you pay in. For information, the screen also shows your cups in total (**CCT**)
+and this month (**CCM**) and your **balance**. If it's
 negative, the amount owed is already in the field – enter what you paid, pick how, and tap
 **Pay**. With payment methods that have a link, you can also pay what you owe straight from
 your phone via QR code.
 
-![Pay & Stats](pictures/manual/en/kiosk-pay.png)
+![Pay](pictures/manual/en/kiosk-pay.png)
 
 ### Settings
 

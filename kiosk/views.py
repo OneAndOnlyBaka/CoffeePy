@@ -44,9 +44,9 @@ RANKING_VIEWS = ["alltime", "month", "pillory"]
 LINK_TOKEN_TTL_SECONDS = 300
 
 THANK_YOU_SECONDS = 20
-# Settings, Pay & Stats and the ranking go back to ordering when nobody used them for this long -
+# Settings, Pay and the ranking go back to ordering when nobody used them for this long -
 # otherwise the next person walks up to an "apply your card" screen that won't order anything.
-IDLE_RETURN_SECONDS = 20
+IDLE_RETURN_SECONDS = 30
 # (max cups today inclusive, gif filename, message) - first match wins; the last row's
 # max_cups is None so it also catches anything above the previous tier. The messages (and
 # the two below) are only marked here: they travel through the JSON session as their English
@@ -311,7 +311,7 @@ def _touched(request):
 
 
 def _idle_return(request):
-    """Falls back from Settings, Pay & Stats or the ranking to ordering after IDLE_RETURN_SECONDS
+    """Falls back from Settings, Pay or the ranking to ordering after IDLE_RETURN_SECONDS
     without a tap. Not while a card is being added: that screen waits for a second card."""
     if request.session.get("logged_in") or request.session.get("mode", MODE_ORDER) == MODE_ORDER:
         return

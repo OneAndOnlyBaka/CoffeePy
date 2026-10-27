@@ -8,10 +8,11 @@ from django.urls import reverse
 from django.utils import timezone
 
 from coffee.models import AltUidCapture, CoffeeSort, Member, NfcReaderStatus, NfcScan
+from kiosk.views import IDLE_RETURN_SECONDS as IDLE
 
 
 class KioskIdleReturnTestCase(TestCase):
-    """Settings, Pay & Stats and the ranking fall back to ordering after 20s without a tap."""
+    """Settings, Pay and the ranking fall back to ordering after IDLE_RETURN_SECONDS without a tap."""
 
     def setUp(self):
         self.client = Client()
@@ -31,21 +32,21 @@ class KioskIdleReturnTestCase(TestCase):
         for mode in ("ranking", "settings", "info"):
             with self.subTest(mode=mode):
                 self.client.get(reverse("kiosk:nav", args=[mode]))
-                self.assertEqual(self._mode(self._poll(10)), mode)
-                response = self._poll(25)
+                self.assertEqual(self._mode(self._poll(IDLE - 5)), mode)
+                response = self._poll(IDLE + 5)
                 self.assertEqual(self._mode(response), "order")
                 self.assertContains(response, 'data-mode="order"')
 
     def test_order_mode_stays(self):
         self.client.get(reverse("kiosk:nav", args=["order"]))
-        self.assertEqual(self._mode(self._poll(60)), "order")
+        self.assertEqual(self._mode(self._poll(IDLE * 3)), "order")
 
     def test_ranking_tab_restarts_the_countdown_and_resets_to_alltime(self):
         self.client.get(reverse("kiosk:nav", args=["ranking"]))
         with mock.patch("time.time", return_value=time.time() + 15):
             self.client.get(reverse("kiosk:ranking_view", args=["month"]))
-        self.assertEqual(self._mode(self._poll(25)), "ranking")
-        self.assertEqual(self._mode(self._poll(40)), "order")
+        self.assertEqual(self._mode(self._poll(15 + IDLE - 5)), "ranking")
+        self.assertEqual(self._mode(self._poll(15 + IDLE + 5)), "order")
         self.assertEqual(self.client.session["ranking_view"], "alltime")
 
     def test_countdown_starts_after_a_logout(self):
@@ -57,15 +58,15 @@ class KioskIdleReturnTestCase(TestCase):
         self._poll(40)  # auto-logout, back on settings' "apply your card"
         self.assertEqual(self.client.session["mode"], "settings")
         self.assertFalse(self.client.session["logged_in"])
-        self.assertEqual(self._mode(self._poll(50)), "settings")
-        self.assertEqual(self._mode(self._poll(65)), "order")
+        self.assertEqual(self._mode(self._poll(40 + IDLE - 5)), "settings")
+        self.assertEqual(self._mode(self._poll(40 + IDLE + 5)), "order")
 
     def test_refused_card_counts_as_a_tap(self):
         self.client.get(reverse("kiosk:nav", args=["info"]))
         Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", departed_at=timezone.now())
         NfcScan.objects.create(uid="AABBCCDD", event=NfcScan.EVENT_INSERTED)
         self._poll(15)
-        self.assertEqual(self._mode(self._poll(30)), "info")
+        self.assertEqual(self._mode(self._poll(15 + IDLE - 5)), "info")
 
     def test_not_while_a_card_is_being_added(self):
         member = Member.objects.create(uid=42, nickname="Alice X.")
@@ -79,4 +80,4 @@ class KioskIdleReturnTestCase(TestCase):
         session.pop("idle_since", None)
         session.save()
         self.assertEqual(self._mode(self._poll(0)), "ranking")
-        self.assertEqual(self._mode(self._poll(25)), "order")
+        self.assertEqual(self._mode(self._poll(IDLE + 5)), "order")

@@ -3,7 +3,7 @@
 *[English version](MANUAL.en.md)*
 
 CoffeePy ist eine Strichliste für die gemeinsame Kaffeemaschine – nur ohne Zettel: Wer sich
-einen Kaffee nimmt, hält seine Karte an den Leser neben der Maschine und tippt auf dem
+einen Kaffee nimmt, hält seine Karte an die markierte Stelle und tippt auf dem
 Touchscreen an, was er trinkt. CoffeePy rechnet mit, zeigt jedem seinen Kontostand, nimmt
 Zahlungen an und hat für die Verwaltung ein Dashboard im Browser. Mitglieder können ihr Handy
 verknüpfen und sehen dort ihre Statistik und zahlen.
@@ -260,8 +260,8 @@ erscheint, wenn am Gerät etwas zu tun ist:
 
 Außer der Rangliste brauchen alle Bereiche eine Karte. Wer eine Karte auflegt, ist angemeldet,
 bis er fertig ist oder nach 20 Sekunden ohne Eingabe automatisch abgemeldet wird. Ein Tipp auf
-einen Bereich in der Leiste meldet ebenfalls ab. **Zahlen & Statistik**, **Einstellungen** und
-die **Rangliste** springen nach 20 Sekunden ohne Tipp von selbst zurück auf **Bestellen** – so
+einen Bereich in der Leiste meldet ebenfalls ab. **Bezahlen**, **Einstellungen** und
+die **Rangliste** springen nach 30 Sekunden ohne Tipp von selbst zurück auf **Bestellen** – so
 findet der Nächste den Kiosk immer bestellbereit vor.
 
 ### Bestellen
@@ -284,16 +284,16 @@ Animation.
 
 ![Danke](pictures/manual/de/kiosk-thank-you.png)
 
-### Zahlen & Statistik
+### Bezahlen
 
-![Zahlen & Statistik – Karte auflegen](pictures/manual/de/kiosk-wait-pay.png)
+![Bezahlen – Karte auflegen](pictures/manual/de/kiosk-wait-pay.png)
 
-Zeigt deine Tassen insgesamt (**CCT**) und in diesem Monat (**CCM**) und deinen
-**Kontostand**. Ist er negativ, steht der offene Betrag schon im Feld – trag ein, was du
+Hier zahlst du ein. Zur Information zeigt der Bildschirm dazu deine Tassen insgesamt (**CCT**)
+und in diesem Monat (**CCM**) und deinen **Kontostand**. Ist er negativ, steht der offene Betrag schon im Feld – trag ein, was du
 bezahlt hast, wähle die Zahlungsart und tippe **Bezahlen**. Sind Zahlungsmethoden mit Link
 eingerichtet, kannst du den offenen Betrag auch direkt per QR-Code mit dem Handy bezahlen.
 
-![Zahlen & Statistik](pictures/manual/de/kiosk-pay.png)
+![Bezahlen](pictures/manual/de/kiosk-pay.png)
 
 ### Einstellungen
 
