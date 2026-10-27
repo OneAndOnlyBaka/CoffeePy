@@ -752,7 +752,7 @@ with its **DE/EN** button, phones and PCs at the top right of the portal and of 
 |---|---|
 | The browser warns about the site. | Install the device certificate once (see [above](#installing-the-certificate)). |
 | **Bad Request (400)** in the browser. | The device doesn't know the address you're using. Use the address from setup (`192.168.4.1`, `coffeepy.local`), or run the provisioning tool over the new address – it adds it. |
-| After switching on, the screen is black, then white, for a minute. | Normal: the Pi starts first, then the browser. The kiosk appears after about a minute. |
+| After switching on, the screen is black, then white, for a minute. | Normal: the Pi starts first, then the browser. The kiosk appears after about a minute and a half – after a power cut it can take a good three minutes: the browser's first start then sometimes fails, and the device starts it again by itself. |
 | The kiosk went black for a moment and started again. | The device restarted a hanging kiosk or the app by itself (see [When the kiosk hangs](#when-the-kiosk-hangs)); the **Audit log** says which. If it happens often, that is where to look for why. |
 | *Card reader not available* | Check the reader's cable and restart the device. |
 | A card isn't recognised. | Hold it flat and still; a card marked as departed is turned away. |

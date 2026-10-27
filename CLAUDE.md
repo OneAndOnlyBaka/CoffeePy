@@ -357,6 +357,12 @@ mind before changing it:
   from GEM DMA helper", `gpu-recent-crash-count` in its arguments). Hence
   `--disable-gpu-rasterization` in `install/kiosk/openbox-autostart`. A new long animation
   is worth a look at `/sys/kernel/debug/dri/0/bo_stats` on the device while it plays.
+- **After a power cut, Chromium's network service crashes at its first start** ("Network service
+  crashed or was terminated" in `$XDG_RUNTIME_DIR/chromium.log`; three times in three tries, never
+  after a clean reboot or a killed browser), the kiosk's page load dies with it and Chromium
+  stays on `about:blank` - a white screen, the app answering. The root cause is inside
+  Chromium; `install/kiosk/openbox-autostart` restarts a browser whose kiosk hasn't polled
+  within `KIOSK_LOAD_SECONDS`. Reproduce with `sync; echo b > /proc/sysrq-trigger`.
 
 ## The device is offline
 

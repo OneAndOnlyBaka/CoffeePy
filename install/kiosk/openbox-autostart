@@ -46,7 +46,18 @@ fi
 # compositing still runs on the GPU, so taps are as quick as before.
 # --password-store=basic: otherwise Chromium wakes the GNOME keyring at every start, which
 # then fails to show its unlock prompt - there is no desktop - for passwords it never stores.
+#
+# A Chromium that runs but never shows the kiosk is ended, too: after a power cut its network
+# service crashed at the first start (twice in two tries), the kiosk's page load died with it
+# and Chromium sat on about:blank - a white screen, indefinitely. The kiosk's page touches
+# HEARTBEAT when it polls (kiosk/views.py, at most every 30s per worker); no touch within
+# KIOSK_LOAD_SECONDS of the start means it never loaded, and the loop starts Chromium again.
+# Its output goes to RAM ($XDG_RUNTIME_DIR), readable until the next boot, not onto the card.
+HEARTBEAT=/opt/coffeepy/data/storage/kiosk-heartbeat
+KIOSK_LOAD_SECONDS=90  # ~30s is usual at boot (first poll after the start), so three times that
+LOG="${XDG_RUNTIME_DIR:-/tmp}/chromium.log"
 while true; do
+    started=$(date +%s)
     chromium \
         --kiosk "$KIOSK_URL/kiosk/" \
         --noerrdialogs \
@@ -62,6 +73,17 @@ while true; do
         --disable-component-update \
         --disable-sync \
         --password-store=basic \
-        --disable-gpu-rasterization
+        --disable-gpu-rasterization >> "$LOG" 2>&1 &
+    browser=$!
+    (
+        sleep "$KIOSK_LOAD_SECONDS"
+        if [ "$(stat -c %Y "$HEARTBEAT" 2>/dev/null || echo 0)" -lt "$started" ]; then
+            echo "$(date -Is) kiosk never polled - restarting Chromium" >> "$LOG"
+            kill "$browser" 2>/dev/null
+        fi
+    ) &
+    check=$!
+    wait "$browser"
+    kill "$check" 2>/dev/null
     sleep 2
 done
