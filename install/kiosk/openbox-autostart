@@ -44,6 +44,8 @@ fi
 # gets (CMA) within one round of the tabs, the GPU process dies ("Failed to allocate from
 # GEM DMA helper" in dmesg) and the screen hangs. Without it, GPU memory stays ~20MB;
 # compositing still runs on the GPU, so taps are as quick as before.
+# --password-store=basic: otherwise Chromium wakes the GNOME keyring at every start, which
+# then fails to show its unlock prompt - there is no desktop - for passwords it never stores.
 while true; do
     chromium \
         --kiosk "$KIOSK_URL/kiosk/" \
@@ -59,6 +61,7 @@ while true; do
         --disable-background-networking \
         --disable-component-update \
         --disable-sync \
+        --password-store=basic \
         --disable-gpu-rasterization
     sleep 2
 done

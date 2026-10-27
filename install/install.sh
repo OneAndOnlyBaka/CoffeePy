@@ -516,6 +516,11 @@ step_kiosk() {
 	# the previous person's entries under the nickname and amount fields.
 	run install -d /etc/chromium/policies/managed
 	run install -m 0644 "${SCRIPT_DIR}/kiosk/chromium-policies.json" /etc/chromium/policies/managed/coffeepy.json
+	# Chromium asks the XDG desktop portal for the desktop's settings at every start. Without a
+	# desktop its GTK backend dies at once, and the portal then sits out D-Bus's 25s timeout
+	# before answering - a third of the time until the kiosk showed. Masked, the request fails
+	# right away and Chromium carries on with its defaults.
+	run systemctl --global mask xdg-desktop-portal.service xdg-desktop-portal-gtk.service
 
 	log "Enabling autologin on tty1"
 	run install -d "$(dirname "${GETTY_AUTOLOGIN}")"

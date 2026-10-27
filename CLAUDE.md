@@ -308,6 +308,9 @@ mind before changing it:
   in parallel with the stack was tried and measured: both slowed down by half a minute and
   the box went into swap, so the kiosk waits for `/health/` first. Measure from the
   device's journal, not by polling it over SSH - that alone slowed a boot by 30s.
+  Chromium itself waited 25s at every start for the XDG desktop portal (no desktop, so its
+  GTK backend dies and the portal sits out D-Bus's timeout): the installer masks the portal
+  globally - look for a pause in the journal before blaming the CPU.
 - **The AP's channel is picked at every hostapd start** (`install/ap_channel.sh`, an
   `ExecStartPre`): as an access point the radio only hears its own channel, so the scan has
   to happen before. Transmit power needs no setting - the Pi 3 already runs at the

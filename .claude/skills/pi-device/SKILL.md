@@ -85,6 +85,12 @@ about a Pi 3. Report numbers, not impressions.
   database makes every page look fast; the kiosk rows are the ones that matter (polled
   every 500ms).
 - Chromium tap latency: `kiosk-browser.sh taps ...` (see above).
+- **When the kiosk is usable:** delete `/opt/coffeepy/data/storage/kiosk-heartbeat`, reboot (or
+  restart `getty@tty1`), then `stat -c %W` of it is the first poll - its birth time, which ext4
+  keeps although the file is touched every 30s. Costs the device nothing while it boots.
+- **Without ethernet** the Pi is reached over its own WiFi at 192.168.4.1 (`PI_HOST` in
+  `.device/pi.env`; the host key is the same). A reboot drops this machine off the WiFi, and it
+  may not rejoin by itself.
 
 ## Things that already went wrong here
 
