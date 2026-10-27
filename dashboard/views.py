@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.sessions.models import Session
 from django.core.paginator import Paginator
 from django.db import connection, transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -169,9 +169,12 @@ def paymentmethod_delete(request, pk):
 @login_required
 def member_list(request):
     # Annotated rather than member.devices.count in the template: that was two
-    # queries per member row.
+    # queries per member row. distinct: the join with orders would multiply the devices.
+    # last_order - when someone stopped coming is what tells a nameless card that left the
+    # company from one still in use.
     members = list(Member.objects.select_related("favourite_coffee").prefetch_related("alt_cards")
-                   .annotate(device_count=Count("devices")).order_by("nickname", "uid"))
+                   .annotate(device_count=Count("devices", distinct=True), last_order=Max("orders__created_at"))
+                   .order_by("nickname", "uid"))
     blocked = NamePolicy.current().blocked_list()
     for member in members:
         # Who the kiosk will ask for a proper name at their next coffee (coffee/names.py).

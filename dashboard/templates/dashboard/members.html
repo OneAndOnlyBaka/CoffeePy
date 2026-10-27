@@ -31,6 +31,7 @@
                     {% translate "UID" %} {{ member.uid|unlocalize }}{% for card in member.alt_cards.all %}{% if forloop.first %} &middot; {% translate "Alt cards" %}{% endif %} {{ card.uid|unlocalize }}{% if not forloop.last %},{% endif %}{% endfor %}
                     {% if member.favourite_coffee %} &middot; {{ member.favourite_coffee.name }}{% endif %}
                     {% if member.device_count %} &middot; {% blocktranslate with count=member.device_count %}{{ count }} phone(s){% endblocktranslate %}{% endif %}
+                    &middot; {% if member.last_order %}<span title="{{ member.last_order|date:'SHORT_DATETIME_FORMAT' }}">{% blocktranslate trimmed with date=member.last_order|date:'SHORT_DATE_FORMAT' %}Last coffee {{ date }}{% endblocktranslate %}</span>{% else %}{% translate "No coffee yet" %}{% endif %}
                 </span>
             </div>
             <div class="list-row-actions">

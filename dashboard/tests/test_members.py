@@ -7,7 +7,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from coffee.models import AuditLogEntry, CoffeeSort, Member, MemberLinkToken
+from coffee.models import AuditLogEntry, CoffeeSort, Member, MemberDevice, MemberLinkToken, Order
 
 
 class MemberCrudTestCase(TestCase):
@@ -100,3 +100,25 @@ class MemberNameRulesTestCase(TestCase):
         self.client.post(reverse("dashboard:member_name_rules"), {"blocked_names": "Chef\nBoss"})
         self.assertContains(self.client.get(reverse("dashboard:members")), "New name at next coffee", count=1)
         self.assertTrue(AuditLogEntry.objects.filter(action="name_policy.update", details="boss, chef").exists())
+
+
+class LastCoffeeTestCase(TestCase):
+    """The member list says when each member last had a coffee - how a nameless card that
+    left the company is told from one still in use."""
+
+    def test_last_coffee_per_member(self):
+        User.objects.create_superuser(username="boss", password="pw")
+        self.client.login(username="boss", password="pw")
+        sort = CoffeeSort.objects.create(name="Espresso", price=Decimal("0.30"), machine_strokes=1)
+        anna = Member.objects.create(uid=1, nickname="Anna B.")
+        Member.objects.create(uid=2, nickname="Ben K.")
+        for days in (40, 3):
+            Order.objects.create(member=anna, coffee_sort=sort, value=Decimal("0.30"), machine_strokes=1,
+                                 created_at=timezone.now() - timedelta(days=days))
+        MemberDevice.objects.create(member=anna, session_key="a", label="a")
+        MemberDevice.objects.create(member=anna, session_key="b", label="b")
+        response = self.client.get(reverse("dashboard:members"))
+        newest = timezone.localtime(timezone.now() - timedelta(days=3)).strftime("%m/%d/%Y")
+        self.assertContains(response, f"Last coffee {newest}")
+        self.assertContains(response, "No coffee yet", count=1)
+        self.assertContains(response, "2 phone(s)")  # not multiplied by the orders it is joined with

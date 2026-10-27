@@ -457,7 +457,9 @@ as on the kiosk.
 
 ### Members
 
-The list of all members with their cards. Per member:
+The list of all members with their cards and the day of their **last coffee** – which tells
+you, even for a card without a name, whether someone still uses it or its owner left long ago
+(then *Mark as departed*). Per member:
 
 - **Edit**: name, UID, favourite coffee. The name follows the same rules as at the kiosk
   (see [Settings](#settings)).

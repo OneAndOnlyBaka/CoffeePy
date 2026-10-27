@@ -481,7 +481,9 @@ Liste wie am Kiosk.
 
 ### Mitglieder
 
-Die Liste aller Mitglieder mit ihren Karten. Pro Mitglied:
+Die Liste aller Mitglieder mit ihren Karten und dem Tag ihres **letzten Kaffees** – daran
+erkennst du auch bei einer Karte ohne Namen, ob noch jemand sie benutzt oder ob ihr Besitzer
+längst gegangen ist (dann *Als ausgeschieden markieren*). Pro Mitglied:
 
 - **Bearbeiten**: Name, UID, Lieblingskaffee. Für den Namen gelten dieselben Regeln wie am Kiosk
   (siehe [Einstellungen](#einstellungen)).

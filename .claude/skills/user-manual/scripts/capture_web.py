@@ -221,7 +221,7 @@ def kiosk_new_card(b):
 def kiosk_ranking(b):
     b.click("a.nav-btn[data-mode=ranking]")
     b.wait_state("ranking")
-    blur = BLUR_JS % json.dumps(private_names())  # real members can make the top 3, or the pillory
+    blur = blur_js()  # real members can make the top 3, or the pillory
     b.js(blur)
     b.shot("kiosk-ranking-alltime")
     for view in ("month", "pillory"):
@@ -265,7 +265,9 @@ FULL_PAGE = ("dashboard-update", "dashboard-backup")
 BLUR_JS = """
 (() => {
   const names = %s.filter(n => n && n.length > 1);
-  const hit = text => /\\d{6,}/.test(text) || names.some(n => text.includes(n));
+  // Card numbers are blurred - all but the demo cards' (demo_data.py), which are made up.
+  const demo = %s;
+  const hit = text => (text.match(/\\d{6,}/g) || []).some(d => !demo.includes(d)) || names.some(n => text.includes(n));
   const blur = el => { el.style.filter = "blur(6px)"; };
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   const found = new Set();
@@ -279,6 +281,16 @@ BLUR_JS = """
   return found.size;
 })()
 """
+
+
+def demo_uids():
+    """The demo cards' uids as the pages print them (demo_data.uid(): little-endian C0FFEE01...)."""
+    hexes = [f"C0FFEE{i + 1:02X}" for i in range(6)] + ["C0FFEEFF"]
+    return [str(int.from_bytes(bytes.fromhex(h), "little")) for h in hexes]
+
+
+def blur_js():
+    return BLUR_JS % (json.dumps(private_names()), json.dumps(demo_uids()))
 
 
 def private_names():
@@ -303,7 +315,7 @@ def dashboard(b, password):
          f"document.querySelector('form').submit()")
     b.page.collect(0.5, until="Page.loadEventFired")
     anna = shell_django("from coffee.models import Member; print(Member.objects.get(nickname='Anna B.').uid)")
-    blur = BLUR_JS % json.dumps(private_names())
+    blur = blur_js()
     for path, name in DASHBOARD_PAGES + [(f"/dashboard/members/{anna}/edit/", "dashboard-member-form")]:
         if not wanted(name):
             continue

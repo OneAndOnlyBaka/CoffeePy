@@ -97,7 +97,8 @@ databases onto it). Nothing personal may reach `docs/pictures/` - nicknames, mem
 ids. This is automatic, not something to ask about:
 
 - `capture_web.py` blurs it: before every dashboard shot and the kiosk's ranking shots it runs
-  `BLUR_JS`, which blurs every element holding a number of six or more digits or the nickname of
+  `BLUR_JS`, which blurs every element holding a number of six or more digits - except the demo
+  cards' uids (`demo_uids()`), so a member list still shows what it is about - or the nickname of
   a member that isn't one of `demo_data.py`'s (`private_names()`). **A new capture step that
   can show members** - a new dashboard page, a kiosk screen with names, the portal - **calls
   `b.js(blur)` before `b.shot(...)`** like the others; a new demo member goes into the exclusion
