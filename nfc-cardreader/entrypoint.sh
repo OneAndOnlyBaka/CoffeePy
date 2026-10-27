@@ -9,6 +9,13 @@ fi
 # pcscd's stdout/stderr is relayed through this FIFO so the watcher below can inspect
 # it line by line while it still reaches this container's own stdout (`docker/podman
 # logs`) - see that watcher for why.
+# Leftovers of a pcscd that never got to clean up (power cut, a SIGKILL at shutdown):
+# `restart: unless-stopped` keeps the container's filesystem, so they survive into the next
+# start, where pcscd takes the stale pid file for a running daemon ("Another pcscd seems to
+# be running"), exits - and the container restarts into the same files, forever. Nothing
+# else in this container runs pcscd, so whatever is there now is stale.
+rm -f /run/pcscd/pcscd.pid /run/pcscd/pcscd.comm
+
 PCSCD_LOG_FIFO="$(mktemp -u)"
 mkfifo "$PCSCD_LOG_FIFO"
 RESTART_MARKER="$(mktemp -u)"
