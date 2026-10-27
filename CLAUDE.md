@@ -239,8 +239,9 @@ mind before changing it:
 - **The AP step comes last and asks first.** It takes the Pi off the network the earlier
   steps need, including the SSH session it is probably running in.
 - **Steps are recorded in `/var/lib/coffeepy/install-state`** so a re-run resumes.
-  `--dry-run` prints the whole plan and touches nothing - it is also the only way to test
-  changes to this script without a Pi.
+  `--dry-run` prints the whole plan and touches nothing; with `--only` it runs without root.
+  Sourced, the script defines its functions and runs nothing (`coffee/tests/test_installer.py`).
+  Those two are the only ways to test changes to it without a Pi.
 - **Beware `set -o pipefail` in helpers**: `tr … | head -c N` fails when head closes the
   pipe, which is why `random_token` tolerates that status and then checks the length.
   Without `set -E` the ERR trap never fires inside a function, and a failure deep in a
@@ -292,7 +293,10 @@ mind before changing it:
   `:coffeepy-previous-*`; if `/health/` doesn't answer afterwards, all of it goes back. A new
   `.env` setting reaches existing devices through `env_defaults` in the manifest (taken from
   `.env.example`). The watcher runs `install.sh --only=hardware,services,kiosk` itself, with
-  `COFFEEPY_FROM_WATCHER=1` - that step must never restart the watcher then. A device can
+  `COFFEEPY_FROM_WATCHER=1` - then it must not restart the watcher, not touch the
+  maintenance status (it is the watcher's), not re-pin the display mode (only provisioning
+  knows it) and find the kiosk user without `SUDO_USER` (root's service has none, and there is
+  no `pi` on a current image). Until `--only` took a list, those steps never ran at all. A device can
   trust its own key instead (`/etc/coffeepy/update-signing.own.pub`, from `provision.sh`; no
   update replaces it) or check nothing (`UPDATE_VERIFY_SIGNATURE=false`).
 - **Which code runs is `coffeepy-version.json`** (`scripts/write_version.sh`: git describe and

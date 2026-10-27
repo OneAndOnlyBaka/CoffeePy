@@ -383,7 +383,11 @@ step_hardware() {
 	run install -d /srv/coffeepy-usb
 	run udevadm control --reload-rules
 
-	if [ -n "${VIDEO_MODE}" ]; then
+	if [ "${COFFEEPY_FROM_WATCHER:-0}" = "1" ]; then
+		# The display mode is chosen at provisioning; the watcher has no VIDEO_MODE to pass, and
+		# the default would pin the panel's mode on a device set up for "auto" (no video= at all).
+		info "update: leaving the display mode as it was set up"
+	elif [ -n "${VIDEO_MODE}" ]; then
 		log "Pinning the display mode"
 		if grep -q "video=HDMI" "${boot}/cmdline.txt" 2>/dev/null; then
 			info "a video= mode is already set - leaving it alone"
@@ -427,8 +431,18 @@ step_hardware() {
 	fi
 }
 
+# Whose session the kiosk is. Under the update watcher nobody ran sudo - root's own service
+# has no SUDO_USER - so the autologin override an earlier run wrote is asked first; "pi" is
+# only the last resort, as the Imager has not created that user since bookworm.
+GETTY_AUTOLOGIN="/etc/systemd/system/getty@tty1.service.d/autologin.conf"
+kiosk_user() {
+	local installed=""
+	[ -r "${GETTY_AUTOLOGIN}" ] && installed="$(sed -n 's/.*--autologin \([^ ]*\) .*/\1/p' "${GETTY_AUTOLOGIN}" | head -n 1)"
+	printf '%s\n' "${KIOSK_USER:-${SUDO_USER:-${installed:-pi}}}"
+}
+
 step_kiosk() {
-	local kiosk_user="${KIOSK_USER:-${SUDO_USER:-pi}}"
+	local kiosk_user; kiosk_user="$(kiosk_user)"
 	if ! id "${kiosk_user}" >/dev/null 2>&1; then
 		# Fatal for a real install - the kiosk session has to belong to somebody - but a
 		# dry run should still be able to show the remaining plan.
@@ -480,12 +494,12 @@ step_kiosk() {
 	run install -m 0644 "${SCRIPT_DIR}/kiosk/chromium-policies.json" /etc/chromium/policies/managed/coffeepy.json
 
 	log "Enabling autologin on tty1"
-	run install -d /etc/systemd/system/getty@tty1.service.d
+	run install -d "$(dirname "${GETTY_AUTOLOGIN}")"
 	if [ "${DRY_RUN}" = "1" ]; then
 		info "[dry-run] write the agetty override for ${kiosk_user}"
 	else
 		sed "s/__FIRST_USER_NAME__/${kiosk_user}/" "${SCRIPT_DIR}/kiosk/getty-autologin.conf" \
-			> /etc/systemd/system/getty@tty1.service.d/autologin.conf
+			> "${GETTY_AUTOLOGIN}"
 	fi
 	# A fresh install reboots anyway, but a re-run with --only=kiosk otherwise left systemd
 	# warning that the getty unit changed on disk.
@@ -732,6 +746,29 @@ step_verify() {
 
 usage() { sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
+# The kiosk shows "back in a moment" while this runs (install/maintenance.sh) - on a re-run
+# its stack is up the whole time, being rebuilt and restarted underneath it.
+step_weight() {
+	case "$1" in
+		preflight) echo 3 ;; packages) echo 8 ;; app) echo 30 ;; hardware) echo 33 ;; kiosk) echo 36 ;;
+		services) echo 40 ;; images) echo 44 ;; ap) echo 88 ;; verify) echo 92 ;; *) echo 0 ;;
+	esac
+}
+start_maintenance() {
+	MAINTENANCE_DIR="${TARGET_DIR}/data/maintenance"
+	# shellcheck source=maintenance.sh
+	. "${SCRIPT_DIR}/maintenance.sh"
+	# Run by the update watcher, the status is the watcher's: ending it here would lift the
+	# kiosk's maintenance screen mid-update, right before the watcher restarts the stack.
+	if [ "${COFFEEPY_FROM_WATCHER:-0}" != "1" ]; then
+		maintenance_begin install
+		trap 'maintenance_end' EXIT
+	fi
+}
+
+# Sourced (coffee/tests/test_installer.py): the functions above, nothing run.
+[ "${BASH_SOURCE[0]}" = "$0" ] || return 0
+
 for arg in "$@"; do
 	case "${arg}" in
 		--dry-run) DRY_RUN=1 ;;
@@ -743,6 +780,10 @@ for arg in "$@"; do
 		-h|--help) usage 0 ;;
 		*) echo "Unknown option: ${arg}" >&2; usage 1 ;;
 	esac
+done
+# A misspelt step would otherwise match nothing and "succeed" without doing anything.
+for step in ${ONLY//,/ }; do
+	case " ${ALL_STEPS} " in *" ${step} "*) ;; *) die "Unknown step in --only: ${step} (steps: ${ALL_STEPS})" ;; esac
 done
 
 if [ "${DRY_RUN}" != "1" ] && [ "$(id -u)" -eq 0 ]; then
@@ -760,21 +801,7 @@ on_error() {
 }
 trap 'on_error ${LINENO}' ERR
 
-# The kiosk shows "back in a moment" while this runs (install/maintenance.sh) - on a re-run
-# its stack is up the whole time, being rebuilt and restarted underneath it.
-step_weight() {
-	case "$1" in
-		preflight) echo 3 ;; packages) echo 8 ;; app) echo 30 ;; hardware) echo 33 ;; kiosk) echo 36 ;;
-		services) echo 40 ;; images) echo 44 ;; ap) echo 88 ;; verify) echo 92 ;; *) echo 0 ;;
-	esac
-}
-if [ "${DRY_RUN}" != "1" ]; then
-	MAINTENANCE_DIR="${TARGET_DIR}/data/maintenance"
-	# shellcheck source=maintenance.sh
-	. "${SCRIPT_DIR}/maintenance.sh"
-	maintenance_begin install
-	trap 'maintenance_end' EXIT
-fi
+[ "${DRY_RUN}" = "1" ] || start_maintenance
 
 CURRENT_STEP=""
 for step in ${ALL_STEPS}; do
