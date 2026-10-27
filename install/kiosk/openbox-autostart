@@ -12,14 +12,14 @@ unclutter-xfixes --idle 0.5 --fork
 # certificate from the device's own CA, which the stack creates on its first start
 # (dashboard/tls.py) in the file below.
 CA=/opt/coffeepy/data/tls/ca.crt
+KIOSK_URL=https://localhost:8443
 
-# Chromium is not held back until the app answers: it starts right away on a local page
-# showing the boot splash (starting.html), which switches to the kiosk once the app is up -
-# Chromium's own start-up and the stack's then overlap instead of adding up. Only the CA has
-# to be there first, for the store below; the stack creates it on its very first start, so
-# this waits only on a device that was never started yet (bounded, as it used to be).
+# Wait for the app container to actually answer before pointing Chromium at it, so the
+# first paint is the kiosk UI rather than a "connection refused" error page. Bounded
+# wait so a genuinely broken/not-yet-built stack still eventually shows *something*
+# (Chromium's own offline page) instead of hanging forever.
 for _ in $(seq 1 60); do
-    [ -f "$CA" ] && break
+    curl -sf --cacert "$CA" "$KIOSK_URL/health/" >/dev/null 2>&1 && break
     sleep 2
 done
 
@@ -46,7 +46,7 @@ fi
 # compositing still runs on the GPU, so taps are as quick as before.
 while true; do
     chromium \
-        --kiosk "file:///opt/coffeepy/install/kiosk/starting.html" \
+        --kiosk "$KIOSK_URL/kiosk/" \
         --noerrdialogs \
         --disable-infobars \
         --disable-session-crashed-bubble \

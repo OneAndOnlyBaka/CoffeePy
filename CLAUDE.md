@@ -275,6 +275,19 @@ mind before changing it:
   ordered after `network-online.target`, so both are disabled. The Imager's cloud-init is
   switched off too (it waits for the network on every boot), and the journal is made
   persistent: Raspberry Pi OS keeps it in RAM, so a slow or crashed boot left no trace.
+  NM also runs with netplan here and, for every connection it knows, writes netplan YAML
+  and runs `netplan generate` plus a daemon-reload (~4s each): the installer keeps Docker's
+  interfaces away from NM and turns netplan's connections into NM keyfiles
+  (`quiet_networkmanager`; the YAML goes to `/etc/netplan.coffeepy-bak`). One generate per
+  boot is left - NM does that with no YAML at all. A drop-in setting NM's `unmanaged-devices`
+  must use `+=`, or it silently replaces the access point's `wlan0` entry.
+- **Boot time is CPU, not waiting.** `systemd-analyze blame`/`critical-chain` and the
+  containers' start times say where it goes. Only the `migrate` service runs
+  `manage.py prepare` (migrate, admin, TLS - one Django process; the others set
+  `COFFEEPY_PREPARE=0`), because each Django start costs seconds on a Pi 3. Starting Chromium
+  in parallel with the stack was tried and measured: both slowed down by half a minute and
+  the box went into swap, so the kiosk waits for `/health/` first. Measure from the
+  device's journal, not by polling it over SSH - that alone slowed a boot by 30s.
 - **The AP's channel is picked at every hostapd start** (`install/ap_channel.sh`, an
   `ExecStartPre`): as an access point the radio only hears its own channel, so the scan has
   to happen before. Transmit power needs no setting - the Pi 3 already runs at the
