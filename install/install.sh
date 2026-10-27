@@ -118,6 +118,16 @@ ensure_line() {
 	printf '%s\n' "${line}" >> "${path}"
 }
 
+# One at a time, and only those that exist: Lite and Desktop images differ, and systemctl
+# fails a whole list over one unit it doesn't know.
+disable_units() {
+	local unit
+	for unit in "$@"; do
+		systemctl cat "${unit}" >/dev/null 2>&1 || continue
+		run systemctl disable --now "${unit}"
+	done
+}
+
 step_done()   { [ -f "${STATE_FILE}" ] && grep -qxF "$1" "${STATE_FILE}"; }
 mark_done()   { [ "${DRY_RUN}" = "1" ] && return 0; install -d "$(dirname "${STATE_FILE}")"; grep -qxF "$1" "${STATE_FILE}" 2>/dev/null || printf '%s\n' "$1" >> "${STATE_FILE}"; }
 
@@ -402,7 +412,21 @@ step_hardware() {
 	log "Trimming what a kiosk does not need"
 	# No Bluetooth peripherals, no physical hotkeys, no modem on this device - and on a
 	# 1GB board the RAM matters more than the convenience.
-	run systemctl disable bluetooth hciuart triggerhappy ModemManager 2>/dev/null || true
+	disable_units bluetooth.service hciuart.service triggerhappy.service ModemManager.service
+	# What the Desktop image adds on top (none of it exists on Lite): printing, NFS, VNC, the
+	# Pi 5's GPU/RP1 self-tests, desktop accounts. NetworkManager's dispatcher has no scripts
+	# here to run. Each of these starts at boot, next to the stack, on four slow cores.
+	disable_units cups.service cups.socket cups.path cups-browsed.service rpcbind.service \
+		rpcbind.socket nfs-blkmap.service nfs-client.target wayvnc-control.service \
+		glamor-test.service rp1-test.service accounts-daemon.service NetworkManager-dispatcher.service
+	# Updates come as bundles (install/update_watcher.py), and an offline box has nothing to
+	# fetch: apt's timers would only start a package run on a device in service.
+	disable_units apt-daily.timer apt-daily-upgrade.timer man-db.timer
+	# The backup stick is mounted by coffeepy-storage.service alone - udisks (which the
+	# browser's gvfs can wake over D-Bus, so masked, not just disabled) must not grab it first.
+	if systemctl cat udisks2.service >/dev/null 2>&1; then
+		run systemctl mask --now udisks2.service
+	fi
 	ensure_line "${boot}/config.txt" "dtoverlay=disable-bt"
 	# The Imager's cloud-init has done its job (user, hostname, SSH) by the time this runs,
 	# but would still go through all its stages on every boot, one of them waiting for
@@ -517,6 +541,30 @@ step_kiosk() {
 	run plymouth-set-default-theme -R pix
 }
 
+# NetworkManager took 14s to start on a Pi 3, and docker and the kiosk's login wait for it.
+# Raspberry Pi OS runs it with netplan: every connection it knows - Docker's bridge and each
+# container's veth included - it writes back as netplan YAML and runs `netplan generate`
+# plus a systemd daemon-reload for (~4s each, three per boot here). Docker's interfaces are
+# none of its business; netplan's connections are kept as what netplan turns them into
+# anyway, native keyfiles - with the YAML moved aside, not deleted. Takes effect at the
+# next boot: reloading now could drop the SSH session this probably runs in.
+quiet_networkmanager() {
+	# += : the access point step's own file sets the same key for wlan0.
+	write_file /etc/NetworkManager/conf.d/coffeepy-docker.conf <<-EOF
+		[keyfile]
+		unmanaged-devices+=interface-name:docker0;interface-name:br-*;interface-name:veth*
+	EOF
+	local generated=(/run/NetworkManager/system-connections/netplan-*.nmconnection) yaml=(/etc/netplan/*.yaml)
+	[ -e "${generated[0]}" ] && [ -e "${yaml[0]}" ] || return 0
+	log "Moving the network connections from netplan to NetworkManager's own files"
+	local file
+	for file in "${generated[@]}"; do
+		run install -m 0600 "${file}" /etc/NetworkManager/system-connections/
+	done
+	run install -d -m 0700 /etc/netplan.coffeepy-bak
+	run mv "${yaml[@]}" /etc/netplan.coffeepy-bak/
+}
+
 step_services() {
 	log "Installing the systemd units"
 	local unit
@@ -535,6 +583,7 @@ step_services() {
 	# that once ethernet got a lease or gave up - ~30s on every boot of a box that never has an
 	# uplink. Nothing here needs one: the kiosk is localhost, phones come in over the AP.
 	run systemctl disable NetworkManager-wait-online.service 2>/dev/null || true
+	[ -d /etc/NetworkManager ] && quiet_networkmanager
 	# What update bundles are checked against (install/update_watcher.py) - outside data/,
 	# root's, so nothing running in a container can swap it for its own.
 	run install -d -m 0755 /etc/coffeepy

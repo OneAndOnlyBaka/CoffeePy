@@ -1,0 +1,33 @@
+<!doctype html>
+<!--
+  What Chromium opens first (install/kiosk/openbox-autostart): the boot splash, while the
+  stack is still starting. Chromium takes ~20s to start on a Pi 3 and the stack ~30s after
+  docker is up - this lets both happen at once instead of one after the other.
+
+  It probes with an image from the app, not /health/: a page loaded from file:// can't read
+  a cross-origin response, but an image either loads or fails. The static files are served
+  by the web container itself (whitenoise), so this only loads once Django answers - before
+  that Caddy has nothing to proxy to and answers with its maintenance page, which is no image.
+  No text on purpose: it would have to exist in both languages, and the splash says enough.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>CoffeePy</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000 url("splash.png") center / contain no-repeat; cursor: none; }
+</style>
+</head>
+<body>
+<script>
+  const APP = "https://localhost:8443";
+  function probe() {
+    const image = new Image();
+    image.onload = () => location.replace(APP + "/kiosk/");
+    image.onerror = () => setTimeout(probe, 1000);
+    image.src = APP + "/static/kiosk/img/nav/order.svg?" + Date.now();
+  }
+  probe();
+</script>
+</body>
+</html>

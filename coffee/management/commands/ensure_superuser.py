@@ -8,7 +8,7 @@ class Command(BaseCommand):
     help = (
         "Creates the initial dashboard admin (a superuser) from DJANGO_SUPERUSER_* "
         "env vars, if set and no user with that username exists yet. Run on every "
-        "container start (see entrypoint.sh); idempotent."
+        "start of the stack (the prepare command, see entrypoint.sh); idempotent."
     )
 
     def handle(self, *args, **options):

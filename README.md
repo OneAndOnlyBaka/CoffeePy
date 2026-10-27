@@ -40,7 +40,7 @@ install V2 fresh and import the database.
 | `db`           | Postgres                                                                  |
 | `mosquitto`    | MQTT broker                                                               |
 | `nfc-bridge`   | Existing ACR122U→MQTT bridge (unmodified, see [nfc-cardreader/](nfc-cardreader/)) |
-| `migrate`      | One-shot `manage.py migrate` + `ensure_tls`, gates startup of the services below |
+| `migrate`      | One-shot `manage.py prepare --tls` (migrate, initial admin, certificates) - the only container that migrates; gates startup of the services below |
 | `web`          | Django (gunicorn): kiosk UI (`/kiosk/`) + admin dashboard (`/dashboard/`) |
 | `caddy`        | The only way in: HTTPS on 443, and the kiosk on 127.0.0.1:8443 (see [HTTPS](#https-and-certificates)) |
 | `mqtt-listener`| Subscribes to the bridge's MQTT topic, writes `NfcScan` rows              |
