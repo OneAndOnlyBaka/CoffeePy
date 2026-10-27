@@ -20,7 +20,7 @@ from django.utils.html import escape
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import backups, purge, rtc, services
+from coffee import backups, clock, names, purge, rtc, services
 from coffee.models import (
     AltUidCapture,
     AuditLogEntry,
@@ -37,7 +37,7 @@ from coffee.network import public_host
 
 from . import audit, import_jobs, system_clock, system_stats, tls
 from .decorators import superuser_required
-from .models import AccountSecurity, PasswordPolicy
+from .models import AccountSecurity, NamePolicy, PasswordPolicy
 from .forms import (
     ROLE_ADMIN,
     AdminSetPasswordForm,
@@ -46,6 +46,7 @@ from .forms import (
     MemberForm,
     OrderForm,
     OwnPasswordChangeForm,
+    NamePolicyForm,
     PasswordPolicyForm,
     PaymentForm,
     PaymentMethodForm,
@@ -59,7 +60,7 @@ def index(request):
         request,
         "dashboard/index.html",
         {"reader_status": reader_status, "public_host": public_host(), "overview": services.dashboard_overview(),
-         "backup_health": backups.health(), "rtc_health": rtc.health()},
+         "backup_health": backups.health(), "rtc_health": rtc.health(), "clock_corrected": clock.corrected()},
     )
 
 
@@ -167,18 +168,29 @@ def paymentmethod_delete(request, pk):
 
 @login_required
 def member_list(request):
-    return render(
-        request,
-        "dashboard/members.html",
-        {
-            # Annotated rather than member.devices.count in the template: that was two
-            # queries per member row.
-            "members": Member.objects.select_related("favourite_coffee")
-            .prefetch_related("alt_cards")
-            .annotate(device_count=Count("devices"))
-            .order_by("nickname", "uid")
-        },
-    )
+    # Annotated rather than member.devices.count in the template: that was two
+    # queries per member row.
+    members = list(Member.objects.select_related("favourite_coffee").prefetch_related("alt_cards")
+                   .annotate(device_count=Count("devices")).order_by("nickname", "uid"))
+    blocked = NamePolicy.current().blocked_list()
+    for member in members:
+        # Who the kiosk will ask for a proper name at their next coffee (coffee/names.py).
+        # A name that only lacks its form ("Anna B") is put right silently, so it is no issue.
+        member.name_issue = None if member.is_departed else names.message(
+            names.problem(names.normalize(member.nickname), member=member, extra_blocked=blocked))
+    return render(request, "dashboard/members.html",
+                  {"members": members, "name_policy_form": NamePolicyForm(instance=NamePolicy.current())})
+
+
+@login_required
+@superuser_required
+@require_POST
+def member_name_rules(request):
+    form = NamePolicyForm(request.POST, instance=NamePolicy.current())
+    if form.is_valid():
+        policy = form.save()
+        audit.log(request, "name_policy.update", details=", ".join(policy.blocked_list())[:500])
+    return redirect("dashboard:members")
 
 
 @login_required
@@ -449,6 +461,11 @@ def system_dashboard(request):
 @superuser_required
 def system_time(request):
     error = None
+    if request.method == "POST" and request.POST.get("confirm"):
+        # The clock check (coffee/clock.py) put the clock forward, and it is right as it is.
+        clock.confirmed()
+        audit.log(request, "system_time.confirmed", details=timezone.localtime().isoformat(timespec="seconds"))
+        return redirect("dashboard:system_time")
     if request.method == "POST":
         dt_str = request.POST.get("datetime")
         try:
@@ -457,9 +474,11 @@ def system_time(request):
         except Exception as exc:  # noqa: BLE001 - surfaced to the admin, not swallowed
             error = str(exc)
         else:
+            clock.confirmed()
             audit.log(request, "system_time.set", details=new_dt.isoformat())
             return redirect("dashboard:system_time")
-    return render(request, "dashboard/system_time.html", {"now": timezone.localtime(), "error": error})
+    return render(request, "dashboard/system_time.html",
+                  {"now": timezone.localtime(), "error": error, "clock_corrected": clock.corrected()})
 
 
 @login_required

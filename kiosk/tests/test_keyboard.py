@@ -33,26 +33,26 @@ class KeyboardEditTestCase(TestCase):
 
     def test_post_nickname_prefills_settings_panel(self):
         self._scan_and_login()
-        response = self.client.post(reverse("kiosk:keyboard"), {"field": "nickname", "value": "Alice"})
+        response = self.client.post(reverse("kiosk:keyboard"), {"field": "nickname", "value": "Alice X."})
         self.assertRedirects(response, reverse("kiosk:index"))
 
         panel = self.client.get(reverse("kiosk:panel"))
-        self.assertContains(panel, 'value="Alice"')
+        self.assertContains(panel, 'value="Alice X."')
 
     def test_settings_save_persists_the_pending_nickname_and_clears_it(self):
         self._scan_and_login()
-        self.client.post(reverse("kiosk:keyboard"), {"field": "nickname", "value": "Alice"})
+        self.client.post(reverse("kiosk:keyboard"), {"field": "nickname", "value": "Alice X."})
 
-        self.client.post(reverse("kiosk:settings_save"), {"nickname": "Alice"})
-        self.assertEqual(Member.objects.get(uid=0xDDCCBBAA).nickname, "Alice")
+        self.client.post(reverse("kiosk:settings_save"), {"nickname": "Alice X."})
+        self.assertEqual(Member.objects.get(uid=0xDDCCBBAA).nickname, "Alice X.")
 
         # a fresh session for a *different* card must not see the old pending value
         self._scan_and_login(uid="11223344")
         panel = self.client.get(reverse("kiosk:panel"))
-        self.assertNotContains(panel, 'value="Alice"')
+        self.assertNotContains(panel, 'value="Alice X."')
 
     def test_post_amount_prefills_pay_panel(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom")
+        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.")
         self.client.get(reverse("kiosk:nav", args=["info"]))
         self._scan_and_login()
 
@@ -63,7 +63,7 @@ class KeyboardEditTestCase(TestCase):
         self.assertContains(panel, 'value="5.50"')
 
     def test_pay_clears_pending_amount(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom")
+        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.")
         self.client.get(reverse("kiosk:nav", args=["info"]))
         self._scan_and_login()
         self.client.post(reverse("kiosk:keyboard"), {"field": "amount", "value": "5.50"})

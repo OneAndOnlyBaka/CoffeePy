@@ -25,6 +25,7 @@ urlpatterns = [
     path("members/", views.member_list, name="members"),
     path("members/add/", views.member_add, name="member_add"),
     path("members/merge/", views.member_merge, name="member_merge"),
+    path("members/name-rules/", views.member_name_rules, name="member_name_rules"),
     path("members/merge/<int:keep_uid>/<int:remove_uid>/", views.member_merge_confirm, name="member_merge_confirm"),
     path("members/<int:uid>/edit/", views.member_edit, name="member_edit"),
     path("members/<int:uid>/delete/", views.member_delete, name="member_delete"),

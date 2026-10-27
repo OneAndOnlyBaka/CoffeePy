@@ -46,3 +46,18 @@ class PasswordPolicy(models.Model):
     @classmethod
     def current(cls):
         return cls.objects.get_or_create(pk=1)[0]
+
+
+class NamePolicy(models.Model):
+    """Names the kiosk refuses on top of coffee/names.py's own list of placeholders - the
+    ones only someone who knows the team would think of. Edited on the dashboard's members
+    page; one row."""
+
+    blocked_names = models.TextField(blank=True, default="")
+
+    @classmethod
+    def current(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+    def blocked_list(self) -> list[str]:
+        return sorted({word.strip().lower() for word in self.blocked_names.replace(",", "\n").splitlines() if word.strip()})

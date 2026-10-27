@@ -7,7 +7,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from coffee.models import CoffeeSort, Member, MemberLinkToken
+from coffee.models import AuditLogEntry, CoffeeSort, Member, MemberLinkToken
 
 
 class MemberCrudTestCase(TestCase):
@@ -31,22 +31,22 @@ class MemberCrudTestCase(TestCase):
     def test_add_creates_a_member(self):
         response = self.client.post(
             reverse("dashboard:member_add"),
-            {"uid": "42", "nickname": "Alice", "favourite_coffee": self.espresso.pk},
+            {"uid": "42", "nickname": "alice b", "favourite_coffee": self.espresso.pk},
         )
         self.assertRedirects(response, reverse("dashboard:members"))
         member = Member.objects.get(uid=42)
-        self.assertEqual(member.nickname, "Alice")
+        self.assertEqual(member.nickname, "Alice B.")  # normalized, like at the kiosk
         self.assertEqual(member.favourite_coffee, self.espresso)
 
     def test_edit_updates_nickname_but_not_uid(self):
         Member.objects.create(uid=42, nickname="Alice")
         response = self.client.post(
             reverse("dashboard:member_edit", args=[42]),
-            {"uid": "999", "nickname": "Alicia", "favourite_coffee": ""},
+            {"uid": "999", "nickname": "Alicia B.", "favourite_coffee": ""},
         )
         self.assertRedirects(response, reverse("dashboard:members"))
         member = Member.objects.get(uid=42)
-        self.assertEqual(member.nickname, "Alicia")
+        self.assertEqual(member.nickname, "Alicia B.")
         self.assertFalse(Member.objects.filter(uid=999).exists())
 
     def test_delete_removes_the_member(self):
@@ -69,3 +69,34 @@ class MemberCrudTestCase(TestCase):
 
         response = portal_client.get(reverse("portal:index"))
         self.assertRedirects(response, reverse("portal:link_invalid"))
+
+
+class MemberNameRulesTestCase(TestCase):
+    """The dashboard applies coffee/names.py like the kiosk, shows who will be asked for a
+    name, and keeps the extra blocked names."""
+
+    def setUp(self):
+        User.objects.create_superuser(username="boss", password="pw")
+        self.client.login(username="boss", password="pw")
+
+    def test_a_refused_name_is_a_form_error(self):
+        Member.objects.create(uid=7, nickname="Tom K.")
+        for nickname, reason in (("Tom", "the first letter of your last name"), ("tom k", "Somebody already goes by that name"),
+                                 ("Test Y.", "doesn&#x27;t look like a first name")):
+            with self.subTest(nickname=nickname):
+                response = self.client.post(reverse("dashboard:member_add"), {"uid": "8", "nickname": nickname})
+                self.assertContains(response, reason)
+        self.assertFalse(Member.objects.filter(uid=8).exists())
+
+    def test_the_list_marks_who_needs_a_new_name(self):
+        Member.objects.create(uid=1, nickname="1")
+        Member.objects.create(uid=2, nickname="Anna B.")
+        response = self.client.get(reverse("dashboard:members"))
+        self.assertContains(response, "New name at next coffee", count=1)
+
+    def test_extra_blocked_names(self):
+        Member.objects.create(uid=2, nickname="Chef B.")
+        self.assertNotContains(self.client.get(reverse("dashboard:members")), "New name at next coffee")
+        self.client.post(reverse("dashboard:member_name_rules"), {"blocked_names": "Chef\nBoss"})
+        self.assertContains(self.client.get(reverse("dashboard:members")), "New name at next coffee", count=1)
+        self.assertTrue(AuditLogEntry.objects.filter(action="name_policy.update", details="boss, chef").exists())

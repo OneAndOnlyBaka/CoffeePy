@@ -569,7 +569,7 @@ step_services() {
 	log "Installing the systemd units"
 	local unit
 	for unit in coffeepy.service coffeepy-update-watcher.service coffeepy-storage.service \
-	            coffeepy-rtc-sync.service coffeepy-rtc-sync.timer; do
+	            coffeepy-rtc-sync.service coffeepy-rtc-sync.timer coffeepy-watchdog.service coffeepy-watchdog.timer; do
 		if [ "${DRY_RUN}" = "1" ]; then
 			info "[dry-run] install ${unit} (paths pointing at ${TARGET_DIR})"
 		else
@@ -597,6 +597,7 @@ step_services() {
 	run systemctl enable --now coffeepy-storage.service
 	run systemctl restart coffeepy-storage.service  # a re-run brings a changed helper in
 	run systemctl enable --now coffeepy-rtc-sync.timer
+	run systemctl enable --now coffeepy-watchdog.timer
 
 	if [ "${DRY_RUN}" != "1" ]; then
 		info "RTC check: $(hwclock --show 2>&1 | head -1 || true)"

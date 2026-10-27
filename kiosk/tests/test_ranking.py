@@ -14,10 +14,10 @@ class RankingBadgeTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=1, nickname="Alice")
-        self.bob = Member.objects.create(uid=2, nickname="Bob")
-        self.carol = Member.objects.create(uid=3, nickname="Carol")
-        self.dave = Member.objects.create(uid=4, nickname="Dave")
+        self.alice = Member.objects.create(uid=1, nickname="Alice X.")
+        self.bob = Member.objects.create(uid=2, nickname="Bob X.")
+        self.carol = Member.objects.create(uid=3, nickname="Carol X.")
+        self.dave = Member.objects.create(uid=4, nickname="Dave X.")
         for member, strokes in ((self.alice, 10), (self.bob, 8), (self.carol, 6), (self.dave, 4)):
             Order.objects.create(
                 member=member, coffee_sort=self.espresso, value=Decimal("0.30"), machine_strokes=strokes
@@ -30,7 +30,7 @@ class RankingBadgeTestCase(TestCase):
 
     def test_alltime_ranking_puts_the_top_three_on_the_podium(self):
         response = self.client.get(reverse("kiosk:panel"))
-        self.assertEqual(self.podium(response), {1: "Alice", 2: "Bob", 3: "Carol"})
+        self.assertEqual(self.podium(response), {1: "Alice X.", 2: "Bob X.", 3: "Carol X."})
         self.assertNotContains(response, "Dave")
         self.assertContains(response, "podium.gif")
         self.assertContains(response, '<div class="podium-banner">All time</div>', html=False)
@@ -44,11 +44,11 @@ class RankingBadgeTestCase(TestCase):
         self.assertContains(response, "vault.gif")  # still running - no podium yet
         self.assertNotContains(response, "podium.gif")
         self.assertEqual([place for place, _ in response.context["podium"]], [1, 2, 3])
-        self.assertEqual(self.podium(response)[1], "Alice")
+        self.assertEqual(self.podium(response)[1], "Alice X.")
 
     def test_a_place_nobody_holds_stays_empty(self):
         Order.objects.exclude(member=self.alice).delete()
-        self.assertEqual(self.podium(self.client.get(reverse("kiosk:panel"))), {1: "Alice", 2: None, 3: None})
+        self.assertEqual(self.podium(self.client.get(reverse("kiosk:panel"))), {1: "Alice X.", 2: None, 3: None})
 
     def test_ranking_screen_is_identical_from_poll_to_poll(self):
         # Otherwise panel_stable_swap.js swaps it in again, and the podium GIF restarts.
@@ -65,13 +65,13 @@ class RankingBadgeTestCase(TestCase):
     def test_ranking_follows_new_orders_while_the_screen_stays_open(self):
         # The rows are cached between polls (_ranking_rows) - a new order has to show up on
         # the very next one regardless.
-        self.assertEqual(self.podium(self.client.get(reverse("kiosk:panel")))[1], "Alice")
+        self.assertEqual(self.podium(self.client.get(reverse("kiosk:panel")))[1], "Alice X.")
         Order.objects.create(member=self.dave, coffee_sort=self.espresso, value=Decimal("3.00"), machine_strokes=20)
-        self.assertEqual(self.podium(self.client.get(reverse("kiosk:panel")))[1], "Dave")
+        self.assertEqual(self.podium(self.client.get(reverse("kiosk:panel")))[1], "Dave X.")
 
     def test_ranking_follows_a_renamed_member(self):
         self.client.get(reverse("kiosk:panel"))
-        Member.objects.filter(pk=self.alice.pk).update(nickname="Alicia")
+        Member.objects.filter(pk=self.alice.pk).update(nickname="Alicia X.")
         self.assertContains(self.client.get(reverse("kiosk:panel")), "Alicia")
 
     def test_pillory_tab_lists_debtors_without_podium(self):
@@ -89,7 +89,7 @@ class RankingBadgeTestCase(TestCase):
         self.assertNotContains(response, "podium.gif")
         self.assertContains(response, '<div class="podium-banner">Shame</div>', html=False)
         # in the ticker - twice, so the band runs on without a gap
-        self.assertEqual(response.content.decode().count("<b>Dave</b>"), 2)
+        self.assertEqual(response.content.decode().count("<b>Dave X.</b>"), 2)
 
     def test_pillory_without_debtors_says_so(self):
         self.client.get(reverse("kiosk:ranking_view", args=["pillory"]))
@@ -116,9 +116,9 @@ class OrderScreenBadgeTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=1, nickname="Alice", favourite_coffee=self.espresso)
-        self.bob = Member.objects.create(uid=2, nickname="Bob", favourite_coffee=self.espresso)
-        self.dave = Member.objects.create(uid=4, nickname="Dave", favourite_coffee=self.espresso)
+        self.alice = Member.objects.create(uid=1, nickname="Alice X.", favourite_coffee=self.espresso)
+        self.bob = Member.objects.create(uid=2, nickname="Bob X.", favourite_coffee=self.espresso)
+        self.dave = Member.objects.create(uid=4, nickname="Dave X.", favourite_coffee=self.espresso)
         for member, strokes in ((self.alice, 10), (self.bob, 8)):
             Order.objects.create(
                 member=member, coffee_sort=self.espresso, value=Decimal("0.30"), machine_strokes=strokes

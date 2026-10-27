@@ -15,7 +15,7 @@ class AltUidCaptureKioskTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=42, nickname="Alice")
+        self.alice = Member.objects.create(uid=42, nickname="Alice X.")
         self.client.get(reverse("kiosk:index"))
 
     def _arm(self, member, seconds=60):
@@ -40,7 +40,7 @@ class AltUidCaptureKioskTestCase(TestCase):
         self.assertFalse(AltUidCapture.objects.exists())
 
     def test_scanning_own_uid_is_ignored_and_capture_stays_armed(self):
-        member = Member.objects.create(uid=0xDDCCBBAA, nickname="Bob")
+        member = Member.objects.create(uid=0xDDCCBBAA, nickname="Bob X.")
         self._arm(member)
         self._scan("AABBCCDD")
         self.client.get(reverse("kiosk:panel"))
@@ -50,7 +50,7 @@ class AltUidCaptureKioskTestCase(TestCase):
         self.assertTrue(AltUidCapture.objects.exists())
 
     def test_scanning_a_card_already_in_use_is_ignored_and_capture_stays_armed(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Carol")
+        Member.objects.create(uid=0xDDCCBBAA, nickname="Carol X.")
         self._arm(self.alice)
         self._scan("AABBCCDD")
         response = self.client.get(reverse("kiosk:panel"))
@@ -61,7 +61,7 @@ class AltUidCaptureKioskTestCase(TestCase):
         self.assertContains(response, "already linked to another account")
 
     def test_conflict_error_keeps_showing_on_later_polls_without_a_new_scan(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Carol")
+        Member.objects.create(uid=0xDDCCBBAA, nickname="Carol X.")
         self._arm(self.alice)
         self._scan("AABBCCDD")
         self.client.get(reverse("kiosk:panel"))  # records the conflict
@@ -71,7 +71,7 @@ class AltUidCaptureKioskTestCase(TestCase):
         self.assertContains(response, "already linked to another account")
 
     def test_a_later_successful_tap_clears_the_conflict_along_with_the_capture(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Carol")
+        Member.objects.create(uid=0xDDCCBBAA, nickname="Carol X.")
         self._arm(self.alice)
         self._scan("AABBCCDD")  # conflict with Carol's card
         self.client.get(reverse("kiosk:panel"))

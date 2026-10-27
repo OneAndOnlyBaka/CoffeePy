@@ -17,7 +17,7 @@ class TimeOfDayDistributionTestCase(TestCase):
     def setUp(self):
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
         self.jug = CoffeeSort.objects.create(name="jug", price=Decimal("0.60"), machine_strokes=2)
-        self.alice = Member.objects.create(uid=1, nickname="Alice")
+        self.alice = Member.objects.create(uid=1, nickname="Alice X.")
 
     def order(self, when: str, sort=None):
         sort = sort or self.espresso

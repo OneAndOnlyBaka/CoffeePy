@@ -12,7 +12,7 @@ class LinkPhonePopupTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=42, nickname="Alice")
+        self.alice = Member.objects.create(uid=42, nickname="Alice X.")
         self.client.get(reverse("kiosk:index"))
 
     def log_in(self):
@@ -79,7 +79,7 @@ class PanelStateMarkerTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=0xDDCCBBAA, nickname="Alice")
+        self.alice = Member.objects.create(uid=0xDDCCBBAA, nickname="Alice X.")
         NfcReaderStatus.objects.create(pk=1, is_online=True)
         self.client.get(reverse("kiosk:index"))
 

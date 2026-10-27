@@ -306,7 +306,7 @@ class EncryptionTestCase(FakeDevice, TestCase):
 
 def seed():
     sort = CoffeeSort.objects.create(name="Espresso", price=Decimal("0.30"), machine_strokes=1)
-    member = Member.objects.create(uid=1, nickname="Anna")
+    member = Member.objects.create(uid=1, nickname="Anna X.")
     Order.objects.create(member=member, coffee_sort=sort, value=Decimal("0.30"), machine_strokes=1)
 
 
@@ -336,7 +336,7 @@ class RealBackupTestCase(FakeDevice, TransactionTestCase):
             self.assertIn("config/env", tar.getnames())
             manifest = json.load(tar.extractfile("manifest.json"))
         self.assertIn("coffee.0001_initial", manifest["migrations"])
-        Member.objects.create(uid=2, nickname="Ben")
+        Member.objects.create(uid=2, nickname="Ben X.")
         self.restore(path)
         self.assertEqual(list(Member.objects.values_list("nickname", flat=True)), ["Anna"])
 
@@ -347,7 +347,7 @@ class RealBackupTestCase(FakeDevice, TransactionTestCase):
             self.assertNotIn(b"Anna", path.read_bytes())
             Member.objects.all().delete()
             self.restore(path)
-        self.assertTrue(Member.objects.filter(nickname="Anna").exists())
+        self.assertTrue(Member.objects.filter(nickname="Anna X.").exists())
         with mock.patch.dict(os.environ, {"BACKUP_PASSPHRASE": ""}):
             self.restore(path, secret="Kaffee-ist-fertig-42")  # another device's passphrase
             with self.assertRaises(backups.BackupError):
@@ -371,7 +371,7 @@ class RealBackupTestCase(FakeDevice, TransactionTestCase):
             self.assertIn("coffee.0001_initial", backup.migrations())
         Member.objects.all().delete()
         self.restore(self.root / "old.dump")
-        self.assertTrue(Member.objects.filter(nickname="Anna").exists())
+        self.assertTrue(Member.objects.filter(nickname="Anna X.").exists())
 
     def test_a_plain_sql_dump_restores(self):
         args, env, name = backups._pg()
@@ -379,7 +379,7 @@ class RealBackupTestCase(FakeDevice, TransactionTestCase):
         touch(self.root / "old.sql", sql)
         Member.objects.all().delete()
         self.restore(self.root / "old.sql")
-        self.assertTrue(Member.objects.filter(nickname="Anna").exists())
+        self.assertTrue(Member.objects.filter(nickname="Anna X.").exists())
 
     def test_a_broken_backup_changes_nothing(self):
         touch(self.root / "broken.sql", "-- PostgreSQL database dump\nCREATE TABLE half (id int);\nTHIS IS NOT SQL;\n")
@@ -387,13 +387,13 @@ class RealBackupTestCase(FakeDevice, TransactionTestCase):
         with self.assertRaises(backups.BackupError) as raised:
             self.restore(self.root / "broken.sql")
         self.assertIn("syntax error", str(raised.exception))
-        self.assertTrue(Member.objects.filter(nickname="Anna").exists())
+        self.assertTrue(Member.objects.filter(nickname="Anna X.").exists())
 
     def test_a_truncated_dump_changes_nothing(self):
         backups.dump(self.root / "full.dump")
         data = (self.root / "full.dump").read_bytes()
         touch(self.root / "cut.dump").write_bytes(data[: len(data) * 2 // 3])
-        Member.objects.create(uid=2, nickname="Ben")
+        Member.objects.create(uid=2, nickname="Ben X.")
         with self.assertRaises(backups.BackupError):
             self.restore(self.root / "cut.dump")
         self.assertEqual(Member.objects.count(), 2)  # rolled back - not half of the backup

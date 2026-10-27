@@ -12,7 +12,7 @@ class MonthChangeReminderTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=42, nickname="Alice")
+        self.alice = Member.objects.create(uid=42, nickname="Alice X.")
         self.client.get(reverse("kiosk:index"))
 
     def _scan(self):

@@ -12,8 +12,8 @@ class ServicesTestCase(TestCase):
     def setUp(self):
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
         self.jug = CoffeeSort.objects.create(name="jug", price=Decimal("0.60"), machine_strokes=2)
-        self.alice = Member.objects.create(uid=1, nickname="Alice", favourite_coffee=self.espresso)
-        self.bob = Member.objects.create(uid=2, nickname="Bob", favourite_coffee=self.jug)
+        self.alice = Member.objects.create(uid=1, nickname="Alice X.", favourite_coffee=self.espresso)
+        self.bob = Member.objects.create(uid=2, nickname="Bob X.", favourite_coffee=self.jug)
 
     def test_total_and_month_cups(self):
         Order.objects.create(member=self.alice, coffee_sort=self.espresso, value=Decimal("0.30"), machine_strokes=1)

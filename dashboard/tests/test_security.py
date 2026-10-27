@@ -167,14 +167,14 @@ class ActivityTestCase(TestCase):
 
     def test_kiosk_card_login_and_order_are_logged(self):
         sort = CoffeeSort.objects.create(name="Espresso", price=Decimal("0.30"), machine_strokes=1)
-        Member.objects.create(uid=1, nickname="Anna", favourite_coffee=sort)
+        Member.objects.create(uid=1, nickname="Anna X.", favourite_coffee=sort)
         kiosk = Client()
         kiosk.get(reverse("kiosk:index"))
         NfcScan.objects.create(uid="01000000", event=NfcScan.EVENT_INSERTED)
         kiosk.get(reverse("kiosk:panel"))
         kiosk.post(reverse("kiosk:order_confirm"))
         self.assertEqual(list(AuditLogEntry.objects.filter(source="kiosk").order_by("id").values_list("action", "actor")),
-                         [("kiosk.card_login", "Anna (uid 1)"), ("order.create", "Anna (uid 1)")])
+                         [("kiosk.card_login", "Anna X. (uid 1)"), ("order.create", "Anna X. (uid 1)")])
 
 
 class SearchTestCase(TestCase):

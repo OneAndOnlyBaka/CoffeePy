@@ -26,7 +26,7 @@ class BackfillOrderSortsTestCase(TestCase):
     def setUp(self):
         self.espresso = CoffeeSort.objects.create(name="espresso", price="0.30", machine_strokes=1)
         self.jug = CoffeeSort.objects.create(name="jug", price="0.60", machine_strokes=2)
-        self.member = Member.objects.create(uid=42, nickname="Alice")
+        self.member = Member.objects.create(uid=42, nickname="Alice X.")
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.dump = Path(self.tmp.name) / "coffee.db"

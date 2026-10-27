@@ -57,9 +57,18 @@ by hand, the next retake would silently drop it.
 ```bash
 python3 -m venv /tmp/manual && /tmp/manual/bin/pip install pillow   # once
 export MANUAL_PYTHON=/tmp/manual/bin/python
-.claude/skills/user-manual/scripts/capture.sh                        # everything, ~15 min
-.claude/skills/user-manual/scripts/capture.sh --only kiosk,portal    # any of kiosk,dashboard,portal,provision
+.claude/skills/user-manual/scripts/capture.sh --shots kiosk-settings,dashboard-members   # just these, both languages
+.claude/skills/user-manual/scripts/capture.sh --only kiosk,portal    # whole areas: kiosk,dashboard,portal,provision
+.claude/skills/user-manual/scripts/capture.sh                        # everything, ~15 min - rarely needed
 ```
+
+**Work out which images a change touches before capturing anything** - the user asked for
+it: a full run costs a quarter of an hour of the device, most changes touch two or three
+images. List them first (the table in "What lives where", the `![...](pictures/manual/de/...)`
+next to every manual passage you changed, and every screen whose template, CSS or texts you
+touched - a shared partial or kiosk.css counts for all screens using it), say which ones and
+why, then run `--shots` with exactly those. Only a change to something every screen shares
+(base CSS, the nav, the corner buttons) justifies `--only` or a full run.
 
 - Deploy the change to the Pi first (`pi-device` deploy.sh) - the screenshots show what runs there.
 - The **kiosk** is captured on the Pi, in its own Chromium. **Dashboard and portal** are
@@ -94,8 +103,8 @@ ids. This is automatic, not something to ask about:
   `b.js(blur)` before `b.shot(...)`** like the others; a new demo member goes into the exclusion
   list in `private_names()` as well as into `demo_data.py`.
 - Before anything is shown to the user or committed, **look at every retaken image** that can
-  contain members (contact sheet, see above): only the demo names (Anna, Ben, Clara, David,
-  Emma, Felix) may be legible, no uid or card number at all. If something slipped through, fix
+  contain members (contact sheet, see above): only the demo names (Anna B., Ben K., Clara M., David S.,
+  Emma W., Felix H.) may be legible, no uid or card number at all. If something slipped through, fix
   the blur and retake - never edit the image by hand, the next retake would bring it back.
 - The same goes for any other screenshot of the device: one taken to show the user something
   (pi-device `screenshot.sh`, a headless browser) stays in the scratchpad, and if it goes

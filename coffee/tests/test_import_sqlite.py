@@ -70,7 +70,7 @@ class ImportSqliteTestCase(TestCase):
             self._assert_imported()
 
     def test_purge_flag_clears_data_the_dump_does_not_contain(self):
-        Member.objects.create(uid=7, nickname="Bob")
+        Member.objects.create(uid=7, nickname="Bob X.")
         CoffeeSort.objects.create(name="filter", price="0.20", machine_strokes=1)
 
         with tempfile.TemporaryDirectory() as tmp:

@@ -198,9 +198,39 @@ Before the kiosk takes orders it needs at least one **coffee sort** – until th
 2. Optionally add **payment methods** (PayPal, PayPal Pool, WERO or a custom link). Cash
    always works.
 3. You don't need to add **members**: an unknown card on the kiosk leads straight to
-   signing up with a nickname.
+   signing up with a name (see [Settings](#settings)).
 4. Plug in a **USB stick** and set it up under **Backup** – from then on the device backs
    itself up (see [Backups](#backups)).
+
+### Moving over from version 1
+
+When CoffeePy replaces a device running the old version 1, you take its data over once –
+best at the end of a day when nobody books any more:
+
+1. **Take the database from the running device, not from a copy.** Switch the old device off
+   once the last booking is made. The data is on its SD card in
+   `/home/<user>/CoffeePy/coffee.db`; a Linux computer reads the card directly, or fetch the
+   file over SSH beforehand. An older copy or a backup from the old stick is only a fallback:
+   whatever was booked after it is missing otherwise.
+2. On the dashboard, under **Import legacy database**, upload the file and tick **Clear
+   existing members, cards, … first** – otherwise test bookings and a second import end up
+   in the books twice.
+3. Look at the newest entries under **Bookings**: if they match the last day on the old
+   device, everything is there.
+4. **Check the time** (dashboard → **System time**). The clock module usually moves over too,
+   and with it the old device's time – which can be wrong after long running without a
+   network.
+5. **Reconnect the phones:** the WiFi has a new name and a new password, and every phone
+   needs the [certificate](#installing-the-certificate).
+6. **Announce the new names:** whoever isn't already called "First L." or a short code like
+   "AB" – with version 1 almost nobody – is asked for a name at their first coffee on the new
+   device (see
+   [Settings](#settings)). That takes half a minute at the touchscreen; a note beforehand saves
+   puzzled faces in the queue.
+7. Set up a **backup stick** (see [Backups](#backups)). Setting up erases the old device's
+   stick – if you want to keep its backups, use a new one.
+
+Keeping the old device's SD card until the first weeks have gone well costs nothing.
 
 ---
 
@@ -214,7 +244,7 @@ device needs looking after:
 | Sign | Meaning |
 |---|---|
 | Red, database symbol | **Backups are not running** – the backup stick is missing, or the last backup failed. Details under **Backup** in the dashboard. |
-| Red, clock symbol | **The clock module (RTC) is faulty** – missing, not answering, or its battery is flat. Details on the dashboard's **Overview**. |
+| Red, clock symbol | **The clock module (RTC) is faulty** – missing, not answering, or its battery is flat –, or **the clock was wrong and has been put forward**. Details on the dashboard's **Overview**. |
 
 ![Warning sign on the kiosk](pictures/manual/en/kiosk-device-alarm.png)
 
@@ -257,8 +287,18 @@ your phone via QR code.
 
 ![Settings – apply your card](pictures/manual/en/kiosk-wait-settings.png)
 
-Change your **nickname** and **favourite coffee** here and tap **Save**. Type directly, or use
-the on-screen keyboard via **Keyboard**.
+Change your **name** and **favourite coffee** here and tap **Save**. Type directly, or use
+the on-screen keyboard via **Keyboard**. – it has umlauts, ß, hyphen and full stop too.
+
+The name is **first name and the first letter of the last name**, like *Anna B.*, or a **short
+code** of two to four capitals, like *AB* – so everyone knows who is on the ranking and the
+pillory. The kiosk adds capitals and the full stop itself (*anna b* becomes *Anna B.*). It refuses placeholders (*Test*, *Name*, *Coffee* …), keyboard
+mashing (*Asdf*) and a name somebody already has – a second letter helps then: *Anna Be.*
+Whoever's name doesn't fit – including those still named after their card number – is **asked
+for a name first** at their next coffee (*Who are you?*) and orders after that; saving goes
+straight on to the order. The field already holds what can be made of the old name – *Anna*
+becomes *Anna*␣, only the letter is missing. A name that only lacks the form (*Anna B* without
+the full stop) is put right by the kiosk without asking.
 
 ![Settings](pictures/manual/en/kiosk-settings.png)
 
@@ -419,7 +459,10 @@ as on the kiosk.
 
 The list of all members with their cards. Per member:
 
-- **Edit**: nickname, UID, favourite coffee.
+- **Edit**: name, UID, favourite coffee. The name follows the same rules as at the kiosk
+  (see [Settings](#settings)).
+- *New name at next coffee*: this name doesn't fit the rules – the kiosk asks the member for
+  a new one at their next coffee.
 - **Add card**: the next card held to the kiosk becomes this member's – that's how someone gets
   a replacement card without ending up with a second account.
 - **Revoke devices**: logs out all linked phones.
@@ -433,6 +476,11 @@ The list of all members with their cards. Per member:
 move to the account you keep, the other one is deleted.
 
 ![Merge members](pictures/manual/en/dashboard-merge.png)
+
+Under **Names** (admins only) you enter **blocked first names** (or short codes), one per line – on top of the
+usual placeholders, which are always refused. Meant for what only someone on the team would
+think of (*Boss*, the coffee machine's name …). Whoever already goes by one of them is asked
+for a new name at their next coffee.
 
 ### Bookings
 
@@ -503,6 +551,14 @@ out: whoever's password no longer meets them is asked for a new one at their nex
 
 **System time**: only needed when the clock module is missing or wrong. The new time is
 also written to the clock module within ten minutes.
+
+Without a network nobody puts the clock right – so the device itself makes sure it doesn't
+go **back**: if it jumps back, or stands before the newest entries in the audit log (every
+booking writes one), it is put forward again and the kiosk shows the red clock sign. The
+overview then says from when to when. Check the time and set it here, or confirm it with
+**The time is right** – the sign goes away. It is never put back: a clock that is ahead
+can't be told from a right one. With internet access the device sets its clock itself anyway,
+and this check stays out of it.
 
 ![System time](pictures/manual/en/dashboard-system-time.png)
 
@@ -667,6 +723,19 @@ installs every bundle – signed, signed with another key, or not signed at all
 checked. Only do this when nobody you don't trust can log in to the dashboard as an admin:
 whoever can upload an update can then run anything on the device.
 
+### When the kiosk hangs
+
+Every minute the device checks that the app answers and that the kiosk's browser still asks
+it for new cards. If something hangs, it restarts it, a step at a time: the kiosk screen
+first, then, if that didn't help, the app. If the app doesn't answer for three minutes, it
+restarts that right away. Each takes a minute or two and shows up in the **Audit log** as
+*watchdog.kiosk_restart* / *watchdog.stack_restart*.
+
+It stays out of updates, restores and imports and the first minutes after switching on, and
+after three restarts within an hour it gives up (*watchdog.gave_up*): a restart doesn't help
+then, and it is time to look at the audit log. Pulling the plug is only left for when even
+that has no effect.
+
 ### Language
 
 You pick the default language during setup. Every device can switch for itself: the kiosk
@@ -682,10 +751,11 @@ with its **DE/EN** button, phones and PCs at the top right of the portal and of 
 | The browser warns about the site. | Install the device certificate once (see [above](#installing-the-certificate)). |
 | **Bad Request (400)** in the browser. | The device doesn't know the address you're using. Use the address from setup (`192.168.4.1`, `coffeepy.local`), or run the provisioning tool over the new address – it adds it. |
 | After switching on, the screen is black, then white, for a minute. | Normal: the Pi starts first, then the browser. The kiosk appears after about a minute. |
+| The kiosk went black for a moment and started again. | The device restarted a hanging kiosk or the app by itself (see [When the kiosk hangs](#when-the-kiosk-hangs)); the **Audit log** says which. If it happens often, that is where to look for why. |
 | *Card reader not available* | Check the reader's cable and restart the device. |
 | A card isn't recognised. | Hold it flat and still; a card marked as departed is turned away. |
 | Red **database** sign on the kiosk | Backups aren't running: plug the backup stick back in, or look at **Backup** in the dashboard for the error. |
-| Red **clock** sign on the kiosk, or the time is wrong | The overview's *Clock module (RTC)* says why. *Not found* / *Does not answer*: check the module and its wiring. *Had lost the time*: replace its battery (CR2032), then correct the time under **System time** – the sign goes once the module has kept the time through a restart. |
+| Red **clock** sign on the kiosk, or the time is wrong | If the overview has a *Time – corrected* row, the clock went back and was put forward: check it under **System time** and set or confirm it. Otherwise the *Clock module (RTC)* row says why. *Not found* / *Does not answer*: check the module and its wiring. *Had lost the time*: replace its battery (CR2032), then correct the time under **System time** – the sign goes once the module has kept the time through a restart. |
 | "We'll be right back" doesn't go away. | Is an update or a restore running? The dashboard's **Update** or **Backup** page shows its progress. A status older than two hours is ignored; when in doubt, restart the device. |
 | Login refused although the password is right | Too many failed attempts lock the account for a while (15 minutes by default) – wait, or have an admin set a new password under **Dashboard users**. |
 | An update is refused | The update page says why: no or a wrong signature (see [Your own signing key](#your-own-signing-key)), a bundle for another platform, not enough space, or an older version than the installed one. |

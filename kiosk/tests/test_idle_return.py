@@ -49,7 +49,7 @@ class KioskIdleReturnTestCase(TestCase):
         self.assertEqual(self.client.session["ranking_view"], "alltime")
 
     def test_countdown_starts_after_a_logout(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom", favourite_coffee=self.espresso)
+        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         self.client.get(reverse("kiosk:nav", args=["settings"]))
         NfcScan.objects.create(uid="AABBCCDD", event=NfcScan.EVENT_INSERTED)
         self._poll(15)  # logs in
@@ -62,13 +62,13 @@ class KioskIdleReturnTestCase(TestCase):
 
     def test_refused_card_counts_as_a_tap(self):
         self.client.get(reverse("kiosk:nav", args=["info"]))
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom", departed_at=timezone.now())
+        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", departed_at=timezone.now())
         NfcScan.objects.create(uid="AABBCCDD", event=NfcScan.EVENT_INSERTED)
         self._poll(15)
         self.assertEqual(self._mode(self._poll(30)), "info")
 
     def test_not_while_a_card_is_being_added(self):
-        member = Member.objects.create(uid=42, nickname="Alice")
+        member = Member.objects.create(uid=42, nickname="Alice X.")
         AltUidCapture.objects.create(member=member, expires_at=timezone.now() + timedelta(seconds=120))
         self.client.get(reverse("kiosk:nav", args=["settings"]))
         self.assertEqual(self._mode(self._poll(60)), "settings")

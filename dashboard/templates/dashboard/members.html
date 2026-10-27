@@ -25,6 +25,7 @@
             <div class="list-row-text">
                 <span class="list-row-title">{{ member.nickname|default:"-" }}
                     {% if member.is_departed %}<span class="badge off" title="{% blocktranslate with date=member.departed_at|date:'d.m.Y' %}Departed {{ date }}{% endblocktranslate %}">{% translate "Departed" %}</span>{% endif %}
+                    {% if member.name_issue %}<span class="badge off" title="{{ member.name_issue }}">{% translate "New name at next coffee" %}</span>{% endif %}
                 </span>
                 <span class="list-row-meta">
                     {% translate "UID" %} {{ member.uid|unlocalize }}{% for card in member.alt_cards.all %}{% if forloop.first %} &middot; {% translate "Alt cards" %}{% endif %} {{ card.uid|unlocalize }}{% if not forloop.last %},{% endif %}{% endfor %}
@@ -70,4 +71,17 @@
         {% endfor %}
     </div>
 </div>
+{% if user.is_superuser %}
+<div class="card">
+    <h2>{% translate "Names" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}Members go by their first name and the first letter of their last name, like
+    "Anna B.", or by a short code of two to four capitals, like "AB" - whoever's name doesn't fit is asked
+    for one at the kiosk before their next coffee.{% endblocktranslate %}</p>
+    <form method="post" action="{% url 'dashboard:member_name_rules' %}">
+        {% csrf_token %}
+        {{ name_policy_form.as_div }}
+        <button type="submit" class="success">{% translate "Save" %}</button>
+    </form>
+</div>
+{% endif %}
 {% endblock %}

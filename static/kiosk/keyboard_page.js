@@ -5,11 +5,12 @@
 (function () {
   "use strict";
 
+  // Umlauts, ß, "-" and "." for names like "Jürgen-Hans Ö." (coffee/names.py).
   const TEXT_ROWS = [
     ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
-    ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
-    ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-    ["z", "x", "c", "v", "b", "n", "m"],
+    ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "ü"],
+    ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ö", "ä"],
+    ["z", "x", "c", "v", "b", "n", "m", "ß", "-", "."],
   ];
   const NUMERIC_ROWS = [
     ["1", "2", "3"],
@@ -61,8 +62,10 @@
       const rowEl = document.createElement("div");
       rowEl.className = "osk-row";
       row.forEach((key) => {
-        const label = !numeric && shift ? key.toUpperCase() : key;
-        rowEl.appendChild(makeKey(label, () => insertText(shift ? key.toUpperCase() : key)));
+        // "ß".toUpperCase() is "SS" - that one stays as it is.
+        const upper = key.toUpperCase().length === 1 ? key.toUpperCase() : key;
+        const label = !numeric && shift ? upper : key;
+        rowEl.appendChild(makeKey(label, () => insertText(shift ? upper : key)));
       });
       keyboardEl.appendChild(rowEl);
     });
@@ -89,4 +92,6 @@
   render();
   input.focus();
   if (numeric) input.select();
+  // A suggested name ("Anna ") is meant to be added to, not typed in front of.
+  else input.setSelectionRange(input.value.length, input.value.length);
 })();

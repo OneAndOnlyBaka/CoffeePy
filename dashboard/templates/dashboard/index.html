@@ -67,6 +67,16 @@
             {% if user.is_superuser %}<a href="{% url 'dashboard:system_time' %}" class="btn secondary btn-sm">{% translate "System time" %}</a>{% endif %}
         </div>
         {% endif %}
+        {% if clock_corrected %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "Time" %}</span>
+                <span class="list-row-meta">{% include "dashboard/_clock_corrected.html" %}</span>
+            </div>
+            <span class="badge off">● {% translate "corrected" %}</span>
+            {% if user.is_superuser %}<a href="{% url 'dashboard:system_time' %}" class="btn secondary btn-sm">{% translate "System time" %}</a>{% endif %}
+        </div>
+        {% endif %}
         <div class="list-row">
             <div class="list-row-text">
                 <span class="list-row-title">{% translate "Address on the network" %}</span>

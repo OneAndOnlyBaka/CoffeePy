@@ -36,7 +36,7 @@ class QrCodeHostTestCase(TestCase):
         self.assertFalse(any("localhost" in u for u in urls))
 
     def test_link_phone_popup_uses_public_host(self):
-        Member.objects.create(uid=42, nickname="Alice", favourite_coffee=self.espresso)
+        Member.objects.create(uid=42, nickname="Alice X.", favourite_coffee=self.espresso)
         NfcScan.objects.create(uid="2A", event=NfcScan.EVENT_INSERTED)  # uid_as_int() -> 42
         self.client.get(reverse("kiosk:nav", args=["settings"]))
         self.client.get(reverse("kiosk:panel"))  # logs in

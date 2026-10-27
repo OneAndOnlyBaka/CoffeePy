@@ -15,7 +15,7 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext as _, gettext_lazy, gettext_noop
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import backups, rtc, services
+from coffee import backups, clock, names, rtc, services
 from coffee.models import (
     AltUidCapture,
     CASH_METHOD_NAME,
@@ -63,12 +63,12 @@ THANK_YOU_TIERS = [
 WEEK_CUPS_GIF_THRESHOLD = 100
 WEEK_CUPS_GIF = "thankyou_week100.gif"
 WEEK_CUPS_MESSAGE = gettext_noop("100+ cups this week?! Maybe take a break...")
-# Nags members who are still just a card number (Member.has_placeholder_name) every time
-# they order, so the ranking and the pillory stop being a list of numbers. Takes priority
-# over both the daily tier and the weekly one - it's the only tier that the member can
-# actually do something about, and it stops as soon as they do.
+# For a member whose name doesn't pass coffee/names.py. Rare now that the kiosk asks for a
+# proper name before the order (_handle_new_scan) - left for an admin renaming someone to
+# something the rules refuse mid-session. Takes priority over both the daily tier and the
+# weekly one - it's the only tier that the member can actually do something about.
 NO_NICKNAME_GIF = "thankyou_no_nickname.gif"
-NO_NICKNAME_MESSAGE = gettext_noop("Who are you?! Set a nickname under Settings.")
+NO_NICKNAME_MESSAGE = gettext_noop("Who are you?! Set your name under Settings.")
 
 
 # What the "back in a moment" screen (static/kiosk/maintenance.js) says for each step that
@@ -136,8 +136,29 @@ def nav(request, mode):
     return redirect("kiosk:index")
 
 
+# The kiosk's sign of life for the host's watchdog (install/kiosk_watchdog.sh): a browser
+# that froze, or sits on a page that never loaded its scripts, stops polling - which nothing
+# else notices. A file's mtime, touched at most this often per worker: the poll comes twice a
+# second, and the SD card should not hear about every one of them.
+HEARTBEAT_SECONDS = 30
+_heartbeat_at = 0.0
+
+
+def _heartbeat():
+    global _heartbeat_at
+    now = time.monotonic()
+    if now - _heartbeat_at < HEARTBEAT_SECONDS:
+        return
+    _heartbeat_at = now
+    try:
+        (settings.STORAGE_DIR / "kiosk-heartbeat").touch()
+    except OSError:
+        pass  # a development checkout without data/storage
+
+
 @require_GET
 def panel(request):
+    _heartbeat()
     return _render_panel(request)
 
 
@@ -185,8 +206,16 @@ def order_cancel(request):
 def settings_save(request):
     if request.session.get("logged_in") and request.session.get("mode") == MODE_SETTINGS:
         uid = request.session["uid"]
-        nickname = (request.POST.get("nickname") or str(uid)).strip()
+        # No falling back to the card's uid any more: that is how the legacy device ended up
+        # with a third of its members listed as numbers (coffee/names.py).
+        nickname = names.normalize(request.POST.get("nickname", ""))
         favourite_id = request.POST.get("favourite_coffee_id") or None
+        problem = names.problem(nickname, member=Member.objects.filter(uid=uid).first())
+        if problem:
+            request.session["pending_nickname"] = nickname
+            request.session["name_error"] = problem
+            request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
+            return _render_panel(request)
         member, created = Member.objects.update_or_create(
             uid=uid,
             defaults={
@@ -196,7 +225,11 @@ def settings_save(request):
         )
         audit.log(request, "member.create" if created else "member.update", target=audit.member_actor(member),
                   actor=audit.member_actor(member), details="own settings at the kiosk")
+        then_order = request.session.get("then_order")
         _reset_session_state(request)
+        if then_order:
+            # They came to order and were asked for their name first: on to the order.
+            _start_session(request, MODE_ORDER, member.uid)
     return _render_panel(request)
 
 
@@ -249,6 +282,7 @@ def keyboard_edit(request):
     request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
     if request.method == "POST":
         request.session[session_key] = request.POST.get("value", "")
+        request.session.pop("name_error", None)  # a new try: judged when it is saved
         return redirect("kiosk:index")
 
     return render(
@@ -265,7 +299,7 @@ def _reset_session_state(request):
     request.session["logged_in"] = False
     for key in (
         "uid", "deadline", "order_coffee_id", "order_auto_checkout", "is_new_user",
-        "pending_nickname", "pending_amount",
+        "pending_nickname", "pending_amount", "name_error", "then_order",
     ):
         request.session.pop(key, None)
     _touched(request)
@@ -361,7 +395,7 @@ def _start_thank_you(request, uid):
     scan-handling that already runs on every poll while logged out - see
     _render_panel)."""
     member = Member.objects.filter(uid=uid).first()
-    if member is None or member.has_placeholder_name:
+    if member is None or member.name_problem is not None:
         gif, message = NO_NICKNAME_GIF, NO_NICKNAME_MESSAGE
     elif services.week_cups(member) > WEEK_CUPS_GIF_THRESHOLD:
         gif, message = WEEK_CUPS_GIF, WEEK_CUPS_MESSAGE
@@ -424,6 +458,7 @@ def _render_panel(request):
     if ctx["state"] in ("wait_for_card", "ranking"):  # the screens with the corner buttons
         ctx["backup_disturbed"] = backups.health()["disturbed"]
         ctx["rtc_disturbed"] = rtc.health()["disturbed"]
+        ctx["clock_corrected"] = clock.corrected() is not None
 
     return render(request, "kiosk/panel.html", ctx)
 
@@ -577,11 +612,21 @@ def _handle_new_scan(request, mode, scan, ctx):
     # card's own uid here would silently 404 the member on every render after this one.
     session_uid = member.uid if member is not None else uid
 
+    if member is not None and member.name_problem is not None and (fixed := names.fixable(member)):
+        # Only the form was off ("Anna B" without the full stop): taken as it is, no question.
+        member.nickname = fixed
+        member.save(update_fields=["nickname"])
+        audit.log(request, "member.update", target=audit.member_actor(member), actor=audit.member_actor(member),
+                  details="name put into the usual form at the kiosk")
+
     if mode in (MODE_ORDER, MODE_RANKING):
-        if member is not None:
+        if member is not None and member.name_problem is None:
             _start_session(request, MODE_ORDER, session_uid)
         else:
-            _start_session(request, MODE_SETTINGS, session_uid, is_new_user=True)
+            # A new card, or a member without a usable name (coffee/names.py): the name
+            # first, then the order (settings_save).
+            _start_session(request, MODE_SETTINGS, session_uid, is_new_user=member is None)
+            request.session["then_order"] = True
     elif mode == MODE_SETTINGS:
         _start_session(request, MODE_SETTINGS, session_uid, is_new_user=member is None)
     elif mode == MODE_INFO:
@@ -693,11 +738,20 @@ def _order_context(request, uid, seconds_left):
 def _settings_context(request, uid, seconds_left):
     member = Member.objects.filter(uid=uid).first()
     pending = request.session.get("pending_nickname")
-    nickname = pending if pending is not None else (member.nickname if member else "")
+    if pending is not None:
+        nickname = pending
+    elif member is not None and member.name_problem is not None:
+        # A start from the old name, so a bare "Anna" only needs her initial (coffee/names.py).
+        nickname = names.suggestion(member.nickname)
+    else:
+        nickname = member.nickname if member else ""
     return {
         "state": "settings",
         "uid": uid,
         "is_new_user": request.session.get("is_new_user", False),
+        # Came to order, but the name has to be sorted out first.
+        "name_required": bool(request.session.get("then_order")) and member is not None,
+        "name_error": names.message(request.session.get("name_error")),
         "nickname": nickname,
         "favourite_coffee_id": member.favourite_coffee_id if member else None,
         "coffee_sorts": list(CoffeeSort.objects.all()),

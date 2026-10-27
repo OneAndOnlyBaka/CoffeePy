@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 16:52+0100\n"
+"POT-Creation-Date: 2026-10-27 19:09+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -55,6 +55,32 @@ msgstr "Eigener Link"
 #, python-format
 msgid "Send %(amount)s€ via WERO to %(identifier)s"
 msgstr "Sende %(amount)s€ per WERO an %(identifier)s"
+
+msgid "Please enter your name."
+msgstr "Bitte gib deinen Namen ein."
+
+msgid ""
+"Your first name and the first letter of your last name, like \"Anna B.\" - "
+"or your short code, like \"AB\"."
+msgstr ""
+"Dein Vorname und der erste Buchstabe deines Nachnamens, z. B. „Anna B.“ – "
+"oder dein Kürzel, z. B. „AB“."
+
+msgid "At most 20 characters."
+msgstr "Höchstens 20 Zeichen."
+
+msgid ""
+"That doesn't look like a first name - use your real one, like \"Anna B.\""
+msgstr ""
+"Das sieht nicht nach einem Vornamen aus – nimm deinen echten, z. B. „Anna B."
+"“"
+
+msgid ""
+"Somebody already goes by that name - add a letter of your last name, like "
+"\"Anna Be.\""
+msgstr ""
+"Den Namen trägt schon jemand – nimm einen Buchstaben deines Nachnamens dazu, "
+"z. B. „Anna Be.“"
 
 msgid "Only admins may open that page."
 msgstr "Diese Seite dürfen nur Admins öffnen."
@@ -118,9 +144,6 @@ msgstr ""
 
 msgid "Uid"
 msgstr "UID"
-
-msgid "Nickname"
-msgstr "Spitzname"
 
 msgid "Favourite coffee"
 msgstr "Lieblingskaffee"
@@ -273,6 +296,16 @@ msgstr "Zur Bestätigung DELETE eingeben"
 
 msgid "Type DELETE to confirm - nothing was changed."
 msgstr "Zur Bestätigung DELETE eingeben – es wurde nichts geändert."
+
+msgid "Blocked first names"
+msgstr "Gesperrte Vornamen"
+
+msgid ""
+"One per line - on top of the usual placeholders (test, name, user, ...), "
+"which are always refused."
+msgstr ""
+"Einer pro Zeile – zusätzlich zu den üblichen Platzhaltern (test, name, user, "
+"…), die immer abgelehnt werden."
 
 msgid "Starting"
 msgstr "Start"
@@ -433,6 +466,22 @@ msgstr "Herunterladen"
 
 msgid "No backups on it yet."
 msgstr "Noch keine Backups darauf."
+
+#, python-format
+msgid ""
+"The clock went back to %(was)s and was put forward to %(now)s. Check the "
+"time, then set or confirm it."
+msgstr ""
+"Die Uhr ist auf %(was)s zurückgesprungen und wurde auf %(now)s vorgestellt. "
+"Prüfe die Uhrzeit und stelle oder bestätige sie."
+
+#, python-format
+msgid ""
+"The clock stood at %(was)s, before the newest bookings, and was put forward "
+"to %(now)s. Check the time, then set or confirm it."
+msgstr ""
+"Die Uhr stand auf %(was)s, vor den neuesten Buchungen, und wurde auf %(now)s "
+"vorgestellt. Prüfe die Uhrzeit und stelle oder bestätige sie."
 
 msgid "My account"
 msgstr "Mein Konto"
@@ -998,18 +1047,25 @@ msgstr "Hält die Uhrzeit, solange der Strom aus ist."
 msgid ""
 "Not found - check that the module is plugged in. After a power cut the clock "
 "is wrong until someone sets it."
-msgstr "Nicht gefunden - prüfe, ob das Modul aufgesteckt ist. Nach einem Stromausfall geht die Uhr falsch, bis jemand sie stellt."
+msgstr ""
+"Nicht gefunden - prüfe, ob das Modul aufgesteckt ist. Nach einem "
+"Stromausfall geht die Uhr falsch, bis jemand sie stellt."
 
 msgid ""
 "Does not answer - the module or its connection is faulty. After a power cut "
 "the clock is wrong until someone sets it."
-msgstr "Antwortet nicht - das Modul oder seine Verbindung ist defekt. Nach einem Stromausfall geht die Uhr falsch, bis jemand sie stellt."
+msgstr ""
+"Antwortet nicht - das Modul oder seine Verbindung ist defekt. Nach einem "
+"Stromausfall geht die Uhr falsch, bis jemand sie stellt."
 
 msgid ""
 "Had lost the time - most likely its battery (CR2032) is flat. Check the "
 "system time and replace the battery; the warning goes once the module kept "
 "the time through a restart."
-msgstr "Hatte die Uhrzeit verloren - wahrscheinlich ist seine Batterie (CR2032) leer. Prüfe die Systemzeit und tausche die Batterie; die Warnung verschwindet, sobald das Modul die Zeit über einen Neustart gehalten hat."
+msgstr ""
+"Hatte die Uhrzeit verloren - wahrscheinlich ist seine Batterie (CR2032) "
+"leer. Prüfe die Systemzeit und tausche die Batterie; die Warnung "
+"verschwindet, sobald das Modul die Zeit über einen Neustart gehalten hat."
 
 msgid "OK"
 msgstr "OK"
@@ -1019,6 +1075,12 @@ msgstr "defekt"
 
 msgid "System time"
 msgstr "Systemzeit"
+
+msgid "Time"
+msgstr "Uhrzeit"
+
+msgid "corrected"
+msgstr "korrigiert"
 
 msgid "Address on the network"
 msgstr "Adresse im Netzwerk"
@@ -1038,11 +1100,11 @@ msgstr "Alle Zahlungen (CSV)"
 msgid "CoffeePy Dashboard - Login"
 msgstr "CoffeePy-Dashboard - Anmeldung"
 
-msgid "Invalid username or password."
-msgstr "Benutzername oder Passwort ungültig."
-
 msgid "Log in"
 msgstr "Anmelden"
+
+msgid "Invalid username or password."
+msgstr "Benutzername oder Passwort ungültig."
 
 #, python-format
 msgid ""
@@ -1222,6 +1284,9 @@ msgstr "Ausgeschieden %(date)s"
 msgid "Departed"
 msgstr "Ausgeschieden"
 
+msgid "New name at next coffee"
+msgstr "Neuer Name beim nächsten Kaffee"
+
 msgid "UID"
 msgstr "UID"
 
@@ -1247,6 +1312,20 @@ msgstr "Als ausgeschieden markieren"
 
 msgid "No members yet."
 msgstr "Noch keine Mitglieder."
+
+msgid "Names"
+msgstr "Namen"
+
+msgid ""
+"Members go by their first name and the first letter of their last name, like "
+"\"Anna B.\", or by a short code of two to four capitals, like \"AB\" - "
+"whoever's name doesn't fit is asked for one at the kiosk before their next "
+"coffee."
+msgstr ""
+"Mitglieder heißen mit Vornamen und dem ersten Buchstaben des Nachnamens, z. "
+"B. „Anna B.“, oder mit einem Kürzel aus zwei bis vier Großbuchstaben, z. "
+"B. „AB“ – wessen Name nicht passt, wird am Kiosk vor dem nächsten Kaffee "
+"nach einem gefragt."
 
 msgid "Login & passwords"
 msgstr "Anmeldung & Passwörter"
@@ -1419,6 +1498,9 @@ msgstr ""
 "Nur als Notlösung nötig, wenn das RTC-Modul abweicht oder fehlt - "
 "normalerweise hält das Installationsskript die Uhr über das DS3231-RTC-"
 "Overlay richtig."
+
+msgid "The time is right"
+msgstr "Die Uhrzeit stimmt"
 
 msgid "Current server time:"
 msgstr "Aktuelle Serverzeit:"
@@ -1791,6 +1873,9 @@ msgstr "Backups laufen nicht – siehe Dashboard"
 msgid "The clock module (RTC) is faulty - see the dashboard"
 msgstr "Das Uhrenmodul (RTC) ist defekt – siehe Dashboard"
 
+msgid "The clock was wrong and has been put forward - see the dashboard"
+msgstr "Die Uhr ging falsch und wurde vorgestellt – siehe Dashboard"
+
 msgid "Link your phone"
 msgstr "Handy verknüpfen"
 
@@ -1902,8 +1987,8 @@ msgstr ""
 msgid "You are logged out after %(seconds)s seconds."
 msgstr "Nach %(seconds)s Sekunden wirst du abgemeldet."
 
-msgid "Change your nickname and your favourite coffee."
-msgstr "Ändere deinen Spitznamen und deinen Lieblingskaffee."
+msgid "Change your name and your favourite coffee."
+msgstr "Ändere deinen Namen und deinen Lieblingskaffee."
 
 msgid "Link your phone to see your stats and pay from there."
 msgstr ""
@@ -1924,10 +2009,9 @@ msgstr ""
 "Tippe auf <strong>Jetzt bestellen</strong>, sonst wird nach %(seconds)s "
 "Sekunden gebucht."
 
-msgid "A card the kiosk doesn't know yet asks for your nickname first."
+msgid "A card the kiosk doesn't know yet asks for your name first."
 msgstr ""
-"Eine Karte, die der Kiosk noch nicht kennt, fragt zuerst nach deinem "
-"Spitznamen."
+"Eine Karte, die der Kiosk noch nicht kennt, fragt zuerst nach deinem Namen."
 
 #, python-format
 msgid "Assigning card to account %(name)s"
@@ -1994,9 +2078,24 @@ msgstr "Jetzt bestellen"
 msgid "Welcome, new card!"
 msgstr "Willkommen, neue Karte!"
 
+msgid "Who are you?"
+msgstr "Wer bist du?"
+
+msgid "Before your coffee: the ranking needs a name your colleagues recognise."
+msgstr ""
+"Vor dem Kaffee: Die Rangliste braucht einen Namen, an dem dich deine "
+"Kolleg:innen erkennen."
+
 #, python-format
 msgid "Card UID: %(uid)s"
 msgstr "Karten-UID: %(uid)s"
+
+msgid ""
+"First name and the first letter of your last name, like \"Anna B.\" - or "
+"your short code, like \"AB\""
+msgstr ""
+"Vorname und erster Buchstabe des Nachnamens, z. B. „Anna B.“ – oder dein "
+"Kürzel, z. B. „AB“"
 
 msgid "Link this phone"
 msgstr "Dieses Handy verknüpfen"
@@ -2059,8 +2158,8 @@ msgstr "Heute zertifizierter Koffein-Junkie!"
 msgid "100+ cups this week?! Maybe take a break..."
 msgstr "Über 100 Tassen diese Woche?! Vielleicht mal eine Pause..."
 
-msgid "Who are you?! Set a nickname under Settings."
-msgstr "Wer bist du?! Leg unter Einstellungen einen Spitznamen fest."
+msgid "Who are you?! Set your name under Settings."
+msgstr "Wer bist du?! Leg unter Einstellungen deinen Namen fest."
 
 msgid "Getting started"
 msgstr "Es geht los"
@@ -2294,3 +2393,6 @@ msgstr "Welcher Kaffee"
 msgid "CoffeePy is being updated. This page comes back on its own."
 msgstr ""
 "CoffeePy wird gerade aktualisiert. Diese Seite kommt von selbst wieder."
+
+#~ msgid "Nickname"
+#~ msgstr "Spitzname"

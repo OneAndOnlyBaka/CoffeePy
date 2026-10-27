@@ -56,17 +56,17 @@ class AuditLogTestCase(TestCase):
 
     def test_member_crud_and_merge_is_logged(self):
         self.client.post(
-            reverse("dashboard:member_add"), {"uid": "1", "nickname": "Alice", "favourite_coffee": ""}
+            reverse("dashboard:member_add"), {"uid": "1", "nickname": "Alice X.", "favourite_coffee": ""}
         )
         self.assertTrue(AuditLogEntry.objects.filter(action="member.create").exists())
 
-        Member.objects.create(uid=2, nickname="Bob")
+        Member.objects.create(uid=2, nickname="Bob X.")
         self.client.post(
             reverse("dashboard:member_merge_confirm", args=[1, 2]),
         )
         self.assertTrue(AuditLogEntry.objects.filter(action="member.merge").exists())
 
     def test_member_delete_is_logged(self):
-        Member.objects.create(uid=5, nickname="Carol")
+        Member.objects.create(uid=5, nickname="Carol X.")
         self.client.post(reverse("dashboard:member_delete", args=[5]))
-        self.assertTrue(AuditLogEntry.objects.filter(action="member.delete", target="Carol (uid 5)").exists())
+        self.assertTrue(AuditLogEntry.objects.filter(action="member.delete", target="Carol X. (uid 5)").exists())

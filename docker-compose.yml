@@ -126,9 +126,10 @@ services:
           # First round a minute in: at boot this would otherwise start its Django processes
           # alongside everybody else's, and nothing here is urgent (migrate did the TLS check).
           sleep 60
-          # Every minute: backs up when the interval set in the dashboard is over, and only
-          # when this device's backup stick is plugged in (coffee/backups.py).
-          python manage.py backup_db --if-due || true
+          # Every minute: puts a clock that went back forward again (coffee/clock.py), then
+          # backs up when the interval set in the dashboard is over, and only when this
+          # device's backup stick is plugged in (coffee/backups.py).
+          python manage.py tick || true
           if [ $$((n % 60)) -eq 0 ]; then
             # The host's events into the audit log, and entries past AUDIT_RETENTION_DAYS out.
             python manage.py audit_housekeeping || true
@@ -142,6 +143,9 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    # The clock check sets the host's clock when it went back (coffee/clock.py).
+    cap_add:
+      - SYS_TIME
     env_file: .env
     environment:
       TLS_DIR: /tls

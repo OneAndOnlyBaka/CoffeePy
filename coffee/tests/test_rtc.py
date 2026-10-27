@@ -99,7 +99,7 @@ class RtcSyncScriptTestCase(SimpleTestCase):
         self.storage = self.root / "storage"
         self.env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "FAKE_RTC": str(self.rtc),
                     "FAKE_LOG": str(self.root / "calls"), "COFFEEPY_STORAGE_DIR": str(self.storage),
-                    "RTC_DEVICE": str(self.device), "BOOT_ID": "boot-1"}
+                    "RTC_DEVICE": str(self.device), "BOOT_ID": "boot-1", "NTP_SYNCED": "no"}
 
     def run_check(self, rtc_time=None, **env):
         if rtc_time is not None:
@@ -129,6 +129,11 @@ class RtcSyncScriptTestCase(SimpleTestCase):
     def test_a_corrected_system_clock_is_written_back(self):
         self.assertEqual(self.run_check(self.now(-3600))["state"], "ok")
         self.assertEqual(self.systohc_calls(), 1)
+
+    def test_it_says_whether_ntp_set_the_clock(self):
+        # coffee/clock.py leaves an NTP-set clock alone.
+        self.assertEqual(self.run_check(self.now())["ntp"], "no")
+        self.assertEqual(self.run_check(NTP_SYNCED="yes")["ntp"], "yes")
 
     def test_no_rtc(self):
         self.device.unlink()

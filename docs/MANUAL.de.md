@@ -207,9 +207,40 @@ keine angelegt ist, zeigt er *Einrichtung nötig* mit QR-Codes zu WLAN und Dashb
 2. Optional **Zahlungsmethoden** anlegen (PayPal, PayPal Pool, WERO oder ein eigener Link).
    Bar geht immer.
 3. **Mitglieder** musst du nicht anlegen: Eine unbekannte Karte führt am Kiosk automatisch
-   zur Anmeldung mit Spitznamen.
+   zur Anmeldung mit Namen (siehe [Einstellungen](#einstellungen)).
 4. Einen **USB-Stick** einstecken und unter **Backup** einrichten – ab dann sichert sich das
    Gerät selbst (siehe [Backups](#backups)).
+
+### Umstieg von Version 1
+
+Ersetzt CoffeePy ein Gerät mit der alten Version 1, übernimmst du dessen Daten einmal – am
+besten am Ende eines Tages, an dem nicht mehr gebucht wird:
+
+1. **Die Datenbank vom laufenden Gerät nehmen, nicht von einer Kopie.** Das alte Gerät
+   ausschalten, nachdem die letzte Buchung gemacht ist. Die Daten liegen auf seiner SD-Karte
+   in `/home/<Benutzer>/CoffeePy/coffee.db`; ein Linux-Rechner liest die Karte direkt, oder
+   du holst die Datei vorher per SSH. Eine ältere Kopie oder ein Backup vom alten Stick ist
+   nur ein Notbehelf: Was danach gebucht wurde, fehlt sonst.
+2. Im Dashboard unter **Alte Datenbank importieren** die Datei hochladen und **Vorhandene
+   Mitglieder, Karten, … zuerst löschen** ankreuzen – sonst landen Probebuchungen und ein
+   zweiter Import doppelt im Bestand.
+3. Unter **Buchungen** die neuesten Einträge ansehen: Stimmen sie mit dem letzten Tag am
+   alten Gerät überein, ist alles da.
+4. **Uhrzeit prüfen** (Dashboard → **Systemzeit**). Das Uhrenmodul kommt meist mit
+   herüber, und mit ihm die Uhrzeit des alten Geräts – die nach langem Betrieb ohne Netz
+   falsch sein kann.
+5. **Handys neu verbinden:** Das WLAN hat einen neuen Namen und ein neues Passwort, und jedes
+   Handy braucht das [Zertifikat](#das-zertifikat-installieren).
+6. **Neue Namen ankündigen:** Wer nicht schon „Vorname X.“ oder ein Kürzel wie „AB“ als Namen
+   hat – bei der Version 1 fast niemand –, wird beim ersten Kaffee am neuen Gerät nach einem
+   Namen gefragt (siehe
+   [Einstellungen](#einstellungen)). Das dauert am Touchscreen eine halbe Minute; ein Hinweis
+   vorab erspart Verwunderung in der Schlange.
+7. Einen **Backup-Stick** einrichten (siehe [Backups](#backups)). Der Stick des alten Geräts
+   wird dabei gelöscht – willst du seine Backups behalten, nimm einen neuen.
+
+Die SD-Karte des alten Geräts aufzuheben, bis die ersten Wochen gut gelaufen sind, kostet
+nichts.
 
 ---
 
@@ -223,7 +254,7 @@ erscheint, wenn am Gerät etwas zu tun ist:
 | Zeichen | Bedeutung |
 |---|---|
 | Rot, Datenbank-Symbol | **Backups laufen nicht** – der Backup-Stick fehlt, oder das letzte Backup ist fehlgeschlagen. Details im Dashboard unter **Backup**. |
-| Rot, Uhr-Symbol | **Das Uhrenmodul (RTC) ist defekt** – es fehlt, antwortet nicht, oder seine Batterie ist leer. Details auf der **Übersicht** im Dashboard. |
+| Rot, Uhr-Symbol | **Das Uhrenmodul (RTC) ist defekt** – es fehlt, antwortet nicht, oder seine Batterie ist leer –, oder **die Uhr ging falsch und wurde vorgestellt**. Details auf der **Übersicht** im Dashboard. |
 
 ![Warnzeichen am Kiosk](pictures/manual/de/kiosk-device-alarm.png)
 
@@ -268,8 +299,19 @@ eingerichtet, kannst du den offenen Betrag auch direkt per QR-Code mit dem Handy
 
 ![Einstellungen – Karte auflegen](pictures/manual/de/kiosk-wait-settings.png)
 
-Hier änderst du **Spitznamen** und **Lieblingskaffee** und tippst **Speichern**. Getippt wird
-direkt oder über **Tastatur** mit der Bildschirmtastatur.
+Hier änderst du **Namen** und **Lieblingskaffee** und tippst **Speichern**. Getippt wird
+direkt oder über **Tastatur** mit der Bildschirmtastatur – sie hat auch Umlaute, ß, Bindestrich
+und Punkt.
+
+Der Name ist **Vorname und erster Buchstabe des Nachnamens**, z. B. *Anna B.*, oder ein
+**Kürzel** aus zwei bis vier Großbuchstaben, z. B. *AB* – so wissen alle, wer in der Rangliste und
+am Pranger steht. Großschreibung und Punkt ergänzt der Kiosk selbst (*anna b* wird *Anna B.*). Abgelehnt werden Platzhalter (*Test*, *Name*, *Kaffee* …),
+Tastatur-Gehämmer (*Asdf*) und ein Name, den schon jemand trägt – dann hilft ein zweiter
+Buchstabe: *Anna Be.* Wessen Name nicht passt – auch wer noch seine Kartennummer als Namen hat –,
+wird beim nächsten Kaffee **zuerst nach dem Namen gefragt** (*Wer bist du?*) und bestellt erst
+danach; nach dem Speichern geht es direkt zur Bestellung. Im Feld steht dann schon, was sich aus
+dem alten Namen machen lässt – aus *Anna* wird *Anna*␣, es fehlt nur der Buchstabe. Fehlt einem
+Namen nur die Form (*Anna B* ohne Punkt), korrigiert der Kiosk ihn ohne Nachfrage.
 
 ![Einstellungen](pictures/manual/de/kiosk-settings.png)
 
@@ -441,7 +483,10 @@ Liste wie am Kiosk.
 
 Die Liste aller Mitglieder mit ihren Karten. Pro Mitglied:
 
-- **Bearbeiten**: Spitzname, UID, Lieblingskaffee.
+- **Bearbeiten**: Name, UID, Lieblingskaffee. Für den Namen gelten dieselben Regeln wie am Kiosk
+  (siehe [Einstellungen](#einstellungen)).
+- *Neuer Name beim nächsten Kaffee*: Dieser Name passt nicht zu den Regeln – der Kiosk fragt
+  das Mitglied beim nächsten Kaffee nach einem neuen.
 - **Karte hinzufügen**: Die nächste Karte, die am Kiosk aufgelegt wird, gehört danach zu diesem
   Mitglied – so bekommt jemand eine Ersatzkarte, ohne dass ein zweites Konto entsteht.
 - **Geräte abmelden**: meldet alle verknüpften Handys ab.
@@ -456,6 +501,11 @@ Die Liste aller Mitglieder mit ihren Karten. Pro Mitglied:
 Zahlungen und Karten wandern auf das Konto, das du behältst, das andere wird gelöscht.
 
 ![Mitglieder zusammenführen](pictures/manual/de/dashboard-merge.png)
+
+Unter **Namen** (nur für Admins) trägst du **gesperrte Vornamen** (oder Kürzel) ein, einen pro Zeile –
+zusätzlich zu den üblichen Platzhaltern, die immer abgelehnt werden. Gedacht für das, worauf
+nur jemand aus dem Team kommt (*Chef*, der Name der Kaffeemaschine …). Wer einen davon schon
+trägt, wird beim nächsten Kaffee nach einem neuen Namen gefragt.
 
 ### Buchungen
 
@@ -529,6 +579,15 @@ einem neuen gefragt.
 
 **Systemzeit**: nur nötig, wenn das Uhrenmodul fehlt oder falsch geht. Die neue Zeit wird
 innerhalb von zehn Minuten auch in das Uhrenmodul geschrieben.
+
+Ohne Netz gibt es niemanden, der die Uhr richtig stellt – deshalb passt das Gerät selbst
+auf, dass sie nicht **zurück** geht: Springt sie zurück, oder steht sie vor den neuesten
+Einträgen im Protokoll (jede Buchung schreibt einen), stellt es sie wieder vor und zeigt das
+rote Uhr-Zeichen am Kiosk. Auf der Übersicht steht dann, von wann auf wann. Prüfe die Zeit
+und stelle sie hier, oder bestätige sie mit **Die Uhrzeit stimmt** – dann verschwindet das
+Zeichen. Zurückgestellt wird sie nie: Eine Uhr, die vorgeht, lässt sich von einer richtigen
+nicht unterscheiden. Hat das Gerät Internet, stellt es die Uhr ohnehin selbst, und diese
+Prüfung hält sich heraus.
 
 ![Systemzeit](pictures/manual/de/dashboard-system-time.png)
 
@@ -699,6 +758,19 @@ jedes Paket ein – signiert, mit einem anderen Schlüssel signiert oder gar nic
 Mach das nur, wenn sich niemand, dem du nicht traust, als Admin am Dashboard anmelden kann: Wer
 ein Update hochladen darf, kann dann alles auf dem Gerät ausführen.
 
+### Wenn der Kiosk hängt
+
+Das Gerät sieht jede Minute nach, ob die App antwortet und ob der Browser am Kiosk noch nach
+neuen Karten fragt. Hängt etwas, startet es selbst neu, Schritt für Schritt: erst den
+Kiosk-Bildschirm, hilft das nicht, die App. Antwortet die App drei Minuten lang nicht, startet
+sie gleich neu. Das dauert jeweils eine bis zwei Minuten und steht als
+*watchdog.kiosk_restart* / *watchdog.stack_restart* im **Protokoll**.
+
+Während eines Updates, einer Wiederherstellung oder eines Imports und in den ersten Minuten
+nach dem Einschalten greift es nicht ein, und nach drei Neustarts in einer Stunde gibt es auf
+(*watchdog.gave_up*): Dann hilft ein Neustart nicht, und es ist Zeit, ins Protokoll zu sehen.
+Den Stecker ziehen musst du also nur noch, wenn auch das nichts mehr bewirkt.
+
 ### Sprache
 
 Die Standardsprache legst du bei der Einrichtung fest. Jedes Gerät kann für sich umschalten:
@@ -715,9 +787,10 @@ der Kiosk mit dem **DE/EN**-Knopf, Handys und PCs oben rechts im Portal und im D
 | **Bad Request (400)** im Browser. | Das Gerät kennt die Adresse nicht, mit der du es aufrufst. Nimm die Adresse aus der Einrichtung (`192.168.4.1`, `coffeepy.local`) oder lass das Provisioning-Tool über die neue Adresse laufen – es trägt sie ein. |
 | Der Bildschirm ist nach dem Einschalten eine Minute lang schwarz, dann weiß. | Normal: Erst startet der Pi, dann der Browser. Nach etwa einer Minute erscheint der Kiosk. |
 | *Kartenleser nicht verfügbar* | Kabel des Lesers prüfen und das Gerät neu starten. |
+| Der Kiosk war kurz schwarz und startete neu. | Das Gerät hat einen hängenden Kiosk oder die App selbst neu gestartet (siehe [Wenn der Kiosk hängt](#wenn-der-kiosk-hängt)); das **Protokoll** sagt, was es war. Passiert das öfter, steht dort, wo es hakt. |
 | Eine Karte wird nicht erkannt. | Karte flach und ruhig auflegen; eine Karte, die als ausgeschieden markiert ist, wird abgewiesen. |
 | Rotes **Datenbank**-Zeichen am Kiosk | Backups laufen nicht: den Backup-Stick wieder einstecken, oder im Dashboard unter **Backup** nach dem Fehler sehen. |
-| Rotes **Uhr**-Zeichen am Kiosk, oder die Uhrzeit stimmt nicht | Die Zeile *Uhrenmodul (RTC)* auf der Übersicht sagt, warum. *Nicht gefunden* / *Antwortet nicht*: Modul und Verkabelung prüfen. *Hatte die Uhrzeit verloren*: Batterie (CR2032) tauschen, dann unter **Systemzeit** die Zeit korrigieren – das Zeichen verschwindet, sobald das Modul die Zeit über einen Neustart gehalten hat. |
+| Rotes **Uhr**-Zeichen am Kiosk, oder die Uhrzeit stimmt nicht | Steht auf der Übersicht eine Zeile *Uhrzeit – korrigiert*, ging die Uhr zurück und wurde vorgestellt: unter **Systemzeit** prüfen und stellen oder bestätigen. Sonst sagt die Zeile *Uhrenmodul (RTC)*, warum. *Nicht gefunden* / *Antwortet nicht*: Modul und Verkabelung prüfen. *Hatte die Uhrzeit verloren*: Batterie (CR2032) tauschen, dann unter **Systemzeit** die Zeit korrigieren – das Zeichen verschwindet, sobald das Modul die Zeit über einen Neustart gehalten hat. |
 | „Wir sind gleich wieder da“ geht nicht weg. | Läuft gerade ein Update oder eine Wiederherstellung? Den Fortschritt zeigt das Dashboard unter **Update** bzw. **Backup**. Ein Status, der älter als zwei Stunden ist, wird ignoriert; im Zweifel das Gerät neu starten. |
 | Anmeldung abgelehnt, obwohl das Passwort stimmt | Nach zu vielen Fehlversuchen ist das Konto eine Weile gesperrt (standardmäßig 15 Minuten) – abwarten, oder ein Admin setzt unter **Dashboard-Benutzer** ein neues Passwort. |
 | Ein Update wird abgelehnt | Die Update-Seite sagt, warum: keine oder eine falsche Signatur (siehe [Eigener Signierschlüssel](#eigener-signierschlüssel)), ein Paket für eine andere Plattform, zu wenig Platz oder eine ältere Version als die installierte. |

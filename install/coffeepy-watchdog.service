@@ -1,0 +1,6 @@
+[Unit]
+Description=Restart the kiosk session or the stack when they stopped working (install/kiosk_watchdog.sh)
+
+[Service]
+Type=oneshot
+ExecStart=/opt/coffeepy/install/kiosk_watchdog.sh

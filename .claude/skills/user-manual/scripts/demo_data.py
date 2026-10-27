@@ -24,6 +24,10 @@ from django.utils import timezone
 from coffee.models import CoffeeSort, Member, NfcScan, Order, Payment, PaymentMethod
 
 MEMBERS = ["Anna", "Ben", "Clara", "David", "Emma", "Felix"]
+# What they are called - in the form the kiosk insists on (coffee/names.py), or every demo
+# scan would end on its "Who are you?" screen instead of the one being captured.
+NAMES = {"Anna": "Anna B.", "Ben": "Ben K.", "Clara": "Clara M.", "David": "David S.", "Emma": "Emma W.",
+         "Felix": "Felix H."}
 # NfcScan hex is little-endian (NfcScan.uid_as_int): "C0FFEE01" is member 0x01EEFFC0.
 CARD_PREFIX = "C0FFEE"
 NEW_CARD = "C0FFEEFF"
@@ -47,7 +51,7 @@ def seed():
     sorts = [CoffeeSort.objects.get_or_create(name=n, defaults={"price": Decimal(p), "machine_strokes": s})[0]
              for n, p, s in SORTS]
     favourites = [sorts[0], sorts[1], sorts[0], sorts[2], sorts[1], sorts[0]]
-    members = [Member.objects.create(uid=uid(i), nickname=n, favourite_coffee=favourites[i])
+    members = [Member.objects.create(uid=uid(i), nickname=NAMES[n], favourite_coffee=favourites[i])
                for i, n in enumerate(MEMBERS)]
     thirst = [4, 3, 2, 2, 1, 1]  # cups on a busy day - Anna leads every ranking
     now = timezone.now()
@@ -67,9 +71,9 @@ def seed():
     for member in members:
         owed = sum(o.value for o in orders if o.member_id == member.uid)
         # Everyone paid up except David, who stopped paying three months ago (the pillory).
-        paid = owed if member.nickname != "David" else owed - Decimal("18.40")
+        paid = owed if member.nickname != NAMES["David"] else owed - Decimal("18.40")
         payments.append(Payment(member=member, value=paid.quantize(Decimal("0.01")),
-                                created_at=now - timedelta(days=95 if member.nickname == "David" else 3)))
+                                created_at=now - timedelta(days=95 if member.nickname == NAMES["David"] else 3)))
     Payment.objects.bulk_create(payments)
     PaymentMethod.objects.get_or_create(name=PAYPAL, defaults={"provider": PaymentMethod.PROVIDER_PAYPAL_ME,
                                                                "identifier": "coffeefund"})

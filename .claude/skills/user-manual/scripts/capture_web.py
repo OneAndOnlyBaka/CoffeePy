@@ -4,6 +4,7 @@ in /tmp. capture.sh drives it; run it by hand only for a subset:
 
     python3 -I capture_web.py de en                 everything, both languages
     python3 -I capture_web.py de --only kiosk       one area: kiosk | dashboard | portal
+    python3 -I capture_web.py de --only kiosk --shots kiosk-settings,kiosk-pay   just these
 
 Dashboard and portal can also be taken from the dev machine, in a local headless Chromium
 (capture.sh does that): CAPTURE_BASE is then the Pi's address, CDP_PORT that Chromium's debug
@@ -108,6 +109,8 @@ class Browser:
     def shot(self, name, settle=0.6, full=False):
         """full: the whole page, not only what fits the window - for pages whose point is
         further down (the update page's version list)."""
+        if not wanted(name):
+            return
         time.sleep(settle)
         if full:
             width = self.js("window.innerWidth")
@@ -122,18 +125,49 @@ class Browser:
         print(f"  {self.lang}/{name}.png")
 
 
+# The shots asked for (capture.sh --shots), or None for all of them. Every section below starts
+# from a nav tap, so one can be skipped without leaving the next in the wrong state.
+WANTED = None
+
+
+def wanted(*names):
+    return WANTED is None or any(name in WANTED for name in names)
+
+
 def kiosk(b):
     b.viewport()
     b.go("/kiosk/")
     for mode, name in (("order", "kiosk-wait-order"), ("info", "kiosk-wait-pay"), ("settings", "kiosk-wait-settings")):
+        if not wanted(name):
+            continue
         b.click(f"a.nav-btn[data-mode={mode}]")
         b.wait_state("wait_for_card")
         b.shot(name)
 
-    b.open_modal(".admin-btn")
-    b.shot("kiosk-setup-popup")
-    b.js("document.getElementById('qr-modal').classList.remove('open')")
+    if wanted("kiosk-setup-popup"):
+        b.open_modal(".admin-btn")
+        b.shot("kiosk-setup-popup")
+        b.js("document.getElementById('qr-modal').classList.remove('open')")
 
+    if wanted("kiosk-device-alarm"):
+        kiosk_device_alarm(b)
+    if wanted("kiosk-order", "kiosk-thank-you"):
+        kiosk_order(b)
+    if wanted("kiosk-pay"):
+        kiosk_pay(b)
+    if wanted("kiosk-settings", "kiosk-link-phone", "kiosk-keyboard"):
+        kiosk_settings(b)
+    if wanted("kiosk-new-card"):
+        kiosk_new_card(b)
+    if wanted("kiosk-ranking-alltime", "kiosk-ranking-month", "kiosk-ranking-pillory"):
+        kiosk_ranking(b)
+    if wanted("kiosk-maintenance"):
+        kiosk_maintenance(b)
+
+
+def kiosk_device_alarm(b):
+    b.click("a.nav-btn[data-mode=order]")
+    b.wait_state("wait_for_card")
     # The red warning sign: an RTC check that found no clock module (written by hand here, the
     # next real check - started right after - puts the true state back).
     on_pi("echo '{\"state\": \"missing\", \"detail\": \"manual screenshot\", \"checked\": '$(date +%s)'}' "
@@ -142,6 +176,8 @@ def kiosk(b):
     b.shot("kiosk-device-alarm", settle=0.3)
     on_pi("sudo systemctl start coffeepy-rtc-sync.service")
 
+
+def kiosk_order(b):
     b.click("a.nav-btn[data-mode=order]")
     b.wait_state("wait_for_card")
     django("scan", "Anna")
@@ -151,12 +187,16 @@ def kiosk(b):
     b.wait_state("thank_you")
     b.shot("kiosk-thank-you", settle=1.5)
 
+
+def kiosk_pay(b):
     b.click("a.nav-btn[data-mode=info]")
     b.wait_state("wait_for_card")
     django("scan", "David")
     b.wait_state("info_pay")
     b.shot("kiosk-pay")
 
+
+def kiosk_settings(b):
     b.click("a.nav-btn[data-mode=settings]")
     b.wait_state("wait_for_card")
     django("scan", "Anna")
@@ -169,12 +209,16 @@ def kiosk(b):
     b.shot("kiosk-keyboard")
     b.go("/kiosk/")
 
+
+def kiosk_new_card(b):
     b.click("a.nav-btn[data-mode=settings]")  # a nav tap logs out
     b.wait_state("wait_for_card")
     django("scan", "new")
     b.wait_state("settings")
     b.shot("kiosk-new-card")
 
+
+def kiosk_ranking(b):
     b.click("a.nav-btn[data-mode=ranking]")
     b.wait_state("ranking")
     blur = BLUR_JS % json.dumps(private_names())  # real members can make the top 3, or the pillory
@@ -186,6 +230,8 @@ def kiosk(b):
         b.js(blur)
         b.shot(f"kiosk-ranking-{view}")
 
+
+def kiosk_maintenance(b):
     b.click("a.nav-btn[data-mode=order]")
     b.wait_state("wait_for_card")
     on_pi("sudo bash -c '. /opt/coffeepy/install/maintenance.sh; maintenance_begin update; maintenance_step images 35'")
@@ -238,7 +284,7 @@ BLUR_JS = """
 def private_names():
     """Nicknames of the members that are not demo data (demo_data.py MEMBERS)."""
     out = shell_django("import json; from coffee.models import Member; "
-                       "print(json.dumps(list(Member.objects.exclude(nickname__in=['Anna','Ben','Clara','David','Emma','Felix'])"
+                       "print(json.dumps(list(Member.objects.exclude(nickname__in=['Anna B.','Ben K.','Clara M.','David S.','Emma W.','Felix H.'])"
                        ".exclude(nickname='').values_list('nickname', flat=True))))")
     try:
         return json.loads(out)
@@ -250,20 +296,25 @@ def dashboard(b, password):
     b.viewport(1280, 800)
     b.go("/dashboard/login/")
     b.shot("dashboard-login")
+    if not wanted(*[name for _, name in DASHBOARD_PAGES], "dashboard-member-form", "dashboard-phone"):
+        return
     b.js(f"document.querySelector('input[name=username]').value='admin';"
          f"document.querySelector('input[name=password]').value={json.dumps(password)};"
          f"document.querySelector('form').submit()")
     b.page.collect(0.5, until="Page.loadEventFired")
-    anna = shell_django("from coffee.models import Member; print(Member.objects.get(nickname='Anna').uid)")
+    anna = shell_django("from coffee.models import Member; print(Member.objects.get(nickname='Anna B.').uid)")
     blur = BLUR_JS % json.dumps(private_names())
     for path, name in DASHBOARD_PAGES + [(f"/dashboard/members/{anna}/edit/", "dashboard-member-form")]:
+        if not wanted(name):
+            continue
         b.go(path)
         b.js(blur)
         b.shot(name, settle=1.5 if "statistics" in path or "system" in path else 0.6, full=name in FULL_PAGE)
-    b.viewport(390, 844, scale=2, mobile=True)  # the same dashboard on a phone
-    b.go("/dashboard/")
-    b.js(blur)
-    b.shot("dashboard-phone")
+    if wanted("dashboard-phone"):
+        b.viewport(390, 844, scale=2, mobile=True)  # the same dashboard on a phone
+        b.go("/dashboard/")
+        b.js(blur)
+        b.shot("dashboard-phone")
     b.viewport(1280, 800)
     b.js("fetch('/dashboard/logout/', {method: 'POST', headers: {'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)[1]}})")
     time.sleep(1)
@@ -273,22 +324,28 @@ def portal(b):
     b.viewport(390, 844, scale=2, mobile=True)
     b.go("/portal/link/expired-example/")
     b.shot("portal-link-invalid")
+    if not wanted("portal-home", "portal-pay", "portal-stats", "portal-cards", "portal-devices"):
+        return
     token = shell_django(
         "from datetime import timedelta; from django.utils import timezone; "
         "from coffee.models import Member, MemberLinkToken; "
-        "print(MemberLinkToken.objects.create(member=Member.objects.get(nickname='David'), "
+        "print(MemberLinkToken.objects.create(member=Member.objects.get(nickname='David S.'), "
         "expires_at=timezone.now() + timedelta(minutes=5)).token)")
     b.go(f"/portal/link/{token}/")
     b.shot("portal-home")
     for path, name in (("/portal/pay/", "portal-pay"), ("/portal/stats/", "portal-stats"),
                        ("/portal/cards/", "portal-cards"), ("/portal/devices/", "portal-devices")):
-        b.go(path)
-        b.shot(name, settle=1.5 if "stats" in path else 0.6)
+        if wanted(name):
+            b.go(path)
+            b.shot(name, settle=1.5 if "stats" in path else 0.6)
 
 
 def main():
     langs = [a for a in sys.argv[1:] if a in ("de", "en")]
     only = sys.argv[sys.argv.index("--only") + 1].split(",") if "--only" in sys.argv else None
+    global WANTED
+    if "--shots" in sys.argv:
+        WANTED = set(sys.argv[sys.argv.index("--shots") + 1].split(","))
     password = on_pi("sudo grep ^DJANGO_SUPERUSER_PASSWORD= /opt/coffeepy/.env | cut -d= -f2-").strip()
     for lang in langs:
         b = Browser(lang)

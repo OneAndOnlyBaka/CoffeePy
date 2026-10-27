@@ -30,13 +30,13 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                 <li>{% translate "Enter what you paid - or scan a payment QR code, if one is shown." %}</li>
                 <li>{% blocktranslate trimmed with seconds=logout_seconds %}You are logged out after {{ seconds }} seconds.{% endblocktranslate %}</li>
                 {% elif wait_mode == "settings" %}
-                <li>{% translate "Change your nickname and your favourite coffee." %}</li>
+                <li>{% translate "Change your name and your favourite coffee." %}</li>
                 <li>{% translate "Link your phone to see your stats and pay from there." %}</li>
                 <li>{% translate "A card the kiosk doesn't know yet is registered here." %}</li>
                 {% else %}
                 <li>{% translate "Your favourite coffee is preselected - tap another one to change it." %}</li>
                 <li>{% blocktranslate trimmed with seconds=checkout_seconds %}Tap <strong>Order now</strong>, or it is booked after {{ seconds }} seconds.{% endblocktranslate %}</li>
-                <li>{% translate "A card the kiosk doesn't know yet asks for your nickname first." %}</li>
+                <li>{% translate "A card the kiosk doesn't know yet asks for your name first." %}</li>
                 {% endif %}
             </ul>
         </div>
@@ -121,13 +121,16 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
 <div class="panel-card">
     <form hx-post="{% url 'kiosk:settings_save' %}" hx-target="#panel" hx-swap="innerHTML">
         {% csrf_token %}
-        <h1 class="panel-header">{% if is_new_user %}{% translate "Welcome, new card!" %}{% else %}{% blocktranslate trimmed with name=nickname|default:uid|unlocalize %}Hello {{ name }}!{% endblocktranslate %}{% endif %}</h1>
+        <h1 class="panel-header">{% if is_new_user %}{% translate "Welcome, new card!" %}{% elif name_required %}{% translate "Who are you?" %}{% else %}{% blocktranslate trimmed with name=nickname|default:uid|unlocalize %}Hello {{ name }}!{% endblocktranslate %}{% endif %}</h1>
         <div class="panel-body">
+            {% if name_required %}<p>{% translate "Before your coffee: the ranking needs a name your colleagues recognise." %}</p>{% endif %}
             <p class="muted">{% blocktranslate trimmed with uid=uid|unlocalize %}Card UID: {{ uid }}{% endblocktranslate %}</p>
             <label class="field">
-                {% translate "Nickname" %}
+                {% translate "Name" %}
+                <span class="muted field-hint">{% translate 'First name and the first letter of your last name, like "Anna B." - or your short code, like "AB"' %}</span>
+                {% if name_error %}<span class="msg error">{{ name_error }}</span>{% endif %}
                 <div class="field-with-osk">
-                    <input type="text" name="nickname" value="{{ nickname }}" placeholder="{{ uid|unlocalize }}"
+                    <input type="text" name="nickname" value="{{ nickname }}" placeholder="Anna B." maxlength="20"
                            id="nickname-input"
                            hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="keyup changed delay:1s" hx-swap="none">
                     <a class="btn osk-open-btn" href="{% url 'kiosk:keyboard' %}?field=nickname&value={{ nickname|urlencode }}">{% include "icons/keyboard.svg" %} {% translate "Keyboard" %}</a>

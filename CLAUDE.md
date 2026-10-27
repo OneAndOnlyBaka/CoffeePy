@@ -61,6 +61,15 @@ Rules that hold across all four:
   live in the dashboard's "Dashboard users"; corrections to orders/payments in "Bookings".
   A new page goes into `dashboard/templatetags/dashboard_nav.py` - sidebar, phone tabs and
   the "More" sheet are all drawn from that one list.
+- **A member's name is "First L."** or a short code like "AB" (`coffee/names.py`: format,
+  placeholders, keyboard mashing, no two active members alike, plus the admin's list in
+  `dashboard.models.NamePolicy`). What the legacy database showed shaped it: a name that only
+  lacks the form ("Anna B") is fixed silently at the next tap, and a bare first name is offered
+  back as the start of the new one (`names.fixable`, `names.suggestion`). The
+  kiosk won't take an order from a member whose name fails it - the card tap goes to the
+  name screen first (`then_order` in the session) - and the dashboard's member form applies
+  the same rules. So **test fixtures that order need a valid name** (`"Alice X."`), and so do
+  the manual's demo members (`demo_data.py` NAMES).
 - Tests live in `<app>/tests/test_*.py`. UI text is bilingual - see "Two languages" below.
 - **A change users can see also changes the manual** (`docs/MANUAL.de.md` + `.en.md`, with
   screenshots in both languages) - the `user-manual` skill in `.claude/skills/` has the
@@ -255,7 +264,18 @@ mind before changing it:
   not slowly inherit the Pi's own drift. It also reports the module's health to
   `data/storage/rtc.json` (`coffee/rtc.py`: the kiosk's red clock sign, the overview's
   "Clock module" row); "lost" - a flat battery - only clears once the RTC kept its time
-  across a reboot, which is why it remembers the boot id it was lost in.
+  across a reboot, which is why it remembers the boot id it was lost in. A clock that is
+  *plausible but wrong* - the legacy device ran ten hours behind at the end - is
+  `coffee/clock.py`'s job: the backup service's minutely `tick` puts it forward when it went
+  back within a boot (`CLOCK_BOOTTIME`) or stands behind the newest audit entry, never back,
+  and not at all once NTP set it (`"ntp"` in `rtc.json`). The container runs in UTC, so the
+  clock is always set as a Unix time (`system_clock.set_system_epoch`) - a local wall-clock
+  string handed to `date -s` used to set it off by the UTC offset.
+- **`install/kiosk_watchdog.sh`** (a timer, every minute) restarts the kiosk session when
+  `data/storage/kiosk-heartbeat` goes stale - the panel view touches it, at most every 30s per
+  worker - and the stack when `/health/` stops answering. It stays out of anything with a
+  maintenance status and gives up after three steps an hour, so a device a restart can't help
+  isn't kept restarting.
 - **The Raspberry Pi archive keys are SHA-1 signed**, and every modern verifier refuses
   them by default: debootstrap picks sqv over gpgv when only sqv is installed, and apt on
   trixie uses sqv outright - both then report the archives as unsigned. The fix is a

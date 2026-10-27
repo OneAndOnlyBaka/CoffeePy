@@ -1,8 +1,9 @@
 #!/bin/bash
 # Retakes the manual's screenshots - all of them, or some areas - into docs/pictures/manual/.
 #
+#   capture.sh --shots kiosk-settings,dashboard-members   just these images (the usual case)
+#   capture.sh --only kiosk,dashboard,portal,provision    whole areas, comma-separated
 #   capture.sh                                  everything, German and English
-#   capture.sh --only kiosk,dashboard,portal,provision    any of them, comma-separated
 #
 # The kiosk is captured on the test Pi itself (pi-device skill: the kiosk browser's debug
 # port, demo cards). Dashboard and portal are captured from this machine, in a throwaway
@@ -18,8 +19,19 @@ PI="${ROOT}/.claude/skills/pi-device/scripts"
 OUT="${ROOT}/docs/pictures/manual"
 PY=${MANUAL_PYTHON:-python3}
 CHROMIUM=${CHROMIUM:-chromium-browser}
-ONLY=${2:-kiosk,dashboard,portal,provision}
-[ "${1:-}" = --only ] || ONLY=kiosk,dashboard,portal,provision
+ONLY=kiosk,dashboard,portal,provision
+SHOTS=""
+case "${1:-}" in
+	--only) ONLY=${2:?--only needs areas} ;;
+	--shots)
+		# The areas follow from the names (kiosk-..., dashboard-...); the rest of each area is
+		# skipped by capture_web.py, step by step.
+		SHOTS=${2:?--shots needs image names, like kiosk-settings}
+		ONLY=$(tr ',' '\n' <<<"${SHOTS}" | cut -d- -f1 | sort -u | paste -sd,)
+		;;
+esac
+SHOTS_ARG=()
+[ -n "${SHOTS}" ] && SHOTS_ARG=(--shots "${SHOTS}")
 wants() { [[ ",${ONLY}," == *",$1,"* ]]; }
 . "${ROOT}/.device/pi.env"
 
@@ -46,7 +58,7 @@ fi
 if wants kiosk; then
 	"${PI}/kiosk-browser.sh" on
 	"${PI}/kiosk-browser.sh" errors >/dev/null   # waits for the kiosk page to load
-	"${PI}/pi.sh" "rm -rf /tmp/manual; python3 -I /tmp/capture_web.py de en --only kiosk"
+	"${PI}/pi.sh" "rm -rf /tmp/manual; python3 -I /tmp/capture_web.py de en --only kiosk ${SHOTS_ARG[*]}"
 	mkdir -p "${OUT}"
 	scp -q -r "${PI_USER}@${PI_HOST}:/tmp/manual/." "${OUT}/"
 fi
@@ -68,7 +80,7 @@ if [ -n "${areas}" ]; then
 		for _ in $(seq 40); do curl -s localhost:9333/json >/dev/null 2>&1 && break; sleep 0.5; done
 		CDP_PORT=9333 CDP_PATH="${PI}" CAPTURE_BASE="https://${PI_HOST}" CAPTURE_OUT="${OUT}" \
 			CAPTURE_SSH="ssh -o BatchMode=yes ${PI_USER}@${PI_HOST}" \
-			python3 -I "${DIR}/capture_web.py" "${lang}" --only "${areas%,}"
+			python3 -I "${DIR}/capture_web.py" "${lang}" --only "${areas%,}" "${SHOTS_ARG[@]}"
 		kill "${BROWSER_PID}" 2>/dev/null; wait "${BROWSER_PID}" 2>/dev/null || true
 		BROWSER_PID=""
 	done

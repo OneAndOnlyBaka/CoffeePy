@@ -38,14 +38,13 @@ class Member(models.Model):
         return self.nickname or str(self.uid)
 
     @property
-    def has_placeholder_name(self) -> bool:
-        """True when nothing but a number identifies this member: no nickname at all, or
-        one that is only digits. The latter is the common case rather than an odd one -
-        the kiosk's Settings screen falls back to the card's uid when the nickname field
-        is left empty (see kiosk.views.settings_save), so everyone who skips that field
-        ends up listed as their card number in the ranking and on the pillory."""
-        nickname = self.nickname.strip()
-        return not nickname or nickname.isdigit()
+    def name_problem(self) -> str | None:
+        """Why this member's name won't do (a key of coffee.names.MESSAGES), or None. The
+        kiosk asks for a proper one before the next order - which also covers everyone who
+        is still just their card number (the kiosk used to fill an empty name field with it)."""
+        from coffee import names  # noqa: PLC0415 - names imports this module
+
+        return names.problem(self.nickname, member=self)
 
     @property
     def is_departed(self) -> bool:

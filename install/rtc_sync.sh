@@ -29,6 +29,9 @@ STORAGE="${COFFEEPY_STORAGE_DIR:-$(dirname "$0")/../data/storage}"
 STATUS="${STORAGE}/rtc.json"
 BOOT_ID="${BOOT_ID:-$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo unknown)}"
 RTC_DEVICE="${RTC_DEVICE:-/dev/rtc0}"  # both overridable for coffee/tests/test_rtc.py
+# Whether NTP set the clock: then it is right, whatever the RTC or the app's own plausibility
+# check (coffee/clock.py, which reads this) would say - and must not be "corrected".
+NTP_SYNCED="${NTP_SYNCED:-$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)}"
 
 field() { # the value of a "key": "value" or "key": number pair in the old status
     sed -n "s/.*\"$1\": \"\{0,1\}\([^\",}]*\).*/\1/p" "$STATUS" 2>/dev/null | head -n 1
@@ -47,8 +50,8 @@ report() { # state detail [rtc_epoch] [difference]
         fi
     fi
     mkdir -p "$STORAGE"
-    printf '{"state": "%s", "detail": "%s", "checked": %s, "rtc_epoch": %s, "difference": %s, "lost_boot": "%s"}\n' \
-        "$1" "$2" "$(date +%s)" "${3:-0}" "${4:-0}" "$lost_boot" > "${STATUS}.tmp"
+    printf '{"state": "%s", "detail": "%s", "checked": %s, "rtc_epoch": %s, "difference": %s, "lost_boot": "%s", "ntp": "%s"}\n' \
+        "$1" "$2" "$(date +%s)" "${3:-0}" "${4:-0}" "$lost_boot" "$NTP_SYNCED" > "${STATUS}.tmp"
     chmod 0644 "${STATUS}.tmp"
     mv "${STATUS}.tmp" "$STATUS"
     if [ "$1" != "$previous" ]; then  # into the audit log (dashboard/audit.py collects these)

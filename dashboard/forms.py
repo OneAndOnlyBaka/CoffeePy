@@ -5,7 +5,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 from django.utils.translation import gettext_lazy, pgettext_lazy
 
-from .models import POLICY_LIMITS, PasswordPolicy
+from .models import POLICY_LIMITS, NamePolicy, PasswordPolicy
+from coffee import names
 from coffee.models import CASH_METHOD_NAME, BackupSettings, CoffeeSort, Member, Order, Payment, PaymentMethod, payment_method_label
 
 
@@ -62,9 +63,10 @@ class MemberForm(forms.ModelForm):
         fields = ["uid", "nickname", "favourite_coffee"]
         labels = {
             "uid": gettext_lazy("Uid"),
-            "nickname": gettext_lazy("Nickname"),
+            "nickname": gettext_lazy("Name"),
             "favourite_coffee": gettext_lazy("Favourite coffee"),
         }
+        help_texts = {"nickname": names.MESSAGES["format"]}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -73,6 +75,16 @@ class MemberForm(forms.ModelForm):
             # (order/payment history is tied to the old one), so only allow setting it
             # once, at creation.
             self.fields["uid"].disabled = True
+        self.fields["nickname"].required = True
+
+    def clean_nickname(self):
+        # The same rules as at the kiosk (coffee/names.py) - an admin entering "Tom" would
+        # otherwise only push the question to Tom's next coffee.
+        name = names.normalize(self.cleaned_data.get("nickname", ""))
+        problem = names.problem(name, member=self.instance if self.instance.pk else None)
+        if problem:
+            raise forms.ValidationError(names.message(problem))
+        return name
 
 
 ROLE_ADMIN, ROLE_MANAGER = "admin", "manager"
@@ -336,3 +348,13 @@ class RestoreForm(forms.Form):
         if self.cleaned_data["confirm"].strip() != "DELETE":
             raise forms.ValidationError(gettext_lazy("Type DELETE to confirm - nothing was changed."))
         return "DELETE"
+
+
+class NamePolicyForm(forms.ModelForm):
+    class Meta:
+        model = NamePolicy
+        fields = ["blocked_names"]
+        labels = {"blocked_names": gettext_lazy("Blocked first names")}
+        help_texts = {"blocked_names": gettext_lazy(
+            "One per line - on top of the usual placeholders (test, name, user, ...), which are always refused.")}
+        widgets = {"blocked_names": forms.Textarea(attrs={"rows": 4})}

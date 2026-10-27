@@ -20,7 +20,7 @@ from coffee.purge import FULL_SCOPE, IMPORT_SCOPE, describe, purge
 class PurgeTestCase(TestCase):
     def setUp(self):
         self.sort = CoffeeSort.objects.create(name="espresso", price="0.30", machine_strokes=1)
-        self.member = Member.objects.create(uid=42, nickname="Alice", favourite_coffee=self.sort)
+        self.member = Member.objects.create(uid=42, nickname="Alice X.", favourite_coffee=self.sort)
         MemberCard.objects.create(member=self.member, uid=99)
         Order.objects.create(member=self.member, value="0.30", machine_strokes=1)
         Payment.objects.create(member=self.member, value="5.00")
