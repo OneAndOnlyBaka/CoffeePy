@@ -41,7 +41,7 @@ are in the [README](../README.md).
 | Power supply | The official one for your model. Cheap supplies are the most common cause of flaky USB devices and touchscreens. |
 | Touchscreen | 1024×600 (e.g. [Adafruit #2396](https://www.adafruit.com/product/2396)). The official 7" display (800×480) works too. |
 | NFC reader | **ACR122U** by Advanced Card Systems – the only supported reader. |
-| Real-time clock | **DS3231** module with a CR2032 battery, so the Pi keeps the right time without internet. Wire it to I²C-1: VCC→pin 1, GND→pin 6, SDA→pin 3, SCL→pin 5. CoffeePy checks it regularly and warns when it is missing, doesn't answer or has lost the time. |
+| Real-time clock | **DS3231** module with a CR2032 battery, so the Pi keeps the right time without internet. Wire it to I²C-1: VCC→pin 1, GND→pin 6, SDA→pin 3, SCL→pin 5. CoffeePy checks it regularly and warns when it is missing, doesn't answer or has lost the time. **Replace the battery every two to three years**, warning or not (see [When something goes wrong](#8-when-something-goes-wrong)). |
 | Cards | Any MIFARE cards or key fobs (ISO 14443A) – one per member. Many company or transit cards work as well. |
 | USB stick (recommended) | For automatic backups. Nothing to prepare: you set it up in the dashboard (see [Backups](#backups)) – that erases it. |
 
@@ -758,6 +758,7 @@ with its **DE/EN** button, phones and PCs at the top right of the portal and of 
 | A card isn't recognised. | Hold it flat and still; a card marked as departed is turned away. |
 | Red **database** sign on the kiosk | Backups aren't running: plug the backup stick back in, or look at **Backup** in the dashboard for the error. |
 | Red **clock** sign on the kiosk, or the time is wrong | If the overview has a *Time – corrected* row, the clock went back and was put forward: check it under **System time** and set or confirm it. Otherwise the *Clock module (RTC)* row says why. *Not found* / *Does not answer*: check the module and its wiring. *Had lost the time*: replace its battery (CR2032), then correct the time under **System time** – the sign goes once the module has kept the time through a restart. |
+| After switching on, the kiosk shows the time the device was switched off (in the morning, the evening before), or the clock is behind by the length of every power cut. | The **clock module's battery is flat**. An almost empty CR2032 (below about 2.3 V) still holds the time but lets the clock stand still without power – the module reports no fault then, and without internet the device can't notice. Replace the battery, then set the time under **System time**. |
 | "We'll be right back" doesn't go away. | Is an update or a restore running? The dashboard's **Update** or **Backup** page shows its progress. A status older than two hours is ignored; when in doubt, restart the device. |
 | Login refused although the password is right | Too many failed attempts lock the account for a while (15 minutes by default) – wait, or have an admin set a new password under **Dashboard users**. |
 | An update is refused | The update page says why: no or a wrong signature (see [Your own signing key](#your-own-signing-key)), a bundle for another platform, not enough space, or an older version than the installed one. |

@@ -264,7 +264,11 @@ mind before changing it:
   not slowly inherit the Pi's own drift. It also reports the module's health to
   `data/storage/rtc.json` (`coffee/rtc.py`: the kiosk's red clock sign, the overview's
   "Clock module" row); "lost" - a flat battery - only clears once the RTC kept its time
-  across a reboot, which is why it remembers the boot id it was lost in. A clock that is
+  across a reboot, which is why it remembers the boot id it was lost in. A nearly flat battery
+  (measured: 0.9V on a test module) is invisible to all of this: the DS3231 keeps its registers
+  but its oscillator stands still without mains, and it doesn't set OSF either - it comes back
+  with a valid, frozen time. Offline nothing can tell; the manual tells people what it looks
+  like (the kiosk shows the time of the power cut). A clock that is
   *plausible but wrong* - the legacy device ran ten hours behind at the end - is
   `coffee/clock.py`'s job: the backup service's minutely `tick` puts it forward when it went
   back within a boot (`CLOCK_BOOTTIME`) or stands behind the newest audit entry, never back,
