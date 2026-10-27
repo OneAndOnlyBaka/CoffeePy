@@ -59,6 +59,7 @@ for unsupported cards/commands they simply stay `null`.
 | `MQTT_RETAIN` | `false` | Publish events retained |
 | `LOG_LEVEL` | `INFO` | Python log level |
 | `PCSCD_DEBUG` | `false` | `pcscd` debug logging |
+| `READER_BEEP` | `0` | `1` lets the reader beep on every card it detects (its own default); sent at each reader session through the PC/SC escape channel, which the image enables (`ifdDriverOptions 0x0001`) |
 
 ## Build (multi-arch)
 

@@ -256,7 +256,13 @@ mind before changing it:
   Without `set -E` the ERR trap never fires inside a function, and a failure deep in a
   step exits with no explanation at all.
 - The kernel's `pn533` driver grabs the ACR122U before pcscd can; `install/
-  blacklist-coffeepy-nfc.conf` is what keeps the reader working.
+  blacklist-coffeepy-nfc.conf` is what keeps the reader working. Commands to the reader
+  itself (beep, LEDs - ACS's API manual, chapter 6) go through the PC/SC escape channel,
+  which libccid refuses unless `ifdDriverOptions` is `0x0001` (the bridge's Dockerfile), and
+  on Linux under `SCARD_CTL_CODE(1)`, not the manual's Windows 3500. The bridge turns the beep
+  off that way. The red LED can't be turned off the same way: the firmware lights it while it
+  polls for cards, which pcscd needs - only a bridge that polls itself (`InAutoPoll`, as V1's
+  libnfc did) could, tried and not done.
 - The DS3231 is read at boot by the kernel, but nothing writes it: the dashboard sets the
   clock from inside a container, and an offline box never gets the NTP sync that would
   trigger the kernel's own RTC update. `install/rtc_sync.sh` on a timer closes that loop -
@@ -308,7 +314,12 @@ mind before changing it:
 - **Boot time is CPU, not waiting.** `systemd-analyze blame`/`critical-chain` and the
   containers' start times say where it goes. Only the `migrate` service runs
   `manage.py prepare` (migrate, admin, TLS - one Django process; the others set
-  `COFFEEPY_PREPARE=0`), because each Django start costs seconds on a Pi 3. Starting Chromium
+  `COFFEEPY_PREPARE=0`), because each Django start costs seconds on a Pi 3. That also took
+  away an accidental safety net: after a power cut Docker restarts every container at once,
+  `depends_on` or not, while PostgreSQL is still recovering - and a long-running process has
+  to survive that itself. The MQTT listener keeps the reader status until the database takes
+  it (`ReaderStatus`); before, a status that arrived too early was lost and the kiosk said
+  "card reader not available" with a working reader. Starting Chromium
   in parallel with the stack was tried and measured: both slowed down by half a minute and
   the box went into swap, so the kiosk waits for `/health/` first. Measure from the
   device's journal, not by polling it over SSH - that alone slowed a boot by 30s.

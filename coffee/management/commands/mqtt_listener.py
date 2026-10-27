@@ -5,6 +5,7 @@ import time
 
 import paho.mqtt.client as mqtt
 from django.core.management.base import BaseCommand
+from django.db import DatabaseError, close_old_connections
 from django.utils import timezone
 
 from coffee.models import NfcReaderStatus, NfcScan
@@ -20,6 +21,7 @@ MQTT_CLIENT_ID = os.environ.get("MQTT_CLIENT_ID", "coffeepy-django")
 STATUS_TOPIC = f"{MQTT_TOPIC}/status"
 
 SCAN_RETENTION_SECONDS = 3600
+STATUS_RETRY_SECONDS = 5
 
 
 def handle_payload(raw: bytes):
@@ -50,6 +52,36 @@ def set_reader_online(is_online: bool) -> None:
     NfcReaderStatus.objects.update_or_create(pk=1, defaults={"is_online": is_online})
 
 
+class ReaderStatus:
+    """The reader status still to be written, kept until the write succeeds. The bridge
+    sends it once, retained, and again only when it changes - after a power cut this
+    process got it while PostgreSQL was still recovering, the write failed (paho swallows
+    whatever a callback raises), and the kiosk said "card reader not available" with a
+    working reader until the next change, which never came."""
+
+    def __init__(self):
+        self.pending = None
+        self.tried_at = 0.0
+
+    def set(self, is_online: bool) -> None:
+        self.pending = is_online
+        self.tried_at = 0.0
+        self.flush()
+
+    def flush(self) -> None:
+        if self.pending is None or time.monotonic() - self.tried_at < STATUS_RETRY_SECONDS:
+            return
+        self.tried_at = time.monotonic()
+        try:
+            close_old_connections()  # one that broke with the database's restart is no use
+            set_reader_online(self.pending)
+        except DatabaseError as exc:
+            log.warning("Could not store the reader status yet (%s) - retrying", exc)
+            return
+        log.info("NFC reader status: %s", "online" if self.pending else "offline")
+        self.pending = None
+
+
 class Command(BaseCommand):
     help = "Subscribe to the acr122u-mqtt bridge and relay card events into NfcScan rows."
 
@@ -59,6 +91,7 @@ class Command(BaseCommand):
             client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
 
         last_prune = time.monotonic()
+        status = ReaderStatus()
 
         def on_connect(c, userdata, flags, rc):
             log.info("Connected to MQTT broker %s:%s (rc=%s)", MQTT_HOST, MQTT_PORT, rc)
@@ -69,17 +102,20 @@ class Command(BaseCommand):
             # Lost the broker ourselves - we can no longer vouch for the bridge's state
             # either, so don't keep showing a possibly-stale "online".
             log.warning("MQTT disconnected (rc=%s) - marking reader status unknown", rc)
-            set_reader_online(False)
+            status.set(False)
 
         def on_message(c, userdata, msg):
             nonlocal last_prune
             if msg.topic == STATUS_TOPIC:
-                is_online = msg.payload.decode("utf-8", errors="replace").strip().lower() == "online"
-                set_reader_online(is_online)
-                log.info("NFC reader status: %s", "online" if is_online else "offline")
+                status.set(msg.payload.decode("utf-8", errors="replace").strip().lower() == "online")
                 return
 
-            scan = handle_payload(msg.payload)
+            try:
+                close_old_connections()
+                scan = handle_payload(msg.payload)
+            except DatabaseError as exc:
+                log.warning("Could not store a card event (%s) - it is lost, the card has to be tapped again", exc)
+                return
             if scan is not None:
                 log.info("Recorded scan #%s: %s uid=%s", scan.id, scan.event, scan.uid)
             if time.monotonic() - last_prune > 300:
@@ -96,8 +132,14 @@ class Command(BaseCommand):
         while True:
             try:
                 client.connect(MQTT_HOST, MQTT_PORT, keepalive=30)
-                client.loop_forever()
+                # A loop of our own rather than loop_forever(): a status the database
+                # wouldn't take yet is retried in between.
+                while True:
+                    rc = client.loop(timeout=1.0)
+                    if rc != mqtt.MQTT_ERR_SUCCESS:
+                        raise OSError(f"MQTT loop ended (rc={rc})")
+                    status.flush()
             except OSError as exc:
                 log.warning("MQTT connection failed: %s - retrying in 5s", exc)
-                set_reader_online(False)
+                status.set(False)
                 time.sleep(5)

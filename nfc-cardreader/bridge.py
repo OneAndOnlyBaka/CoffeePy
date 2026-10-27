@@ -342,6 +342,42 @@ class TagObserver(CardObserver):
 
 
 READER_POLL_INTERVAL_SECONDS = 3
+# The reader beeps on every card it detects unless told not to (ACR122U API 6.7). Not a
+# setting it keeps: a power cut of the reader turns the beep back on, so it is sent at the
+# start of every reader session.
+READER_BEEP = os.environ.get("READER_BEEP", "0") == "1"
+SET_BUZZER_ON_DETECTION = [0xFF, 0x00, 0x52, 0xFF if READER_BEEP else 0x00, 0x00]
+
+
+def configure_reader(reader_name):
+    """Sends the reader its settings through the PC/SC escape channel - possible without a
+    card on it, which is why libccid's ifdDriverOptions 0x0001 is set in the Dockerfile.
+    Linux's CCID driver takes the escape as SCARD_CTL_CODE(1), not the 3500 the ACS manual
+    gives for Windows. Never fatal: a reader that won't take it still reads cards."""
+    from smartcard.scard import (SCARD_CTL_CODE, SCARD_LEAVE_CARD, SCARD_PROTOCOL_UNDEFINED,
+                                 SCARD_SCOPE_USER, SCARD_SHARE_DIRECT, SCardConnect, SCardControl,
+                                 SCardDisconnect, SCardEstablishContext, SCardGetErrorMessage,
+                                 SCardReleaseContext)
+    hr, context = SCardEstablishContext(SCARD_SCOPE_USER)
+    if hr != 0:
+        log.warning("Reader settings not sent - no PC/SC context: %s", SCardGetErrorMessage(hr))
+        return
+    try:
+        hr, handle, _ = SCardConnect(context, reader_name, SCARD_SHARE_DIRECT, SCARD_PROTOCOL_UNDEFINED)
+        if hr != 0:
+            log.warning("Reader settings not sent - cannot connect: %s", SCardGetErrorMessage(hr))
+            return
+        try:
+            hr, response = SCardControl(handle, SCARD_CTL_CODE(1), SET_BUZZER_ON_DETECTION)
+            if hr == 0 and list(response[:2]) == [0x90, 0x00]:
+                log.info("Reader beep on card detection: %s", "on" if READER_BEEP else "off")
+            else:
+                log.warning("Reader did not take the beep setting: %s %s", SCardGetErrorMessage(hr),
+                            toHexString(list(response)))
+        finally:
+            SCardDisconnect(handle, SCARD_LEAVE_CARD)
+    finally:
+        SCardReleaseContext(context)
 
 
 def _list_readers():
@@ -378,6 +414,8 @@ def run_session(publisher):
     "up" forever with no way to ever see another card again. Polling readers() directly
     from here, each iteration, is an independent liveness check that doesn't depend on
     that thread staying healthy."""
+    for reader in _list_readers():
+        configure_reader(str(reader))
     observer = TagObserver(publisher)
     monitor = CardMonitor()
     monitor.addObserver(observer)

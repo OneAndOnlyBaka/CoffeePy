@@ -53,3 +53,30 @@ class ReaderStatusTestCase(TestCase):
         set_reader_online(False)
         self.assertEqual(NfcReaderStatus.objects.count(), 1)
         self.assertFalse(NfcReaderStatus.objects.get(pk=1).is_online)
+
+
+class ReaderStatusRetryTestCase(TestCase):
+    """The status the bridge sends once is kept until the database takes it - after a power
+    cut the database was still recovering when it came."""
+
+    def test_a_failed_write_is_retried_until_it_works(self):
+        from unittest import mock
+
+        from django.db import OperationalError
+
+        from coffee.management.commands import mqtt_listener
+
+        status = mqtt_listener.ReaderStatus()
+        with mock.patch.object(mqtt_listener, "set_reader_online",
+                               side_effect=OperationalError("the database system is starting up")):
+            status.set(True)
+        self.assertFalse(NfcReaderStatus.objects.filter(is_online=True).exists())
+        self.assertTrue(status.pending)
+
+        status.flush()  # too soon: waits STATUS_RETRY_SECONDS between tries
+        self.assertFalse(NfcReaderStatus.objects.filter(is_online=True).exists())
+
+        status.tried_at -= mqtt_listener.STATUS_RETRY_SECONDS
+        status.flush()
+        self.assertTrue(NfcReaderStatus.objects.get(pk=1).is_online)
+        self.assertIsNone(status.pending)
