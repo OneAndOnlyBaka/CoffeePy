@@ -13,8 +13,8 @@
 #   --yes         don't ask before the steps that change networking
 #   --force       re-run steps that are already recorded as done
 #   --skip-ap     leave networking alone (keep the Pi on your existing WiFi/ethernet)
-#   --only=STEP   run a single step (preflight packages app hardware kiosk services
-#                 images ap verify)
+#   --only=STEP[,STEP...]  run just these steps, in their usual order (preflight packages
+#                 app hardware kiosk services images ap verify)
 #   --offline=DIR install from an unpacked offline bundle - no internet needed at all
 #                 (see scripts/build_offline_bundle.sh)
 #
@@ -400,6 +400,23 @@ step_hardware() {
 	# 1GB board the RAM matters more than the convenience.
 	run systemctl disable bluetooth hciuart triggerhappy ModemManager 2>/dev/null || true
 	ensure_line "${boot}/config.txt" "dtoverlay=disable-bt"
+	# The Imager's cloud-init has done its job (user, hostname, SSH) by the time this runs,
+	# but would still go through all its stages on every boot, one of them waiting for
+	# network-online.target. Edits to user-data on the boot partition no longer apply after this.
+	if [ -d /etc/cloud ]; then
+		write_file /etc/cloud/cloud-init.disabled </dev/null
+	fi
+
+	log "Keeping the system journal across reboots"
+	# Raspberry Pi OS keeps it in RAM only (40-rpi-volatile-storage.conf), so a boot that hung
+	# or crashed leaves nothing to look at afterwards. Capped, for the SD card's sake; the
+	# file name sorts after the Raspberry Pi one, so it wins.
+	write_file /etc/systemd/journald.conf.d/90-coffeepy-persistent.conf <<-EOF
+		[Journal]
+		Storage=persistent
+		SystemMaxUse=64M
+	EOF
+	run systemctl restart systemd-journald
 
 	log "Growing swap (crash safety net, not something to lean on)"
 	if [ -f /etc/dphys-swapfile ]; then
@@ -500,6 +517,10 @@ step_services() {
 	done
 	run systemctl daemon-reload
 	run systemctl enable coffeepy.service coffeepy-update-watcher.service
+	# docker.service itself waits for network-online.target, and NetworkManager only declares
+	# that once ethernet got a lease or gave up - ~30s on every boot of a box that never has an
+	# uplink. Nothing here needs one: the kiosk is localhost, phones come in over the AP.
+	run systemctl disable NetworkManager-wait-online.service 2>/dev/null || true
 	# What update bundles are checked against (install/update_watcher.py) - outside data/,
 	# root's, so nothing running in a container can swap it for its own.
 	run install -d -m 0755 /etc/coffeepy
@@ -630,8 +651,8 @@ step_ap() {
 
 	run systemctl enable --now systemd-networkd
 	# Enabling networkd pulls in its wait-online, which then waits for links it does not
-	# manage and times out after two minutes - holding back coffeepy.service, which is
-	# ordered after network-online.target. NM's own wait-online already covers ethernet.
+	# manage and times out after two minutes - holding back docker.service, which is ordered
+	# after network-online.target (NM's wait-online is switched off in step_services).
 	[ "${nm}" = "1" ] && run systemctl disable systemd-networkd-wait-online.service
 	run systemctl daemon-reload
 	run systemctl enable --now hostapd dnsmasq
@@ -757,7 +778,10 @@ fi
 
 CURRENT_STEP=""
 for step in ${ALL_STEPS}; do
-	[ -n "${ONLY}" ] && [ "${ONLY}" != "${step}" ] && continue
+	# A list, too: the update watcher runs --only=hardware,services,kiosk.
+	if [ -n "${ONLY}" ]; then
+		case ",${ONLY}," in *",${step},"*) ;; *) continue ;; esac
+	fi
 	if [ "${FORCE}" != "1" ] && [ -z "${ONLY}" ] && step_done "${step}"; then
 		log "Step ${step}: already done, skipping (--force to repeat)"
 		continue

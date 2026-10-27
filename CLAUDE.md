@@ -270,7 +270,10 @@ mind before changing it:
   unmanaged *and* the radio switched on through `nmcli` - NM keeps its own "WiFi off" state
   (the default when the Imager set up no WiFi) and re-applies the rfkill block every boot.
   Enabling systemd-networkd also enables its wait-online, which then stalls boot by two
-  minutes; `coffeepy.service` is ordered after `network-online.target`.
+  minutes, and NM's own wait-online costs ~30s on a box without uplink - `docker.service` is
+  ordered after `network-online.target`, so both are disabled. The Imager's cloud-init is
+  switched off too (it waits for the network on every boot), and the journal is made
+  persistent: Raspberry Pi OS keeps it in RAM, so a slow or crashed boot left no trace.
 - **The AP's channel is picked at every hostapd start** (`install/ap_channel.sh`, an
   `ExecStartPre`): as an access point the radio only hears its own channel, so the scan has
   to happen before. Transmit power needs no setting - the Pi 3 already runs at the

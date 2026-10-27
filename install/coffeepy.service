@@ -1,8 +1,9 @@
 [Unit]
 Description=CoffeePy (docker compose stack)
 Requires=docker.service
-After=docker.service network-online.target
-Wants=network-online.target
+# network.target, not network-online.target: the stack serves the device's own access point
+# and localhost, and an offline box would otherwise sit out NetworkManager's timeout first.
+After=docker.service network.target
 
 [Service]
 Type=oneshot
