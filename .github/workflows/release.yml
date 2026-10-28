@@ -90,10 +90,12 @@ jobs:
           arch="${{ steps.names.outputs.arch }}"
           # Single-platform images, so the platform is part of every tag: a later arm/v7 run
           # must not overwrite what an arm64 device pulls as "latest".
+          # Only that platform's manifest, not the index the containerd image store (Docker 29)
+          # keeps: GHCR took its layers, then refused the tag with "denied".
           push() { # local image, name in the registry
             for tag in "$version-$arch" "latest-$arch"; do
               docker tag "$1" "${{ env.REGISTRY }}/$owner/$2:$tag"
-              docker push "${{ env.REGISTRY }}/$owner/$2:$tag"
+              docker push --platform "$PLATFORM" "${{ env.REGISTRY }}/$owner/$2:$tag"
             done
           }
           push coffeepy-web:latest coffeepy-web
