@@ -657,7 +657,7 @@ defaults() {
 update_label() {
 	case "${UPDATE_SIGNATURE}" in
 		own) printf '%s' "$(t "own key" "eigener Schlüssel")${UPDATE_PUBLIC_KEY:+ · $(basename "${UPDATE_PUBLIC_KEY}")}" ;;
-		off) t "signature not checked" "Signatur nicht geprüft" ;;
+		off) t "signature not checked (development only)" "Signatur nicht geprüft (nur Entwicklung)" ;;
 		*)   t "CoffeePy's key" "Schlüssel von CoffeePy" ;;
 	esac
 }
@@ -728,13 +728,13 @@ edit_setting() {
 	updates)
 		local choices=("$(t "CoffeePy's key|install/update-signing.pub" "Schlüssel von CoffeePy|install/update-signing.pub")"
 			"$(t "Own key|for updates you build yourself" "Eigener Schlüssel|für selbst gebaute Updates")"
-			"$(t "No check|any update is installed" "Keine Prüfung|jedes Update wird eingespielt")")
+			"$(t "No check (development only)|any update is installed - for a test device" "Keine Prüfung (nur Entwicklung)|jedes Update wird eingespielt - für ein Testgerät")")
 		local current=0
 		[ "${UPDATE_SIGNATURE}" = own ] && current=1
 		[ "${UPDATE_SIGNATURE}" = off ] && current=2
 		ui_menu "Updates" "$(t \
-"Update bundles are signed, and the Pi only installs those whose signature matches its key. Your own key replaces CoffeePy's, and no update changes it again (scripts/update_signing_key.sh makes a key pair). Without a check, anyone who can upload in the dashboard can install anything." \
-"Update-Pakete sind signiert, und der Pi spielt nur solche ein, deren Signatur zu seinem Schlüssel passt. Ein eigener Schlüssel ersetzt den von CoffeePy, und kein Update ändert ihn wieder (scripts/update_signing_key.sh erzeugt ein Schlüsselpaar). Ohne Prüfung kann jeder, der im Dashboard hochladen darf, alles einspielen.")" \
+"Update bundles are signed, and the Pi only installs those whose signature matches its key. Your own key replaces CoffeePy's, and no update changes it again (scripts/update_signing_key.sh makes a key pair). The release builds on GitHub are unsigned: sign one with scripts/sign_update_bundle.sh and your own key. Without a check - only for development - anyone who can upload in the dashboard can install anything." \
+"Update-Pakete sind signiert, und der Pi spielt nur solche ein, deren Signatur zu seinem Schlüssel passt. Ein eigener Schlüssel ersetzt den von CoffeePy, und kein Update ändert ihn wieder (scripts/update_signing_key.sh erzeugt ein Schlüsselpaar). Die Release-Builds auf GitHub sind unsigniert: Signiere eines mit scripts/sign_update_bundle.sh und deinem eigenen Schlüssel. Ohne Prüfung - nur für die Entwicklung - kann jeder, der im Dashboard hochladen darf, alles einspielen.")" \
 			"${current}" "${choices[@]}" || return 0
 		case "${MENU}" in
 			0) UPDATE_SIGNATURE=bundled ;;

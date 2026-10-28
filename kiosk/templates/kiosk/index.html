@@ -48,7 +48,7 @@ window.addEventListener("load", function () {
             <span class="nav-label">{% translate "Settings" %}</span>
         </a>
         <a class="nav-btn {% if mode == 'ranking' %}active{% endif %}" data-mode="ranking" href="{% url 'kiosk:nav' 'ranking' %}"
-           hx-get="{% url 'kiosk:nav' 'ranking' %}">
+           hx-get="{% url 'kiosk:nav' 'ranking' %}"{% if not ranking_on %} hidden{% endif %}>
             <span class="nav-icon"><img src="{% static 'kiosk/img/nav/ranking.svg' %}" alt="{% translate "Ranking" %}"></span>
             <span class="nav-label">{% translate "Ranking" %}</span>
         </a>

@@ -91,3 +91,23 @@ class NightPolicy(models.Model):
     @classmethod
     def current(cls):
         return cls.objects.get_or_create(pk=1)[0]
+
+
+class KioskBoards(models.Model):
+    """What the kiosk shows everyone standing at the machine: the ranking (who drinks the most)
+    and the pillory (who owes money). Both are personal data about colleagues - consumption and
+    debts - and can look like behaviour monitoring to a works council, so each is a decision the
+    admin takes on the System page. Off on a new device ("privacy by default"); a device that
+    already had members when this arrived keeps showing both (migration 0005). The dashboard's own
+    pillory page, for whoever collects the money, is not affected."""
+
+    ranking = models.BooleanField(default=False)
+    pillory = models.BooleanField(default=False)
+
+    @classmethod
+    def current(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+    def kiosk_views(self) -> list[str]:
+        """The ranking screen's tabs, in order - empty: no ranking button at all."""
+        return (["alltime", "month"] if self.ranking else []) + (["pillory"] if self.pillory else [])

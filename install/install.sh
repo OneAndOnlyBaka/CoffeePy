@@ -356,11 +356,18 @@ step_app() {
 	sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(random_token 24)/" "${TARGET_DIR}/.env"
 	sed -i "s/^AP_PASSPHRASE=.*/AP_PASSPHRASE=$(random_token 12)/" "${TARGET_DIR}/.env"
 	sed -i "s/^DJANGO_SUPERUSER_PASSWORD=.*/DJANGO_SUPERUSER_PASSWORD=$(random_token 16)/" "${TARGET_DIR}/.env"
-	if [ "${SKIP_AP}" != "1" ]; then
-		# Pin the address QR codes use to the AP's own fixed IP: autodetection runs inside
-		# a container and cannot tell the AP interface from ethernet when both are up.
-		sed -i "s/^PUBLIC_HOST=.*/PUBLIC_HOST=${AP_ADDRESS}/" "${TARGET_DIR}/.env"
-	fi
+	# Pin the address QR codes use: the AP's own fixed IP, or else this host's LAN address.
+	# The app's autodetection runs inside a container - it sees the container's address, which
+	# no phone reaches, and cannot tell the AP interface from ethernet when both are up.
+	local public="${AP_ADDRESS}"
+	[ "${SKIP_AP}" != "1" ] || public="$(host_address)"
+	[ -z "${public}" ] || sed -i "s/^PUBLIC_HOST=.*/PUBLIC_HOST=${public}/" "${TARGET_DIR}/.env"
+}
+
+# The address this host's default route leaves from - what a phone on the same network
+# reaches it at. Empty without a route (the dashboard then says the address is a guess).
+host_address() {
+	ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -1
 }
 
 boot_config() {

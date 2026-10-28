@@ -28,8 +28,22 @@ both run as web apps (HTMX), and NFC card reads delivered through the
 > keeping backups and operating the hardware safely. This does not limit liability for intent,
 > gross negligence or injury to life, body or health where the law forbids that.
 
-**New here?** [docs/MANUAL.md](docs/MANUAL.md) covers what hardware to buy and how to use
-the kiosk/dashboard day to day. This README is the technical/installation reference.
+**Where to start:**
+
+- **Using it, buying the hardware:** [docs/MANUAL.md](docs/MANUAL.md) (German and English).
+- **Installing it on a Pi:** [Raspberry Pi install](#raspberry-pi-install) below - usually
+  `scripts/provision.sh` from your PC.
+- **Trying it on a PC:** [Quick start](#quick-start).
+- **Changing the code:** [Development](#development) and [CLAUDE.md](CLAUDE.md).
+- **Build, checks and releases:** [docs/CI.md](docs/CI.md).
+
+**Project status.** CoffeePy is built and run by one person for one office. That is fine for
+its own use, but whoever runs it elsewhere should be able to maintain it themselves - it is
+MIT-licensed, and made to be maintainable by someone new: [CLAUDE.md](CLAUDE.md) writes down
+what is not obvious and what already went wrong once, the tests run on SQLite and PostgreSQL
+with the backup and update code at full coverage, every push is audited for known
+vulnerabilities, Dependabot proposes the updates, and every release carries SBOMs of what a
+device runs ([docs/CI.md](docs/CI.md)). Issues and pull requests are welcome.
 
 ### Coming from V1?
 
@@ -126,6 +140,10 @@ The Pi is meant to run without internet, so updates are pushed manually instead 
    compose file is the only source of truth for what's in the bundle *and* what runs on
    the Pi, so the two can't quietly fall out of sync - and shipping it is how you add a
    whole new container (a new service block), not just update existing ones.
+   Or take the bundle from a GitHub release and sign it with `sign_update_bundle.sh` and your
+   own key ([docs/CI.md](docs/CI.md#signed-bundles---the-path-for-a-device-in-use)) - the
+   release's bundle is unsigned, and installing it as it is needs the signature check off,
+   which is for development only.
 2. Carry it over (USB stick, or a laptop joined to the Pi's own WiFi AP) and upload it at
    `/dashboard/update/` (superuser only).
 3. A host-level systemd service (`coffeepy-update-watcher.service`,
@@ -178,59 +196,20 @@ Anything meant to be opened from a *different* device (the dashboard/link-your-p
 codes on the kiosk) needs an address that device can actually reach - not "localhost",
 which is what the kiosk's own browser sees since it and the app run on the same machine.
 `PUBLIC_HOST` in `.env` controls this, and is automatically added to
-`DJANGO_ALLOWED_HOSTS` so Django doesn't reject requests through it. `install/
-install.sh` sets it automatically for the Pi's own WiFi AP (`192.168.4.1`) - that's
-the one deployment this was built to get right by default. Everywhere else, autodetection
-runs *inside* the `web` container, so it normally reports the container's own
-bridge-network IP rather than the host's real LAN IP (a phone can't reach that) - set
-`PUBLIC_HOST` explicitly to your host's LAN IP if you want working QR codes outside the
-Pi's AP setup.
+`DJANGO_ALLOWED_HOSTS` so Django doesn't reject requests through it. The provisioning tool
+and `install/install.sh` set it - to the Pi's own WiFi AP (`192.168.4.1`), or without the AP
+to the address the host's default route leaves from. Left empty (a plain `docker compose up`
+on a PC), autodetection runs *inside* the `web` container and normally finds the container's
+own bridge-network IP, which no phone reaches: set `PUBLIC_HOST` to your host's LAN IP. The
+dashboard's System page says so while the address is only a guess.
 
 `/dashboard/system/` (superuser only) shows that address alongside live CPU, RAM and disk
 usage (via `psutil`) - handy for keeping an eye on a resource-constrained Pi.
 
-### CI/CD
+### Build, checks and releases
 
-Two GitHub Actions workflows, both under [.github/workflows/](.github/workflows/):
-
-- **`ci.yml`** - runs the Django test suite (`DJANGO_TEST_SQLITE=1 manage.py test`) on
-  every push and pull request. No Docker/Postgres involved, just `pip install` + the
-  test runner, so it's fast.
-- **`release.yml`** - runs on pushing a tag matching `v*.*.*`, on every push to `master` or
-  `develop` that changes more than docs (a newer push cancels a running branch build), and for
-  any other branch only by hand via "Run workflow", with a choice of branch and platform. Every
-  `master` build is a release `vX.Y.Z` - the workflow sets the tag, the next build counts the
-  patch up (`GitVersion.yml`; `+semver: minor` in a commit message or a tag of your own for
-  more). It builds everything an offline Pi deployment needs, for `linux/arm64` (64-bit
-  Raspberry Pi OS; `linux/arm/v7` in the manual-run dropdown for a 32-bit one):
-  - the images this repo builds, pushed to `ghcr.io/<owner>/coffeepy-web` and
-    `ghcr.io/<owner>/coffeepy-nfc-bridge` as `:<version>-<arch>` and `:latest-<arch>`
-    (single-platform images, so the platform is in every tag);
-  - a CycloneDX **SBOM** of every image in the bundle (Syft),
-    `coffeepy-sbom-<version>-<arch>.tar` - what a device runs, down to the Python and Alpine
-    packages, to check against new vulnerabilities without the device;
-  - an **unsigned** update bundle, `coffeepy-update-<version>-<arch>-unsigned.tar`
-    (`scripts/build_update_bundle.sh --unsigned`): every image of `docker-compose.yml` -
-    Postgres, Mosquitto and Caddy included - plus the compose file and `install/`, ready for
-    `/dashboard/update/`. A device only takes it with `UPDATE_VERIFY_SIGNATURE=false`; the
-    signing key stays on the dev machine, so a signed bundle is built there.
-
-  The version is [GitVersion](https://gitversion.net)'s, configured in `GitVersion.yml` (V2
-  starts at 2.0.0; a tag `vX.Y.Z` makes its commit exactly that version) - in the image, the
-  bundle's manifest, every tag and file name, and the footer of dashboard, portal and kiosk.
-  A `+` in it becomes `-` in image tags and file names.
-
-  - the provisioning tool as `coffeepy-provision-<version>.zip` (the committed tree: unpack,
-    run `scripts/provision.sh`) and `sign_update_bundle.sh`, which signs the unsigned bundle
-    with your own key (`bash sign_update_bundle.sh <bundle> --key <key>`; it checks every
-    file's checksum first and prints the key's fingerprint as the dashboard shows it).
-
-  All of it goes into a GitHub Release: a tag `vX.Y.Z` or a `master` build makes a release
-  (shown as "Latest"); every other build a pre-release `build-<version>-<arch>`, of which the newest five are kept (GitVersion ignores
-  those tags). It is also a workflow-run artifact (download needs a GitHub login, kept 90
-  days). GHCR packages are private by default on first publish even for a public repo - flip
-  visibility to public under the repo's Packages tab if you want `docker pull` to work
-  without logging in.
+Tests (on SQLite and PostgreSQL), the vulnerability audit, the lint, and how releases with
+images, update bundles, SBOMs and the provisioning tool are built: [docs/CI.md](docs/CI.md).
 
 ## Raspberry Pi install
 

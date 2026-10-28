@@ -7,10 +7,12 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from coffee.models import CoffeeSort, Member, MemberCard, NfcReaderStatus, NfcScan, Order
+from dashboard.models import KioskBoards
 
 
 class KioskPanelTestCase(TestCase):
     def setUp(self):
+        KioskBoards.objects.update_or_create(pk=1, defaults={"ranking": True, "pillory": True})
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
         NfcReaderStatus.objects.create(pk=1, is_online=True)

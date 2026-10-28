@@ -66,6 +66,8 @@ def update(request):
         "version": settings.COFFEEPY_VERSION,
         "version_sections": version_sections,
         "version_text": versions.as_text(version_sections),
+        # The device installs anything uploaded here - fine on a test device, never in use.
+        "signature_off": isinstance(system, dict) and not (system.get("signature") or {}).get("check", True),
         "system_missing": not isinstance(system, dict),
         "installed": installed,
         "previous": _read("previous.json"),

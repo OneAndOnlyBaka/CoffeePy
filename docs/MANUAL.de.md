@@ -137,7 +137,7 @@ auswählen, um sie zu ändern:
 | Adresse für Handys | Die Adresse in den QR-Codes und im Zertifikat. Mit Access Point `192.168.4.1`, sonst die (am besten feste) Adresse des Pi in deinem Netz. |
 | Zeitzone | Für die Uhr und die Statistiken nach Stunde und Wochentag. |
 | Backups & Protokoll | Ob die Backups auf dem USB-Stick **verschlüsselt** werden (eine Passphrase mit mindestens 12 Zeichen – bewahre sie sicher auf, ohne sie lässt sich kein Backup wiederherstellen), und wie viele Tage das **Protokoll** aufbewahrt wird (standardmäßig 90). Wie oft gesichert wird, stellst du im Dashboard ein. |
-| Updates | Welche **Signatur** ein Update tragen muss: Schlüssel von CoffeePy, **eigener Schlüssel** oder **keine Prüfung** (siehe [Eigener Signierschlüssel](#eigener-signierschlüssel)). |
+| Updates | Welche **Signatur** ein Update tragen muss: Schlüssel von CoffeePy, **eigener Schlüssel** oder **keine Prüfung (nur Entwicklung)** (siehe [Eigener Signierschlüssel](#eigener-signierschlüssel)). |
 | Display | Bildschirmmodus. Das dokumentierte 1024×600-Display meldet seine Auflösung nicht und braucht deshalb die Vorgabe. |
 | Web-Worker | Prozesse für die Web-App: 2 für einen Pi 3, 3–4 für einen Pi 4 oder 5. |
 | Installieren aus | Internet oder ein Offline-Paket (für Pis ohne Internet, siehe README). |
@@ -360,7 +360,12 @@ Balken darunter. Gezählt werden Tassen – eine Kanne zählt zwei.
 
   ![Pranger](pictures/manual/de/kiosk-ranking-pillory.png)
 
-Die Rangliste öffnet immer mit **Gesamt**.
+Die Rangliste öffnet immer mit ihrem ersten Reiter.
+
+**Ob es Rangliste und Pranger gibt, entscheidet der Admin** (Dashboard → **System** →
+*Rangliste und Pranger*): Ist eines aus, fehlt sein Reiter; ist beides aus, fehlt der Knopf
+**Rangliste** ganz – und die Medaille nach einer Bestellung auch. Ein neu eingerichtetes Gerät
+startet mit beidem aus; siehe [Datenschutz und Arbeitsplatz](#datenschutz-und-arbeitsplatz).
 
 ### Admin-Zugang
 
@@ -589,6 +594,17 @@ einem neuen gefragt.
 
 ![System](pictures/manual/de/dashboard-system.png)
 
+**Rangliste und Pranger**: was der Kiosk allen an der Maschine zeigt – die Rangliste (wer am
+meisten trinkt, gesamt und im Monat) und den Pranger (wer Geld schuldet), je mit einem Haken.
+Der Kiosk folgt mit seiner nächsten Abfrage. Die Seite **Pranger** im Dashboard, für den, der
+das Geld einsammelt, bleibt davon unberührt. Siehe
+[Datenschutz und Arbeitsplatz](#datenschutz-und-arbeitsplatz).
+
+Steht oben unter der Adresse ein Hinweis, die Adresse sei *nur geschätzt*, ist `PUBLIC_HOST` in
+`.env` leer und die Adresse vermutlich die des App-Containers – die QR-Codes führen dann ins
+Leere. Das Provisioning-Tool und der Installer setzen sie; von Hand: `PUBLIC_HOST=` mit der
+Adresse des Geräts.
+
 **Nachtruhe**: Mit *Kiosk nachts ausschalten* schaltet der Kiosk um *Aus ab* (z. B. 20:00) den
 Bildschirm dunkel und kommt um *Wieder an ab* (z. B. 05:30) von selbst wieder. Für *Samstag und
 Sonntag* wählst du *Wie unter der Woche*, *Den ganzen Tag aus* oder *Eigene Zeiten*
@@ -752,6 +768,25 @@ Die Daten gehen dabei ebenfalls auf den Stand vor diesem Update zurück.
 Für Scripte gibt es `./scripts/build_update_bundle.sh` (seine Optionen stehen am Anfang des
 Scripts); ein Update geht auch über das Provisioning-Tool von einem PC aus.
 
+#### Update aus dem GitHub-Release
+
+Jeder Build auf GitHub liegt unter *Releases* bereit – das neueste ist mit *Latest*
+markiert. Die Update-Pakete dort sind **unsigniert**, denn der Schlüssel liegt nie bei GitHub.
+Für ein Gerät im Einsatz signierst du das Paket selbst, mit deinem eigenen Schlüssel (siehe
+[Eigener Signierschlüssel](#eigener-signierschlüssel) – das Gerät muss ihm vertrauen):
+
+1. Aus dem Release `coffeepy-update-<Version>-arm64-unsigned.tar` und
+   `sign_update_bundle.sh` herunterladen.
+2. Signieren: `bash sign_update_bundle.sh coffeepy-update-<Version>-arm64-unsigned.tar --key
+   ~/.config/coffeepy/update-signing.key`. Das Script prüft zuerst jede Datei des Pakets gegen
+   seine Prüfsummen, schreibt dann `coffeepy-update-<Version>-arm64.tar` und nennt den
+   Fingerabdruck deines Schlüssels – derselbe muss unter **Update › Versionen**
+   (*Update-Signatur*) stehen.
+3. Das **signierte** Paket im Dashboard unter **Update** hochladen.
+
+Das unsignierte Paket direkt einzuspielen geht nur mit abgeschalteter Prüfung (siehe unten) –
+**nur für die Entwicklung** und ein Testgerät.
+
 #### Eigener Signierschlüssel
 
 Ein Gerät spielt nur Updates ein, deren Signatur zu seinem Schlüssel passt – standardmäßig zu
@@ -775,12 +810,14 @@ eigenen:
 
 Den Fingerabdruck des verwendeten Schlüssels zeigt **Update › Versionen** (*Update-Signatur*).
 
-**Die Prüfung ganz abschalten:** im Provisioning-Tool **Updates › Keine Prüfung**, oder
+**Die Prüfung ganz abschalten – nur für die Entwicklung:** im Provisioning-Tool **Updates ›
+Keine Prüfung (nur Entwicklung)**, oder
 `UPDATE_VERIFY_SIGNATURE=false` in `/opt/coffeepy/.env` auf dem Gerät. Das Gerät spielt dann
 jedes Paket ein – signiert, mit einem anderen Schlüssel signiert oder gar nicht signiert
 (`build_update_bundle.sh --unsigned`). Prüfsummen, Plattform und Platz werden weiter geprüft.
-Mach das nur, wenn sich niemand, dem du nicht traust, als Admin am Dashboard anmelden kann: Wer
-ein Update hochladen darf, kann dann alles auf dem Gerät ausführen.
+Mach das nur auf einem Testgerät, an dem sich niemand, dem du nicht traust, als Admin anmelden
+kann: Wer ein Update hochladen darf, kann dann alles auf dem Gerät ausführen. Die Update-Seite
+im Dashboard warnt, solange die Prüfung aus ist.
 
 ### Wenn der Kiosk hängt
 
@@ -794,6 +831,32 @@ Während eines Updates, einer Wiederherstellung oder eines Imports und in den er
 nach dem Einschalten greift es nicht ein, nachts (**Nachtruhe**) nicht beim Kiosk, und nach drei Neustarts in einer Stunde gibt es auf
 (*watchdog.gave_up*): Dann hilft ein Neustart nicht, und es ist Zeit, ins Protokoll zu sehen.
 Den Stecker ziehen musst du also nur noch, wenn auch das nichts mehr bewirkt.
+
+### Datenschutz und Arbeitsplatz
+
+CoffeePy verarbeitet personenbezogene Daten von Kolleginnen und Kollegen: Name, Karten-ID, jede
+Bestellung mit Uhrzeit, Zahlungen und Kontostand, im Protokoll außerdem, wer wann was im
+Dashboard getan hat (mit IP-Adresse, standardmäßig 90 Tage). Im Büro sind Konsum- und
+Schuldendaten personenbezogen – in Deutschland gilt dafür die DSGVO, und sobald etwas nach
+Verhaltens- oder Leistungsdaten aussieht, kann der **Betriebsrat** mitbestimmen
+(§ 87 Abs. 1 Nr. 6 BetrVG: technische Einrichtungen, die dazu *geeignet* sind, Verhalten oder
+Leistung zu überwachen – ob das gewollt ist, spielt keine Rolle).
+
+Was dabei hilft, ohne Rechtsberatung zu sein:
+
+- **Rangliste und Pranger bewusst einschalten** (Dashboard → **System**) – ein neues Gerät hat
+  beides aus. Gerade der Pranger zeigt allen an der Maschine, wer Schulden hat.
+- **Vorher informieren**: wer welche Daten sieht, wozu sie dienen (die Strichliste) und wie
+  lange sie bleiben (Art. 13 DSGVO); wo es einen Betriebsrat gibt, ihn vor dem Einschalten von
+  Rangliste und Pranger einbeziehen.
+- **Kürzel erlauben**: Wer nicht mit Namen in der Rangliste stehen will, nimmt ein Kürzel wie
+  „AB“ (siehe [Einstellungen](#einstellungen) am Kiosk).
+- **Ausgeschiedene markieren** (Dashboard → **Mitglieder**): Ihre Karten sind gesperrt, sie
+  tauchen in Rangliste und Pranger nicht mehr auf.
+- **Backups** enthalten dieselben Daten – den Stick so verwahren wie die Daten selbst, und ein
+  Backup-Passwort setzen, wenn er das Haus verlassen könnte.
+- Das Dashboard ist nur mit Anmeldung erreichbar; wer Admin ist, sieht alles. Vergib die
+  Rollen sparsam (**Dashboard-Benutzer**).
 
 ### Sprache
 

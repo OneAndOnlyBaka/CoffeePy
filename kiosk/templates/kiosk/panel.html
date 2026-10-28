@@ -1,5 +1,5 @@
 {% load static i18n l10n coffee_tags %}
-<div id="panel-state" data-panel-key="{{ panel_key }}" data-mode="{{ mode }}" hidden></div>
+<div id="panel-state" data-panel-key="{{ panel_key }}" data-mode="{{ mode }}" data-ranking="{{ ranking_views|yesno:'1,0' }}" hidden></div>
 {% if state == "wait_for_card" %}
 {% include "kiosk/_corner_buttons.html" %}
 {% comment %}
@@ -215,14 +215,21 @@ Like the wait screen, identical HTML from poll to poll, or the podium GIF restar
 on every one: so the tabs are GET links, and there is no form (and no csrf token) here.
 {% endcomment %}
 <div class="ranking">
+    {% comment %}Only the tabs the admin allows (KioskBoards) - and no tab bar for a single one.{% endcomment %}
+    {% if ranking_views|length > 1 %}
     <nav class="ranking-tabs" hx-target="#panel" hx-swap="innerHTML" hx-sync="#panel:replace">
+        {% if "alltime" in ranking_views %}
         <a class="{% if ranking_view == 'alltime' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'alltime' %}"
            hx-get="{% url 'kiosk:ranking_view' 'alltime' %}">{% translate "All time" %}</a>
         <a class="{% if ranking_view == 'month' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'month' %}"
            hx-get="{% url 'kiosk:ranking_view' 'month' %}">{% translate "This month" %}</a>
+        {% endif %}
+        {% if "pillory" in ranking_views %}
         <a class="{% if ranking_view == 'pillory' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'pillory' %}"
            hx-get="{% url 'kiosk:ranking_view' 'pillory' %}">{% translate "Pillory" %}</a>
+        {% endif %}
     </nav>
+    {% endif %}
     <div class="podium-stage">
         <div class="podium-banner">{{ banner }}</div>
         {% if ranking_view == "pillory" %}

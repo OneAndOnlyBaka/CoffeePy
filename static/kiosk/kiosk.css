@@ -34,6 +34,9 @@ html, body.kiosk { overflow: hidden; }
 .nav-icon img { width: 100%; height: 100%; object-fit: contain; filter: brightness(0.85); }
 .nav-label { flex: 0 0 auto; text-align: center; }
 .nav-btn.active { background: var(--coffee); }
+/* The ranking button the admin switched off (dashboard → System): display:flex above would
+   otherwise beat the hidden attribute. */
+.nav-btn[hidden] { display: none; }
 .nav-btn.active .nav-icon img { filter: none; }
 
 .kiosk-panel {

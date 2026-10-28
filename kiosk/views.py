@@ -31,6 +31,7 @@ from coffee.models import (
 )
 from coffee.network import public_base_url
 from dashboard import audit
+from dashboard.models import KioskBoards
 
 MODE_ORDER = "order"
 MODE_INFO = "info"
@@ -40,7 +41,6 @@ VALID_MODES = (MODE_ORDER, MODE_INFO, MODE_SETTINGS, MODE_RANKING)
 
 ORDER_AUTO_CHECKOUT_SECONDS = 20
 AUTO_LOGOUT_SECONDS = 20
-RANKING_VIEWS = ["alltime", "month", "pillory"]
 LINK_TOKEN_TTL_SECONDS = 300
 
 THANK_YOU_SECONDS = 20
@@ -102,8 +102,18 @@ def index(request):
     request.session.setdefault("ranking_view", "alltime")
     return render(request, "kiosk/index.html", {
         "mode": request.session["mode"],
+        "ranking_on": bool(_ranking_views(request)),
         "maintenance_steps": {key: str(label) for key, label in MAINTENANCE_STEPS.items()},
     })
+
+
+def _ranking_views(request):
+    """The ranking screen's tabs the admin allows (dashboard → System, KioskBoards) - asked once
+    per request; empty means no ranking screen at all."""
+    views = getattr(request, "_ranking_views", None)
+    if views is None:
+        views = request._ranking_views = KioskBoards.current().kiosk_views()
+    return views
 
 
 def language(request):
@@ -124,11 +134,13 @@ def language(request):
 
 
 def nav(request, mode):
-    if mode in VALID_MODES:
+    # A ranking button the admin has just switched off can still be on a screen that hasn't
+    # polled since (nav_state.js hides it then) - its tap changes nothing.
+    if mode in VALID_MODES and (mode != MODE_RANKING or _ranking_views(request)):
         request.session["mode"] = mode
         _reset_session_state(request)
-        if mode == MODE_RANKING:  # always opens on the podium, not on whichever tab was left open
-            request.session["ranking_view"] = "alltime"
+        if mode == MODE_RANKING:  # always opens on its first tab, not on whichever was left open
+            request.session["ranking_view"] = _ranking_views(request)[0]
     # The nav buttons swap only #panel via htmx (index.html): a full page load per tap took
     # ~370ms on a Pi 3, most of it Chromium rebuilding the page. The redirect stays for
     # anything that follows the plain link.
@@ -168,7 +180,7 @@ def ranking_view(request, view):
     """A tab of the ranking screen. A GET link like the language button, for the same
     reason: a form's csrf token would make the screen differ on every poll, and the podium
     animation restart with it (panel.html)."""
-    if view in RANKING_VIEWS:
+    if view in _ranking_views(request):
         request.session["ranking_view"] = view
     _touched(request)
     if request.headers.get("HX-Request"):
@@ -447,7 +459,10 @@ def _render_panel(request):
     # redirects into the settings flow, or a timeout logs out) - re-read it before
     # rendering so the panel reflects the *new* state, not the one at request start.
     mode = request.session.get("mode", mode)
+    if mode == MODE_RANKING and not _ranking_views(request):  # switched off while on screen
+        mode = request.session["mode"] = MODE_ORDER
     ctx["mode"] = mode
+    ctx["ranking_views"] = _ranking_views(request)
     if ctx.get("state") is None:
         ctx.update(_state_context(request, mode))
 
@@ -720,9 +735,11 @@ def _order_context(request, uid, seconds_left):
         prior_balance = services.balance_before_current_month(member)
         if prior_balance < 0:
             month_reminder_balance = -prior_balance
-        # Shares the ranking screen's cached rows - the order screen is polled as well.
-        alltime_badge = _rank_badge(uid, _ranking_rows(request, "alltime"))
-        month_badge = _rank_badge(uid, _ranking_rows(request, "month"))
+        # Shares the ranking screen's cached rows - the order screen is polled as well. A place
+        # on the podium is the ranking too, shown to whoever stands next to the machine.
+        if "alltime" in _ranking_views(request):
+            alltime_badge = _rank_badge(uid, _ranking_rows(request, "alltime"))
+            month_badge = _rank_badge(uid, _ranking_rows(request, "month"))
     return {
         "state": "order",
         "member": member,
@@ -811,9 +828,10 @@ def _info_pay_context(request, uid, seconds_left):
 
 
 def _ranking_context(request):
-    view = request.session.get("ranking_view", "alltime")
-    if view not in ("month", "pillory"):
-        view = "alltime"
+    views = _ranking_views(request)
+    view = request.session.get("ranking_view")
+    if view not in views:
+        view = views[0]
     rows = _ranking_rows(request, view)
     context = {"ranking_view": view, "rows": rows}
     if view == "pillory":

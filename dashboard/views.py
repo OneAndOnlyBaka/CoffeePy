@@ -4,6 +4,7 @@ import os
 import tempfile
 from datetime import datetime, timedelta
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
@@ -35,7 +36,7 @@ from coffee.network import public_host
 
 from . import audit, import_jobs, night, system_clock, system_stats, tls
 from .decorators import superuser_required
-from .models import AccountSecurity, NamePolicy, NightPolicy, PasswordPolicy
+from .models import AccountSecurity, KioskBoards, NamePolicy, NightPolicy, PasswordPolicy
 from .forms import (
     ROLE_ADMIN,
     AdminSetPasswordForm,
@@ -45,6 +46,7 @@ from .forms import (
     OrderForm,
     OwnPasswordChangeForm,
     NamePolicyForm,
+    KioskBoardsForm,
     NightPolicyForm,
     PasswordPolicyForm,
     PaymentForm,
@@ -452,8 +454,18 @@ def export_payments(request):
 @login_required
 @superuser_required
 def system_dashboard(request):
-    policy = NightPolicy.current()
-    if request.method == "POST":
+    policy, boards = NightPolicy.current(), KioskBoards.current()
+    form = NightPolicyForm(instance=policy)
+    boards_form = KioskBoardsForm(instance=boards)
+    if request.method == "POST" and request.POST.get("form") == "boards":
+        boards_form = KioskBoardsForm(request.POST, instance=boards)
+        if boards_form.is_valid():
+            boards = boards_form.save()
+            audit.log(request, "kiosk_boards.update", details=", ".join(
+                f"{name} {'on' if getattr(boards, name) else 'off'}" for name in ("ranking", "pillory")))
+            messages.success(request, _("Saved - the kiosk follows with its next poll."))
+            return redirect("dashboard:system_dashboard")
+    elif request.method == "POST":
         form = NightPolicyForm(request.POST, instance=policy)
         if form.is_valid():
             policy = form.save()
@@ -461,13 +473,13 @@ def system_dashboard(request):
             audit.log(request, "night.update", details=night.describe(policy))
             messages.success(request, _("Saved - the kiosk follows within a minute."))
             return redirect("dashboard:system_dashboard")
-    else:
-        form = NightPolicyForm(instance=policy)
-    return render(
-        request,
-        "dashboard/system_dashboard.html",
-        {"stats": system_stats.gather(), "public_host": public_host(), "night_form": form},
-    )
+    return render(request, "dashboard/system_dashboard.html", {
+        "stats": system_stats.gather(), "public_host": public_host(), "night_form": form,
+        "boards_form": boards_form,
+        # Without PUBLIC_HOST the address is detected inside the container - usually the
+        # container's own, which no phone reaches (coffee/network.py).
+        "public_host_guessed": not settings.PUBLIC_HOST,
+    })
 
 
 @login_required
