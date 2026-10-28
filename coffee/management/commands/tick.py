@@ -8,7 +8,8 @@ from dashboard import night
 class Command(BaseCommand):
     help = (
         "The backup service's minutely round (docker-compose.yml): the clock check (coffee/clock.py), "
-        "the kiosk's night schedule (dashboard/night.py), then a backup if one is due - in one process, because each Django start costs seconds on a Pi 3."
+        "the kiosk's night schedule (dashboard/night.py), then a backup if one is due - in one process, "
+        "because each Django start costs seconds on a Pi 3."
     )
 
     def handle(self, *args, **options):

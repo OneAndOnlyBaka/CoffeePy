@@ -173,7 +173,8 @@ class NightSettingTestCase(TestCase):
 
     def test_tick_brings_the_file_back(self):
         NightPolicy.objects.update_or_create(pk=1, defaults={"enabled": True})
-        with mock.patch("coffee.clock.check", return_value=None), mock.patch("coffee.management.commands.tick.call_command"):
+        with mock.patch("coffee.clock.check", return_value=None), \
+                mock.patch("coffee.management.commands.tick.call_command"):
             call_command("tick", stdout=mock.Mock(), stderr=mock.Mock())
         self.assertTrue(self.schedule()["enabled"])
         self.assertFalse(night.write_file())  # unchanged: not rewritten
