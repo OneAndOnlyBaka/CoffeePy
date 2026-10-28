@@ -19,8 +19,9 @@ name: Release
 # The device itself is set up with install/install.sh on Raspberry Pi OS Lite; there is no
 # image to build here.
 #
-# Triggered by pushing a tag (a release), by a push to master or develop (a pre-release), or -
-# for any other branch - only by hand via workflow_dispatch ("Run workflow", pick the branch).
+# Triggered by pushing a tag or a push to master (a release, vX.Y.Z), by a push to develop (a
+# pre-release), or - for any other branch - only by hand via workflow_dispatch ("Run
+# workflow", pick the branch; also a pre-release).
 on:
   push:
     tags: ["v*.*.*"]
@@ -156,11 +157,12 @@ jobs:
             sign_update_bundle.sh
           compression-level: 0   # image layers are compressed already
 
-      # A tag vX.Y.Z is a release. Every other build becomes a pre-release, so the bundle is a
-      # plain download link rather than an artifact behind a login that expires - tagged
-      # build-<version>-<arch>, which GitVersion (tag-prefix [vV]) and the v*.*.* trigger both
-      # ignore; only the newest KEEP_BUILDS of them are kept. A tag the GITHUB_TOKEN creates
-      # starts no workflow of its own.
+      # A tag vX.Y.Z, and every build of master, is a release - master's tagged v<version> here,
+      # which is what GitVersion counts the next master commit up from. Every other build is a
+      # pre-release build-<version>-<arch>, which GitVersion (tag-prefix [vV]) and the v*.*.*
+      # trigger both ignore; only the newest KEEP_BUILDS of those are kept. Either way a plain
+      # download link, not an artifact behind a login that expires. A tag the GITHUB_TOKEN
+      # creates starts no workflow of its own.
       - name: Publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -177,10 +179,20 @@ jobs:
           - \`${{ steps.names.outputs.sbom }}\`: a CycloneDX SBOM of every image in it
           - \`${{ steps.names.outputs.provision }}\`: the provisioning tool - unpack, then \`scripts/provision.sh\` sets up a Pi
           - Images: \`${{ env.REGISTRY }}/$owner/coffeepy-web:$image_tag\`, \`${{ env.REGISTRY }}/$owner/coffeepy-nfc-bridge:$image_tag\`"
+          release() { # tag - an existing one (a re-run, the other platform) only gets the files
+            if gh release view "$1" >/dev/null 2>&1; then
+              gh release upload "$1" "${files[@]}" --clobber
+            else
+              gh release create "$1" "${files[@]}" --target "$GITHUB_SHA" --latest --title "CoffeePy ${1#v}" \
+                --generate-notes --notes "$notes"
+            fi
+          }
           if [ "${{ github.ref_type }}" = "tag" ]; then
-            tag="${{ github.ref_name }}"
-            gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --generate-notes --notes "$notes"
-            gh release upload "$tag" "${files[@]}" --clobber
+            release "${{ github.ref_name }}"
+            exit 0
+          fi
+          if [ "${{ github.ref_name }}" = "master" ]; then
+            release "v${{ steps.names.outputs.version }}"
             exit 0
           fi
           tag="build-$image_tag"

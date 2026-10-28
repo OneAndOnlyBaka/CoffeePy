@@ -10,12 +10,11 @@ tag-prefix: '[vV]?'
 # GitVersion 6's names: ContinuousDelivery counts like that, ContinuousDeployment drops the
 # label altogether (a branch build then claimed to be 2.0.0).
 branches:
-  # Untagged commits on master are builds, not the release: 2.0.0-ci.N, and after the tag
-  # v2.0.0 2.0.1-ci.N. Without a label every one of them claimed to be the final version, and
-  # its pre-release build-<version> already existed from the commit before.
+  # Every build of master is a release: the workflow tags it vX.Y.Z, and the next commit is
+  # X.Y.(Z+1) - "+semver: minor" in a commit message, or a tag of your own, for more.
   main:
-    mode: ContinuousDelivery
-    label: ci
+    mode: ContinuousDeployment
+    increment: Patch
   unknown:
     mode: ContinuousDelivery
   feature:
