@@ -50,9 +50,9 @@ jobs:
 
       - name: Tests against PostgreSQL, with coverage
         env:
-          FULL_COVERAGE: >-
-            coffee/backups.py,dashboard/restore_jobs.py,dashboard/views_backup.py,
-            dashboard/views_update.py,install/storage_helper.py,install/update_watcher.py
+          # One line: a folded list keeps a space after each break, and " dashboard/..." then
+          # matched nothing - that file went unchecked without a word.
+          FULL_COVERAGE: "coffee/backups.py,dashboard/restore_jobs.py,dashboard/views_backup.py,dashboard/views_update.py,install/storage_helper.py,install/update_watcher.py"
         run: |
           docker compose -f docker-compose.test.yml run --rm -e FULL_COVERAGE tests \
             'coverage run manage.py test && coverage report --skip-covered \
