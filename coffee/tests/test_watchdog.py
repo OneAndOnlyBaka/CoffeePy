@@ -28,7 +28,8 @@ class WatchdogTestCase(SimpleTestCase):
         self.calls = self.root / "calls"
         fakes = {"curl": f'#!/bin/sh\n[ -f "{self.healthy}" ]\n',
                  "systemctl": f'#!/bin/sh\necho "$*" >> "{self.calls}"\n',
-                 "logger": "#!/bin/sh\nexit 0\n"}
+                 "logger": "#!/bin/sh\nexit 0\n",
+                 "pgrep": "#!/bin/sh\nexit 1\n"}  # no kiosk browser, also not this machine's own
         for name, body in fakes.items():
             (bin_dir / name).write_text(body)
             (bin_dir / name).chmod(0o755)
@@ -38,7 +39,7 @@ class WatchdogTestCase(SimpleTestCase):
         self.state = self.root / "state"
         self.env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "COFFEEPY_STORAGE_DIR": str(self.storage),
                     "COFFEEPY_MAINTENANCE_FILE": str(self.maintenance), "WATCHDOG_STATE_DIR": str(self.state),
-                    "WATCHDOG_UPTIME": "3600"}
+                    "WATCHDOG_UPTIME": "3600", "WATCHDOG_NIGHT_CHECK": "false"}
         self.healthy.touch()
 
     def run_once(self, **env):
@@ -107,6 +108,25 @@ class WatchdogTestCase(SimpleTestCase):
         self.run_once()
         self.run_once()
         self.assertEqual(self.run_once(), ["restart coffeepy.service"])
+
+    def test_hands_off_at_night(self):
+        self.beat(6 * 3600)  # the evening's last poll
+        for _ in range(3):
+            self.assertEqual(self.run_once(WATCHDOG_NIGHT_CHECK="true"), [])
+        self.healthy.unlink()  # the app itself is still watched - the phone portal runs at night
+        for _ in range(3):
+            self.run_once(WATCHDOG_NIGHT_CHECK="true")
+        self.assertEqual(self.restarts(), ["restart coffeepy.service"])
+
+    def test_a_browser_still_starting_gets_its_time(self):
+        self.beat(6 * 3600)  # the morning: the last heartbeat is the evening's
+        bin_dir = self.root / "bin"
+        (bin_dir / "pgrep").write_text("#!/bin/sh\necho 4242\n")
+        (bin_dir / "ps").write_text("#!/bin/sh\necho '  40'\n")
+        (bin_dir / "ps").chmod(0o755)
+        self.assertEqual(self.run_once(), [])
+        (bin_dir / "ps").write_text("#!/bin/sh\necho ' 400'\n")
+        self.assertEqual(self.run_once(), ["restart getty@tty1.service"])
 
     def test_not_right_after_a_boot(self):
         self.healthy.unlink()

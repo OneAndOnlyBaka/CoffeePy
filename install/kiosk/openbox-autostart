@@ -53,10 +53,27 @@ fi
 # HEARTBEAT when it polls (kiosk/views.py, at most every 30s per worker); no touch within
 # KIOSK_LOAD_SECONDS of the start means it never loaded, and the loop starts Chromium again.
 # Its output goes to RAM ($XDG_RUNTIME_DIR), readable until the next boot, not onto the card.
+# At night (dashboard → System → Night rest) there is no Chromium and no picture: the loop
+# ends the browser when the night begins, keeps the screen's signal off - again every 30s,
+# since a touch on the panel wakes it - and starts a fresh browser in the morning.
+night() { python3 /opt/coffeepy/install/kiosk_night.py; }
+NIGHT_CHECK_SECONDS=30
+
 HEARTBEAT=/opt/coffeepy/data/storage/kiosk-heartbeat
 KIOSK_LOAD_SECONDS=90  # ~30s is usual at boot (first poll after the start), so three times that
 LOG="${XDG_RUNTIME_DIR:-/tmp}/chromium.log"
 while true; do
+    if night; then
+        echo "$(date -Is) night - kiosk off until the morning" >> "$LOG"
+        xset +dpms
+        while night; do
+            xset dpms force off
+            sleep "$NIGHT_CHECK_SECONDS"
+        done
+        xset dpms force on
+        xset -dpms
+        echo "$(date -Is) morning - kiosk on" >> "$LOG"
+    fi
     started=$(date +%s)
     chromium \
         --kiosk "$KIOSK_URL/kiosk/" \
@@ -80,7 +97,14 @@ while true; do
         if [ "$(stat -c %Y "$HEARTBEAT" 2>/dev/null || echo 0)" -lt "$started" ]; then
             echo "$(date -Is) kiosk never polled - restarting Chromium" >> "$LOG"
             kill "$browser" 2>/dev/null
+            exit 0
         fi
+        while sleep "$NIGHT_CHECK_SECONDS"; do
+            if night; then
+                kill "$browser" 2>/dev/null  # the loop above takes it from here
+                exit 0
+            fi
+        done
     ) &
     check=$!
     wait "$browser"

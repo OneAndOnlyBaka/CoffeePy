@@ -5,7 +5,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 from django.utils.translation import gettext_lazy, pgettext_lazy
 
-from .models import POLICY_LIMITS, NamePolicy, PasswordPolicy
+from .models import POLICY_LIMITS, NamePolicy, NightPolicy, PasswordPolicy
 from coffee import names
 from coffee.models import CASH_METHOD_NAME, BackupSettings, CoffeeSort, Member, Order, Payment, PaymentMethod, payment_method_label
 
@@ -358,3 +358,25 @@ class NamePolicyForm(forms.ModelForm):
         help_texts = {"blocked_names": gettext_lazy(
             "One per line - on top of the usual placeholders (test, name, user, ...), which are always refused.")}
         widgets = {"blocked_names": forms.Textarea(attrs={"rows": 4})}
+
+
+class NightPolicyForm(forms.ModelForm):
+    class Meta:
+        model = NightPolicy
+        fields = ["enabled", "off_at", "on_at", "weekend", "weekend_off_at", "weekend_on_at"]
+        labels = {"enabled": gettext_lazy("Switch the kiosk off at night"), "off_at": gettext_lazy("Off from"),
+                  "on_at": gettext_lazy("On again from"), "weekend": gettext_lazy("Saturday and Sunday"),
+                  "weekend_off_at": gettext_lazy("Weekend: off from"),
+                  "weekend_on_at": gettext_lazy("Weekend: on again from")}
+        widgets = {name: forms.TimeInput(attrs={"type": "time"}, format="%H:%M")
+                   for name in ("off_at", "on_at", "weekend_off_at", "weekend_on_at")}
+
+    def clean(self):
+        cleaned = super().clean()
+        same = gettext_lazy("Off and on at the same time would be no night at all.")
+        if cleaned.get("enabled") and cleaned.get("off_at") == cleaned.get("on_at"):
+            self.add_error("on_at", same)
+        if (cleaned.get("enabled") and cleaned.get("weekend") == NightPolicy.WEEKEND_TIMES
+                and cleaned.get("weekend_off_at") == cleaned.get("weekend_on_at")):
+            self.add_error("weekend_on_at", same)
+        return cleaned

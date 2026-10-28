@@ -25,6 +25,7 @@ STACK_CHECKS="${WATCHDOG_STACK_CHECKS:-3}"     # minutes without an answer befor
 STALE="${WATCHDOG_HEARTBEAT_SECONDS:-180}"     # the kiosk polls twice a second, beats every 30s
 MAX_ACTIONS="${WATCHDOG_MAX_ACTIONS:-3}"       # per hour
 UPTIME="${WATCHDOG_UPTIME:-$(cut -d. -f1 /proc/uptime)}"
+NIGHT_CHECK="${WATCHDOG_NIGHT_CHECK:-python3 $DIR/install/kiosk_night.py}"  # 0 at night
 NOW="$(date +%s)"
 
 mkdir -p "$STATE"
@@ -78,11 +79,22 @@ if ! curl -sf --max-time 15 --cacert "$CA" "$HEALTH_URL" >/dev/null 2>&1; then
 fi
 rm -f "$STATE/failures"
 
+# The kiosk's night (dashboard → System): no browser on purpose, nothing to repair.
+if $NIGHT_CHECK >/dev/null 2>&1; then
+    rm -f "$STATE/kiosk-restarted"
+    exit 0
+fi
 # No heartbeat file at all: no kiosk browser has ever polled this stack - nothing to judge.
 [ -f "$STORAGE/kiosk-heartbeat" ] || exit 0
 age=$((NOW - $(stat -c %Y "$STORAGE/kiosk-heartbeat")))
 if [ "$age" -lt "$STALE" ]; then
     rm -f "$STATE/kiosk-restarted"
+    exit 0
+fi
+# A browser younger than that is still starting - in the morning after the night, say, when
+# the last heartbeat is the evening's. The session's own loop restarts one that never loads.
+browser=$(pgrep -o -f "^/usr/lib/chromium/chromium" 2>/dev/null)
+if [ -n "$browser" ] && [ "$(ps -o etimes= -p "$browser" | tr -d ' ')" -lt "$STALE" ] 2>/dev/null; then
     exit 0
 fi
 if [ -f "$STATE/kiosk-restarted" ]; then

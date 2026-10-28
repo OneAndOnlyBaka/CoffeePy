@@ -1,5 +1,8 @@
+import datetime
+
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext_lazy
 
 
 class AccountSecurity(models.Model):
@@ -61,3 +64,30 @@ class NamePolicy(models.Model):
 
     def blocked_list(self) -> list[str]:
         return sorted({word.strip().lower() for word in self.blocked_names.replace(",", "\n").splitlines() if word.strip()})
+
+
+class NightPolicy(models.Model):
+    """When the kiosk sleeps - set on the dashboard's System page, carried out by the kiosk
+    session itself (install/kiosk/openbox-autostart reads it from the file dashboard/night.py
+    writes). One row; off until an admin turns it on. Saturday and Sunday can follow the
+    weekdays, stay off all day, or have times of their own."""
+
+    WEEKEND_SAME = "same"
+    WEEKEND_ALL_DAY = "all_day"
+    WEEKEND_TIMES = "times"
+    WEEKEND_CHOICES = [
+        (WEEKEND_SAME, gettext_lazy("Like the weekdays")),
+        (WEEKEND_ALL_DAY, gettext_lazy("Off all day")),
+        (WEEKEND_TIMES, gettext_lazy("Times of its own")),
+    ]
+
+    enabled = models.BooleanField(default=False)
+    off_at = models.TimeField(default=datetime.time(20, 0))
+    on_at = models.TimeField(default=datetime.time(5, 30))
+    weekend = models.CharField(max_length=10, choices=WEEKEND_CHOICES, default=WEEKEND_SAME)
+    weekend_off_at = models.TimeField(default=datetime.time(20, 0))
+    weekend_on_at = models.TimeField(default=datetime.time(8, 0))
+
+    @classmethod
+    def current(cls):
+        return cls.objects.get_or_create(pk=1)[0]

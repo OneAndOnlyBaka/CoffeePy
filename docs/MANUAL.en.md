@@ -552,6 +552,15 @@ out: whoever's password no longer meets them is asked for a new one at their nex
 
 ![System](pictures/manual/en/dashboard-system.png)
 
+**Night rest**: with *Switch the kiosk off at night* the kiosk darkens its screen at *Off from*
+(say 20:00) and comes back by itself at *On again from* (say 05:30). For *Saturday and Sunday*
+choose *Like the weekdays*, *Off all day* or *Times of its own* (*Weekend: off from* / *on again
+from*). A night belongs to the day it starts on: Friday night runs to Saturday morning by the
+weekday times, and after a Sunday that was off all day the kiosk comes back on Monday at *On
+again from*. At night, cards at the machine are **not booked** - not later in the morning
+either. The phone portal, the backups and the dashboard keep running. A change takes effect
+within a minute and shows up in the **Audit log** as *night.update*.
+
 **System time**: only needed when the clock module is missing or wrong. The new time is
 also written to the clock module within ten minutes.
 
@@ -734,7 +743,8 @@ first, then, if that didn't help, the app. If the app doesn't answer for three m
 restarts that right away. Each takes a minute or two and shows up in the **Audit log** as
 *watchdog.kiosk_restart* / *watchdog.stack_restart*.
 
-It stays out of updates, restores and imports and the first minutes after switching on, and
+It stays out of updates, restores and imports, the first minutes after switching on and - for
+the kiosk - the night rest, and
 after three restarts within an hour it gives up (*watchdog.gave_up*): a restart doesn't help
 then, and it is time to look at the audit log. Pulling the plug is only left for when even
 that has no effect.
@@ -754,6 +764,7 @@ with its **DE/EN** button, phones and PCs at the top right of the portal and of 
 | The browser warns about the site. | Install the device certificate once (see [above](#installing-the-certificate)). |
 | **Bad Request (400)** in the browser. | The device doesn't know the address you're using. Use the address from setup (`192.168.4.1`, `coffeepy.local`), or run the provisioning tool over the new address – it adds it. |
 | After switching on, the screen is black, then white, for a minute. | Normal: the Pi starts first, then the browser. The kiosk appears after about a minute and a half – after a power cut it can take a good three minutes: the browser's first start then sometimes fails, and the device starts it again by itself. |
+| The screen is dark, taps and cards do nothing, but the dashboard works. | The **Night rest** is on (dashboard → **System**). It ends by itself at the set time; to stop it, untick it - the kiosk comes back within a minute. |
 | The kiosk went black for a moment and started again. | The device restarted a hanging kiosk or the app by itself (see [When the kiosk hangs](#when-the-kiosk-hangs)); the **Audit log** says which. If it happens often, that is where to look for why. |
 | *Card reader not available* | Check the reader's cable and restart the device. |
 | A card isn't recognised. | Hold it flat and still; a card marked as departed is turned away. |

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 00:36+0100\n"
+"POT-Creation-Date: 2026-10-28 00:54+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -306,6 +306,27 @@ msgstr ""
 "Einer pro Zeile – zusätzlich zu den üblichen Platzhaltern (test, name, user, "
 "…), die immer abgelehnt werden."
 
+msgid "Switch the kiosk off at night"
+msgstr "Kiosk nachts ausschalten"
+
+msgid "Off from"
+msgstr "Aus ab"
+
+msgid "On again from"
+msgstr "Wieder an ab"
+
+msgid "Saturday and Sunday"
+msgstr "Samstag und Sonntag"
+
+msgid "Weekend: off from"
+msgstr "Wochenende: aus ab"
+
+msgid "Weekend: on again from"
+msgstr "Wochenende: wieder an ab"
+
+msgid "Off and on at the same time would be no night at all."
+msgstr "Aus und an zur selben Zeit wäre gar keine Nacht."
+
 msgid "Starting"
 msgstr "Start"
 
@@ -336,6 +357,15 @@ msgstr "Fehlgeschlagen"
 #, python-format
 msgid "Import failed: %(error)s"
 msgstr "Import fehlgeschlagen: %(error)s"
+
+msgid "Like the weekdays"
+msgstr "Wie unter der Woche"
+
+msgid "Off all day"
+msgstr "Den ganzen Tag aus"
+
+msgid "Times of its own"
+msgstr "Eigene Zeiten"
 
 msgid "Checking the backup"
 msgstr "Backup wird geprüft"
@@ -1483,6 +1513,18 @@ msgstr "System"
 msgid "Reachable from another device (phone, laptop) at:"
 msgstr "Von anderen Geräten (Handy, Laptop) erreichbar unter:"
 
+msgid "Night rest"
+msgstr "Nachtruhe"
+
+msgid ""
+"At night the kiosk's screen goes dark and taps at the machine are not "
+"booked. The phone portal and the backups keep running; in the morning the "
+"kiosk starts again by itself."
+msgstr ""
+"Nachts ist der Bildschirm des Kiosks dunkel, und Karten an der Maschine "
+"werden nicht gebucht. Das Handy-Portal und die Backups laufen weiter; am "
+"Morgen startet der Kiosk von selbst wieder."
+
 msgid "CPU"
 msgstr "CPU"
 
@@ -1758,6 +1800,9 @@ msgstr "Bitte beide Konten auswählen."
 
 msgid "Pick two different accounts."
 msgstr "Bitte zwei verschiedene Konten auswählen."
+
+msgid "Saved - the kiosk follows within a minute."
+msgstr "Gespeichert - der Kiosk folgt innerhalb einer Minute."
 
 msgid "Please choose both the certificate and its private key."
 msgstr "Bitte wähle das Zertifikat und seinen privaten Schlüssel aus."

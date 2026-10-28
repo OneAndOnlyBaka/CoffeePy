@@ -326,6 +326,17 @@ mind before changing it:
   Chromium itself waited 25s at every start for the XDG desktop portal (no desktop, so its
   GTK backend dies and the portal sits out D-Bus's timeout): the installer masks the portal
   globally - look for a pause in the journal before blaming the CPU.
+- **The kiosk's night rest** (dashboard → System, `dashboard.models.NightPolicy`) is carried out
+  by the kiosk session, not the app: `dashboard/night.py` writes `data/storage/night.json` (on save
+  and in every `tick`, so a restore catches up), and `install/kiosk_night.py` - stdlib, the host
+  has no Django - mirrors its `is_night`; keep the two identical (`test_night` compares them).
+  The file carries `TIME_ZONE`, because the host's own zone may be UTC. At night the autostart
+  ends Chromium and holds DPMS off; the watchdog leaves the kiosk alone then, and also a browser
+  younger than its stale limit (the morning's, with the evening's heartbeat). Taps at night are
+  never booked: `kiosk.views.index` starts every page load at the newest scan. Measured on the
+  Pi: dark within 4s of the night's start, polling 28s after the morning's - but the first
+  Chromium after a *reboot* during the night hit the network-service crash below and needed the
+  90s restart.
 - **The AP's channel is picked at every hostapd start** (`install/ap_channel.sh`, an
   `ExecStartPre`): as an access point the radio only hears its own channel, so the scan has
   to happen before. Transmit power needs no setting - the Pi 3 already runs at the

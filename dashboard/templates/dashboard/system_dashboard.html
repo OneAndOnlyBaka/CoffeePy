@@ -9,6 +9,19 @@
     </p>
 </div>
 
+<div class="card">
+    <h2>{% translate "Night rest" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}
+        At night the kiosk's screen goes dark and taps at the machine are not booked. The phone portal and the
+        backups keep running; in the morning the kiosk starts again by itself.
+    {% endblocktranslate %}</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ night_form.as_p }}
+        <button type="submit" class="btn">{% translate "Save" %}</button>
+    </form>
+</div>
+
 {% comment %}
 The bar widths are CSS - "width: 12,5%" in German would be dropped, so they stay unlocalized.
 {% endcomment %}

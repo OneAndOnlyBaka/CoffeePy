@@ -95,9 +95,10 @@ MAINTENANCE_STEPS = {
 
 def index(request):
     request.session.setdefault("mode", MODE_ORDER)
-    request.session.setdefault(
-        "last_scan_id", NfcScan.objects.order_by("-id").values_list("id", flat=True).first() or 0
-    )
+    # Every page load starts from the newest scan: a browser that comes back - restarted by the
+    # watchdog, or in the morning after the night (dashboard/night.py) - must not book the taps
+    # people made at the dark screen.
+    request.session["last_scan_id"] = NfcScan.objects.order_by("-id").values_list("id", flat=True).first() or 0
     request.session.setdefault("ranking_view", "alltime")
     return render(request, "kiosk/index.html", {
         "mode": request.session["mode"],

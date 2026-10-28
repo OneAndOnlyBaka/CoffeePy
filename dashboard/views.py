@@ -35,9 +35,9 @@ from coffee.models import (
 )
 from coffee.network import public_host
 
-from . import audit, import_jobs, system_clock, system_stats, tls
+from . import audit, import_jobs, night, system_clock, system_stats, tls
 from .decorators import superuser_required
-from .models import AccountSecurity, NamePolicy, PasswordPolicy
+from .models import AccountSecurity, NamePolicy, NightPolicy, PasswordPolicy
 from .forms import (
     ROLE_ADMIN,
     AdminSetPasswordForm,
@@ -47,6 +47,7 @@ from .forms import (
     OrderForm,
     OwnPasswordChangeForm,
     NamePolicyForm,
+    NightPolicyForm,
     PasswordPolicyForm,
     PaymentForm,
     PaymentMethodForm,
@@ -453,10 +454,21 @@ def export_payments(request):
 @login_required
 @superuser_required
 def system_dashboard(request):
+    policy = NightPolicy.current()
+    if request.method == "POST":
+        form = NightPolicyForm(request.POST, instance=policy)
+        if form.is_valid():
+            policy = form.save()
+            night.write_file(policy)
+            audit.log(request, "night.update", details=night.describe(policy))
+            messages.success(request, _("Saved - the kiosk follows within a minute."))
+            return redirect("dashboard:system_dashboard")
+    else:
+        form = NightPolicyForm(instance=policy)
     return render(
         request,
         "dashboard/system_dashboard.html",
-        {"stats": system_stats.gather(), "public_host": public_host()},
+        {"stats": system_stats.gather(), "public_host": public_host(), "night_form": form},
     )
 
 

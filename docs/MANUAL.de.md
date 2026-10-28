@@ -579,6 +579,16 @@ einem neuen gefragt.
 
 ![System](pictures/manual/de/dashboard-system.png)
 
+**Nachtruhe**: Mit *Kiosk nachts ausschalten* schaltet der Kiosk um *Aus ab* (z. B. 20:00) den
+Bildschirm dunkel und kommt um *Wieder an ab* (z. B. 05:30) von selbst wieder. Für *Samstag und
+Sonntag* wählst du *Wie unter der Woche*, *Den ganzen Tag aus* oder *Eigene Zeiten*
+(*Wochenende: aus ab* / *wieder an ab*). Eine Nacht gehört zu dem Tag, an dem sie beginnt: Die
+Freitagnacht läuft bis Samstagmorgen nach den Zeiten unter der Woche, und nach einem ganz
+ausgeschalteten Sonntag kommt der Kiosk am Montag zu *Wieder an ab*. In der Nacht werden Karten an der
+Maschine **nicht gebucht** – auch nicht nachträglich am Morgen. Das Handy-Portal, die Backups
+und das Dashboard laufen weiter. Eine Änderung greift innerhalb einer Minute; sie steht als
+*night.update* im **Protokoll**.
+
 **Systemzeit**: nur nötig, wenn das Uhrenmodul fehlt oder falsch geht. Die neue Zeit wird
 innerhalb von zehn Minuten auch in das Uhrenmodul geschrieben.
 
@@ -769,7 +779,7 @@ sie gleich neu. Das dauert jeweils eine bis zwei Minuten und steht als
 *watchdog.kiosk_restart* / *watchdog.stack_restart* im **Protokoll**.
 
 Während eines Updates, einer Wiederherstellung oder eines Imports und in den ersten Minuten
-nach dem Einschalten greift es nicht ein, und nach drei Neustarts in einer Stunde gibt es auf
+nach dem Einschalten greift es nicht ein, nachts (**Nachtruhe**) nicht beim Kiosk, und nach drei Neustarts in einer Stunde gibt es auf
 (*watchdog.gave_up*): Dann hilft ein Neustart nicht, und es ist Zeit, ins Protokoll zu sehen.
 Den Stecker ziehen musst du also nur noch, wenn auch das nichts mehr bewirkt.
 
@@ -789,6 +799,7 @@ der Kiosk mit dem **DE/EN**-Knopf, Handys und PCs oben rechts im Portal und im D
 | **Bad Request (400)** im Browser. | Das Gerät kennt die Adresse nicht, mit der du es aufrufst. Nimm die Adresse aus der Einrichtung (`192.168.4.1`, `coffeepy.local`) oder lass das Provisioning-Tool über die neue Adresse laufen – es trägt sie ein. |
 | Der Bildschirm ist nach dem Einschalten eine Minute lang schwarz, dann weiß. | Normal: Erst startet der Pi, dann der Browser. Nach etwa anderthalb Minuten erscheint der Kiosk – nach einem Stromausfall kann es gut drei Minuten dauern: Dann scheitert der erste Start des Browsers manchmal, und das Gerät startet ihn von selbst noch einmal. |
 | *Kartenleser nicht verfügbar* | Kabel des Lesers prüfen und das Gerät neu starten. |
+| Der Bildschirm ist dunkel, Tippen und Karten bewirken nichts, das Dashboard geht aber. | Die **Nachtruhe** läuft (Dashboard → **System**). Sie endet zur eingestellten Zeit von selbst; zum Ausschalten den Haken entfernen – der Kiosk kommt innerhalb einer Minute. |
 | Der Kiosk war kurz schwarz und startete neu. | Das Gerät hat einen hängenden Kiosk oder die App selbst neu gestartet (siehe [Wenn der Kiosk hängt](#wenn-der-kiosk-hängt)); das **Protokoll** sagt, was es war. Passiert das öfter, steht dort, wo es hakt. |
 | Eine Karte wird nicht erkannt. | Karte flach und ruhig auflegen; eine Karte, die als ausgeschieden markiert ist, wird abgewiesen. |
 | Rotes **Datenbank**-Zeichen am Kiosk | Backups laufen nicht: den Backup-Stick wieder einstecken, oder im Dashboard unter **Backup** nach dem Fehler sehen. |

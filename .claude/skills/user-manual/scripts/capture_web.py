@@ -255,7 +255,7 @@ DASHBOARD_PAGES = [
     ("/dashboard/login-rules/", "dashboard-password-policy"), ("/dashboard/account/", "dashboard-account"),
     ("/dashboard/backup/restore/upload/", "dashboard-restore-upload"),
 ]
-FULL_PAGE = ("dashboard-update", "dashboard-backup")
+FULL_PAGE = ("dashboard-update", "dashboard-backup", "dashboard-system")
 
 
 # Run before every dashboard shot: the device may hold real data next to the demo members
