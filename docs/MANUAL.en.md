@@ -15,6 +15,15 @@ and pay from there.
 > informal tally among the people sharing the machine, just like the sheet was. Where coffee is
 > sold commercially, a real POS system is needed. CoffeePy comes without any warranty (see the
 > [LICENSE](../LICENSE)).
+>
+> **No liability.** As far as the law allows, the authors accept no liability for damage of any
+> kind arising from installing or using CoffeePy – among others lost or wrong data and
+> balances, money owed or paid, disputes among members, failed backups or updates, damage to
+> the Raspberry Pi, the card reader, the coffee machine or connected devices, and loss of data
+> on the SD card or the backup stick. Whoever runs CoffeePy is responsible for checking the
+> balances, keeping backups and operating the hardware safely. Liability for intent, gross
+> negligence and injury to life, body or health is not affected where the law does not allow
+> excluding it.
 
 This manual covers every screen. Technical details (architecture, development, internals)
 are in the [README](../README.md).

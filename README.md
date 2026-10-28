@@ -19,6 +19,14 @@ both run as web apps (HTMX), and NFC card reads delivered through the
 > payment links only open the member's own app. Balances are an informal tally among the people
 > sharing the machine. If coffee is sold commercially, that needs a real POS system. CoffeePy
 > is provided as is, without warranty – see [LICENSE](LICENSE).
+>
+> **No liability.** As far as the law allows, the authors accept no liability for damage of any
+> kind arising from installing or using CoffeePy – among others lost or wrong data and
+> balances, money owed or paid, disputes among members, failed backups or updates, damage to
+> the Raspberry Pi, the reader, the coffee machine or anything connected, and loss of data on
+> the SD card or the backup stick. Whoever runs it is responsible for checking the balances,
+> keeping backups and operating the hardware safely. This does not limit liability for intent,
+> gross negligence or injury to life, body or health where the law forbids that.
 
 **New here?** [docs/MANUAL.md](docs/MANUAL.md) covers what hardware to buy and how to use
 the kiosk/dashboard day to day. This README is the technical/installation reference.

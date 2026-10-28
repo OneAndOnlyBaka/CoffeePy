@@ -17,6 +17,16 @@ verknüpfen und sehen dort ihre Statistik und zahlen.
 > die Maschine teilen – so wie vorher der Zettel. Wo Kaffee gewerblich verkauft wird, braucht es
 > ein richtiges Kassensystem. CoffeePy kommt ohne jede Gewährleistung (siehe
 > [LICENSE](../LICENSE)).
+>
+> **Keine Haftung.** Soweit gesetzlich zulässig, übernehmen die Autoren keine Haftung für
+> Schäden jeder Art, die aus der Installation oder Nutzung von CoffeePy entstehen – unter
+> anderem verlorene oder falsche Daten und Kontostände, offene oder bezahlte Beträge, Streit
+> unter Mitgliedern, fehlgeschlagene Backups oder Updates, Schäden am Raspberry Pi, am
+> Kartenleser, an der Kaffeemaschine oder an angeschlossenen Geräten sowie Datenverlust auf der
+> SD-Karte oder dem Backup-Stick. Wer CoffeePy betreibt, ist selbst dafür verantwortlich, die
+> Kontostände zu prüfen, Backups aufzubewahren und die Hardware sicher zu betreiben. Die
+> Haftung für Vorsatz, grobe Fahrlässigkeit und für Schäden an Leben, Körper oder Gesundheit
+> bleibt unberührt, soweit das Gesetz sie nicht ausschließen lässt.
 
 Diese Anleitung erklärt alle Oberflächen. Technische Details (Aufbau, Entwicklung, Interna)
 stehen in der [README](../README.md).
