@@ -20,6 +20,7 @@
     </header>
     <main class="portal-content">
         {% block portal_content %}{% endblock %}
+        <p class="portal-version">{% blocktranslate trimmed with version=coffeepy_version %}CoffeePy {{ version }}{% endblocktranslate %}</p>
     </main>
     <nav class="portal-tabbar">
         <a href="{% url 'portal:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">

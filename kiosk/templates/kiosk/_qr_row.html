@@ -13,3 +13,8 @@
         <p class="muted">{% translate "Manage coffee sorts, members, stats and more" %}</p>
     </div>
 </div>
+{% comment %}
+The same on every render (it changes only with an update), so the panel's wait screen this sits
+on stays byte-identical from poll to poll.
+{% endcomment %}
+<p class="qr-version">{% blocktranslate trimmed with version=coffeepy_version %}Version {{ version }}{% endblocktranslate %}</p>

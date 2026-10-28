@@ -1,0 +1,7 @@
+# GitVersion (https://gitversion.net) computes the version from the git history: the release
+# workflow runs it and hands the result to scripts/write_version.sh (coffeepy-version.json).
+# V2 starts at 2.0.0; a tag vX.Y.Z on a commit makes that commit exactly X.Y.Z, and the
+# commits after it count up from there (2.0.1-<branch>.N until the next tag).
+workflow: GitFlow/v1
+next-version: 2.0.0
+tag-prefix: '[vV]?'

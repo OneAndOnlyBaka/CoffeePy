@@ -605,7 +605,9 @@ Upload an update bundle and follow it being installed (see [Updates](#updates)).
 returns to the version before the last update. **Versions** lists exactly what runs on the
 device: the CoffeePy version and its commit, Python, Django, the database, the operating
 system, Docker, and every container with the id of its image – **Copy all** puts the whole list
-on the clipboard, ready for a bug report.
+on the clipboard, ready for a bug report. The CoffeePy version alone is also at the bottom of
+the dashboard's navigation, at the bottom of the phone portal, and on the kiosk below the QR
+codes for the admin area (the wrench).
 
 ![Update](pictures/manual/en/dashboard-update.png)
 

@@ -15,9 +15,22 @@ if ! command -v git >/dev/null || ! git -C "${ROOT}" rev-parse --is-inside-work-
 	[ -f "${OUT}" ] && sed -n 's/.*"version": "\([^"]*\)".*/\1/p' "${OUT}"
 	exit 0
 fi
-# Without a tag, describe falls back to the abbreviated commit - unique either way; -dirty
-# marks a tree with uncommitted changes, which no commit hash alone would reveal.
-version="$(git -C "${ROOT}" describe --tags --always --dirty)"
+# The version is GitVersion's SemVer (GitVersion.yml): handed in as COFFEEPY_VERSION by the
+# release workflow, or asked from a local `gitversion`/`dotnet-gitversion`. Without either,
+# git describe - the abbreviated commit while there is no tag - is unique all the same.
+version="${COFFEEPY_VERSION:-}"
+if [ -z "${version}" ]; then
+	for tool in gitversion dotnet-gitversion; do
+		command -v "${tool}" >/dev/null || continue
+		version="$(cd "${ROOT}" && "${tool}" /showvariable FullSemVer 2>/dev/null)" && break
+		version=""
+	done
+fi
+version="${version:-$(git -C "${ROOT}" describe --tags --always)}"
+# A tree with uncommitted changes is no build of that commit - no version alone would say so.
+if ! git -C "${ROOT}" diff --quiet HEAD 2>/dev/null; then
+	case "${version}" in *+*) version="${version}.dirty" ;; *) version="${version}+dirty" ;; esac
+fi
 commit="$(git -C "${ROOT}" rev-parse HEAD)"
 committed="$(git -C "${ROOT}" show -s --format=%cI HEAD)"
 branch="$(git -C "${ROOT}" rev-parse --abbrev-ref HEAD | tr -d '"\\')"

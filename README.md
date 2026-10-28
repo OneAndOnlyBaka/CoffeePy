@@ -196,13 +196,21 @@ Two GitHub Actions workflows, both under [.github/workflows/](.github/workflows/
   - the images this repo builds, pushed to `ghcr.io/<owner>/coffeepy-web` and
     `ghcr.io/<owner>/coffeepy-nfc-bridge` as `:<version>-<arch>` and `:latest-<arch>`
     (single-platform images, so the platform is in every tag);
+  - a CycloneDX **SBOM** of every image in the bundle (Syft),
+    `coffeepy-sbom-<version>-<arch>.tar` - what a device runs, down to the Python and Alpine
+    packages, to check against new vulnerabilities without the device;
   - an **unsigned** update bundle, `coffeepy-update-<version>-<arch>-unsigned.tar`
     (`scripts/build_update_bundle.sh --unsigned`): every image of `docker-compose.yml` -
     Postgres, Mosquitto and Caddy included - plus the compose file and `install/`, ready for
     `/dashboard/update/`. A device only takes it with `UPDATE_VERIFY_SIGNATURE=false`; the
     signing key stays on the dev machine, so a signed bundle is built there.
 
-  On a tag push the bundle is attached to a GitHub Release for that tag (a plain download
+  The version is [GitVersion](https://gitversion.net)'s, configured in `GitVersion.yml` (V2
+  starts at 2.0.0; a tag `vX.Y.Z` makes its commit exactly that version) - in the image, the
+  bundle's manifest, every tag and file name, and the footer of dashboard, portal and kiosk.
+  A `+` in it becomes `-` in image tags and file names.
+
+  On a tag push the bundle and the SBOMs are attached to a GitHub Release for that tag (a plain download
   link); otherwise it is a workflow-run artifact (download needs a GitHub login, kept 90
   days). GHCR packages are private by default on first publish even for a public repo - flip
   visibility to public under the repo's Packages tab if you want `docker pull` to work

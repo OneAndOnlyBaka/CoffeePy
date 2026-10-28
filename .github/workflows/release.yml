@@ -7,6 +7,12 @@ name: Release
 #      install/, in one tar for /dashboard/update/. Devices only take it with
 #      UPDATE_VERIFY_SIGNATURE=false: the signing key never leaves the dev machine, so CI
 #      can't sign (sign a bundle there with scripts/build_update_bundle.sh instead).
+#   3. A CycloneDX SBOM of every image in the bundle (Syft) - what a device runs, down to
+#      the Python and Alpine packages, for checking it against new vulnerabilities without
+#      the device and for the Cyber Resilience Act's documentation duty.
+#
+# The version is GitVersion's (GitVersion.yml) and goes into the image, the bundle's
+# manifest, every tag and file name - and the dashboard, portal and kiosk footer.
 #
 # The device itself is set up with install/install.sh on Raspberry Pi OS Lite; there is no
 # image to build here.
@@ -53,18 +59,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # scripts/write_version.sh names the build with `git describe --tags` - without
-          # the history and tags a release would only be a commit hash.
+          # GitVersion counts commits and reads tags - it needs the whole history.
           fetch-depth: 0
+
+      - uses: gittools/actions/gitversion/setup@v3
+        with:
+          versionSpec: "6.x"
+      - uses: gittools/actions/gitversion/execute@v3
+        id: gitversion
 
       - name: Determine names
         id: names
         run: |
-          version="$(scripts/write_version.sh)"
+          # The bundle script calls write_version.sh again - the same version both times.
+          echo "COFFEEPY_VERSION=${{ steps.gitversion.outputs.fullSemVer }}" >> "$GITHUB_ENV"
+          version="$(COFFEEPY_VERSION="${{ steps.gitversion.outputs.fullSemVer }}" scripts/write_version.sh)"
           arch="${PLATFORM#linux/}"; arch="${arch//\//}"   # arm64, armv7
+          tag="${version//+/-}"   # SemVer's build metadata "+" is not allowed in an image tag
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "arch=$arch" >> "$GITHUB_OUTPUT"
-          echo "bundle=coffeepy-update-$version-$arch-unsigned.tar" >> "$GITHUB_OUTPUT"
+          echo "bundle=coffeepy-update-$tag-$arch-unsigned.tar" >> "$GITHUB_OUTPUT"
+          echo "sbom=coffeepy-sbom-$tag-$arch.tar" >> "$GITHUB_OUTPUT"
+          echo "Version $version" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: docker/setup-qemu-action@v3
 
@@ -83,10 +100,23 @@ jobs:
       - name: Build the update bundle (unsigned)
         run: scripts/build_update_bundle.sh --platform "$PLATFORM" --unsigned --output "${{ steps.names.outputs.bundle }}"
 
+      - uses: anchore/sbom-action/download-syft@v0
+        id: syft
+
+      - name: SBOMs of every image in the bundle (CycloneDX)
+        run: |
+          mkdir sbom
+          for image in $(docker compose config --images | sort -u); do
+            "${{ steps.syft.outputs.cmd }}" scan "docker:$image" --platform "$PLATFORM" \
+              -o "cyclonedx-json=sbom/$(echo "$image" | tr '/:' '__').cdx.json"
+          done
+          tar -cf "${{ steps.names.outputs.sbom }}" -C sbom .
+          ls -l sbom
+
       - name: Push the built images to GHCR
         run: |
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          version="${{ steps.names.outputs.version }}"
+          version="${{ steps.names.outputs.tag }}"
           arch="${{ steps.names.outputs.arch }}"
           # Single-platform images, so the platform is part of every tag: a later arm/v7 run
           # must not overwrite what an arm64 device pulls as "latest".
@@ -108,6 +138,11 @@ jobs:
           path: ${{ steps.names.outputs.bundle }}
           compression-level: 0   # image layers are compressed already
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.names.outputs.sbom }}
+          path: ${{ steps.names.outputs.sbom }}
+
       - name: Attach to GitHub release
         if: github.ref_type == 'tag'
         env:
@@ -115,8 +150,8 @@ jobs:
         run: |
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           tag="${{ github.ref_name }}"
-          arch="${{ steps.names.outputs.arch }}"
+          image_tag="${{ steps.names.outputs.tag }}-${{ steps.names.outputs.arch }}"
           gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --generate-notes \
             --notes "Update bundle for $PLATFORM, unsigned - devices need UPDATE_VERIFY_SIGNATURE=false.
-          Images: ${{ env.REGISTRY }}/$owner/coffeepy-web:$tag-$arch, ${{ env.REGISTRY }}/$owner/coffeepy-nfc-bridge:$tag-$arch"
-          gh release upload "$tag" "${{ steps.names.outputs.bundle }}" --clobber
+          Images: ${{ env.REGISTRY }}/$owner/coffeepy-web:$image_tag, ${{ env.REGISTRY }}/$owner/coffeepy-nfc-bridge:$image_tag"
+          gh release upload "$tag" "${{ steps.names.outputs.bundle }}" "${{ steps.names.outputs.sbom }}" --clobber

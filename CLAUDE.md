@@ -363,12 +363,16 @@ mind before changing it:
   no `pi` on a current image). Until `--only` took a list, those steps never ran at all. A device can
   trust its own key instead (`/etc/coffeepy/update-signing.own.pub`, from `provision.sh`; no
   update replaces it) or check nothing (`UPDATE_VERIFY_SIGNATURE=false`).
-- **Which code runs is `coffeepy-version.json`** (`scripts/write_version.sh`: git describe and
-  the commit), git-ignored and written into the tree by everything that builds or ships it -
+- **Which code runs is `coffeepy-version.json`** (`scripts/write_version.sh`: GitVersion's
+  SemVer from `GitVersion.yml` - the release workflow hands it in as `COFFEEPY_VERSION`, a local
+  `gitversion` is asked, else git describe - and the commit), git-ignored and written into the tree by everything that builds or ships it -
   the image has no `.git`. The dashboard's version list (`dashboard/versions.py`) adds what
   the host's update watcher sees in `data/updates/system.json`: OS and each container's image
   id - the only thing that tells two untagged builds apart. A new way of building or
-  shipping the tree has to call `write_version.sh`, or the device reports "dev".
+  shipping the tree has to call `write_version.sh`, or the device reports "dev". Every page
+  shows it (`config.context_processors.version`: dashboard navigation, portal, the kiosk's
+  admin QR codes) - constant per build, so the kiosk's wait screen stays byte-identical. A
+  SemVer may carry `+metadata`, which an image tag can't: the release workflow swaps it for `-`.
 - **One thing at a time:** update, restore and import check each other through
   `data/maintenance/status.json` (`restore_jobs.maintenance_active`, the watcher's
   `other_maintenance`).

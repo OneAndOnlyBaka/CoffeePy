@@ -1,3 +1,4 @@
+{% load i18n %}
 {% for group in groups %}
 <div class="nav-group">
     {% if group.heading %}<p class="nav-heading">{{ group.heading }}</p>{% endif %}
@@ -8,3 +9,4 @@
     {% endfor %}
 </div>
 {% endfor %}
+<p class="nav-version">{% blocktranslate trimmed with version=coffeepy_version %}CoffeePy {{ version }}{% endblocktranslate %}</p>

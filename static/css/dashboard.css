@@ -45,6 +45,7 @@ body.dashboard .topbar-btn, body.dashboard .language-switch button {
 .dash-frame { display: flex; min-height: calc(100vh - 60px); }
 .dash-sidebar { display: none; }
 .nav-group { padding: 6px 0; }
+.nav-version { margin: 16px 20px 12px; font-size: 0.75rem; color: var(--coffee-light); overflow-wrap: anywhere; }
 .nav-heading { margin: 10px 20px 4px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--coffee-light); }
 .nav-item {

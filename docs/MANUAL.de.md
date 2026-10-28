@@ -635,7 +635,9 @@ Ein Update-Paket hochladen und verfolgen, wie es eingespielt wird (siehe [Update
 **Zurück zu …** kehrt zur Version vor dem letzten Update zurück. **Versionen** listet genau, was
 auf dem Gerät läuft: die CoffeePy-Version und ihren Commit, Python, Django, die Datenbank, das
 Betriebssystem, Docker und jeden Container mit der ID seines Images – **Alle kopieren** legt die
-ganze Liste in die Zwischenablage, fertig für eine Fehlermeldung.
+ganze Liste in die Zwischenablage, fertig für eine Fehlermeldung. Die CoffeePy-Version allein
+steht auch unten in der Navigation des Dashboards, unten im Handy-Portal und am Kiosk unter den
+QR-Codes für den Admin-Bereich (Schraubenschlüssel).
 
 ![Update](pictures/manual/de/dashboard-update.png)
 

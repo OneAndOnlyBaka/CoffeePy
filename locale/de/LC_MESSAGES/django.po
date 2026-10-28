@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 00:54+0100\n"
+"POT-Creation-Date: 2026-10-28 21:23+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -511,6 +511,10 @@ msgid ""
 msgstr ""
 "Die Uhr stand auf %(was)s, vor den neuesten Buchungen, und wurde auf %(now)s "
 "vorgestellt. Prüfe die Uhrzeit und stelle oder bestätige sie."
+
+#, python-format
+msgid "CoffeePy %(version)s"
+msgstr "CoffeePy %(version)s"
 
 msgid "My account"
 msgstr "Mein Konto"
@@ -1970,6 +1974,10 @@ msgstr "Dashboard öffnen"
 
 msgid "Manage coffee sorts, members, stats and more"
 msgstr "Kaffeesorten, Mitglieder, Statistik und mehr verwalten"
+
+#, python-format
+msgid "Version %(version)s"
+msgstr "Version %(version)s"
 
 msgid "CoffeePy Kiosk"
 msgstr "CoffeePy-Kiosk"

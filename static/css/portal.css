@@ -68,6 +68,8 @@ body.portal { user-select: auto; font-size: 16px; }
   flex-direction: column;
   gap: 16px;
 }
+.portal-version { margin: auto 0 0; text-align: center; font-size: 0.75rem; color: var(--coffee-light);
+  overflow-wrap: anywhere; }
 .portal-content h1 { font-size: 1.5em; margin: 4px 0 0; }
 .portal-content h2 { font-size: 1.1em; margin: 0 0 4px; }
 .portal-content button, .portal-content .btn { min-height: 48px; }
