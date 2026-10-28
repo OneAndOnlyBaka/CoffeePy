@@ -80,3 +80,47 @@ class ReaderStatusRetryTestCase(TestCase):
         status.flush()
         self.assertTrue(NfcReaderStatus.objects.get(pk=1).is_online)
         self.assertIsNone(status.pending)
+
+
+class ReaderStatusRecheckTestCase(TestCase):
+    """A reset, restore or import replaces the database under the running listener - the row it
+    wrote is gone or old, and the bridge only reports a change."""
+
+    def test_a_lost_status_is_written_again(self):
+        from coffee.management.commands import mqtt_listener
+
+        status = mqtt_listener.ReaderStatus()
+        status.set(True)
+        NfcReaderStatus.objects.all().delete()  # Datenbank zurücksetzen / restore
+        status.flush()  # within STATUS_CHECK_SECONDS: not looked at yet
+        self.assertFalse(NfcReaderStatus.objects.exists())
+        status.checked_at -= mqtt_listener.STATUS_CHECK_SECONDS
+        status.flush()
+        self.assertTrue(NfcReaderStatus.objects.get(pk=1).is_online)
+
+    def test_an_old_status_is_corrected(self):
+        from coffee.management.commands import mqtt_listener
+
+        status = mqtt_listener.ReaderStatus()
+        status.set(True)
+        NfcReaderStatus.objects.filter(pk=1).update(is_online=False)  # a backup's
+        status.checked_at -= mqtt_listener.STATUS_CHECK_SECONDS
+        status.flush()
+        self.assertTrue(NfcReaderStatus.objects.get(pk=1).is_online)
+
+    def test_nothing_known_nothing_written(self):
+        from coffee.management.commands import mqtt_listener
+
+        status = mqtt_listener.ReaderStatus()
+        status.checked_at -= mqtt_listener.STATUS_CHECK_SECONDS
+        status.flush()
+        self.assertFalse(NfcReaderStatus.objects.exists())
+
+
+class ResetKeepsTheReaderStatusTestCase(TestCase):
+    def test_the_reset_leaves_it(self):
+        from coffee.purge import FULL_SCOPE, purge
+
+        NfcReaderStatus.objects.create(pk=1, is_online=True)
+        purge(FULL_SCOPE)
+        self.assertTrue(NfcReaderStatus.objects.get(pk=1).is_online)

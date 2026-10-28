@@ -2,8 +2,8 @@
 
 IMPORT_SCOPE clears exactly what a legacy-DB import refills, so an import can start from
 a clean slate instead of merging into whatever is already there. FULL_SCOPE is the
-dashboard's "reset database" action and additionally drops payment methods, NFC scans,
-the audit log and the reader status.
+dashboard's "reset database" action and additionally drops payment methods, NFC scans
+and the audit log.
 
 Neither scope ever touches Django's auth tables: an admin who deletes their own dashboard
 login has no way back in on a kiosk box that nobody can SSH into.
@@ -21,7 +21,6 @@ from coffee.models import (
     MemberCard,
     MemberDevice,
     MemberLinkToken,
-    NfcReaderStatus,
     NfcScan,
     Order,
     Payment,
@@ -41,7 +40,9 @@ IMPORT_SCOPE = [
     CoffeeSort,
 ]
 
-FULL_SCOPE = IMPORT_SCOPE + [NfcScan, PaymentMethod, AuditLogEntry, NfcReaderStatus]
+# Not NfcReaderStatus: it is the device's state, not data - deleted, the kiosk says "card reader
+# not available" with a working reader until the bridge reports a change.
+FULL_SCOPE = IMPORT_SCOPE + [NfcScan, PaymentMethod, AuditLogEntry]
 
 
 def purge(scope) -> dict:

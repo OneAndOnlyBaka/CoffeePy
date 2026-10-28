@@ -22,6 +22,7 @@ STATUS_TOPIC = f"{MQTT_TOPIC}/status"
 
 SCAN_RETENTION_SECONDS = 3600
 STATUS_RETRY_SECONDS = 5
+STATUS_CHECK_SECONDS = 30
 
 
 def handle_payload(raw: bytes):
@@ -57,19 +58,28 @@ class ReaderStatus:
     sends it once, retained, and again only when it changes - after a power cut this
     process got it while PostgreSQL was still recovering, the write failed (paho swallows
     whatever a callback raises), and the kiosk said "card reader not available" with a
-    working reader until the next change, which never came."""
+    working reader until the next change, which never came.
+
+    The last status is also compared with the row every STATUS_CHECK_SECONDS: a reset, a
+    restore or an import replaces the database under this process, and the row it wrote is
+    gone or old afterwards - the same "not available" with a working reader."""
 
     def __init__(self):
         self.pending = None
+        self.known = None
         self.tried_at = 0.0
+        self.checked_at = time.monotonic()
 
     def set(self, is_online: bool) -> None:
-        self.pending = is_online
+        self.pending = self.known = is_online
         self.tried_at = 0.0
         self.flush()
 
     def flush(self) -> None:
-        if self.pending is None or time.monotonic() - self.tried_at < STATUS_RETRY_SECONDS:
+        if self.pending is None:
+            self._check()
+            return
+        if time.monotonic() - self.tried_at < STATUS_RETRY_SECONDS:
             return
         self.tried_at = time.monotonic()
         try:
@@ -80,6 +90,20 @@ class ReaderStatus:
             return
         log.info("NFC reader status: %s", "online" if self.pending else "offline")
         self.pending = None
+
+    def _check(self) -> None:
+        if self.known is None or time.monotonic() - self.checked_at < STATUS_CHECK_SECONDS:
+            return
+        self.checked_at = time.monotonic()
+        try:
+            close_old_connections()
+            in_step = NfcReaderStatus.objects.filter(pk=1, is_online=self.known).exists()
+        except DatabaseError as exc:
+            log.warning("Could not check the stored reader status (%s)", exc)
+            return
+        if not in_step:
+            log.info("The stored reader status was gone or old (database replaced?) - writing it again")
+            self.set(self.known)
 
 
 class Command(BaseCommand):

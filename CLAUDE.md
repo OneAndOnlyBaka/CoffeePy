@@ -319,7 +319,9 @@ mind before changing it:
   `depends_on` or not, while PostgreSQL is still recovering - and a long-running process has
   to survive that itself. The MQTT listener keeps the reader status until the database takes
   it (`ReaderStatus`); before, a status that arrived too early was lost and the kiosk said
-  "card reader not available" with a working reader. Starting Chromium
+  "card reader not available" with a working reader. It also compares its last status with the row
+  every 30s: a reset, restore or import replaces the database under it, and the bridge only
+  reports a change (the reset itself leaves `NfcReaderStatus` alone - `coffee/purge.py`). Starting Chromium
   in parallel with the stack was tried and measured: both slowed down by half a minute and
   the box went into swap, so the kiosk waits for `/health/` first. Measure from the
   device's journal, not by polling it over SSH - that alone slowed a boot by 30s.
