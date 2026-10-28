@@ -24,3 +24,58 @@ jobs:
 
       - name: Run Django test suite
         run: python manage.py test
+
+  # Every known vulnerability that an upgrade fixes fails the build - in the Python
+  # dependencies and in the images this repo builds. One without a fix yet is reported, not
+  # failed on. The images of others (postgres, mosquitto, caddy) are only reported: their
+  # packages are theirs to fix, and the release build pulls their newest tag anyway.
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # One requirements file at a time: the bridge pins paho-mqtt 1.x, the app wants 2.x.
+      - name: Python dependencies (pip-audit)
+        run: |
+          pip install --quiet pip-audit
+          status=0
+          for requirements in requirements.txt nfc-cardreader/requirements.txt; do
+            echo "== $requirements"
+            pip-audit -r "$requirements" --format json --output audit.json --progress-spinner off || true
+            scripts/audit_python.py audit.json || status=1
+          done
+          exit $status
+
+      # amd64, natively: the Debian and Alpine package versions are the same as on the Pi's
+      # arm64, and an emulated build would take five times as long.
+      - name: Build the images
+        if: always()
+        run: |
+          cp .env.example .env
+          docker compose build --quiet
+          docker compose pull --quiet --ignore-buildable
+
+      - uses: anchore/scan-action/download-grype@v6
+        if: always()
+        id: grype
+
+      - name: Images (Grype)
+        if: always()
+        run: |
+          grype="${{ steps.grype.outputs.cmd }}"
+          status=0
+          for image in $(docker compose config --images | sort -u); do
+            case "$image" in
+              coffeepy-*)
+                echo "== $image - fails on anything fixable"
+                "$grype" "docker:$image" --only-fixed --fail-on negligible || status=1 ;;
+              *)
+                echo "== $image - not ours, for information"
+                "$grype" "docker:$image" --only-fixed || true ;;
+            esac
+          done
+          exit $status
