@@ -6,7 +6,7 @@ and ARM (arm64/armv7), e.g. for a Raspberry Pi.
 
 ## Contents
 
-- [Dockerfile](Dockerfile) — multi-stage build (`python:3.12-slim`, Debian-based)
+- [Dockerfile](Dockerfile) — multi-stage build (`python:3.14-slim`, Debian-based)
 - [bridge.py](bridge.py) — reads the card UID over PC/SC, publishes to MQTT
 - [entrypoint.sh](entrypoint.sh) — starts `pcscd` and the bridge inside the container
 - [docker-compose.yml](docker-compose.yml) — example setup against an external MQTT broker

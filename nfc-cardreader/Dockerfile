@@ -1,4 +1,4 @@
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
@@ -12,7 +12,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         pcscd \
@@ -30,6 +30,8 @@ RUN sed -i '/<key>ifdDriverOptions<\/key>/{n;s|<string>0x0000</string>|<string>0
     && grep -A1 '<key>ifdDriverOptions</key>' /usr/lib/pcsc/drivers/ifd-ccid.bundle/Contents/Info.plist | grep -q 0x0001
 
 COPY --from=builder /install /usr/local
+# The base image's pip lags behind its fixes (the CI audit fails on that) - a newer one.
+RUN pip install --no-cache-dir --upgrade pip
 
 WORKDIR /app
 COPY bridge.py .
