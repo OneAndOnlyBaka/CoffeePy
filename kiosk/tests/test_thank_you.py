@@ -74,7 +74,7 @@ class ThankYouTestCase(TestCase):
             self.assertNotIn(leftover, response.content)
 
     def test_a_different_members_card_interrupts_thank_you_immediately(self):
-        alice = Member.objects.create(uid=42, nickname="Alice X.", favourite_coffee=self.espresso)
+        Member.objects.create(uid=42, nickname="Alice X.", favourite_coffee=self.espresso)
         self._log_in()
         self.client.post(reverse("kiosk:order_confirm"))
 
