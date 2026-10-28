@@ -189,20 +189,23 @@ Two GitHub Actions workflows, both under [.github/workflows/](.github/workflows/
   every push and pull request. No Docker/Postgres involved, just `pip install` + the
   test runner, so it's fast.
 - **`release.yml`** - runs on pushing a tag matching `v*.*.*` (or manually via "Run
-  workflow" for a test build without publishing a release), and builds everything an
-  offline Pi deployment needs:
-  - `images-and-bundle`: builds `coffeepy-web` and `nfc-bridge` for `linux/arm/v7` -
-    matching a device running the 32-bit Raspberry Pi OS, which is the right choice on a
-    1GB Pi 3B (`linux/arm64` is available in the manual-run dropdown for a 64-bit
-    device) - pushes each to
-    `ghcr.io/<owner>/coffeepy-web` and `ghcr.io/<owner>/coffeepy-nfc-bridge`
-    (`:latest` and `:<tag>`), then runs `scripts/build_update_bundle.sh` and uploads the
-    resulting offline update bundle.
+  workflow", with a choice of platform, for a test build of any branch without publishing a
+  release), and builds everything an offline Pi deployment needs, for `linux/arm64` (64-bit
+  Raspberry Pi OS; `linux/arm/v7` in the manual-run dropdown for a 32-bit one):
+  - the images this repo builds, pushed to `ghcr.io/<owner>/coffeepy-web` and
+    `ghcr.io/<owner>/coffeepy-nfc-bridge` as `:<version>-<arch>` and `:latest-<arch>`
+    (single-platform images, so the platform is in every tag);
+  - an **unsigned** update bundle, `coffeepy-update-<version>-<arch>-unsigned.tar`
+    (`scripts/build_update_bundle.sh --unsigned`): every image of `docker-compose.yml` -
+    Postgres, Mosquitto and Caddy included - plus the compose file and `install/`, ready for
+    `/dashboard/update/`. A device only takes it with `UPDATE_VERIFY_SIGNATURE=false`; the
+    signing key stays on the dev machine, so a signed bundle is built there.
 
-  On a tag push the job attaches its output to a GitHub Release for that tag; otherwise
-  (manual run) it is only available as a workflow-run artifact. GHCR packages are private
-  by default on first publish even for a public repo - flip visibility to public under the
-  repo's Packages tab if you want `docker pull` to work without logging in.
+  On a tag push the bundle is attached to a GitHub Release for that tag (a plain download
+  link); otherwise it is a workflow-run artifact (download needs a GitHub login, kept 90
+  days). GHCR packages are private by default on first publish even for a public repo - flip
+  visibility to public under the repo's Packages tab if you want `docker pull` to work
+  without logging in.
 
 ## Raspberry Pi install
 

@@ -1,29 +1,32 @@
 name: Release
 
 # Builds everything an offline Pi deployment needs and publishes it:
-#   1. The individual coffeepy-web / coffeepy-nfc-bridge images, pushed to GHCR.
-#   2. The offline update bundle (scripts/build_update_bundle.sh output) - images +
-#      docker-compose.yml in one tar, uploadable at /dashboard/update/.
+#   1. The images this repo builds (coffeepy-web, coffeepy-nfc-bridge), pushed to GHCR.
+#   2. An UNSIGNED offline update bundle (scripts/build_update_bundle.sh): every image of
+#      docker-compose.yml - Postgres, Mosquitto and Caddy included - plus the compose file and
+#      install/, in one tar for /dashboard/update/. Devices only take it with
+#      UPDATE_VERIFY_SIGNATURE=false: the signing key never leaves the dev machine, so CI
+#      can't sign (sign a bundle there with scripts/build_update_bundle.sh instead).
 #
 # The device itself is set up with install/install.sh on Raspberry Pi OS Lite; there is no
 # image to build here.
 #
-# Triggered by pushing a tag (attaches everything to a GitHub Release) or manually via
-# workflow_dispatch (produces the same artifacts without a release, e.g. to test).
+# Triggered by pushing a tag (attaches the bundle to a GitHub Release) or manually via
+# workflow_dispatch (same artifacts without a release, e.g. to test a branch).
 on:
   push:
     tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
       platform:
-        # Must match the Raspberry Pi OS the device runs, or it rejects the bundle's
-        # images with "exec format error": linux/arm/v7 for the 32-bit OS (the right
-        # choice on a 1GB Pi 3B), linux/arm64 for the 64-bit one.
+        # Must match the Raspberry Pi OS the device runs - the update watcher refuses a
+        # bundle for another platform: linux/arm64 for the 64-bit OS, linux/arm/v7 for the
+        # 32-bit one.
         description: "Target platform for the images/update bundle"
         required: false
-        default: "linux/arm/v7"
+        default: "linux/arm64"
         type: choice
-        options: ["linux/arm/v7", "linux/arm64"]
+        options: ["linux/arm64", "linux/arm/v7"]
 
 permissions:
   contents: write
@@ -31,25 +34,29 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  PLATFORM: ${{ inputs.platform || 'linux/arm64' }}
 
 jobs:
   images-and-bundle:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+        with:
+          # scripts/write_version.sh names the build with `git describe --tags` - without
+          # the history and tags a release would only be a commit hash.
+          fetch-depth: 0
 
-      - name: Determine release tag
-        id: tag
+      - name: Determine names
+        id: names
         run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=dev-$(date +%Y%m%d%H%M)" >> "$GITHUB_OUTPUT"
-          fi
+          version="$(scripts/write_version.sh)"
+          arch="${PLATFORM#linux/}"; arch="${arch//\//}"   # arm64, armv7
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "arch=$arch" >> "$GITHUB_OUTPUT"
+          echo "bundle=coffeepy-update-$version-$arch-unsigned.tar" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -61,42 +68,33 @@ jobs:
       - name: "Prepare .env (docker-compose.yml's env_file directive needs it to exist)"
         run: cp .env.example .env
 
-      - name: Build coffeepy-web + nfc-bridge (docker-compose.yml is the source of truth)
-        env:
-          DOCKER_DEFAULT_PLATFORM: ${{ inputs.platform || 'linux/arm/v7' }}
-        run: docker compose build
+      # Builds coffeepy-web + nfc-bridge and pulls the rest, all for PLATFORM - the images
+      # pushed below are the very ones inside the bundle.
+      - name: Build the update bundle (unsigned)
+        run: scripts/build_update_bundle.sh --platform "$PLATFORM" --unsigned --output "${{ steps.names.outputs.bundle }}"
 
-      - name: Push individual images to GHCR
+      - name: Push the built images to GHCR
         run: |
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          tag="${{ steps.tag.outputs.tag }}"
-
-          web_image="${{ env.REGISTRY }}/$owner/coffeepy-web"
-          docker tag coffeepy-web:latest "$web_image:$tag"
-          docker tag coffeepy-web:latest "$web_image:latest"
-          docker push "$web_image:$tag"
-          docker push "$web_image:latest"
-
-          # nfc-bridge has no explicit `image:` in docker-compose.yml, so compose
-          # auto-names it - find whatever that name turned out to be rather than
-          # hand-guessing the project-name prefix.
-          nfc_local=$(docker compose config --images | grep nfc-bridge)
-          nfc_image="${{ env.REGISTRY }}/$owner/coffeepy-nfc-bridge"
-          docker tag "$nfc_local" "$nfc_image:$tag"
-          docker tag "$nfc_local" "$nfc_image:latest"
-          docker push "$nfc_image:$tag"
-          docker push "$nfc_image:latest"
-
-      - name: Build offline update bundle
-        run: |
-          ./scripts/build_update_bundle.sh \
-            "${{ inputs.platform || 'linux/arm/v7' }}" \
-            "coffeepy-update-${{ steps.tag.outputs.tag }}.tar"
+          version="${{ steps.names.outputs.version }}"
+          arch="${{ steps.names.outputs.arch }}"
+          # Single-platform images, so the platform is part of every tag: a later arm/v7 run
+          # must not overwrite what an arm64 device pulls as "latest".
+          push() { # local image, name in the registry
+            for tag in "$version-$arch" "latest-$arch"; do
+              docker tag "$1" "${{ env.REGISTRY }}/$owner/$2:$tag"
+              docker push "${{ env.REGISTRY }}/$owner/$2:$tag"
+            done
+          }
+          push coffeepy-web:latest coffeepy-web
+          # nfc-bridge has no `image:` in docker-compose.yml, so compose names it itself.
+          push "$(docker compose config --images | grep nfc-bridge)" coffeepy-nfc-bridge
 
       - uses: actions/upload-artifact@v4
         with:
-          name: update-bundle
-          path: coffeepy-update-*.tar
+          name: ${{ steps.names.outputs.bundle }}
+          path: ${{ steps.names.outputs.bundle }}
+          compression-level: 0   # image layers are compressed already
 
       - name: Attach to GitHub release
         if: github.ref_type == 'tag'
@@ -104,6 +102,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          tag="${{ steps.tag.outputs.tag }}"
-          gh release create "$tag" --title "$tag" --generate-notes --notes "Images: ${{ env.REGISTRY }}/$owner/coffeepy-web:$tag and ${{ env.REGISTRY }}/$owner/coffeepy-nfc-bridge:$tag" || true
-          gh release upload "$tag" coffeepy-update-*.tar --clobber
+          tag="${{ github.ref_name }}"
+          arch="${{ steps.names.outputs.arch }}"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --generate-notes \
+            --notes "Update bundle for $PLATFORM, unsigned - devices need UPDATE_VERIFY_SIGNATURE=false.
+          Images: ${{ env.REGISTRY }}/$owner/coffeepy-web:$tag-$arch, ${{ env.REGISTRY }}/$owner/coffeepy-nfc-bridge:$tag-$arch"
+          gh release upload "$tag" "${{ steps.names.outputs.bundle }}" --clobber

@@ -89,7 +89,12 @@ images="$("$DOCKER" compose config --images)"
 mapfile -t IMAGES < <(sort -u <<<"$images")
 [ "${#IMAGES[@]}" -gt 0 ] && [ -n "${IMAGES[0]}" ] || { echo "No images in docker-compose.yml?" >&2; exit 1; }
 echo "== Saving images: ${IMAGES[*]} =="
-"$DOCKER" save -o "$workdir/images.tar" "${IMAGES[@]}"
+# With the containerd image store (Docker 29's default, e.g. on CI runners) a pulled image is
+# the whole multi-platform index, and saving it fails on the platforms never downloaded.
+# Older Docker (the Pi's own) has no --platform and saves just what is there anyway.
+save_platform=()
+"$DOCKER" save --help 2>/dev/null | grep -q -- '--platform' && save_platform=(--platform "$PLATFORM")
+"$DOCKER" save "${save_platform[@]}" -o "$workdir/images.tar" "${IMAGES[@]}"
 
 if [ "${IMAGES_ONLY:-0}" = "1" ]; then
 	mv "$workdir/images.tar" "$OUT"
