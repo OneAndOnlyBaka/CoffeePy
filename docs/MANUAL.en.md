@@ -132,7 +132,7 @@ change it:
 | Address for phones | The address in QR codes and in the certificate. `192.168.4.1` with the access point, otherwise the Pi's (preferably fixed) address on your network. |
 | Time zone | For the clock and the statistics by hour and weekday. |
 | Backups & audit log | Whether the backups on the USB stick are **encrypted** (a passphrase of at least 12 characters – keep it somewhere safe, no backup can be restored without it), and for how many days the **audit log** is kept (90 by default). How often backups are made is set in the dashboard. |
-| Updates | Which **signature** an update has to carry: CoffeePy's key, **your own key**, or **no check** (see [Your own signing key](#your-own-signing-key)). |
+| Updates | Which **signature** an update has to carry: CoffeePy's key, **your own key**, or **no check (development only)** (see [Your own signing key](#your-own-signing-key)). |
 | Display | Screen mode. The documented 1024×600 display doesn't report its resolution, so it needs the preset. |
 | Web workers | Processes serving the web app: 2 for a Pi 3, 3–4 for a Pi 4 or 5. |
 | Install from | Internet, or an offline bundle (for Pis without internet, see the README). |
@@ -344,7 +344,12 @@ bar underneath. Counted are cups – a jug is two.
 
   ![Pillory](pictures/manual/en/kiosk-ranking-pillory.png)
 
-Opening the ranking always starts on **All time**.
+Opening the ranking always starts on its first tab.
+
+**Whether there is a ranking and a pillory is the admin's decision** (dashboard → **System** →
+*Ranking and pillory*): with one off, its tab is gone; with both off, the **Ranking** button is
+gone altogether – and the medal after an order as well. A newly set-up device starts with both
+off; see [Privacy and the workplace](#privacy-and-the-workplace).
 
 ### Admin access
 
@@ -561,6 +566,15 @@ out: whoever's password no longer meets them is asked for a new one at their nex
 
 ![System](pictures/manual/en/dashboard-system.png)
 
+**Ranking and pillory**: what the kiosk shows everyone at the machine – the ranking (who drinks
+the most, all time and this month) and the pillory (who owes money), each with a tick. The
+kiosk follows with its next poll. The dashboard's **Pillory** page, for whoever collects the
+money, is not affected. See [Privacy and the workplace](#privacy-and-the-workplace).
+
+If a note under the address says it was *only guessed*, `PUBLIC_HOST` in `.env` is empty and the
+address is probably the app container's – the QR codes then lead nowhere. The provisioning tool
+and the installer set it; by hand: `PUBLIC_HOST=` with the device's address.
+
 **Night rest**: with *Switch the kiosk off at night* the kiosk darkens its screen at *Off from*
 (say 20:00) and comes back by itself at *On again from* (say 05:30). For *Saturday and Sunday*
 choose *Like the weekdays*, *Off all day* or *Times of its own* (*Weekend: off from* / *on again
@@ -717,6 +731,24 @@ data then also goes back to the state before that update.
 For scripts there is `./scripts/build_update_bundle.sh` (its options are listed at the top of
 the script); an update also works from a PC through the provisioning tool.
 
+#### Updating from the GitHub release
+
+Every build on GitHub is waiting under *Releases* – the newest is marked *Latest*. The update
+bundles there are **unsigned**, because the key is never at GitHub. For a device in use, you
+sign the bundle yourself, with your own key (see [Your own signing key](#your-own-signing-key)
+– the device has to trust it):
+
+1. Download `coffeepy-update-<version>-arm64-unsigned.tar` and `sign_update_bundle.sh` from the
+   release.
+2. Sign it: `bash sign_update_bundle.sh coffeepy-update-<version>-arm64-unsigned.tar --key
+   ~/.config/coffeepy/update-signing.key`. The script first checks every file of the bundle
+   against its checksums, then writes `coffeepy-update-<version>-arm64.tar` and names your
+   key's fingerprint – the same must be under **Update › Versions** (*Update signature*).
+3. Upload the **signed** bundle in the dashboard under **Update**.
+
+Installing the unsigned bundle directly only works with the check turned off (see below) –
+**for development only**, on a test device.
+
 #### Your own signing key
 
 A device only installs updates whose signature matches its key – by default the key that comes
@@ -739,12 +771,14 @@ with CoffeePy (`install/update-signing.pub`). If you build updates yourself, use
 
 The fingerprint of the key in use is shown under **Update › Versions** (*Update signature*).
 
-**Switching the check off completely:** in the provisioning tool **Updates › No check**, or
+**Switching the check off completely – for development only:** in the provisioning tool
+**Updates › No check (development only)**, or
 `UPDATE_VERIFY_SIGNATURE=false` in `/opt/coffeepy/.env` on the device. The device then
 installs every bundle – signed, signed with another key, or not signed at all
 (`build_update_bundle.sh --unsigned`). The checksums, the platform and the space are still
-checked. Only do this when nobody you don't trust can log in to the dashboard as an admin:
-whoever can upload an update can then run anything on the device.
+checked. Only do this on a test device where nobody you don't trust can log in as an admin:
+whoever can upload an update can then run anything on the device. The dashboard's update page
+warns for as long as the check is off.
 
 ### When the kiosk hangs
 
@@ -759,6 +793,31 @@ the kiosk - the night rest, and
 after three restarts within an hour it gives up (*watchdog.gave_up*): a restart doesn't help
 then, and it is time to look at the audit log. Pulling the plug is only left for when even
 that has no effect.
+
+### Privacy and the workplace
+
+CoffeePy processes personal data about colleagues: name, card id, every order with its time,
+payments and balance, and in the audit log who did what in the dashboard (with IP address, 90
+days by default). At work, consumption and debts are personal data – in Germany the GDPR
+applies, and as soon as something looks like data on behaviour or performance, a **works
+council** may have a say (§ 87 (1) no. 6 BetrVG: technical facilities *suited* to monitor
+behaviour or performance – whether that is the intention doesn't matter).
+
+What helps, without being legal advice:
+
+- **Switch the ranking and the pillory on deliberately** (dashboard → **System**) – a new
+  device has both off. The pillory in particular shows everyone at the machine who owes money.
+- **Inform people first**: who sees which data, what it is for (the tally) and how long it is
+  kept (Art. 13 GDPR); where there is a works council, involve it before switching the ranking
+  or the pillory on.
+- **Allow short codes**: whoever doesn't want their name in the ranking takes a code like "AB"
+  (see [Settings](#settings) at the kiosk).
+- **Mark people who left** (dashboard → **Members**): their cards are blocked, and they no
+  longer appear in the ranking or the pillory.
+- **Backups** hold the same data – keep the stick as you would the data itself, and set a
+  backup password if it might leave the building.
+- The dashboard needs a login; an admin sees everything. Hand out the roles sparingly
+  (**Dashboard users**).
 
 ### Language
 

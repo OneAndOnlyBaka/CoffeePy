@@ -4,6 +4,15 @@
 {% block dashboard_content %}
 <h1>{% translate "Software update" %}</h1>
 
+{% if signature_off %}
+<p class="msg warning">{% blocktranslate trimmed %}
+    The signature check is off - only meant for development. This device installs any bundle uploaded here,
+    including one that isn't CoffeePy. For a device in use: sign the release's bundle with
+    sign_update_bundle.sh and your own key, and turn the check back on with the provisioning tool (see the
+    manual, "Updates").
+{% endblocktranslate %}</p>
+{% endif %}
+
 <div class="card">
     <div class="list">
         <div class="list-row">

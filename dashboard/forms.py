@@ -5,7 +5,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 from django.utils.translation import gettext_lazy, pgettext_lazy
 
-from .models import POLICY_LIMITS, NamePolicy, NightPolicy, PasswordPolicy
+from .models import POLICY_LIMITS, KioskBoards, NamePolicy, NightPolicy, PasswordPolicy
 from coffee import names
 from coffee.models import CASH_METHOD_NAME, BackupSettings, CoffeeSort, Member, Order, Payment, PaymentMethod, payment_method_label
 
@@ -380,3 +380,11 @@ class NightPolicyForm(forms.ModelForm):
                 and cleaned.get("weekend_off_at") == cleaned.get("weekend_on_at")):
             self.add_error("weekend_on_at", same)
         return cleaned
+
+
+class KioskBoardsForm(forms.ModelForm):
+    class Meta:
+        model = KioskBoards
+        fields = ["ranking", "pillory"]
+        labels = {"ranking": gettext_lazy("Ranking at the kiosk (most cups, all time and this month)"),
+                  "pillory": gettext_lazy("Pillory at the kiosk (who owes money)")}

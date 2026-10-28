@@ -182,8 +182,8 @@ jobs:
           files=("$BUNDLE" "$SBOM" "$PROVISION" sign_update_bundle.sh)
           notes="CoffeePy $VERSION for $PLATFORM, commit ${GITHUB_SHA::7} on $GITHUB_REF_NAME.
 
-          - \`$BUNDLE\`: the update bundle for /dashboard/update/ - **unsigned**, devices only take it with UPDATE_VERIFY_SIGNATURE=false
-          - \`sign_update_bundle.sh\`: signs it with your own key - \`bash sign_update_bundle.sh <bundle> --key <key>\`, for devices that check signatures
+          - \`$BUNDLE\`: the update bundle, **unsigned**. For a device in use, sign it first: \`bash sign_update_bundle.sh $BUNDLE --key <your key>\`, then upload the signed bundle at /dashboard/update/. Installing it unsigned needs the signature check off (UPDATE_VERIFY_SIGNATURE=false) - development only.
+          - \`sign_update_bundle.sh\`: checks every file in the bundle against its manifest and signs it with your own key
           - \`$SBOM\`: a CycloneDX SBOM of every image in it
           - \`$PROVISION\`: the provisioning tool - unpack, then \`scripts/provision.sh\` sets up a Pi
           - Images: \`$REGISTRY/$OWNER/coffeepy-web:$image_tag\`, \`$REGISTRY/$OWNER/coffeepy-nfc-bridge:$image_tag\`"

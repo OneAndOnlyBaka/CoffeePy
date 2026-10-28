@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from coffee.models import AltUidCapture, CoffeeSort, Member, NfcReaderStatus, NfcScan
+from dashboard.models import KioskBoards
 from kiosk.views import IDLE_RETURN_SECONDS as IDLE
 
 
@@ -15,6 +16,7 @@ class KioskIdleReturnTestCase(TestCase):
     """Settings, Pay and the ranking fall back to ordering after IDLE_RETURN_SECONDS without a tap."""
 
     def setUp(self):
+        KioskBoards.objects.update_or_create(pk=1, defaults={"ranking": True, "pillory": True})
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
         NfcReaderStatus.objects.create(pk=1, is_online=True)

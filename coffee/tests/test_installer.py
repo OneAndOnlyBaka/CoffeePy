@@ -42,6 +42,21 @@ class InstallerTestCase(SimpleTestCase):
         self.assertEqual(self.sourced(ask, SUDO_USER="admin", KIOSK_USER="kiosk"), "kiosk")
         self.assertEqual(self.sourced(f'GETTY_AUTOLOGIN="{self.root}/missing"; kiosk_user'), "pi")
 
+    def fake_ip(self, output):
+        """A PATH with an `ip` that answers `ip -4 route get` like this host would."""
+        bin_dir = self.root / "bin"
+        bin_dir.mkdir(exist_ok=True)
+        (bin_dir / "ip").write_text(f"#!/bin/sh\nprintf '%s\\n' '{output}'\n")
+        (bin_dir / "ip").chmod(0o755)
+        return f"{bin_dir}:{self.env['PATH']}"
+
+    # Without the AP, PUBLIC_HOST is the LAN address - the app's own guess, from inside its
+    # container, would be the container's.
+    def test_the_address_phones_reach_without_the_ap(self):
+        route = "1.1.1.1 via 192.168.10.1 dev eth0 src 192.168.10.28 uid 1000"
+        self.assertEqual(self.sourced("host_address", PATH=self.fake_ip(route)), "192.168.10.28")
+        self.assertEqual(self.sourced("host_address", PATH=self.fake_ip("")), "")  # no route at all
+
     def test_a_misspelt_step_is_refused(self):
         result = self.dry_run("--only=hardwar")
         self.assertEqual(result.returncode, 1)

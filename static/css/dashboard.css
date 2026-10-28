@@ -224,6 +224,7 @@ body.dashboard .login-wrap .language-switch button { min-height: 40px; padding: 
 .msg { padding: 10px 14px; border-radius: var(--radius); margin: 0; background: var(--cream-dark); }
 .msg.success { background: #e2f3e4; color: var(--success); }
 .msg.error { background: #fbe4e2; color: var(--danger); }
+.msg.warning { background: #fdf1dc; color: #7a4a00; }
 
 .file-list { list-style: none; padding: 0; margin: 0; }
 .file-list li { padding: 8px 0; border-bottom: 1px solid var(--cream-dark); overflow-wrap: anywhere; }

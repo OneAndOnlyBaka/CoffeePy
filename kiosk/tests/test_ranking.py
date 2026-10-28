@@ -8,10 +8,12 @@ from django.utils import timezone, translation
 from django.utils.formats import date_format
 
 from coffee.models import CoffeeSort, Member, NfcScan, Order
+from dashboard.models import KioskBoards
 
 
 class RankingBadgeTestCase(TestCase):
     def setUp(self):
+        KioskBoards.objects.update_or_create(pk=1, defaults={"ranking": True, "pillory": True})
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
         self.alice = Member.objects.create(uid=1, nickname="Alice X.")
@@ -114,6 +116,7 @@ class RankingBadgeTestCase(TestCase):
 
 class OrderScreenBadgeTestCase(TestCase):
     def setUp(self):
+        KioskBoards.objects.update_or_create(pk=1, defaults={"ranking": True, "pillory": True})
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
         self.alice = Member.objects.create(uid=1, nickname="Alice X.", favourite_coffee=self.espresso)

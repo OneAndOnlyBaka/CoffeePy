@@ -96,6 +96,12 @@ immediately. Consequences, all of which have already caused bugs:
 - **The QR modal lives outside `#panel`** so the poll can't wipe it mid-scan - so nothing
   removes it either. `panel.html` renders `data-panel-key="<state>:<uid>"` and
   `panel_modal.js` closes the modal when that changes (auto-logout, next member's card).
+- **The ranking and the pillory are optional** (`dashboard.models.KioskBoards`, dashboard →
+  System): personal data at a workplace, so a new device starts with both off and migration
+  0005 keeps them on only where members existed. `kiosk_views()` is the ranking screen's tabs;
+  empty hides the nav button (`#panel-state`'s `data-ranking`, read by `nav_state.js` on every
+  poll) and the podium medal after an order. **Tests that use the ranking switch it on** in
+  `setUp` - the test database starts as new as a fresh device.
 - **Tapping a nav button logs the session out** (`views.nav` → `_reset_session_state`). To
   reach a logged-in Settings screen in a test: choose the mode first, *then* create the
   `NfcScan`. `NfcScan.uid_as_int()` is little-endian - `"AABBCCDD"` is member `0xDDCCBBAA`.

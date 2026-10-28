@@ -7,6 +7,28 @@
     <p>{% translate "Reachable from another device (phone, laptop) at:" %}
         <strong>https://{{ public_host }}/</strong>
     </p>
+    {% if public_host_guessed %}
+    <p class="msg warning">{% blocktranslate trimmed %}
+        This address was only guessed, from inside the app's container - often it is the container's own,
+        which no phone can reach, and the QR codes lead nowhere. Set PUBLIC_HOST in .env to this device's
+        address (the provisioning tool does that for you).
+    {% endblocktranslate %}</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>{% translate "Ranking and pillory" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}
+        What the kiosk shows everyone at the machine. How much someone drinks and who owes money are personal
+        data about colleagues - depending on the workplace a matter for data protection and the works council
+        (see the manual). The dashboard's own pillory, for whoever collects the money, stays either way.
+    {% endblocktranslate %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="boards">
+        {{ boards_form.as_p }}
+        <button type="submit" class="btn">{% translate "Save" %}</button>
+    </form>
 </div>
 
 <div class="card">
