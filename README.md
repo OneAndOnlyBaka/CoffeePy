@@ -210,8 +210,14 @@ Two GitHub Actions workflows, both under [.github/workflows/](.github/workflows/
   bundle's manifest, every tag and file name, and the footer of dashboard, portal and kiosk.
   A `+` in it becomes `-` in image tags and file names.
 
-  On a tag push the bundle and the SBOMs are attached to a GitHub Release for that tag (a plain download
-  link); otherwise it is a workflow-run artifact (download needs a GitHub login, kept 90
+  - the provisioning tool as `coffeepy-provision-<version>.zip` (the committed tree: unpack,
+    run `scripts/provision.sh`) and `sign_update_bundle.sh`, which signs the unsigned bundle
+    with your own key (`bash sign_update_bundle.sh <bundle> --key <key>`; it checks every
+    file's checksum first and prints the key's fingerprint as the dashboard shows it).
+
+  All of it goes into a GitHub Release: a tag `vX.Y.Z` makes a release; every other build a
+  pre-release `build-<version>-<arch>`, of which the newest five are kept (GitVersion ignores
+  those tags). It is also a workflow-run artifact (download needs a GitHub login, kept 90
   days). GHCR packages are private by default on first publish even for a public repo - flip
   visibility to public under the repo's Packages tab if you want `docker pull` to work
   without logging in.

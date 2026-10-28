@@ -26,7 +26,7 @@ if [ -z "${version}" ]; then
 		version=""
 	done
 fi
-version="${version:-$(git -C "${ROOT}" describe --tags --always)}"
+version="${version:-$(git -C "${ROOT}" describe --tags --match 'v[0-9]*' --always)}"
 # A tree with uncommitted changes is no build of that commit - no version alone would say so.
 if ! git -C "${ROOT}" diff --quiet HEAD 2>/dev/null; then
 	case "${version}" in *+*) version="${version}.dirty" ;; *) version="${version}+dirty" ;; esac

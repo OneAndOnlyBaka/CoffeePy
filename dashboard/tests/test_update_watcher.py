@@ -20,6 +20,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 HAS_OPENSSL = bool(shutil.which("openssl"))
+SIGN_SCRIPT = settings.BASE_DIR / "scripts" / "sign_update_bundle.sh"
 
 
 def load_watcher(project, pubkey):
@@ -211,6 +212,38 @@ class UpdateWatcherTestCase(SimpleTestCase):
 
     def test_unsigned(self):
         self.assert_refused(self.apply(self.bundle(sign=False)), "not signed")
+
+    # scripts/sign_update_bundle.sh: the release workflow's unsigned bundle, signed at home
+
+    def sign(self, bundle, *args):
+        return subprocess.run(["bash", str(SIGN_SCRIPT), str(bundle), "--key", str(self.key), *args],
+                              capture_output=True, text=True)
+
+    def test_an_unsigned_bundle_signed_at_home(self):
+        unsigned = self.bundle(name="coffeepy-update-v2-arm64-unsigned.tar", sign=False)
+        result = self.sign(unsigned)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(hashlib.sha256(self.pubkey.read_bytes()).hexdigest()[:16], result.stdout)  # what the device shows
+        signed = unsigned.with_name("coffeepy-update-v2-arm64.tar")
+        unsigned.unlink()
+        self.assertEqual(self.apply(signed)["state"], "done")
+
+    def test_a_signature_of_another_key_is_replaced(self):
+        other = self.root / "other.pem"
+        subprocess.run(["openssl", "genpkey", "-algorithm", "ed25519", "-out", str(other)], check=True)
+        theirs = self.bundle(name="theirs.tar", key=other)
+        result = self.sign(theirs, "--output", str(self.watcher.INCOMING / "ours.tar"))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        theirs.unlink()
+        self.assertEqual(self.apply(self.watcher.INCOMING / "ours.tar")["state"], "done")
+
+    def test_a_damaged_bundle_is_not_signed(self):
+        unsigned = self.bundle(name="broken-unsigned.tar", sign=False, tamper=True)
+        result = self.sign(unsigned)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("images.tar: checksum differs", result.stderr)
+        self.assertFalse(unsigned.with_name("broken.tar").exists())
+        self.assertFalse(unsigned.with_name("broken.tar.part").exists())
 
     def test_check_turned_off_on_this_device(self):
         with open(self.project / ".env", "a") as f:
