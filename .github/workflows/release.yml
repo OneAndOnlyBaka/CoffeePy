@@ -11,11 +11,15 @@ name: Release
 # The device itself is set up with install/install.sh on Raspberry Pi OS Lite; there is no
 # image to build here.
 #
-# Triggered by pushing a tag (attaches the bundle to a GitHub Release) or manually via
-# workflow_dispatch (same artifacts without a release, e.g. to test a branch).
+# Triggered by pushing a tag (attaches the bundle to a GitHub Release), by a push to the V2
+# branch (artifact only), or manually via workflow_dispatch - which GitHub only offers for a
+# workflow that is on the default branch, and master still has V1.
 on:
   push:
     tags: ["v*.*.*"]
+    branches: ["v2-rework"]
+    # A change to the manual or its screenshots ships nothing (tags ignore this filter).
+    paths-ignore: ["docs/**", "**.md", ".claude/**"]
   workflow_dispatch:
     inputs:
       platform:
@@ -31,6 +35,12 @@ on:
 permissions:
   contents: write
   packages: write
+
+# A branch build half an hour into emulated arm64 is worthless once a newer push came; a
+# release build is never cut short.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 env:
   REGISTRY: ghcr.io

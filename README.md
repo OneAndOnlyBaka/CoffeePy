@@ -188,9 +188,10 @@ Two GitHub Actions workflows, both under [.github/workflows/](.github/workflows/
 - **`ci.yml`** - runs the Django test suite (`DJANGO_TEST_SQLITE=1 manage.py test`) on
   every push and pull request. No Docker/Postgres involved, just `pip install` + the
   test runner, so it's fast.
-- **`release.yml`** - runs on pushing a tag matching `v*.*.*` (or manually via "Run
-  workflow", with a choice of platform, for a test build of any branch without publishing a
-  release), and builds everything an offline Pi deployment needs, for `linux/arm64` (64-bit
+- **`release.yml`** - runs on pushing a tag matching `v*.*.*`, on every push to `v2-rework`
+  that changes more than docs (a newer push cancels a running branch build), or manually via
+  "Run workflow" with a choice of platform - which GitHub only offers once the workflow is on
+  the default branch. It builds everything an offline Pi deployment needs, for `linux/arm64` (64-bit
   Raspberry Pi OS; `linux/arm/v7` in the manual-run dropdown for a 32-bit one):
   - the images this repo builds, pushed to `ghcr.io/<owner>/coffeepy-web` and
     `ghcr.io/<owner>/coffeepy-nfc-bridge` as `:<version>-<arch>` and `:latest-<arch>`
