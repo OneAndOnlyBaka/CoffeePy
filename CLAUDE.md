@@ -393,6 +393,16 @@ mind before changing it:
   Chromium; `install/kiosk/openbox-autostart` restarts a browser whose kiosk hasn't polled
   within `KIOSK_LOAD_SECONDS`. Reproduce with `sync; echo b > /proc/sysrq-trigger`.
 
+## Every PR is audited
+
+CI's `audit` job fails on every known vulnerability that an upgrade fixes: `pip-audit` per
+requirements file (`scripts/audit_python.py` tells fixable from not-yet-fixed) and Grype on
+the two images this repo builds. Other people's images (postgres, mosquitto, caddy) are only
+reported - their packages are theirs to fix, and every build pulls their newest tag. What can't
+be fixed yet goes into `.grype.yaml` with its reason, never silently: the two CPython CVEs there
+are fixed only in 3.15, which Django 5.2 doesn't support. The images run Python 3.14 and
+upgrade the base image's pip, because both lagged behind their fixes.
+
 ## The device is offline
 
 The Pi runs without internet, in a browser it never leaves. **Nothing may load from an

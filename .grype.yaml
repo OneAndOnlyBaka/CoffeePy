@@ -1,0 +1,17 @@
+# Exceptions to the CI audit (.github/workflows/ci.yml, job "audit"), which otherwise fails on
+# every vulnerability a newer release fixes. Each entry says why that fix can't be taken yet -
+# drop it as soon as it can (and the audit will tell once the reason is gone: a newer
+# base image without the finding makes the rule simply match nothing).
+ignore:
+  # Fixed only in CPython 3.15, not backported to 3.14 - which is the newest Python that Django
+  # 5.2 (this app's LTS) supports. Revisit with the move to a Django that supports 3.15.
+  - vulnerability: CVE-2025-15367
+    package:
+      name: python
+      type: binary
+    reason: "fixed only in Python 3.15, which Django 5.2 LTS does not support"
+  - vulnerability: CVE-2026-12345
+    package:
+      name: python
+      type: binary
+    reason: "fixed only in Python 3.15, which Django 5.2 LTS does not support"
