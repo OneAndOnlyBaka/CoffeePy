@@ -1,7 +1,6 @@
 """The backup page: the USB stick (setting one up, its backups), the backup settings, and
 restoring - from a stick or from an uploaded file. Admins only. The work itself is in
 coffee/backups.py, the stick's device side in install/storage_helper.py."""
-import os
 import tempfile
 import uuid
 from pathlib import Path
@@ -13,7 +12,6 @@ from django.core.management import call_command
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 

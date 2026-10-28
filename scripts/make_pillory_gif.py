@@ -145,7 +145,6 @@ def bubble(d, at, text):
 
 def beans(d, t):
     """Every so often one of the crowd near the debtor throws a coffee bean at them."""
-    x = debtor_x(t)
     for k, offset in enumerate((0.3, 1.1, 1.9)):
         throw = ((t + offset) % 1.6) / 0.7
         if throw >= 1:

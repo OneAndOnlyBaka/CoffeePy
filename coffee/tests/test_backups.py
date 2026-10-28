@@ -338,7 +338,7 @@ class RealBackupTestCase(FakeDevice, TransactionTestCase):
         self.assertIn("coffee.0001_initial", manifest["migrations"])
         Member.objects.create(uid=2, nickname="Ben X.")
         self.restore(path)
-        self.assertEqual(list(Member.objects.values_list("nickname", flat=True)), ["Anna"])
+        self.assertEqual(list(Member.objects.values_list("nickname", flat=True)), ["Anna X."])
 
     def test_encrypted(self):
         with mock.patch.dict(os.environ, {"BACKUP_PASSPHRASE": "Kaffee-ist-fertig-42"}):

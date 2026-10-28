@@ -40,9 +40,8 @@ on:
         type: choice
         options: ["linux/arm64", "linux/arm/v7"]
 
-permissions:
-  contents: write
-  packages: write
+# Nothing by default; the one job asks for what it needs.
+permissions: {}
 
 # A branch build half an hour into emulated arm64 is worthless once a newer push came; a
 # release build is never cut short.
@@ -54,42 +53,54 @@ env:
   REGISTRY: ghcr.io
   PLATFORM: ${{ inputs.platform || 'linux/arm64' }}
 
+# Actions are pinned to a commit, not a tag that can be moved under this workflow's write
+# rights (Dependabot keeps the pins current). Values reach the scripts as environment
+# variables, never as ${{ }} inside them: a branch or tag name is text someone else chose.
 jobs:
   images-and-bundle:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: write   # the release and its tag
+      packages: write   # the images on GHCR
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # GitVersion counts commits and reads tags - it needs the whole history.
           fetch-depth: 0
+          persist-credentials: false
 
-      - uses: gittools/actions/gitversion/setup@v3
+      - uses: gittools/actions/gitversion/setup@51d325634925d7d9ce0a7efc2c586c0bc2b9eee6 # v3.2.1
         with:
           versionSpec: "6.x"
-      - uses: gittools/actions/gitversion/execute@v3
+      - uses: gittools/actions/gitversion/execute@51d325634925d7d9ce0a7efc2c586c0bc2b9eee6 # v3.2.1
         id: gitversion
 
+      # Every later step reads these from the environment.
       - name: Determine names
-        id: names
+        env:
+          FULL_SEMVER: ${{ steps.gitversion.outputs.fullSemVer }}
         run: |
           # The bundle script calls write_version.sh again - the same version both times.
-          echo "COFFEEPY_VERSION=${{ steps.gitversion.outputs.fullSemVer }}" >> "$GITHUB_ENV"
-          version="$(COFFEEPY_VERSION="${{ steps.gitversion.outputs.fullSemVer }}" scripts/write_version.sh)"
+          version="$(COFFEEPY_VERSION="$FULL_SEMVER" scripts/write_version.sh)"
           arch="${PLATFORM#linux/}"; arch="${arch//\//}"   # arm64, armv7
           tag="${version//+/-}"   # SemVer's build metadata "+" is not allowed in an image tag
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "arch=$arch" >> "$GITHUB_OUTPUT"
-          echo "bundle=coffeepy-update-$tag-$arch-unsigned.tar" >> "$GITHUB_OUTPUT"
-          echo "sbom=coffeepy-sbom-$tag-$arch.tar" >> "$GITHUB_OUTPUT"
-          echo "provision=coffeepy-provision-$tag.zip" >> "$GITHUB_OUTPUT"
+          {
+            echo "COFFEEPY_VERSION=$FULL_SEMVER"
+            echo "VERSION=$version"
+            echo "TAG=$tag"
+            echo "ARCH=$arch"
+            echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}"
+            echo "BUNDLE=coffeepy-update-$tag-$arch-unsigned.tar"
+            echo "SBOM=coffeepy-sbom-$tag-$arch.tar"
+            echo "PROVISION=coffeepy-provision-$tag.zip"
+          } >> "$GITHUB_ENV"
           echo "Version $version" >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -101,34 +112,33 @@ jobs:
       # Builds coffeepy-web + nfc-bridge and pulls the rest, all for PLATFORM - the images
       # pushed below are the very ones inside the bundle.
       - name: Build the update bundle (unsigned)
-        run: scripts/build_update_bundle.sh --platform "$PLATFORM" --unsigned --output "${{ steps.names.outputs.bundle }}"
+        run: scripts/build_update_bundle.sh --platform "$PLATFORM" --unsigned --output "$BUNDLE"
 
-      - uses: anchore/sbom-action/download-syft@v0
+      - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
         id: syft
 
       - name: SBOMs of every image in the bundle (CycloneDX)
+        env:
+          SYFT: ${{ steps.syft.outputs.cmd }}
         run: |
           mkdir sbom
           for image in $(docker compose config --images | sort -u); do
-            "${{ steps.syft.outputs.cmd }}" scan "docker:$image" --platform "$PLATFORM" \
+            "$SYFT" scan "docker:$image" --platform "$PLATFORM" \
               -o "cyclonedx-json=sbom/$(echo "$image" | tr '/:' '__').cdx.json"
           done
-          tar -cf "${{ steps.names.outputs.sbom }}" -C sbom .
+          tar -cf "$SBOM" -C sbom .
           ls -l sbom
 
       - name: Push the built images to GHCR
         run: |
-          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          version="${{ steps.names.outputs.tag }}"
-          arch="${{ steps.names.outputs.arch }}"
           # Single-platform images, so the platform is part of every tag: a later arm/v7 run
           # must not overwrite what an arm64 device pulls as "latest".
           # Only that platform's manifest, not the index the containerd image store (Docker 29)
           # keeps: GHCR took its layers, then refused the tag with "denied".
           push() { # local image, name in the registry
-            for tag in "$version-$arch" "latest-$arch"; do
-              docker tag "$1" "${{ env.REGISTRY }}/$owner/$2:$tag"
-              docker push --platform "$PLATFORM" "${{ env.REGISTRY }}/$owner/$2:$tag"
+            for tag in "$TAG-$ARCH" "latest-$ARCH"; do
+              docker tag "$1" "$REGISTRY/$OWNER/$2:$tag"
+              docker push --platform "$PLATFORM" "$REGISTRY/$OWNER/$2:$tag"
             done
           }
           push coffeepy-web:latest coffeepy-web
@@ -140,20 +150,20 @@ jobs:
       # file write_version.sh then keeps.
       - name: Pack the provisioning tool
         run: |
-          dir="coffeepy-${{ steps.names.outputs.tag }}"
+          dir="coffeepy-$TAG"
           git archive --format=tar --prefix="$dir/" HEAD | tar -x
           cp coffeepy-version.json "$dir/"
           rm -rf "${dir:?}/.claude" "${dir:?}/.github"
-          zip -qr "${{ steps.names.outputs.provision }}" "$dir"
+          zip -qr "$PROVISION" "$dir"
           cp scripts/sign_update_bundle.sh .
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: coffeepy-${{ steps.names.outputs.tag }}-${{ steps.names.outputs.arch }}
+          name: coffeepy-${{ env.TAG }}-${{ env.ARCH }}
           path: |
-            ${{ steps.names.outputs.bundle }}
-            ${{ steps.names.outputs.sbom }}
-            ${{ steps.names.outputs.provision }}
+            ${{ env.BUNDLE }}
+            ${{ env.SBOM }}
+            ${{ env.PROVISION }}
             sign_update_bundle.sh
           compression-level: 0   # image layers are compressed already
 
@@ -168,17 +178,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KEEP_BUILDS: 5
         run: |
-          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          image_tag="${{ steps.names.outputs.tag }}-${{ steps.names.outputs.arch }}"
-          files=("${{ steps.names.outputs.bundle }}" "${{ steps.names.outputs.sbom }}"
-                 "${{ steps.names.outputs.provision }}" sign_update_bundle.sh)
-          notes="CoffeePy ${{ steps.names.outputs.version }} for $PLATFORM, commit ${GITHUB_SHA::7} on ${{ github.ref_name }}.
+          image_tag="$TAG-$ARCH"
+          files=("$BUNDLE" "$SBOM" "$PROVISION" sign_update_bundle.sh)
+          notes="CoffeePy $VERSION for $PLATFORM, commit ${GITHUB_SHA::7} on $GITHUB_REF_NAME.
 
-          - \`${{ steps.names.outputs.bundle }}\`: the update bundle for /dashboard/update/ - **unsigned**, devices only take it with UPDATE_VERIFY_SIGNATURE=false
+          - \`$BUNDLE\`: the update bundle for /dashboard/update/ - **unsigned**, devices only take it with UPDATE_VERIFY_SIGNATURE=false
           - \`sign_update_bundle.sh\`: signs it with your own key - \`bash sign_update_bundle.sh <bundle> --key <key>\`, for devices that check signatures
-          - \`${{ steps.names.outputs.sbom }}\`: a CycloneDX SBOM of every image in it
-          - \`${{ steps.names.outputs.provision }}\`: the provisioning tool - unpack, then \`scripts/provision.sh\` sets up a Pi
-          - Images: \`${{ env.REGISTRY }}/$owner/coffeepy-web:$image_tag\`, \`${{ env.REGISTRY }}/$owner/coffeepy-nfc-bridge:$image_tag\`"
+          - \`$SBOM\`: a CycloneDX SBOM of every image in it
+          - \`$PROVISION\`: the provisioning tool - unpack, then \`scripts/provision.sh\` sets up a Pi
+          - Images: \`$REGISTRY/$OWNER/coffeepy-web:$image_tag\`, \`$REGISTRY/$OWNER/coffeepy-nfc-bridge:$image_tag\`"
           release() { # tag - an existing one (a re-run, the other platform) only gets the files
             if gh release view "$1" >/dev/null 2>&1; then
               gh release upload "$1" "${files[@]}" --clobber
@@ -187,17 +195,17 @@ jobs:
                 --generate-notes --notes "$notes"
             fi
           }
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            release "${{ github.ref_name }}"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            release "$GITHUB_REF_NAME"
             exit 0
           fi
-          if [ "${{ github.ref_name }}" = "master" ]; then
-            release "v${{ steps.names.outputs.version }}"
+          if [ "$GITHUB_REF_NAME" = "master" ]; then
+            release "v$VERSION"
             exit 0
           fi
           tag="build-$image_tag"
           gh release create "$tag" "${files[@]}" --target "$GITHUB_SHA" --prerelease --latest=false \
-            --title "${{ steps.names.outputs.version }} ($PLATFORM)" --notes "$notes"
+            --title "$VERSION ($PLATFORM)" --notes "$notes"
           gh release list --limit 200 --json tagName,isPrerelease,createdAt \
             --jq '[.[] | select(.isPrerelease and (.tagName | startswith("build-")))] | sort_by(.createdAt) | reverse
                   | .[(env.KEEP_BUILDS | tonumber):] | .[].tagName' |

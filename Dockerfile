@@ -1,9 +1,9 @@
 # Two stages so the runtime image never carries a toolchain. It earns its keep on the
 # Raspberry Pi: the image is 32-bit armhf, and neither psutil nor psycopg's binary build
 # publishes an armv7 wheel, so pip has to compile psutil from source - which the runtime
-# base (python:3.12-slim, no compiler) cannot do. On amd64/arm64 pip just finds wheels
+# base (python:3.14-slim, no compiler) cannot do. On amd64/arm64 pip just finds wheels
 # here and this stage costs almost nothing.
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
@@ -16,7 +16,7 @@ COPY requirements.txt .
 RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
 
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # postgresql-client: pg_dump for the backup service, and libpq5 - which is also what the
 # pure-Python psycopg used on armv7 loads at runtime.
@@ -36,7 +36,9 @@ WORKDIR /app
 
 COPY requirements.txt .
 COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \
+# The base image's pip lags behind its fixes (the CI audit fails on that) - a newer one first.
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \
     && rm -rf /wheels
 
 COPY . .

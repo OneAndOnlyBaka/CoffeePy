@@ -1,4 +1,3 @@
-from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
@@ -28,7 +27,7 @@ class AuditLogTestCase(TestCase):
         self.assertEqual(actions[:2], ["member.delete", "member.create"])
 
     def test_coffee_sort_crud_is_logged(self):
-        response = self.client.post(
+        self.client.post(
             reverse("dashboard:coffeesort_add"), {"name": "espresso", "price": "0.30", "machine_strokes": "1"}
         )
         sort = CoffeeSort.objects.get(name="espresso")

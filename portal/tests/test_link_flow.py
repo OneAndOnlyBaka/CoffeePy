@@ -1,5 +1,4 @@
 from datetime import timedelta
-from decimal import Decimal
 
 from django.contrib.sessions.models import Session
 from django.test import Client, TestCase

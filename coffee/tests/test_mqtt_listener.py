@@ -1,6 +1,6 @@
 import json
 
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 
 from coffee.management.commands.mqtt_listener import handle_payload, set_reader_online
 from coffee.models import NfcReaderStatus, NfcScan
@@ -55,7 +55,10 @@ class ReaderStatusTestCase(TestCase):
         self.assertFalse(NfcReaderStatus.objects.get(pk=1).is_online)
 
 
-class ReaderStatusRetryTestCase(TestCase):
+# ReaderStatus calls close_old_connections(), which closes a connection that is inside a
+# transaction - as every TestCase's is. On SQLite the tests never noticed; on PostgreSQL the
+# test's own connection was gone. The listener itself runs in autocommit.
+class ReaderStatusRetryTestCase(TransactionTestCase):
     """The status the bridge sends once is kept until the database takes it - after a power
     cut the database was still recovering when it came."""
 
@@ -82,7 +85,7 @@ class ReaderStatusRetryTestCase(TestCase):
         self.assertIsNone(status.pending)
 
 
-class ReaderStatusRecheckTestCase(TestCase):
+class ReaderStatusRecheckTestCase(TransactionTestCase):
     """A reset, restore or import replaces the database under the running listener - the row it
     wrote is gone or old, and the bridge only reports a change."""
 

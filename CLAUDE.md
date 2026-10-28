@@ -16,8 +16,10 @@ python manage.py runserver
 ```
 
 `DJANGO_TEST_SQLITE=1` swaps Postgres for a local SQLite file; without it every command tries
-to reach the `db` container. CI (`.github/workflows/ci.yml`) runs exactly `python manage.py
-test` with those two variables and nothing else - no linter, no formatter, no type checker.
+to reach the `db` container. CI (`.github/workflows/ci.yml`) runs that suite (plus `makemigrations --check`), the same
+suite against PostgreSQL with the coverage below, the audit (see "Every PR is audited"), and
+a lint job of correctness checks only: ruff `F`, ShellCheck errors, zizmor on the workflows,
+gitleaks over the history. No formatter, no type checker.
 The suite only grows, so don't trust a count or a duration written down anywhere: the last
 lines of a run say how many tests ran and how long they took, and `skipped=N` how many need
 something SQLite can't give them.
@@ -392,6 +394,17 @@ mind before changing it:
   stays on `about:blank` - a white screen, the app answering. The root cause is inside
   Chromium; `install/kiosk/openbox-autostart` restarts a browser whose kiosk hasn't polled
   within `KIOSK_LOAD_SECONDS`. Reproduce with `sync; echo b > /proc/sysrq-trigger`.
+
+## Every PR is audited
+
+CI's `audit` job fails on every known vulnerability that an upgrade fixes (Dependabot's weekly
+PRs keep it there, `.github/dependabot.yml`): `pip-audit` per
+requirements file (`scripts/audit_python.py` tells fixable from not-yet-fixed) and Grype on
+the two images this repo builds. Other people's images (postgres, mosquitto, caddy) are only
+reported - their packages are theirs to fix, and every build pulls their newest tag. What can't
+be fixed yet goes into `.grype.yaml` with its reason, never silently: the two CPython CVEs there
+are fixed only in 3.15, which Django 5.2 doesn't support. The images run Python 3.14 and
+upgrade the base image's pip, because both lagged behind their fixes.
 
 ## The device is offline
 

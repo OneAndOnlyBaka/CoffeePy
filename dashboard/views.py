@@ -1,6 +1,5 @@
 import csv
 import json
-from functools import wraps
 import os
 import tempfile
 from datetime import datetime, timedelta
@@ -27,7 +26,6 @@ from coffee.models import (
     CoffeeSort,
     Member,
     MemberCard,
-    MemberDevice,
     NfcReaderStatus,
     Order,
     Payment,
