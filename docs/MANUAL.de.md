@@ -48,14 +48,47 @@ stehen in der [README](../README.md).
 
 | Teil | Hinweise |
 |---|---|
-| Raspberry Pi | **3 Model B oder neuer** (3, 3+, 4, 5, Zero 2 W). Ein Pi 3 mit 1 GB reicht; ein Pi 4 mit 2 GB+ hat mehr Reserven. |
-| microSD-Karte | 16 GB oder mehr, möglichst A1/A2 – das ist die Systemplatte. |
-| Netzteil | Das offizielle Netzteil für dein Modell. Billige Netzteile sind die häufigste Ursache für wackelige USB-Geräte und Touchscreens. |
+| Raspberry Pi | **3 Model B oder neuer mit mindestens 1 GB RAM** (3, 3+, 4, 5). Ein Pi 3 mit 1 GB reicht, nutzt aber schon komprimierten Auslagerungsspeicher; ein Pi 4 mit 2 GB+ hat mehr Reserven. Der Zero 2 W (512 MB) reicht nicht – siehe [Was das Gerät braucht](#was-das-gerät-braucht). |
+| microSD-Karte | 16 GB oder mehr, möglichst A1/A2 – das ist die Systemplatte. 32 GB lassen Luft für Updates. |
+| Netzteil | Das offizielle Netzteil für dein Modell. Billige Netzteile sind die häufigste Ursache für wackelige USB-Geräte und Touchscreens – das alte Gerät mit Version 1 lief mit zu wenig Spannung und startete deshalb immer wieder neu. |
+| Kühlkörper (empfohlen) | Ohne Kühlung läuft ein Pi 3 im Betrieb bei gut 60 °C; bei Dauerlast wurden 83 °C gemessen, knapp unter der Drosselgrenze. Ein passiver Kühlkörper und Luftschlitze im Gehäuse reichen. |
 | Touchscreen | 1024×600 (z. B. [Adafruit #2396](https://www.adafruit.com/product/2396)). Das offizielle 7"-Display (800×480) funktioniert ebenfalls. |
 | NFC-Leser | **ACR122U** von Advanced Card Systems – der einzige unterstützte Leser. |
 | Echtzeituhr | **DS3231**-Modul mit CR2032-Batterie, damit der Pi auch ohne Internet die richtige Uhrzeit hat. Anschluss an I²C-1: VCC→Pin 1, GND→Pin 6, SDA→Pin 3, SCL→Pin 5. CoffeePy prüft es regelmäßig und warnt, wenn es fehlt, nicht antwortet oder die Zeit verloren hat. **Die Batterie alle zwei bis drei Jahre tauschen**, auch ohne Warnung (siehe [Wenn etwas nicht klappt](#8-wenn-etwas-nicht-klappt)). |
 | Karten | Beliebige MIFARE-Karten oder -Schlüsselanhänger (ISO 14443A) – eine pro Mitglied. Viele Firmen- oder Fahrkarten funktionieren auch. |
 | USB-Stick (empfohlen) | Für automatische Backups. Vorzubereiten ist nichts: Du richtest ihn im Dashboard ein (siehe [Backups](#backups)) – dabei wird er gelöscht. |
+
+### Was das Gerät braucht
+
+Gemessen am 29.10.2026 auf einem **Raspberry Pi 3 Model B (1 GB)** mit Raspberry Pi OS 13
+(64 Bit), mit den Daten eines echten Büros: 24 Mitglieder, 8.672 Bestellungen seit 2023.
+
+| | Kiosk wartet („Karte auflegen“) | Kiosk zeigt die Rangliste |
+|---|---|---|
+| **Prozessor** (4 Kerne) | rund 0,7 Kerne – davon der Browser 0,4, die App 0,1 | rund 1,1 Kerne – der Browser allein 0,8 |
+| **Arbeitsspeicher** (905 MB nutzbar) | rund 530 MB belegt, 340 MB komprimiert ausgelagert, 330–380 MB frei | wie links, der Browser braucht 60 MB mehr |
+| **Grafikspeicher** (256 MB) | genug frei | fast voll (unter 1 MB frei) – die großen Animationen |
+| **Temperatur** ohne Kühlung | 60 °C, keine Drosselung | 61 °C, keine Drosselung |
+
+Der Browser am Kiosk braucht mit Abstand am meisten: Er fragt zweimal pro Sekunde nach neuen
+Karten und spielt die Animationen ab. Die App antwortet ihm im Mittel in 0,25 Sekunden.
+
+**Speicherplatz auf der SD-Karte:**
+
+| | |
+|---|---|
+| Betriebssystem | 3–5 GB (Lite), mit Desktop mehr |
+| Die laufenden Programme von CoffeePy (Images) | rund 0,9 GB |
+| Die Sicherungskopie der vorigen Version nach einem Update (für **Zurück zu …**) | rund 0,9 GB |
+| Datenbank | 12 MB |
+| Systemprotokoll | bis rund 50 MB |
+
+Insgesamt waren auf dem Testgerät (mit Desktop-Image) 8 GB belegt. Ein Backup auf dem Stick
+ist mit diesen Daten nur rund **200 KB** groß – jeder Stick reicht.
+
+**Zeiten:** Nach dem Einschalten ist der Kiosk nach etwa anderthalb Minuten bereit, nach einem
+Stromausfall nach bis zu dreieinhalb. Ein Update dauert rund sieben Minuten, die erste
+Installation wegen des Bauens der App deutlich länger.
 
 ### Gehäuse
 

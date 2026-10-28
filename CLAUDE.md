@@ -387,6 +387,13 @@ mind before changing it:
 - **Current Raspberry Pi OS drives HDMI through KMS**, where `hdmi_group`/`hdmi_mode`/
   `hdmi_cvt` are ignored. A panel with no usable EDID (the documented 1024x600 one) stays
   black unless the mode is forced with `video=` on the kernel command line.
+- **What the device needs is measured, not guessed** - the manual's "What the device needs"
+  has the numbers (Pi 3, 1 GB, 2026-10-29): about 530 MB RAM in use plus 340 MB in zram swap,
+  so nothing under 1 GB works; the kiosk's Chromium is most of the CPU. `resources.sh`
+  (pi-device skill) measures per process group; mind the ranking screen's 30s idle return
+  when measuring it. Every `docker compose build` leaves the replaced image dangling, a few
+  hundred MB each - `install.sh`'s image step and the update watcher prune them (only
+  dangling ones: the rollback copies are tagged).
 - **The Pi 3's GPU has 256MB (CMA), and GPU rasterization fills it with GIF frames**:
   Chromium keeps every decoded frame of an animated GIF as a texture, the ranking's GIFs
   are 120-160 frames of ~1MB, and the GPU process then dies (`dmesg`: "Failed to allocate

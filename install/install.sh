@@ -624,7 +624,7 @@ step_images() {
 	fi
 	log "Building the app images - the long part, especially on a Pi 3"
 	if [ "${DRY_RUN}" = "1" ]; then
-		info "[dry-run] docker compose build && docker compose pull --ignore-buildable"
+		info "[dry-run] docker compose build && docker compose pull --ignore-buildable && docker image prune -f"
 		return 0
 	fi
 	local attempt
@@ -632,6 +632,9 @@ step_images() {
 		# Every image the compose file uses but does not build (db, mosquitto, caddy) - a
 		# hand-kept list here is how a new service ends up missing on the device.
 		if (cd "${TARGET_DIR}" && docker compose build && docker compose pull --ignore-buildable); then
+			# The image a rebuild replaced stays behind untagged - a few hundred MB on the SD card
+			# per run, for good. The update watcher's rollback copies are tagged and stay.
+			docker image prune -f >/dev/null || true
 			return 0
 		fi
 		warn "Build attempt ${attempt} failed."
