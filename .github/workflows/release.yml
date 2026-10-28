@@ -19,13 +19,12 @@ name: Release
 # The device itself is set up with install/install.sh on Raspberry Pi OS Lite; there is no
 # image to build here.
 #
-# Triggered by pushing a tag (attaches the bundle to a GitHub Release), by a push to the V2
-# branch (artifact only), or manually via workflow_dispatch - which GitHub only offers for a
-# workflow that is on the default branch, and master still has V1.
+# Triggered by pushing a tag (a release), by a push to master or v2-rework (a pre-release),
+# or manually via workflow_dispatch.
 on:
   push:
     tags: ["v*.*.*"]
-    branches: ["v2-rework"]
+    branches: ["master", "v2-rework"]
     # A change to the manual or its screenshots ships nothing (tags ignore this filter).
     paths-ignore: ["docs/**", "**.md", ".claude/**"]
   workflow_dispatch:
