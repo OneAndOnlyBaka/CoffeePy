@@ -198,8 +198,10 @@ Two GitHub Actions workflows, both under [.github/workflows/](.github/workflows/
   test runner, so it's fast.
 - **`release.yml`** - runs on pushing a tag matching `v*.*.*`, on every push to `master` or
   `develop` that changes more than docs (a newer push cancels a running branch build), and for
-  any other branch only by hand via "Run workflow", with a choice of branch and platform. Untagged `master` builds are
-  `2.0.0-ci.N` (`GitVersion.yml`); a tag `v2.0.0` makes exactly 2.0.0. It builds everything an offline Pi deployment needs, for `linux/arm64` (64-bit
+  any other branch only by hand via "Run workflow", with a choice of branch and platform. Every
+  `master` build is a release `vX.Y.Z` - the workflow sets the tag, the next build counts the
+  patch up (`GitVersion.yml`; `+semver: minor` in a commit message or a tag of your own for
+  more). It builds everything an offline Pi deployment needs, for `linux/arm64` (64-bit
   Raspberry Pi OS; `linux/arm/v7` in the manual-run dropdown for a 32-bit one):
   - the images this repo builds, pushed to `ghcr.io/<owner>/coffeepy-web` and
     `ghcr.io/<owner>/coffeepy-nfc-bridge` as `:<version>-<arch>` and `:latest-<arch>`
@@ -223,8 +225,8 @@ Two GitHub Actions workflows, both under [.github/workflows/](.github/workflows/
     with your own key (`bash sign_update_bundle.sh <bundle> --key <key>`; it checks every
     file's checksum first and prints the key's fingerprint as the dashboard shows it).
 
-  All of it goes into a GitHub Release: a tag `vX.Y.Z` makes a release; every other build a
-  pre-release `build-<version>-<arch>`, of which the newest five are kept (GitVersion ignores
+  All of it goes into a GitHub Release: a tag `vX.Y.Z` or a `master` build makes a release
+  (shown as "Latest"); every other build a pre-release `build-<version>-<arch>`, of which the newest five are kept (GitVersion ignores
   those tags). It is also a workflow-run artifact (download needs a GitHub login, kept 90
   days). GHCR packages are private by default on first publish even for a public repo - flip
   visibility to public under the repo's Packages tab if you want `docker pull` to work
