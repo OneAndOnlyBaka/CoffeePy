@@ -19,12 +19,12 @@ name: Release
 # The device itself is set up with install/install.sh on Raspberry Pi OS Lite; there is no
 # image to build here.
 #
-# Triggered by pushing a tag (a release), by a push to master or v2-rework (a pre-release),
-# or manually via workflow_dispatch.
+# Triggered by pushing a tag (a release), by a push to master or develop (a pre-release), or -
+# for any other branch - only by hand via workflow_dispatch ("Run workflow", pick the branch).
 on:
   push:
     tags: ["v*.*.*"]
-    branches: ["master", "v2-rework"]
+    branches: ["master", "develop"]
     # A change to the manual or its screenshots ships nothing (tags ignore this filter).
     paths-ignore: ["docs/**", "**.md", ".claude/**"]
   workflow_dispatch:

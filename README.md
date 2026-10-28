@@ -197,8 +197,8 @@ Two GitHub Actions workflows, both under [.github/workflows/](.github/workflows/
   every push and pull request. No Docker/Postgres involved, just `pip install` + the
   test runner, so it's fast.
 - **`release.yml`** - runs on pushing a tag matching `v*.*.*`, on every push to `master` or
-  `v2-rework` that changes more than docs (a newer push cancels a running branch build), or
-  manually via "Run workflow" with a choice of platform. Untagged `master` builds are
+  `develop` that changes more than docs (a newer push cancels a running branch build), and for
+  any other branch only by hand via "Run workflow", with a choice of branch and platform. Untagged `master` builds are
   `2.0.0-ci.N` (`GitVersion.yml`); a tag `v2.0.0` makes exactly 2.0.0. It builds everything an offline Pi deployment needs, for `linux/arm64` (64-bit
   Raspberry Pi OS; `linux/arm/v7` in the manual-run dropdown for a 32-bit one):
   - the images this repo builds, pushed to `ghcr.io/<owner>/coffeepy-web` and
