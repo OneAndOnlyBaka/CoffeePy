@@ -1,0 +1,5 @@
+# gitleaks findings that are no secrets - by fingerprint (commit:file:rule:line), so that a
+# real one in the same file still counts. Made-up passwords of the login tests.
+ace5fbc72233950e5995f711e6856258ffeaf876:dashboard/tests/test_security.py:generic-api-key:122
+ace5fbc72233950e5995f711e6856258ffeaf876:dashboard/tests/test_security.py:generic-api-key:139
+ace5fbc72233950e5995f711e6856258ffeaf876:dashboard/tests/test_security.py:generic-api-key:140

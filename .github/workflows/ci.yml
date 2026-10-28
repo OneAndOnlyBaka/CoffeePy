@@ -156,4 +156,6 @@ jobs:
       # Every commit, so a password or key that was committed and removed again still counts.
       - name: Secrets (gitleaks)
         if: always()
-        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --redact --verbose
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --redact --verbose \
+            --gitleaks-ignore-path /repo/.gitleaksignore
