@@ -1,0 +1,9 @@
+{% load i18n %}
+{% comment %}The fields of a restore: which parts, a passphrase for a foreign backup, the confirmation.{% endcomment %}
+<fieldset class="field radio-field">
+    <legend>{{ form.parts.label }}</legend>
+    {% for box in form.parts %}<label class="checkbox-row">{{ box.tag }} <span>{{ box.choice_label }}</span></label>{% endfor %}
+</fieldset>
+{% if form.parts.errors %}<p class="msg error">{{ form.parts.errors|join:" " }}</p>{% endif %}
+{% include "dashboard/_field.html" with field=form.passphrase %}
+{% include "dashboard/_field.html" with field=form.confirm %}

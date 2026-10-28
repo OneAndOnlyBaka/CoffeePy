@@ -1,0 +1,20 @@
+{% load i18n %}
+<div class="qr-row">
+    {% if wifi_qr_svg %}
+    <div class="qr-card">
+        <h2>1. {% translate "Join WiFi" %}</h2>
+        <div class="qr-image">{{ wifi_qr_svg|safe }}</div>
+        <p class="muted">{% blocktranslate trimmed with ssid=ap_ssid %}Network "{{ ssid }}"{% endblocktranslate %}</p>
+    </div>
+    {% endif %}
+    <div class="qr-card">
+        <h2>{% if wifi_qr_svg %}2. {% endif %}{% translate "Open dashboard" %}</h2>
+        <div class="qr-image">{{ dashboard_qr_svg|safe }}</div>
+        <p class="muted">{% translate "Manage coffee sorts, members, stats and more" %}</p>
+    </div>
+</div>
+{% comment %}
+The same on every render (it changes only with an update), so the panel's wait screen this sits
+on stays byte-identical from poll to poll.
+{% endcomment %}
+<p class="qr-version">{% blocktranslate trimmed with version=coffeepy_version %}Version {{ version }}{% endblocktranslate %}</p>

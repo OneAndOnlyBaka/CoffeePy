@@ -1,0 +1,7 @@
+{% load i18n %}
+<div class="modal-card">
+    <button type="button" class="modal-close" hx-on:click="document.getElementById('qr-modal').classList.remove('open')">✕</button>
+    <h1>{% translate "Admin access" %}</h1>
+    <p>{% translate "Only for whoever looks after this coffee machine - you don't need any of this to get a coffee." %}</p>
+    {% include "kiosk/_qr_row.html" %}
+</div>

@@ -1,0 +1,39 @@
+{% load i18n %}
+{% comment %}
+Whether backups are being made right now - on the overview and the backup page. Include
+with health=backups.health() and configured=the stick.json contents.
+{% endcomment %}
+{% if health.state == "ok" %}
+<div class="card backup-health ok">
+    <h2>{% include "icons/database.svg" %} {% translate "Backups are running" %}</h2>
+    <p>{% if health.last_ok %}{% blocktranslate with when=health.last_ok|date:"d.m.Y H:i" %}Last backup {{ when }}.{% endblocktranslate %}{% else %}{% translate "The first backup is made within the hour." %}{% endif %}</p>
+</div>
+{% elif health.state == "missing" %}
+<div class="card backup-health warn">
+    <h2>{% include "icons/database.svg" %} {% translate "Backups are not running - the backup stick is missing" %}</h2>
+    <p>{% blocktranslate trimmed with model=configured.model|default:"USB" serial=configured.serial %}Plug the backup stick ({{ model }}, serial {{ serial }}) back in -
+        backups then carry on by themselves. A different stick has to be set up under Backup first.{% endblocktranslate %}
+        {% if health.last_ok %}{% blocktranslate with when=health.last_ok|date:"d.m.Y H:i" %}Last backup {{ when }}.{% endblocktranslate %}{% endif %}</p>
+</div>
+{% elif health.state == "failing" %}
+<div class="card backup-health warn">
+    <h2>{% include "icons/database.svg" %} {% translate "The last backup failed" %}</h2>
+    <p>{{ health.error }}</p>
+</div>
+{% elif health.state == "stale" %}
+<div class="card backup-health warn">
+    <h2>{% include "icons/database.svg" %} {% translate "No backup for a long time" %}</h2>
+    <p>{% if health.last_ok %}{% blocktranslate with when=health.last_ok|date:"d.m.Y H:i" %}Last backup {{ when }}.{% endblocktranslate %}{% endif %}
+        {% translate "The backup service doesn't seem to be running - restarting the device usually helps." %}</p>
+</div>
+{% elif health.state == "helper" %}
+<div class="card backup-health warn">
+    <h2>{% include "icons/database.svg" %} {% translate "Backups are not running - the storage service isn't answering" %}</h2>
+    <p>{% translate "The device's storage service (coffeepy-storage) is not running. Restarting the device usually helps." %}</p>
+</div>
+{% else %}
+<div class="card backup-health warn">
+    <h2>{% include "icons/database.svg" %} {% translate "No backups yet" %}</h2>
+    <p>{% translate "Plug in a USB stick and set it up under Backup - from then on the data is saved to it regularly." %}</p>
+</div>
+{% endif %}

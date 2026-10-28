@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static i18n dashboard_nav %}
+{% block viewport %}width=device-width, initial-scale=1{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% block dashboard_head %}{% endblock %}
+{% endblock %}
+{% block body_class %}dashboard{% endblock %}
+{% block body %}
+{% dashboard_nav as nav_groups %}
+{% comment %}
+Same frame as the phone portal (portal/base.html): a dark top bar, cards on cream, tabs at
+the bottom. On a phone the bottom tabs carry the everyday pages and "More" opens the rest;
+from tablet width on, the full navigation is a sidebar instead (dashboard.css).
+{% endcomment %}
+<header class="dash-topbar">
+    <a href="{% url 'dashboard:index' %}" class="brand">{% include "icons/cup.svg" %} <span>CoffeePy</span></a>
+    <div class="topbar-actions">
+        {% include "includes/language_switch.html" %}
+        <a href="{% url 'dashboard:account' %}" class="topbar-btn{% if request.resolver_match.url_name == 'account' %} active{% endif %}"
+           title="{% translate "My account" %}">{% include "icons/user.svg" %}<span class="topbar-label">{{ user.get_username }}</span></a>
+        <form method="post" action="{% url 'dashboard:logout' %}" class="logout-form">
+            {% csrf_token %}
+            <button type="submit" class="topbar-btn" title="{% translate "Log out" %}">{% include "icons/logout.svg" %}<span class="topbar-label">{% translate "Log out" %}</span></button>
+        </form>
+    </div>
+</header>
+<div class="dash-frame">
+    <nav class="dash-sidebar" aria-label="{% translate "Navigation" %}">
+        {% include "dashboard/_nav.html" with groups=nav_groups %}
+    </nav>
+    <main class="dash-content">
+        {% for message in messages %}<p class="msg {{ message.tags }}">{{ message }}</p>{% endfor %}
+        {% block dashboard_content %}{% endblock %}
+    </main>
+</div>
+{% dashboard_tabs as tabbar %}
+<nav class="dash-tabbar">
+    {% for tab in tabbar.tabs %}
+    <a href="{% url 'dashboard:'|add:tab.url_name %}" class="{% if tab.active %}active{% endif %}">
+        <span class="tab-icon">{% include tab.icon %}</span>{{ tab.label }}
+    </a>
+    {% endfor %}
+    <a href="#dash-more" class="{% if tabbar.more_active %}active{% endif %}">
+        <span class="tab-icon">{% include "icons/dots.svg" %}</span>{% translate "More" %}
+    </a>
+</nav>
+{% comment %}
+"More" on a phone: every page, as a sheet over the content. Opened and closed by its #anchor
+(:target in dashboard.css), so it needs no script.
+{% endcomment %}
+<div id="dash-more" class="dash-more">
+    <a href="#" class="dash-more-backdrop" aria-label="{% translate "Close" %}"></a>
+    <nav class="dash-more-sheet">
+        <a href="#" class="dash-more-close" aria-label="{% translate "Close" %}">&times;</a>
+        {% include "dashboard/_nav.html" with groups=nav_groups %}
+    </nav>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Set up as backup stick" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "Set up as backup stick" %}</h1>
+<div class="card danger-zone">
+    <h2>{{ disk.vendor }} {{ disk.model }} &middot; {{ disk.size|filesizeformat }}</h2>
+    <p>{% blocktranslate trimmed with serial=disk.serial %}Serial number {{ serial }}. The stick is <strong>formatted</strong> -
+        everything on it is erased - and marked as this device's backup stick. From then on the database is
+        backed up to it automatically.{% endblocktranslate %}</p>
+    {% if configured %}<p class="msg error">{% blocktranslate trimmed with model=configured.model %}This replaces the current
+        backup stick ({{ model }}): that one is forgotten, and no backups go to it any more.{% endblocktranslate %}</p>{% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="disk" value="{{ disk.path }}">
+        <label class="checkbox-row"><input type="checkbox" name="confirm" value="1" required>
+            <span>{% translate "Yes - erase this stick and use it for backups." %}</span></label>
+        <div class="action-row">
+            <a href="{% url 'dashboard:backup' %}" class="btn secondary">{% translate "Cancel" %}</a>
+            <button type="submit" class="danger">{% translate "Format and set up" %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

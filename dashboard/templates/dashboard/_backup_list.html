@@ -1,0 +1,21 @@
+{% load i18n %}
+<div class="list">
+    {% for f in files %}
+    <div class="list-row">
+        <div class="list-row-text">
+            <span class="list-row-title">{{ f.created|date:"d.m.Y H:i" }}
+                {% if f.check == "damaged" %}<span class="badge off">{% translate "damaged" %}</span>{% elif f.check == "ok" %}<span class="badge ok-badge">{% translate "checked" %}</span>{% endif %}
+                {% if f.encrypted %}<span class="badge">{% translate "encrypted" %}</span>{% endif %}
+                {% if not f.device %}<span class="badge">{% translate "data only" %}</span>{% endif %}
+            </span>
+            <span class="list-row-meta">{{ f.name }} &middot; {{ f.size|filesizeformat }}</span>
+        </div>
+        <div class="list-row-actions">
+            <a href="{% url 'dashboard:backup_download' source f.name %}" class="btn secondary btn-sm">{% translate "Download" %}</a>
+            <a href="{% url 'dashboard:backup_restore' source f.name %}" class="btn secondary btn-sm">{% translate "Restore" %}</a>
+        </div>
+    </div>
+    {% empty %}
+    <p class="muted list-empty">{% translate "No backups on it yet." %}</p>
+    {% endfor %}
+</div>

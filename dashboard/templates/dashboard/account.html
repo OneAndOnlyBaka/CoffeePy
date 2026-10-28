@@ -1,0 +1,24 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "My account" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "My account" %}</h1>
+<div class="card">
+    <div class="list">
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ user.get_username }}</span>
+                <span class="list-row-meta">{% if user.is_superuser %}{% translate "Admin" %}{% else %}{% translate "Manager" %}{% endif %}{% if user.last_login %} &middot; {% blocktranslate with when=user.last_login|date:"d.m.Y H:i" %}last login {{ when }}{% endblocktranslate %}{% endif %}</span>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <h2>{% translate "Change password" %}</h2>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}{% include "dashboard/_field.html" %}{% endfor %}
+        <button type="submit" class="success">{% translate "Change password" %}</button>
+    </form>
+</div>
+{% endblock %}

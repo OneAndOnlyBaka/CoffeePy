@@ -1,0 +1,22 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% if instance %}{% translate "Edit coffee sort" %}{% else %}{% translate "Add coffee sort" %}{% endif %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% if instance %}{% blocktranslate with name=instance.name %}Edit {{ name }}{% endblocktranslate %}{% else %}{% translate "Add coffee sort" %}{% endif %}</h1>
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <label class="field">
+            {{ field.label }}
+            {{ field }}
+            {% if field.errors %}<span class="msg error">{{ field.errors|join:", " }}</span>{% endif %}
+        </label>
+        {% endfor %}
+        <div class="action-row">
+            <a href="{% url 'dashboard:coffeesorts' %}" class="btn secondary">{% translate "Cancel" %}</a>
+            <button type="submit" class="success">{% translate "Save" %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

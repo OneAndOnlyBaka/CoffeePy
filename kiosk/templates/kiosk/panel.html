@@ -1,0 +1,270 @@
+{% load static i18n l10n coffee_tags %}
+<div id="panel-state" data-panel-key="{{ panel_key }}" data-mode="{{ mode }}" hidden></div>
+{% if state == "wait_for_card" %}
+{% include "kiosk/_corner_buttons.html" %}
+{% comment %}
+Nothing on this screen may change from one poll to the next: identical HTML is what lets
+panel_stable_swap.js skip the swap, and only a skipped swap keeps the animation running
+instead of restarting it every second. Hence the clock is filled in by clock.js, not here.
+{% endcomment %}
+{% if not reader_online %}
+<div class="wait-card error">
+    <h1>{% translate "Card reader not available" %}</h1>
+    <p>{% translate "The NFC reader isn't responding - please tell an admin." %}</p>
+    <div class="clock" data-kiosk-clock></div>
+</div>
+{% else %}
+<div class="wait-card wait-{{ wait_mode }}">
+    <h1>{% translate "Apply your card" %}</h1>
+    <p class="wait-purpose">
+        {% if wait_mode == "info" %}{% translate "to see your account or pay" %}{% elif wait_mode == "settings" %}{% translate "to change your settings" %}{% else %}{% translate "to order a coffee" %}{% endif %}
+        &middot; {% translate "the scanner is at the marked spot" %}
+    </p>
+    <div class="wait-body">
+        <img class="wait-gif" src="{% static 'kiosk/img/wait/wait_'|add:wait_mode|add:'.gif' %}" alt="">
+        <div class="info-box">
+            <h2>{% translate "What happens next" %}</h2>
+            <ul>
+                {% if wait_mode == "info" %}
+                <li>{% translate "You see your cups this month and in total, and your balance." %}</li>
+                <li>{% translate "Enter what you paid - or scan a payment QR code, if one is shown." %}</li>
+                <li>{% blocktranslate trimmed with seconds=logout_seconds %}You are logged out after {{ seconds }} seconds.{% endblocktranslate %}</li>
+                {% elif wait_mode == "settings" %}
+                <li>{% translate "Change your name and your favourite coffee." %}</li>
+                <li>{% translate "Link your phone to see your stats and pay from there." %}</li>
+                <li>{% translate "A card the kiosk doesn't know yet is registered here." %}</li>
+                {% else %}
+                <li>{% translate "Your favourite coffee is preselected - tap another one to change it." %}</li>
+                <li>{% blocktranslate trimmed with seconds=checkout_seconds %}Tap <strong>Order now</strong>, or it is booked after {{ seconds }} seconds.{% endblocktranslate %}</li>
+                <li>{% translate "A new card, or a name that doesn't fit the rules yet, is asked for a name first." %}</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    <div class="clock" data-kiosk-clock></div>
+</div>
+{% endif %}
+
+{% elif state == "assigning_alt_uid" %}
+<div class="wait-card{% if capture_error %} error{% endif %}">
+    <h1>{% blocktranslate trimmed with name=member.display_name %}Assigning card to account {{ name }}{% endblocktranslate %}</h1>
+    {% if capture_error %}<p class="msg error">{{ capture_error }}</p>{% endif %}
+    <p>{% translate "Tap the new card now - this closes automatically after 60 seconds." %}</p>
+</div>
+
+{% elif state == "card_not_recognized" %}
+<div class="wait-card error">
+    <h1>{% translate "Card not recognized" %}</h1>
+    <p>{% translate "Please try applying your card again." %}</p>
+</div>
+
+{% elif state == "account_departed" %}
+<div class="wait-card error">
+    <h1>{% translate "Account no longer active" %}</h1>
+    <p>{% translate "This card's account has been marked as departed. Please see an admin." %}</p>
+</div>
+
+{% elif state == "no_coffee_sorts" %}
+<div class="wait-card error setup-wizard">
+    <h1>{% translate "Setup needed" %}</h1>
+    <p>{% translate "No coffee sorts configured yet. Finish setup from a phone or PC - the touchscreen has no keyboard." %}</p>
+    {% include "kiosk/_qr_row.html" %}
+</div>
+
+{% elif state == "thank_you" %}
+<div class="wait-card thank-you">
+    <h1>{% blocktranslate trimmed with name=member_name %}Thank you, {{ name }}!{% endblocktranslate %}</h1>
+    {% comment %}
+    Nothing here may vary between two polls of the same interlude: identical HTML is what
+    lets panel_stable_swap.js skip the swap, and only an untouched <img> element plays its
+    gif through instead of restarting at frame 0 twice a second.
+    {% endcomment %}
+    <img class="thank-you-gif" src="{% static 'kiosk/img/thankyou/'|add:gif %}" alt="">
+    <p>{{ message }}</p>
+</div>
+
+{% elif state == "order" %}
+<div class="panel-card">
+    <form hx-target="#panel" hx-swap="innerHTML">
+        {% csrf_token %}
+        <h1 class="panel-header">{% blocktranslate trimmed with name=member.display_name %}Hi {{ name }}!{% endblocktranslate %}
+            {% if alltime_badge %}<span class="rank-badge" title="{% translate "Top 3 all-time" %}">{% include "icons/medal.svg" with place=alltime_badge %}</span>{% endif %}
+            {% if month_badge %}<span class="rank-badge" title="{% translate "Top 3 this month" %}">{% include "icons/medal.svg" with place=month_badge %}</span>{% endif %}
+        </h1>
+        <div class="panel-body">
+            {% if month_reminder_balance %}
+            <p class="msg error">{% blocktranslate trimmed with amount=month_reminder_balance %}Reminder: you still owe {{ amount }}€ from last month - please settle up soon (see Pay).{% endblocktranslate %}</p>
+            {% endif %}
+            <div class="coffee-list">
+                {% for sort in coffee_sorts %}
+                <label class="coffee-option {% if sort.pk == selected_coffee_id %}selected{% endif %}">
+                    <input type="radio" name="coffee_id" value="{{ sort.pk|unlocalize }}"
+                           {% if sort.pk == selected_coffee_id %}checked{% endif %}
+                           hx-post="{% url 'kiosk:order_select' %}" hx-trigger="change">
+                    <span>{{ sort.name }}</span>
+                    <span class="price">{{ sort.price }}€</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="action-row panel-footer">
+            <button type="button" class="danger" hx-post="{% url 'kiosk:order_cancel' %}">✕ {% translate "Cancel" %}</button>
+            {% if auto_checkout and seconds_left is not None %}
+            <span class="countdown">{% blocktranslate trimmed with seconds=seconds_left %}Automatic checkout in {{ seconds }}s{% endblocktranslate %}</span>
+            {% endif %}
+            <button type="button" class="success primary-action" hx-post="{% url 'kiosk:order_confirm' %}">✓ {% translate "Order now" %}</button>
+        </div>
+    </form>
+</div>
+
+{% elif state == "settings" %}
+<div class="panel-card">
+    <form hx-post="{% url 'kiosk:settings_save' %}" hx-target="#panel" hx-swap="innerHTML">
+        {% csrf_token %}
+        <h1 class="panel-header">{% if is_new_user %}{% translate "Welcome, new card!" %}{% elif name_required %}{% translate "Who are you?" %}{% else %}{% blocktranslate trimmed with name=nickname|default:uid|unlocalize %}Hello {{ name }}!{% endblocktranslate %}{% endif %}</h1>
+        <div class="panel-body">
+            {% if name_required %}<p>{% translate "Before your coffee: the ranking needs a name your colleagues recognise." %}</p>{% endif %}
+            <p class="muted">{% blocktranslate trimmed with uid=uid|unlocalize %}Card UID: {{ uid }}{% endblocktranslate %}</p>
+            <label class="field">
+                {% translate "Name" %}
+                <span class="muted field-hint">{% translate 'First name and the first letter of your last name, like "Anna B." - or your short code, like "AB"' %}</span>
+                {% if name_error %}<span class="msg error">{{ name_error }}</span>{% endif %}
+                <div class="field-with-osk">
+                    <input type="text" name="nickname" value="{{ nickname }}" placeholder="Anna B." maxlength="20"
+                           id="nickname-input"
+                           hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="keyup changed delay:1s" hx-swap="none">
+                    <a class="btn osk-open-btn" href="{% url 'kiosk:keyboard' %}?field=nickname&value={{ nickname|urlencode }}">{% include "icons/keyboard.svg" %} {% translate "Keyboard" %}</a>
+                </div>
+            </label>
+            <label class="field">
+                {% translate "Favourite coffee" %}
+                <select name="favourite_coffee_id"
+                        hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="change" hx-swap="none">
+                    {% for sort in coffee_sorts %}
+                    <option value="{{ sort.pk|unlocalize }}" {% if sort.pk == favourite_coffee_id %}selected{% endif %}>{{ sort.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="action-row panel-footer">
+            <button type="button" class="btn secondary" title="{% translate "Link this phone" %}"
+                    hx-get="{% url 'kiosk:link_phone_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
+                    hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/phone.svg" %} {% translate "Link this phone" %}</button>
+            {% if seconds_left is not None %}<span class="countdown">{% blocktranslate trimmed with seconds=seconds_left %}Automatic logout in {{ seconds }}s{% endblocktranslate %}</span>{% endif %}
+            <button type="submit" class="success primary-action">{% translate "Save" %}</button>
+        </div>
+    </form>
+</div>
+
+{% elif state == "info_pay" %}
+<div class="panel-card">
+    <form hx-post="{% url 'kiosk:pay' %}" hx-target="#panel" hx-swap="innerHTML">
+        {% csrf_token %}
+        <h1 class="panel-header">{% blocktranslate trimmed with name=member.display_name %}Hello {{ name }}!{% endblocktranslate %}</h1>
+        <div class="panel-body">
+            <div class="stats-row">
+                <div class="stat"><span class="label">{% translate "CCT" %}</span><span class="value">{{ total_cups }}</span></div>
+                <div class="stat"><span class="label">{% translate "CCM" %}</span><span class="value">{{ month_cups }}</span></div>
+                <div class="stat"><span class="label">{% translate "Balance" %}</span><span class="value">{{ balance }}€</span></div>
+            </div>
+            <p class="muted">{% translate "CC = Cups Count; T/M = Total/Month" %}</p>
+            <label class="field">
+                {% translate "Payment amount" %}
+                <div class="field-with-osk">
+                    <input type="text" inputmode="decimal" name="amount" value="{{ pay_default|unlocalize }}"
+                           id="pay-amount-input">
+                    <a class="btn osk-open-btn" href="{% url 'kiosk:keyboard' %}?field=amount&value={{ pay_default|unlocalize|urlencode }}">{% include "icons/keyboard.svg" %} {% translate "Keyboard" %}</a>
+                </div>
+            </label>
+            {% if payment_method_names|length > 1 %}
+            <label class="field">
+                {% translate "Paid via" %}
+                <select name="method">
+                    {% for name in payment_method_names %}
+                    <option value="{{ name }}">{{ name|method_label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            {% endif %}
+            {% if payment_method_qr_row %}
+            <p class="muted">{% translate "Or scan to pay what you owe directly:" %}</p>
+            <div class="qr-row">
+                {% for entry in payment_method_qr_row %}
+                <div class="qr-card">
+                    <h2>{{ entry.name }}</h2>
+                    <div class="qr-image">{{ entry.qr_svg|safe }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% for instruction in payment_method_instructions %}
+            <p class="muted">{{ instruction }}</p>
+            {% endfor %}
+        </div>
+        <div class="action-row panel-footer">
+            {% if seconds_left is not None %}<span class="countdown">{% blocktranslate trimmed with seconds=seconds_left %}Automatic logout in {{ seconds }}s{% endblocktranslate %}</span>{% endif %}
+            <button type="submit" class="success primary-action">{% translate "Pay" %}</button>
+        </div>
+    </form>
+</div>
+
+{% elif state == "ranking" %}
+{% include "kiosk/_corner_buttons.html" %}
+{% comment %}
+Like the wait screen, identical HTML from poll to poll, or the podium GIF restarts at frame 0
+on every one: so the tabs are GET links, and there is no form (and no csrf token) here.
+{% endcomment %}
+<div class="ranking">
+    <nav class="ranking-tabs" hx-target="#panel" hx-swap="innerHTML" hx-sync="#panel:replace">
+        <a class="{% if ranking_view == 'alltime' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'alltime' %}"
+           hx-get="{% url 'kiosk:ranking_view' 'alltime' %}">{% translate "All time" %}</a>
+        <a class="{% if ranking_view == 'month' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'month' %}"
+           hx-get="{% url 'kiosk:ranking_view' 'month' %}">{% translate "This month" %}</a>
+        <a class="{% if ranking_view == 'pillory' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'pillory' %}"
+           hx-get="{% url 'kiosk:ranking_view' 'pillory' %}">{% translate "Pillory" %}</a>
+    </nav>
+    <div class="podium-stage">
+        <div class="podium-banner">{{ banner }}</div>
+        {% if ranking_view == "pillory" %}
+        {% if rows %}
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.gif' %}" alt="">
+        {% comment %}
+        The list twice in a row, moved left by exactly one copy's width per animation round
+        (kiosk.css) - so the band never runs out. A CSS animation, like the GIF, survives the
+        poll because an unchanged panel is never swapped in again.
+        {% endcomment %}
+        <div class="podium-names ticker">
+            <div class="ticker-track" style="animation-duration: {{ ticker_seconds|unlocalize }}s">
+                {% for copy in "12" %}
+                <span class="ticker-copy"{% if forloop.last %} aria-hidden="true"{% endif %}>
+                    {% for row in rows %}
+                    <span class="ticker-item"><span class="podium-place">{{ forloop.counter }}.</span> <b>{{ row.name }}</b> <span class="ticker-debt">{{ row.balance }}€</span></span>
+                    {% endfor %}
+                    <span class="ticker-item ticker-hint">{% translate "Settle up under “Pay”" %}</span>
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.gif' %}" alt="">
+        <div class="podium-names ticker"><b class="ticker-clear">{% translate "Everyone has paid up!" %}</b></div>
+        {% endif %}
+        {% else %}
+        {% if ranking_view == "month" %}
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/vault.gif' %}" alt="">
+        {% else %}
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/podium.gif' %}" alt="">
+        {% endif %}
+        <div class="podium-names{% if ranking_view == 'month' %} standings{% endif %}">
+            {% for place, row in podium %}
+            <div class="podium-name place-{{ place }}">
+                <span class="podium-place">{{ place }}.</span>
+                <b>{% if row %}{{ row.name }}{% else %}–{% endif %}</b>
+                {% if row %}<span class="podium-cups">{{ row.cups }} {% translate "cups" %}</span>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

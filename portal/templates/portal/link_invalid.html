@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load i18n static %}
+{% block title %}{% translate "Link no longer valid" %} - CoffeePy{% endblock %}
+{% block viewport %}width=device-width, initial-scale=1{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/portal.css' %}">{% endblock %}
+{% block body_class %}portal{% endblock %}
+{% block body %}
+{% url 'certificate_download' as certificate_url %}
+<div class="portal-frame">
+    <main class="portal-content">
+        <div class="card">
+            {% include "includes/language_switch.html" %}
+            <h1>{% translate "This link is no longer valid" %}</h1>
+            <p>{% blocktranslate trimmed %}The link may have expired, already been used, or this device may have been logged out. Ask an admin for a fresh "Link this phone" QR code from the kiosk's Settings screen.{% endblocktranslate %}</p>
+            <p class="muted">{% blocktranslate trimmed %}Your browser warns about this site? <a href="{{ certificate_url }}">Download the device certificate</a> and install it once.{% endblocktranslate %}</p>
+        </div>
+    </main>
+</div>
+{% endblock %}

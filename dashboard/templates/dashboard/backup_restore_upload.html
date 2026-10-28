@@ -1,0 +1,20 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Restore from a file" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "Restore from a file" %}</h1>
+<div class="card danger-zone">
+    <p>{% blocktranslate trimmed %}A backup file - from "Download a backup", or from a backup stick read on a PC (older
+        .dump and .sql backups too). It is checked before anything changes: that it is a backup, that it
+        can be opened, and that it isn't from a newer CoffeePy. The device is backed up first.{% endblocktranslate %}</p>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label class="field">{% translate "Backup file" %} <input type="file" name="backup" required></label>
+        {% include "dashboard/_restore_form.html" %}
+        <div class="action-row">
+            <a href="{% url 'dashboard:backup' %}" class="btn secondary">{% translate "Cancel" %}</a>
+            <button type="submit" class="danger">{% translate "Restore" %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

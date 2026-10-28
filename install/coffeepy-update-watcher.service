@@ -1,0 +1,14 @@
+[Unit]
+Description=CoffeePy offline update watcher
+Requires=coffeepy.service
+After=coffeepy.service
+
+[Service]
+Type=simple
+Environment=COFFEEPY_DIR=/opt/coffeepy
+ExecStart=/usr/bin/python3 /opt/coffeepy/install/update_watcher.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

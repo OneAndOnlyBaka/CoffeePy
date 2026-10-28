@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% block title %}{% translate "CoffeePy Kiosk" %}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'kiosk/kiosk.css' %}">
+<script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+<script src="{% static 'kiosk/panel_scroll.js' %}" defer></script>
+<script src="{% static 'kiosk/panel_stable_swap.js' %}" defer></script>
+<script src="{% static 'kiosk/panel_modal.js' %}" defer></script>
+<script src="{% static 'kiosk/nav_state.js' %}" defer></script>
+<script src="{% static 'kiosk/clock.js' %}" defer></script>
+<script src="{% static 'kiosk/maintenance.js' %}" defer></script>
+{% comment %}
+Inline on purpose: a page loaded while the stack restarts can get its HTML but lose the CSS
+and scripts above - and then nothing polls, nothing reloads, and the touchscreen shows bare
+links until someone restarts the browser. This is the one part that can't be lost that way.
+{% endcomment %}
+<script>
+window.addEventListener("load", function () {
+  var frame = document.querySelector(".kiosk-frame");
+  var styled = frame && getComputedStyle(frame).display === "flex";
+  if (!window.htmx || !styled) setTimeout(function () { location.reload(); }, 5000);
+});
+</script>
+{% endblock %}
+{% block body_class %}kiosk{% endblock %}
+{% block body %}
+<div class="kiosk-frame" data-mode="{{ mode }}">
+    {% comment %}
+    The buttons swap #panel in place instead of loading a page (see views.nav). hx-sync
+    aborts a poll that is still in flight - its answer predates the tap and would put the
+    old screen back - and holds new polls until the tap's own panel has arrived.
+    {% endcomment %}
+    <nav class="kiosk-nav" hx-target="#panel" hx-swap="innerHTML" hx-sync="#panel:replace">
+        <a class="nav-btn {% if mode == 'order' %}active{% endif %}" data-mode="order" href="{% url 'kiosk:nav' 'order' %}"
+           hx-get="{% url 'kiosk:nav' 'order' %}">
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/order.svg' %}" alt="{% translate "Order" %}"></span>
+            <span class="nav-label">{% translate "Order" %}</span>
+        </a>
+        <a class="nav-btn {% if mode == 'info' %}active{% endif %}" data-mode="info" href="{% url 'kiosk:nav' 'info' %}"
+           hx-get="{% url 'kiosk:nav' 'info' %}">
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/info.svg' %}" alt="{% translate "Pay" %}"></span>
+            <span class="nav-label">{% translate "Pay" %}</span>
+        </a>
+        <a class="nav-btn {% if mode == 'settings' %}active{% endif %}" data-mode="settings" href="{% url 'kiosk:nav' 'settings' %}"
+           hx-get="{% url 'kiosk:nav' 'settings' %}">
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/settings.svg' %}" alt="{% translate "Settings" %}"></span>
+            <span class="nav-label">{% translate "Settings" %}</span>
+        </a>
+        <a class="nav-btn {% if mode == 'ranking' %}active{% endif %}" data-mode="ranking" href="{% url 'kiosk:nav' 'ranking' %}"
+           hx-get="{% url 'kiosk:nav' 'ranking' %}">
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/ranking.svg' %}" alt="{% translate "Ranking" %}"></span>
+            <span class="nav-label">{% translate "Ranking" %}</span>
+        </a>
+    </nav>
+    <main id="panel" class="kiosk-panel"
+          hx-get="{% url 'kiosk:panel' %}"
+          hx-trigger="load, kiosk-poll"
+          hx-swap="innerHTML">
+        <div class="wait-card"><p>{% translate "Loading…" %}</p></div>
+    </main>
+</div>
+<!-- Lives outside #panel so the 500ms poll never touches it while it's open. -->
+<div id="qr-modal" class="modal-overlay"
+     hx-on:click="if (event.target === event.currentTarget) event.currentTarget.classList.remove('open')">
+    <div id="qr-modal-content"></div>
+</div>
+<!-- Covers everything while an install or update runs, or the app stops answering
+     (static/kiosk/maintenance.js) - so nobody orders into a half-restarted app. -->
+<div id="maintenance" class="maintenance" hidden
+     data-status-url="/maintenance/status.json" data-health-url="{% url 'health' %}">
+    <div class="maintenance-card">
+        {% include "icons/cup.svg" %}
+        <h1>{% translate "We'll be right back" %}</h1>
+        <p>{% translate "CoffeePy is being updated - ordering is paused for a moment." %}</p>
+        <div class="maintenance-bar"><span></span></div>
+        <p class="maintenance-step"></p>
+    </div>
+</div>
+{{ maintenance_steps|json_script:"maintenance-steps" }}
+{% endblock %}

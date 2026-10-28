@@ -1,0 +1,29 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "System time" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "System time" %}</h1>
+<p>{% blocktranslate trimmed %}Only needed as a fallback if the RTC module drifts or isn't fitted - normally the
+Raspbian install script keeps the clock correct via the DS3231 RTC overlay.{% endblocktranslate %}</p>
+{% if error %}<p class="msg error">{{ error }}</p>{% endif %}
+{% if clock_corrected %}
+<div class="card">
+    <p class="msg error">{% include "dashboard/_clock_corrected.html" %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" name="confirm" value="1" class="secondary">{% translate "The time is right" %}</button>
+    </form>
+</div>
+{% endif %}
+<div class="card">
+    <p>{% translate "Current server time:" %} <strong>{{ now }}</strong></p>
+    <form method="post">
+        {% csrf_token %}
+        <label class="field">
+            {% translate "New date/time" %}
+            <input type="datetime-local" name="datetime" required>
+        </label>
+        <button type="submit" class="success">{% translate "Set system time" %}</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "dashboard/base.html" %}
+{% load i18n l10n %}
+{% block title %}{% translate "Import legacy database" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "Import legacy database" %}</h1>
+<p>{% blocktranslate trimmed %}Upload an old CoffeePy <code>coffee.db</code> or one of its <code>coffeeN.db</code>
+backups - both a real SQLite file and a plain SQL dump text file work. By default coffee
+sorts, members, orders and payments are matched by name/UID and updated in place and
+nothing else is touched - tick the box below to start from an empty database instead.{% endblocktranslate %}</p>
+<p id="import-msg" class="msg" hidden></p>
+<div class="card">
+    <form id="import-form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="dump" accept=".db" required>
+        <label class="checkbox-row">
+            <input type="checkbox" name="purge" value="1">
+            {% blocktranslate trimmed %}Clear existing members, cards, orders, payments and coffee sorts first, instead
+            of merging the import into them. Payment methods and the audit log are kept.{% endblocktranslate %}
+        </label>
+        <button type="submit" class="success">{% translate "Import" %}</button>
+    </form>
+    <div id="import-progress" class="import-progress" hidden>
+        <div class="action-row">
+            <span class="spinner"></span>
+            <span id="import-phase">{% translate "Uploading…" %}</span>
+        </div>
+        <div class="stat-bar-track">
+            <div id="import-bar" class="stat-bar-fill progress-fill" style="width: 0%"></div>
+        </div>
+    </div>
+</div>
+{% translate "Uploading…" as uploading %}
+{% translate "Starting…" as starting %}
+{% translate "Upload failed." as upload_failed %}
+{% translate "Delete all existing members, orders, payments and coffee sorts before importing?" as confirm_purge %}
+<script>
+const uploading = "{{ uploading|escapejs }}";
+const uploadFailed = "{{ upload_failed|escapejs }}";
+const statusUrl = "{% url 'dashboard:import_status' %}";
+const form = document.getElementById("import-form");
+const submitButton = form.querySelector("button");
+const progressBox = document.getElementById("import-progress");
+const phaseLabel = document.getElementById("import-phase");
+const bar = document.getElementById("import-bar");
+const messageBox = document.getElementById("import-msg");
+let timer = null;
+
+function setProgress(label, percent) {
+    phaseLabel.textContent = label;
+    bar.style.width = percent + "%";
+}
+
+function running(label, percent) {
+    messageBox.hidden = true;
+    submitButton.disabled = true;
+    progressBox.hidden = false;
+    setProgress(label, percent);
+}
+
+function finish(text, ok) {
+    clearInterval(timer);
+    timer = null;
+    progressBox.hidden = true;
+    submitButton.disabled = false;
+    messageBox.textContent = text;
+    messageBox.className = "msg " + (ok ? "success" : "error");
+    messageBox.hidden = false;
+}
+
+function apply(status) {
+    if (status.state === "running") {
+        running(status.phase + " - " + status.percent + "%", status.percent);
+    } else if (status.state === "done") {
+        finish(status.message, true);
+    } else if (status.state === "error") {
+        finish(status.message, false);
+    }
+}
+
+async function poll() {
+    try {
+        apply(await (await fetch(statusUrl)).json());
+    } catch (e) { /* transient - the next tick tries again */ }
+}
+
+function watch() {
+    if (timer === null) {
+        timer = setInterval(poll, 500);
+    }
+}
+
+form.addEventListener("submit", event => {
+    event.preventDefault();
+    if (form.purge.checked && !window.confirm("{{ confirm_purge|escapejs }}")) {
+        return;
+    }
+    running(uploading + " 0%", 0);
+
+    // XHR rather than fetch: it reports upload progress, which is the part that takes the
+    // time on a slow network, while the import itself is polled from the status endpoint.
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", window.location.pathname);
+    xhr.upload.addEventListener("progress", e => {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded * 100) / e.total);
+            setProgress(uploading + " " + percent + "%", percent);
+        }
+    });
+    xhr.addEventListener("load", () => {
+        let data = {};
+        try { data = JSON.parse(xhr.responseText); } catch (e) { /* handled below */ }
+        if (xhr.status !== 200) {
+            finish(data.error || uploadFailed, false);
+            return;
+        }
+        setProgress("{{ starting|escapejs }}", 0);
+        watch();
+        poll();
+    });
+    xhr.addEventListener("error", () => finish(uploadFailed, false));
+    xhr.send(new FormData(form));
+});
+
+// An import keeps running when the page is closed - pick it back up on the next visit.
+{% if status.state == "running" %}
+running("{{ status.phase|escapejs }} - {{ status.percent|unlocalize }}%", {{ status.percent|unlocalize }});
+watch();
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "dashboard/base.html" %}
+{% load i18n l10n %}
+{% block title %}{% translate "System" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "System" %}</h1>
+<div class="card">
+    <p>{% translate "Reachable from another device (phone, laptop) at:" %}
+        <strong>https://{{ public_host }}/</strong>
+    </p>
+</div>
+
+<div class="card">
+    <h2>{% translate "Night rest" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}
+        At night the kiosk's screen goes dark and taps at the machine are not booked. The phone portal and the
+        backups keep running; in the morning the kiosk starts again by itself.
+    {% endblocktranslate %}</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ night_form.as_p }}
+        <button type="submit" class="btn">{% translate "Save" %}</button>
+    </form>
+</div>
+
+{% comment %}
+The bar widths are CSS - "width: 12,5%" in German would be dropped, so they stay unlocalized.
+{% endcomment %}
+<div class="system-grid">
+    <div class="card">
+        <h2>{% translate "CPU" %}</h2>
+        <p class="stat-value-large">{{ stats.cpu_percent }}%</p>
+        <div class="stat-bar-track">
+            <div class="stat-bar-fill{% if stats.cpu_percent >= 90 %} danger{% elif stats.cpu_percent >= 70 %} warn{% endif %}"
+                 style="width: {{ stats.cpu_percent|unlocalize }}%;"></div>
+        </div>
+        <p class="muted">{% blocktranslate with cores=stats.cpu_count %}{{ cores }} core(s){% endblocktranslate %}{% if stats.cpu_temp %} - {{ stats.cpu_temp }}&deg;C{% endif %}</p>
+    </div>
+
+    <div class="card">
+        <h2>{% translate "Memory" %}</h2>
+        <p class="stat-value-large">{{ stats.memory_percent }}%</p>
+        <div class="stat-bar-track">
+            <div class="stat-bar-fill{% if stats.memory_percent >= 90 %} danger{% elif stats.memory_percent >= 70 %} warn{% endif %}"
+                 style="width: {{ stats.memory_percent|unlocalize }}%;"></div>
+        </div>
+        <p class="muted">{{ stats.memory_used_mb }} MB / {{ stats.memory_total_mb }} MB</p>
+    </div>
+
+    <div class="card">
+        <h2>{% translate "Disk" %}</h2>
+        <p class="stat-value-large">{{ stats.disk_percent }}%</p>
+        <div class="stat-bar-track">
+            <div class="stat-bar-fill{% if stats.disk_percent >= 90 %} danger{% elif stats.disk_percent >= 70 %} warn{% endif %}"
+                 style="width: {{ stats.disk_percent|unlocalize }}%;"></div>
+        </div>
+        <p class="muted">{{ stats.disk_used_gb }} GB / {{ stats.disk_total_gb }} GB</p>
+    </div>
+</div>
+{% endblock %}

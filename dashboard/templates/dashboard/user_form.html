@@ -1,0 +1,17 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% if instance %}{% translate "Edit user" %}{% else %}{% translate "Add user" %}{% endif %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% if instance %}{% blocktranslate with name=instance.get_username %}Edit {{ name }}{% endblocktranslate %}{% else %}{% translate "Add user" %}{% endif %}</h1>
+{% if error %}<p class="msg error">{{ error }}</p>{% endif %}
+<div class="card">
+    <form method="post" autocomplete="off">
+        {% csrf_token %}
+        {% for field in form %}{% include "dashboard/_field.html" %}{% endfor %}
+        <div class="action-row">
+            <a href="{% url 'dashboard:users' %}" class="btn secondary">{% translate "Cancel" %}</a>
+            <button type="submit" class="success">{% translate "Save" %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

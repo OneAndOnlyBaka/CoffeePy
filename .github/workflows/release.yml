@@ -1,0 +1,196 @@
+name: Release
+
+# Builds everything an offline Pi deployment needs and publishes it:
+#   1. The images this repo builds (coffeepy-web, coffeepy-nfc-bridge), pushed to GHCR.
+#   2. An UNSIGNED offline update bundle (scripts/build_update_bundle.sh): every image of
+#      docker-compose.yml - Postgres, Mosquitto and Caddy included - plus the compose file and
+#      install/, in one tar for /dashboard/update/. Devices only take it with
+#      UPDATE_VERIFY_SIGNATURE=false: the signing key never leaves the dev machine, so CI
+#      can't sign (sign a bundle there with scripts/build_update_bundle.sh instead).
+#   3. A CycloneDX SBOM of every image in the bundle (Syft) - what a device runs, down to
+#      the Python and Alpine packages, for checking it against new vulnerabilities without
+#      the device and for the Cyber Resilience Act's documentation duty.
+#   4. The provisioning tool as a zip (scripts/provision.sh and the tree it ships to a Pi),
+#      and scripts/sign_update_bundle.sh, to sign the unsigned bundle with your own key.
+#
+# The version is GitVersion's (GitVersion.yml) and goes into the image, the bundle's
+# manifest, every tag and file name - and the dashboard, portal and kiosk footer.
+#
+# The device itself is set up with install/install.sh on Raspberry Pi OS Lite; there is no
+# image to build here.
+#
+# Triggered by pushing a tag (attaches the bundle to a GitHub Release), by a push to the V2
+# branch (artifact only), or manually via workflow_dispatch - which GitHub only offers for a
+# workflow that is on the default branch, and master still has V1.
+on:
+  push:
+    tags: ["v*.*.*"]
+    branches: ["v2-rework"]
+    # A change to the manual or its screenshots ships nothing (tags ignore this filter).
+    paths-ignore: ["docs/**", "**.md", ".claude/**"]
+  workflow_dispatch:
+    inputs:
+      platform:
+        # Must match the Raspberry Pi OS the device runs - the update watcher refuses a
+        # bundle for another platform: linux/arm64 for the 64-bit OS, linux/arm/v7 for the
+        # 32-bit one.
+        description: "Target platform for the images/update bundle"
+        required: false
+        default: "linux/arm64"
+        type: choice
+        options: ["linux/arm64", "linux/arm/v7"]
+
+permissions:
+  contents: write
+  packages: write
+
+# A branch build half an hour into emulated arm64 is worthless once a newer push came; a
+# release build is never cut short.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+env:
+  REGISTRY: ghcr.io
+  PLATFORM: ${{ inputs.platform || 'linux/arm64' }}
+
+jobs:
+  images-and-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # GitVersion counts commits and reads tags - it needs the whole history.
+          fetch-depth: 0
+
+      - uses: gittools/actions/gitversion/setup@v3
+        with:
+          versionSpec: "6.x"
+      - uses: gittools/actions/gitversion/execute@v3
+        id: gitversion
+
+      - name: Determine names
+        id: names
+        run: |
+          # The bundle script calls write_version.sh again - the same version both times.
+          echo "COFFEEPY_VERSION=${{ steps.gitversion.outputs.fullSemVer }}" >> "$GITHUB_ENV"
+          version="$(COFFEEPY_VERSION="${{ steps.gitversion.outputs.fullSemVer }}" scripts/write_version.sh)"
+          arch="${PLATFORM#linux/}"; arch="${arch//\//}"   # arm64, armv7
+          tag="${version//+/-}"   # SemVer's build metadata "+" is not allowed in an image tag
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "arch=$arch" >> "$GITHUB_OUTPUT"
+          echo "bundle=coffeepy-update-$tag-$arch-unsigned.tar" >> "$GITHUB_OUTPUT"
+          echo "sbom=coffeepy-sbom-$tag-$arch.tar" >> "$GITHUB_OUTPUT"
+          echo "provision=coffeepy-provision-$tag.zip" >> "$GITHUB_OUTPUT"
+          echo "Version $version" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: docker/setup-qemu-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Prepare .env (docker-compose.yml's env_file directive needs it to exist)"
+        run: cp .env.example .env
+
+      # Builds coffeepy-web + nfc-bridge and pulls the rest, all for PLATFORM - the images
+      # pushed below are the very ones inside the bundle.
+      - name: Build the update bundle (unsigned)
+        run: scripts/build_update_bundle.sh --platform "$PLATFORM" --unsigned --output "${{ steps.names.outputs.bundle }}"
+
+      - uses: anchore/sbom-action/download-syft@v0
+        id: syft
+
+      - name: SBOMs of every image in the bundle (CycloneDX)
+        run: |
+          mkdir sbom
+          for image in $(docker compose config --images | sort -u); do
+            "${{ steps.syft.outputs.cmd }}" scan "docker:$image" --platform "$PLATFORM" \
+              -o "cyclonedx-json=sbom/$(echo "$image" | tr '/:' '__').cdx.json"
+          done
+          tar -cf "${{ steps.names.outputs.sbom }}" -C sbom .
+          ls -l sbom
+
+      - name: Push the built images to GHCR
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          version="${{ steps.names.outputs.tag }}"
+          arch="${{ steps.names.outputs.arch }}"
+          # Single-platform images, so the platform is part of every tag: a later arm/v7 run
+          # must not overwrite what an arm64 device pulls as "latest".
+          # Only that platform's manifest, not the index the containerd image store (Docker 29)
+          # keeps: GHCR took its layers, then refused the tag with "denied".
+          push() { # local image, name in the registry
+            for tag in "$version-$arch" "latest-$arch"; do
+              docker tag "$1" "${{ env.REGISTRY }}/$owner/$2:$tag"
+              docker push --platform "$PLATFORM" "${{ env.REGISTRY }}/$owner/$2:$tag"
+            done
+          }
+          push coffeepy-web:latest coffeepy-web
+          # nfc-bridge has no `image:` in docker-compose.yml, so compose names it itself.
+          push "$(docker compose config --images | grep nfc-bridge)" coffeepy-nfc-bridge
+
+      # The tree as committed plus the version file: provision.sh packs and ships it to the Pi,
+      # and outside a git checkout it takes the folder as it is (pack_source), whose version
+      # file write_version.sh then keeps.
+      - name: Pack the provisioning tool
+        run: |
+          dir="coffeepy-${{ steps.names.outputs.tag }}"
+          git archive --format=tar --prefix="$dir/" HEAD | tar -x
+          cp coffeepy-version.json "$dir/"
+          rm -rf "${dir:?}/.claude" "${dir:?}/.github"
+          zip -qr "${{ steps.names.outputs.provision }}" "$dir"
+          cp scripts/sign_update_bundle.sh .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coffeepy-${{ steps.names.outputs.tag }}-${{ steps.names.outputs.arch }}
+          path: |
+            ${{ steps.names.outputs.bundle }}
+            ${{ steps.names.outputs.sbom }}
+            ${{ steps.names.outputs.provision }}
+            sign_update_bundle.sh
+          compression-level: 0   # image layers are compressed already
+
+      # A tag vX.Y.Z is a release. Every other build becomes a pre-release, so the bundle is a
+      # plain download link rather than an artifact behind a login that expires - tagged
+      # build-<version>-<arch>, which GitVersion (tag-prefix [vV]) and the v*.*.* trigger both
+      # ignore; only the newest KEEP_BUILDS of them are kept. A tag the GITHUB_TOKEN creates
+      # starts no workflow of its own.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEEP_BUILDS: 5
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          image_tag="${{ steps.names.outputs.tag }}-${{ steps.names.outputs.arch }}"
+          files=("${{ steps.names.outputs.bundle }}" "${{ steps.names.outputs.sbom }}"
+                 "${{ steps.names.outputs.provision }}" sign_update_bundle.sh)
+          notes="CoffeePy ${{ steps.names.outputs.version }} for $PLATFORM, commit ${GITHUB_SHA::7} on ${{ github.ref_name }}.
+
+          - \`${{ steps.names.outputs.bundle }}\`: the update bundle for /dashboard/update/ - **unsigned**, devices only take it with UPDATE_VERIFY_SIGNATURE=false
+          - \`sign_update_bundle.sh\`: signs it with your own key - \`bash sign_update_bundle.sh <bundle> --key <key>\`, for devices that check signatures
+          - \`${{ steps.names.outputs.sbom }}\`: a CycloneDX SBOM of every image in it
+          - \`${{ steps.names.outputs.provision }}\`: the provisioning tool - unpack, then \`scripts/provision.sh\` sets up a Pi
+          - Images: \`${{ env.REGISTRY }}/$owner/coffeepy-web:$image_tag\`, \`${{ env.REGISTRY }}/$owner/coffeepy-nfc-bridge:$image_tag\`"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            tag="${{ github.ref_name }}"
+            gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --generate-notes --notes "$notes"
+            gh release upload "$tag" "${files[@]}" --clobber
+            exit 0
+          fi
+          tag="build-$image_tag"
+          gh release create "$tag" "${files[@]}" --target "$GITHUB_SHA" --prerelease --latest=false \
+            --title "${{ steps.names.outputs.version }} ($PLATFORM)" --notes "$notes"
+          gh release list --limit 200 --json tagName,isPrerelease,createdAt \
+            --jq '[.[] | select(.isPrerelease and (.tagName | startswith("build-")))] | sort_by(.createdAt) | reverse
+                  | .[(env.KEEP_BUILDS | tonumber):] | .[].tagName' |
+            while read -r old; do
+              echo "Removing the older build $old"
+              gh release delete "$old" --yes --cleanup-tag
+            done

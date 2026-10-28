@@ -1,0 +1,21 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+__pycache__
+*.pyc
+db.sqlite3
+staticfiles/
+data/
+nfc-cardreader/
+install/
+scripts/
+README.md
+# Nothing the running app reads - and every MB here is carried by each offline update bundle.
+housing/
+docs/
+.github/
+.claude/
+.vscode/
+CLAUDE.md

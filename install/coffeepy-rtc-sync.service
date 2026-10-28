@@ -1,0 +1,8 @@
+[Unit]
+Description=Persist a corrected system clock to the DS3231 RTC
+# No RTC fitted (the DS3231 is optional - see docs/MANUAL.md) means nothing to write to.
+ConditionPathExists=/dev/rtc0
+
+[Service]
+Type=oneshot
+ExecStart=/opt/coffeepy/install/rtc_sync.sh

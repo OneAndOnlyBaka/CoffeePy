@@ -1,0 +1,26 @@
+{% extends "dashboard/base.html" %}
+{% load i18n l10n %}
+{% block title %}{% translate "Deposit pillory" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "Deposit pillory" %}</h1>
+<p class="muted">{% blocktranslate trimmed %}Members with a negative balance, considering all payments and orders up to (but not
+including) the current month.{% endblocktranslate %}</p>
+<div class="card">
+    <div class="list">
+        {% for entry in entries %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ forloop.counter }}. {{ entry.member.display_name }}</span>
+                <span class="list-row-meta">{% blocktranslate with payments=entry.payments deposits=entry.deposits %}Paid {{ payments }}€ &middot; coffee until last month {{ deposits }}€{% endblocktranslate %}</span>
+            </div>
+            <span class="list-row-value negative">{{ entry.balance }}€</span>
+            <div class="list-row-actions">
+                <a href="{% url 'dashboard:payment_add' %}?member={{ entry.member.uid|unlocalize }}" class="btn secondary btn-sm">{% translate "Enter payment" %}</a>
+            </div>
+        </div>
+        {% empty %}
+        <p class="muted list-empty">{% translate "Nobody owes anything." %} {% include "icons/party.svg" %}</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

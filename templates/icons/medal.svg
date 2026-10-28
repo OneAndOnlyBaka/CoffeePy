@@ -1,0 +1,4 @@
+{% comment %}
+Ranking medal - include with place=1|2|3. Fixed colours rather than currentColor: gold,
+silver and bronze are the point of it. Same flat look as the kiosk's nav icons.
+{% endcomment %}<svg class="icon medal medal-{{ place }}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.6 1.5h4.2l2.4 7.6H9z" fill="#6b3b00"/><path d="M17.4 1.5h-4.2l-2.4 7.6H15z" fill="#c98a3d"/><circle cx="12" cy="15" r="7.2" fill="{% if place == 1 %}#e2ab3b{% elif place == 2 %}#cfc9c1{% else %}#c27d45{% endif %}" stroke="{% if place == 1 %}#a8761a{% elif place == 2 %}#8f8a83{% else %}#86501f{% endif %}" stroke-width="1.4"/><text x="12" y="18.2" text-anchor="middle" font-size="9" font-weight="700" font-family="sans-serif" fill="#3b2314">{{ place }}</text></svg>

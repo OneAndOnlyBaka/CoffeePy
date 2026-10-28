@@ -1,0 +1,4 @@
+# ACR122U (ACS, 072f:2200). MODE=0666 so pcscd can open the raw USB device; power/control
+# keeps the kernel from autosuspending the reader, which on some ports leaves it awake but
+# unable to poll until it is physically replugged.
+SUBSYSTEM=="usb", ATTR{idVendor}=="072f", ATTR{idProduct}=="2200", MODE="0666", ATTR{power/control}="on"

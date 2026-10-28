@@ -1,0 +1,20 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Restore a backup" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "Restore a backup" %}</h1>
+<div class="card danger-zone">
+    <h2>{{ name }} &middot; {{ size|filesizeformat }}</h2>
+    {% if check == "damaged" %}<p class="msg error">{% translate "This backup no longer matches its checksum - it is probably damaged." %}</p>{% endif %}
+    <p>{% blocktranslate trimmed %}What you tick is replaced by the state of this backup - the data includes the dashboard
+        logins. The device is backed up first. The kiosk shows "We'll be right back" meanwhile.{% endblocktranslate %}</p>
+    <form method="post">
+        {% csrf_token %}
+        {% include "dashboard/_restore_form.html" %}
+        <div class="action-row">
+            <a href="{% url 'dashboard:backup' %}" class="btn secondary">{% translate "Cancel" %}</a>
+            <button type="submit" class="danger">{% translate "Restore" %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+# The image the tests run in (docker-compose.test.yml): the same base and the same command
+# line tools as the app's own image - pg_dump/pg_restore 17, openssl - so a backup is made,
+# encrypted and restored here exactly as on the device. The source is mounted, not copied:
+# a change to the code needs no rebuild.
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        openssl \
+        postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt

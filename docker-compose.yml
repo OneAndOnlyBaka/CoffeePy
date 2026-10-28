@@ -1,0 +1,190 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-coffeepy}
+      POSTGRES_USER: ${POSTGRES_USER:-coffeepy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-coffeepy}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-coffeepy}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      # Every second while starting: migrate - and with it everything else - waits for this,
+      # and at boot it otherwise found Postgres ready up to 5s late.
+      start_period: 30s
+      start_interval: 1s
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./nfc-cardreader/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro,z
+
+  nfc-bridge:
+    build: ./nfc-cardreader
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      MQTT_TOPIC: ${MQTT_TOPIC:-nfc/acr122u}
+      LOG_LEVEL: INFO
+
+  migrate:
+    build: .
+    image: coffeepy-web:latest
+    # The one container that migrates (the others set COFFEEPY_PREPARE=0, see entrypoint.sh),
+    # and creates the device CA, Caddy's certificates and the Caddyfile on first start, so
+    # caddy (which waits for this) finds them in place - all in a single Django process.
+    command: ["python", "manage.py", "prepare", "--tls"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      COFFEEPY_PREPARE: "0"
+      TLS_DIR: /tls
+    volumes:
+      - ./data/tls:/tls:z
+
+  web:
+    build:
+      context: .
+    image: coffeepy-web:latest
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      COFFEEPY_PREPARE: "0"
+      TLS_DIR: /tls
+      USB_DIR: /usb
+      STORAGE_DIR: /storage
+      MAINTENANCE_DIR: /maintenance
+      COFFEEPY_ENV_FILE: /config/.env
+    # Overrides the Dockerfile's own CMD (which defaults to 3, a reasonable default for
+    # non-Pi hosts) - each worker is a full separate Django process, so on a 1GB-RAM Pi
+    # running Postgres/mosquitto/mqtt-listener/backup alongside it, that's real RAM.
+    # GUNICORN_WORKERS in .env lets Pi builds run leaner (see .env.example). --preload
+    # imports Django once in the master so the workers share those pages copy-on-write
+    # (~12MB less on a Pi 3 with two workers). --timeout: a sync worker is busy for the
+    # whole upload of an update bundle (~700MB, minutes over the AP's WiFi), and the default
+    # 30s killed every such upload half-way through.
+    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "${GUNICORN_WORKERS:-3}", "--preload", "--timeout", "900"]
+    # No published port: only caddy reaches this, over the compose network.
+    cap_add:
+      - SYS_TIME
+    volumes:
+      - ./data/updates:/app/updates:z
+      - ./data/tls:/tls:z
+      # The USB backup stick, mounted by the host (install/storage_helper.py) - rslave, so a
+      # stick plugged in after the container started still shows up in it.
+      - type: bind
+        source: /srv/coffeepy-usb
+        target: /usb
+        bind:
+          propagation: rslave
+          create_host_path: true
+      - ./data/storage:/storage:z
+      # Read-only: a backup carries it, so a replacement device can get its settings back.
+      - ./.env:/config/.env:ro,z
+      # A restore writes the kiosk's "back in a moment" status here (coffee/backups.py).
+      - ./data/maintenance:/maintenance:z
+
+  mqtt-listener:
+    build: .
+    image: coffeepy-web:latest
+    command: ["python", "manage.py", "mqtt_listener"]
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      mosquitto:
+        condition: service_started
+    env_file: .env
+    environment:
+      COFFEEPY_PREPARE: "0"
+
+  backup:
+    build: .
+    image: coffeepy-web:latest
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        n=0
+        while true; do
+          # First round a minute in: at boot this would otherwise start its Django processes
+          # alongside everybody else's, and nothing here is urgent (migrate did the TLS check).
+          sleep 60
+          # Every minute: puts a clock that went back forward again (coffee/clock.py), then
+          # backs up when the interval set in the dashboard is over, and only when this
+          # device's backup stick is plugged in (coffee/backups.py).
+          python manage.py tick || true
+          if [ $$((n % 60)) -eq 0 ]; then
+            # The host's events into the audit log, and entries past AUDIT_RETENTION_DAYS out.
+            python manage.py audit_housekeeping || true
+            # Renews the certificates before they expire (dashboard/tls.py) - a box that
+            # never restarts would otherwise outlive its 800-day server certificate.
+            python manage.py ensure_tls || true
+          fi
+          n=$$((n + 1))
+        done
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    # The clock check sets the host's clock when it went back (coffee/clock.py).
+    cap_add:
+      - SYS_TIME
+    env_file: .env
+    environment:
+      TLS_DIR: /tls
+      USB_DIR: /usb
+      STORAGE_DIR: /storage
+      COFFEEPY_ENV_FILE: /config/.env
+    volumes:
+      # The USB backup stick, mounted by the host (install/storage_helper.py) - rslave, so a
+      # stick plugged in after the container started still shows up in it.
+      - type: bind
+        source: /srv/coffeepy-usb
+        target: /usb
+        bind:
+          propagation: rslave
+          create_host_path: true
+      - ./data/storage:/storage:z
+      - ./.env:/config/.env:ro,z
+      - ./data/tls:/tls:z
+
+  # The only way in: 443 for the network, 127.0.0.1:8443 for the kiosk's own browser (the
+  # one place /kiosk/ is served). The Caddyfile and certificates are written by the app
+  # (dashboard/tls.py); --watch picks up a changed certificate without a restart.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    command: ["caddy", "run", "--config", "/tls/Caddyfile", "--adapter", "caddyfile", "--watch"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      web:
+        condition: service_started
+    ports:
+      - "443:443"
+      - "127.0.0.1:8443:8443"
+    volumes:
+      - ./data/tls:/tls:ro,z
+      # Written by install.sh and the update watcher (install/maintenance.sh), served by
+      # Caddy itself so the kiosk can read it while the app is down.
+      - ./data/maintenance:/maintenance:ro,z
+
+volumes:
+  pg_data:

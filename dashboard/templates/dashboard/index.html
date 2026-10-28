@@ -1,0 +1,97 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "CoffeePy Dashboard" %}{% endblock %}
+{% block dashboard_content %}
+<h1>{% blocktranslate with name=user.get_username %}Hello {{ name }}!{% endblocktranslate %}</h1>
+
+<div class="stats-row">
+    <div class="stat"><span class="label">{% translate "Cups today" %}</span><span class="value">{{ overview.cups_today }}</span></div>
+    <div class="stat"><span class="label">{% translate "Cups this month" %}</span><span class="value">{{ overview.cups_month }}</span></div>
+    <div class="stat"><span class="label">{% translate "Active members" %}</span><span class="value">{{ overview.active_members }}</span></div>
+    <a class="stat stat-link" href="{% url 'dashboard:pillory' %}">
+        <span class="label">{% translate "Open from last month" %}</span>
+        <span class="value {% if overview.debtors %}negative{% else %}ok{% endif %}">{{ overview.open_amount }}€</span>
+        <span class="sub">{% blocktranslate with count=overview.debtors %}{{ count }} in the pillory{% endblocktranslate %}</span>
+    </a>
+</div>
+
+<div class="card">
+    <h2>{% translate "Quick actions" %}</h2>
+    <div class="action-row">
+        <a href="{% url 'dashboard:payment_add' %}" class="btn success">{% include "icons/plus.svg" %}{% translate "Enter payment" %}</a>
+        <a href="{% url 'dashboard:member_add' %}" class="btn secondary">{% include "icons/plus.svg" %}{% translate "Add member" %}</a>
+        <a href="{% url 'dashboard:bookings' %}" class="btn secondary">{% include "icons/list.svg" %}{% translate "Bookings" %}</a>
+    </div>
+</div>
+
+<div class="card">
+    <h2>{% translate "Device" %}</h2>
+    <div class="list">
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "NFC card reader" %}</span>
+                <span class="list-row-meta">{% if reader_status %}{% blocktranslate with when=reader_status.updated_at|date:"d.m.Y H:i:s" %}last update {{ when }}{% endblocktranslate %}{% else %}{% translate "never reported in" %}{% endif %}</span>
+            </div>
+            {% if reader_status.is_online %}<span class="badge ok-badge">● {% translate "online" %}</span>{% else %}<span class="badge off">● {% translate "offline" %}</span>{% endif %}
+        </div>
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "Backup stick" %}</span>
+                <span class="list-row-meta">
+                    {% if backup_health.state == "ok" %}{% if backup_health.last_ok %}{% blocktranslate with when=backup_health.last_ok|date:"d.m.Y H:i" %}Last backup {{ when }}.{% endblocktranslate %}{% else %}{% translate "The first backup is made within the hour." %}{% endif %}
+                    {% elif backup_health.state == "missing" %}{% blocktranslate trimmed with model=backup_health.configured.model|default:"USB" serial=backup_health.configured.serial %}Backups are not running - plug the stick ({{ model }}, serial {{ serial }}) back in.{% endblocktranslate %}
+                    {% elif backup_health.state == "failing" %}{% translate "The last backup failed" %}: {{ backup_health.error }}
+                    {% elif backup_health.state == "stale" %}{% translate "No backup for a long time" %}
+                    {% elif backup_health.state == "helper" %}{% translate "Backups are not running - the storage service isn't answering" %}
+                    {% else %}{% translate "None set up - backups are not running." %}{% endif %}
+                </span>
+            </div>
+            {% if backup_health.state == "ok" %}<span class="badge ok-badge">● {% translate "backing up" %}</span>
+            {% elif backup_health.state == "missing" %}<span class="badge off">● {% translate "missing" %}</span>
+            {% else %}<span class="badge off">● {% translate "no backups" %}</span>{% endif %}
+            {% if user.is_superuser %}<a href="{% url 'dashboard:backup' %}" class="btn secondary btn-sm">{% translate "Backup" %}</a>{% endif %}
+        </div>
+        {% if rtc_health.state != "unknown" %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "Clock module (RTC)" %}</span>
+                <span class="list-row-meta">
+                    {% if rtc_health.state == "ok" %}{% translate "Keeps the time while the power is off." %}
+                    {% elif rtc_health.state == "missing" %}{% translate "Not found - check that the module is plugged in. After a power cut the clock is wrong until someone sets it." %}
+                    {% elif rtc_health.state == "unreadable" %}{% translate "Does not answer - the module or its connection is faulty. After a power cut the clock is wrong until someone sets it." %}
+                    {% else %}{% translate "Had lost the time - most likely its battery (CR2032) is flat. Check the system time and replace the battery; the warning goes once the module kept the time through a restart." %}{% endif %}
+                </span>
+            </div>
+            {% if rtc_health.state == "ok" %}<span class="badge ok-badge">● {% translate "OK" %}</span>
+            {% else %}<span class="badge off">● {% translate "faulty" %}</span>{% endif %}
+            {% if user.is_superuser %}<a href="{% url 'dashboard:system_time' %}" class="btn secondary btn-sm">{% translate "System time" %}</a>{% endif %}
+        </div>
+        {% endif %}
+        {% if clock_corrected %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "Time" %}</span>
+                <span class="list-row-meta">{% include "dashboard/_clock_corrected.html" %}</span>
+            </div>
+            <span class="badge off">● {% translate "corrected" %}</span>
+            {% if user.is_superuser %}<a href="{% url 'dashboard:system_time' %}" class="btn secondary btn-sm">{% translate "System time" %}</a>{% endif %}
+        </div>
+        {% endif %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "Address on the network" %}</span>
+                <span class="list-row-meta">https://{{ public_host }}/</span>
+            </div>
+            {% if user.is_superuser %}<a href="{% url 'dashboard:system_dashboard' %}" class="btn secondary btn-sm">{% translate "CPU/RAM/disk" %}</a>{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>{% translate "Exports" %}</h2>
+    <div class="action-row">
+        <a href="{% url 'dashboard:export_orders' %}" class="btn secondary">{% include "icons/download.svg" %}{% translate "All orders (CSV)" %}</a>
+        <a href="{% url 'dashboard:export_payments' %}" class="btn secondary">{% include "icons/download.svg" %}{% translate "All payments (CSV)" %}</a>
+    </div>
+</div>
+{% endblock %}

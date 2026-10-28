@@ -1,0 +1,46 @@
+# rsync filter rules for the copy this checkout makes into /opt/coffeepy (install.sh's
+# "app" step, rsync --filter='. <this file>').
+#
+# First matching rule wins, so the "+" lines have to come before the "-" that would
+# otherwise swallow them. Note rsync knows nothing about .gitignore - a file being
+# git-ignored is exactly why it is still sitting in the working tree at build time.
+
+# install.sh copies this into place and fills in per-device secrets; it must ship.
++ /.env.example
+
+# A .env from somewhere else must NOT be copied in: the device's own secrets live only at
+# /opt/coffeepy/.env, generated once by install.sh - and since it only generates them when
+# no .env is there yet, an imported one would quietly suppress that.
+- /.env
+- /.env.*
+
+# Local development leftovers: a virtualenv of the wrong architecture, editor state, a
+# dev database, collected static files (the image rebuilds them in the container).
+- /.venv/
+- /venv/
+- /.vscode/
+- /.idea/
+- node_modules/
+- *.sqlite3
+- /staticfiles/
+- __pycache__/
+- *.pyc
+
+- /.git/
+- /.github/
+# Leftovers from the removed image build, if any are still around. (rsync has no trailing
+# comments - text after a rule becomes part of its pattern.)
+- /pi-gen/
+
+# The update watcher's state: what is installed, the rollback snapshot (previous.json, the old
+# compose file and install/) and the databases saved before each update. Only some of it was
+# kept once - a re-run then deleted the rest, and with it the way back. The whole directory,
+# like data/storage/ below; the same for the old backup folder.
+- /data/updates/
+- /data/backups/
+# The device CA and its certificates - phones trust this CA, so a re-run must keep it.
+- /data/tls/
+# The kiosk's "back in a moment" status - written by this very run (install/maintenance.sh).
+- /data/maintenance/
+# The backup stick's state: this device's id (the stick carries it) and which stick it is.
+- /data/storage/

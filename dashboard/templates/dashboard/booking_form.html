@@ -1,0 +1,19 @@
+{% extends "dashboard/base.html" %}
+{% load i18n l10n %}
+{% block title %}{% if kind == "orders" %}{% translate "Edit booking" %}{% elif instance %}{% translate "Edit payment" %}{% else %}{% translate "Enter payment" %}{% endif %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% if kind == "orders" %}{% blocktranslate with name=instance.member.display_name %}Coffee of {{ name }}{% endblocktranslate %}{% elif instance %}{% blocktranslate with name=instance.member.display_name %}Payment of {{ name }}{% endblocktranslate %}{% else %}{% translate "Enter payment" %}{% endif %}</h1>
+{% if not instance %}
+<p class="muted">{% translate "For money handed over in person, or a transfer that arrived outside the kiosk and the phones." %}</p>
+{% endif %}
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}{% include "dashboard/_field.html" %}{% endfor %}
+        <div class="action-row">
+            <a href="{% url 'dashboard:bookings' %}?kind={{ kind }}{% if instance %}&amp;member={{ instance.member_id|unlocalize }}{% endif %}" class="btn secondary">{% translate "Cancel" %}</a>
+            <button type="submit" class="success">{% translate "Save" %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

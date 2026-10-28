@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% block viewport %}width=device-width, initial-scale=1{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">{% endblock %}
+{% block body_class %}dashboard{% endblock %}
+{% block title %}{% translate "CoffeePy Dashboard - Login" %}{% endblock %}
+{% block body %}
+<div class="login-wrap">
+    <form method="post" class="card">
+        {% csrf_token %}
+        <h1>{% include "icons/cup.svg" %} CoffeePy</h1>
+        <label class="field">{% translate "Username" %} {{ form.username }}</label>
+        <label class="field">{% translate "Password" %} {{ form.password }}</label>
+        <button type="submit" class="success btn-block">{% translate "Log in" %}</button>
+        {% comment %}Under the button rather than above the form: "logged out after 30 minutes" or a wrong
+        password is read after the attempt, and the form itself no longer jumps down when one appears.{% endcomment %}
+        {% for message in messages %}<p class="msg login-msg {{ message.tags }}">{{ message }}</p>{% endfor %}
+        {% if form.errors %}<p class="msg login-msg error">{% if "locked" in form.non_field_errors.as_data.0.code %}{{ form.non_field_errors.0 }}{% else %}{% translate "Invalid username or password." %}{% endif %}</p>{% endif %}
+        {% url 'certificate_download' as download_url %}
+        <p class="muted login-cert">{% blocktranslate trimmed %}Browser warns about this site? <a href="{{ download_url }}">Download the device certificate</a> and install it once.{% endblocktranslate %}</p>
+    </form>
+    {% include "includes/language_switch.html" %}
+</div>
+{% endblock %}

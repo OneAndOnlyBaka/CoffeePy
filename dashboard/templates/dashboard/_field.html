@@ -1,0 +1,16 @@
+{% comment %}One form field: label, input, help text, errors - include with field=...{% endcomment %}
+{% if field.field.widget.input_type == "checkbox" %}
+<label class="checkbox-row">{{ field }} <span>{{ field.label }}{% if field.help_text %}<br><span class="muted">{{ field.help_text }}</span>{% endif %}</span></label>
+{% elif field.field.widget.input_type == "radio" %}
+<fieldset class="field radio-field">
+    <legend>{{ field.label }}</legend>
+    {% for radio in field %}<label class="checkbox-row">{{ radio.tag }} <span>{{ radio.choice_label }}</span></label>{% endfor %}
+</fieldset>
+{% else %}
+<label class="field">
+    {{ field.label }}
+    {{ field }}
+    {% if field.help_text %}<span class="muted">{{ field.help_text|safe }}</span>{% endif %}
+</label>
+{% endif %}
+{% if field.errors %}<p class="msg error">{{ field.errors|join:" " }}</p>{% endif %}

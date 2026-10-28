@@ -1,0 +1,111 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Update" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "Software update" %}</h1>
+
+<div class="card">
+    <div class="list">
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "Installed version" %}</span>
+                <span class="list-row-meta">{{ installed.version|default:version }}{% if installed.applied %} &middot; {% blocktranslate with when=installed.applied|date:"d.m.Y H:i" %}applied {{ when }}{% endblocktranslate %}{% endif %}</span>
+            </div>
+            {% if previous %}
+            <form method="post" action="{% url 'dashboard:update_rollback' %}" onsubmit="return confirm('{% translate "Go back to the previous version? The data goes back to the state before the last update." as q %}{{ q|escapejs }}');">
+                {% csrf_token %}
+                <button type="submit" class="secondary btn-sm">{% blocktranslate with version=previous.installed.version|default:"?" %}Back to {{ version }}{% endblocktranslate %}</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card" id="update-state">
+    <h2>{% translate "Status" %}</h2>
+    <p id="update-message" class="msg {% if state.state == 'failed' or state.state == 'rolled_back' %}error{% elif state.state == 'done' %}success{% endif %}">
+        {% if state.state == "running" %}<span class="spinner"></span> {{ state.message }}
+        {% elif state.message %}{{ state.message }}
+        {% else %}{% translate "No update processed yet." %}{% endif %}
+    </p>
+    <pre id="update-log" class="muted"></pre>
+</div>
+
+<div class="card">
+    <h2>{% translate "Upload an update" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}A bundle from the update package builder (<code>scripts/update_builder.sh</code>).
+    Before anything changes, the device checks its signature, that it is for this device and that there is
+    room for it, and saves the database to the SD card. If the new version doesn't come up, the previous
+    one is put back automatically. The kiosk shows "We'll be right back" meanwhile.{% endblocktranslate %}</p>
+    <form method="post" action="{% url 'dashboard:update_upload' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label class="field">{% translate "Update bundle" %} <input type="file" name="bundle" accept=".tar,.tar.gz" required></label>
+        <label class="checkbox-row"><input type="checkbox" name="allow_downgrade" value="1">
+            <span>{% translate "Allow installing an older version than the installed one" %}</span></label>
+        <button type="submit" class="success" {% if state.state == "running" or pending %}disabled{% endif %}>{% translate "Upload and install" %}</button>
+    </form>
+</div>
+
+<div class="card" id="versions">
+    <div class="card-head">
+        <h2>{% translate "Versions" %}</h2>
+        <button type="button" class="secondary btn-sm" id="copy-versions" data-done="{% translate "Copied" %}">{% translate "Copy all" %}</button>
+    </div>
+    <p class="muted">{% translate "Exactly what runs on this device - the commit, and for every container the id of its image. Paste it into a bug report." %}</p>
+    {% for heading, rows in version_sections %}{% if rows %}
+    <h3>{{ heading }}</h3>
+    <dl class="version-list">
+        {% for label, value in rows %}<dt>{{ label }}</dt><dd><code>{{ value }}</code></dd>{% endfor %}
+    </dl>
+    {% endif %}{% endfor %}
+    {% if system_missing %}<p class="muted">{% translate "The device's own details (operating system, containers) appear once the update watcher has written them - a few seconds after it starts." %}</p>{% endif %}
+    <textarea id="versions-text" hidden readonly>{{ version_text }}</textarea>
+</div>
+
+{% if pre_update %}
+<div class="card">
+    <h2>{% translate "Saved before updates" %}</h2>
+    <p class="muted">{% translate "The database as it was before each of the last updates - on the SD card, for going back." %}</p>
+    <ul class="file-list">{% for f in pre_update %}<li>{{ f.name }} &middot; {{ f.size|filesizeformat }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<script>
+(function () {
+    const button = document.getElementById("copy-versions");
+    const text = document.getElementById("versions-text").value;
+    button.addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch (e) {  // no clipboard API (e.g. an untrusted certificate): the old way
+            const area = document.createElement("textarea");
+            area.value = text;
+            document.body.appendChild(area);
+            area.select();
+            document.execCommand("copy");
+            area.remove();
+        }
+        const label = button.textContent;
+        button.textContent = button.dataset.done;
+        setTimeout(() => { button.textContent = label; }, 1500);
+    });
+})();
+(function () {
+    const message = document.getElementById("update-message");
+    const log = document.getElementById("update-log");
+    let wasRunning = {% if state.state == "running" or pending %}true{% else %}false{% endif %};
+    async function poll() {
+        try {
+            const data = await (await fetch("{% url 'dashboard:update_status' %}")).json();
+            log.textContent = data.log;
+            const running = data.state.state === "running" || data.pending;
+            if (wasRunning && !running) { location.reload(); return; }
+            if (running && data.state.message) { message.textContent = data.state.message; }
+            wasRunning = running;
+        } catch (e) { /* the app restarts during an update - keep asking */ }
+        setTimeout(poll, 3000);
+    }
+    poll();
+})();
+</script>
+{% endblock %}

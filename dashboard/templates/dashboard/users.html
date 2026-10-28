@@ -1,0 +1,42 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Dashboard users" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<div class="page-head">
+    <h1>{% translate "Dashboard users" %}</h1>
+    <div class="page-actions">
+        <a href="{% url 'dashboard:user_add' %}" class="btn success">{% include "icons/plus.svg" %}{% translate "Add user" %}</a>
+    </div>
+</div>
+<p class="muted">{% blocktranslate trimmed %}Who may log in to this dashboard. Admins can do everything, including the system
+pages and this one; managers look after members, bookings, coffee sorts and payment
+methods. Members themselves need no account - they use the kiosk and their phone.{% endblocktranslate %}</p>
+<div class="card">
+    <div class="list">
+        {% for account in users %}
+        {% autoescape off %}{% blocktranslate with name=account.get_username asvar confirm_delete %}Delete the dashboard user {{ name }}?{% endblocktranslate %}{% endautoescape %}
+        <div class="list-row{% if not account.is_active %} muted{% endif %}">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ account.get_username }}
+                    {% if account.is_superuser %}<span class="badge admin">{% translate "Admin" %}</span>{% else %}<span class="badge">{% translate "Manager" %}</span>{% endif %}
+                    {% if not account.is_active %}<span class="badge off">{% translate "locked" %}</span>{% endif %}
+                    {% if account.pk == user.pk %}<span class="badge">{% translate "you" %}</span>{% endif %}
+                </span>
+                <span class="list-row-meta">{% if account.last_login %}{% blocktranslate with when=account.last_login|date:"d.m.Y H:i" %}last login {{ when }}{% endblocktranslate %}{% else %}{% translate "never logged in" %}{% endif %}</span>
+            </div>
+            <div class="list-row-actions">
+                <a href="{% url 'dashboard:user_edit' account.pk %}" class="btn secondary btn-sm">{% translate "Edit" %}</a>
+                {% comment %}Your own password is changed on your account page, with the current one.{% endcomment %}
+                {% if account.pk != user.pk %}
+                <a href="{% url 'dashboard:user_password' account.pk %}" class="btn secondary btn-sm">{% translate "Set password" %}</a>
+                <form method="post" action="{% url 'dashboard:user_delete' account.pk %}" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
+                    {% csrf_token %}
+                    <button type="submit" class="danger btn-sm">{% translate "Delete" %}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

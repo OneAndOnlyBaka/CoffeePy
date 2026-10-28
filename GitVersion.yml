@@ -1,0 +1,16 @@
+# GitVersion (https://gitversion.net) computes the version from the git history: the release
+# workflow runs it and hands the result to scripts/write_version.sh (coffeepy-version.json).
+# V2 starts at 2.0.0; a tag vX.Y.Z on a commit makes that commit exactly X.Y.Z, and the
+# commits after it count up from there.
+workflow: GitFlow/v1
+next-version: 2.0.0
+tag-prefix: '[vV]?'
+# The commit count as the pre-release number - 2.0.0-v2-rework.97 - rather than the default's
+# 2.0.0-v2-rework.1+97, whose "+" an image tag can't carry and whose ".1" never moves. Mind
+# GitVersion 6's names: ContinuousDelivery counts like that, ContinuousDeployment drops the
+# label altogether (a branch build then claimed to be 2.0.0).
+branches:
+  unknown:
+    mode: ContinuousDelivery
+  feature:
+    mode: ContinuousDelivery

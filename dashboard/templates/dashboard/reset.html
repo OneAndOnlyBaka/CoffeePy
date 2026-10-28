@@ -1,0 +1,49 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Reset database" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "Reset database" %}</h1>
+{% url 'dashboard:backup' as backup_url %}
+<p>{% blocktranslate trimmed %}Deletes <strong>all</strong> coffee data on this machine: members and their cards and
+linked phones, orders, payments, coffee sorts, payment methods, NFC scans and the audit
+log. Dashboard logins are kept, so you stay signed in. This cannot be undone - take a
+<a href="{{ backup_url }}">backup</a> first if the data still matters.{% endblocktranslate %}</p>
+{% if message %}<p class="msg success">{{ message }}</p>{% endif %}
+{% if error %}<p class="msg error">{{ error }}</p>{% endif %}
+<div class="card">
+    <h2>{% translate "Currently stored" %}</h2>
+    <ul class="file-list">
+        {% for label, count in counts %}
+        <li>{{ label }}: <strong>{{ count }}</strong></li>
+        {% endfor %}
+    </ul>
+</div>
+<div class="card danger-zone">
+    <h2>{% translate "Delete everything" %}</h2>
+    <form method="post" id="reset-form">
+        {% csrf_token %}
+        <label class="field"><span>{% blocktranslate trimmed %}Type <code>{{ confirmation }}</code> to confirm{% endblocktranslate %}</span>
+            <input type="text" name="confirm" autocomplete="off" required>
+        </label>
+        <div class="action-row">
+            <button type="submit" class="danger">{% translate "Delete all data" %}</button>
+            <span class="spinner" id="reset-spinner" hidden></span>
+        </div>
+    </form>
+</div>
+{% translate "Delete all coffee data? This cannot be undone." as confirm_reset %}
+<script>
+document.getElementById("reset-form").addEventListener("submit", event => {
+    const typed = event.target.confirm.value.trim();
+    if (typed !== "{{ confirmation|escapejs }}") {
+        return;  // the server rejects it too - this just saves a round trip
+    }
+    if (!window.confirm("{{ confirm_reset|escapejs }}")) {
+        event.preventDefault();
+        return;
+    }
+    event.target.querySelector("button").disabled = true;
+    document.getElementById("reset-spinner").hidden = false;
+});
+</script>
+{% endblock %}
