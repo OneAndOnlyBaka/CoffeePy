@@ -1,10 +1,17 @@
 name: CI
 
+# Every push and every PR. Each job is a check of its own, so a red one says what failed.
 on:
   push:
     branches: ["**"]
   pull_request:
 
+permissions:
+  contents: read
+
+# Actions are pinned to a commit, not a tag that could be moved under them (Dependabot keeps
+# the pins current). Values reach the scripts as environment variables, never as ${{ }}
+# inside them.
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -12,9 +19,11 @@ jobs:
       DJANGO_TEST_SQLITE: "1"
       DJANGO_SECRET_KEY: "ci-test-secret-key"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.14"
           cache: "pip"
@@ -22,19 +31,46 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # A model change without its migration would reach a device as a crash at `migrate`.
+      - name: No missing migrations
+        run: python manage.py makemigrations --check --dry-run
+
       - name: Run Django test suite
         run: python manage.py test
 
+  # The same suite against a real PostgreSQL 16 and with the image's pg_dump/openssl
+  # (docker-compose.test.yml) - where the backup, restore and update tests run that SQLite
+  # skips. Those files are kept at full line and branch coverage (CLAUDE.md).
+  test-postgres:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Tests against PostgreSQL, with coverage
+        env:
+          FULL_COVERAGE: >-
+            coffee/backups.py,dashboard/restore_jobs.py,dashboard/views_backup.py,
+            dashboard/views_update.py,install/storage_helper.py,install/update_watcher.py
+        run: |
+          docker compose -f docker-compose.test.yml run --rm -e FULL_COVERAGE tests \
+            'coverage run manage.py test && coverage report --skip-covered \
+             && echo "== kept at full coverage:" && coverage report --include="$FULL_COVERAGE" --fail-under=100'
+
   # Every known vulnerability that an upgrade fixes fails the build - in the Python
   # dependencies and in the images this repo builds. One without a fix yet is reported, not
-  # failed on. The images of others (postgres, mosquitto, caddy) are only reported: their
-  # packages are theirs to fix, and the release build pulls their newest tag anyway.
+  # failed on; one that can't be taken yet is in .grype.yaml with its reason. The images of
+  # others (postgres, mosquitto, caddy) are only reported: their packages are theirs to fix,
+  # and the release build pulls their newest tag anyway.
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.14"
 
@@ -59,23 +95,65 @@ jobs:
           docker compose build --quiet
           docker compose pull --quiet --ignore-buildable
 
-      - uses: anchore/scan-action/download-grype@v6
+      - uses: anchore/scan-action/download-grype@1638637db639e0ade3258b51db49a9a137574c3e # v6.5.1
         if: always()
         id: grype
 
       - name: Images (Grype)
         if: always()
+        env:
+          GRYPE: ${{ steps.grype.outputs.cmd }}
         run: |
-          grype="${{ steps.grype.outputs.cmd }}"
           status=0
           for image in $(docker compose config --images | sort -u); do
             case "$image" in
               coffeepy-*)
                 echo "== $image - fails on anything fixable"
-                "$grype" "docker:$image" --only-fixed --fail-on negligible || status=1 ;;
+                "$GRYPE" "docker:$image" --only-fixed --fail-on negligible || status=1 ;;
               *)
                 echo "== $image - not ours, for information"
-                "$grype" "docker:$image" --only-fixed || true ;;
+                "$GRYPE" "docker:$image" --only-fixed || true ;;
             esac
           done
           exit $status
+
+  # Correctness, not style: no formatter is configured on purpose (CLAUDE.md, "Style").
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # gitleaks reads every commit, not just the last.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.14"
+
+      - name: Install ruff and zizmor
+        run: pip install --quiet ruff zizmor
+
+      # Pyflakes' checks and syntax errors: undefined names, unused imports, shadowing.
+      - name: Python (ruff, correctness only)
+        if: always()
+        run: ruff check --select F,E9 --target-version py314 --output-format github .
+
+      # Errors only: the installer, the provisioning tool and the kiosk session are bash,
+      # and their traps (pipefail in helpers, an ERR trap without set -E) cost time before.
+      - name: Shell scripts (ShellCheck, errors)
+        if: always()
+        run: |
+          mapfile -t scripts < <(git ls-files '*.sh' install/kiosk/xinitrc install/kiosk/openbox-autostart \
+            install/kiosk/bash_profile_kiosk)
+          shellcheck --severity=error "${scripts[@]}"
+
+      # The workflows themselves: injection through ${{ }}, unpinned actions, broad rights.
+      - name: Workflows (zizmor)
+        if: always()
+        run: zizmor --format github .github/workflows/
+
+      # Every commit, so a password or key that was committed and removed again still counts.
+      - name: Secrets (gitleaks)
+        if: always()
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --redact --verbose

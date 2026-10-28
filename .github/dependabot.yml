@@ -1,0 +1,40 @@
+# Weekly PRs for what the build depends on, so the CI audit (ci.yml, job "audit") stays green
+# by small steps instead of turning red all at once. Each PR runs the full CI - tests on SQLite
+# and PostgreSQL, the audit, the lint - before anything is merged.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule: {interval: weekly}
+    groups:
+      python: {patterns: ["*"]}
+  - package-ecosystem: pip
+    directory: /nfc-cardreader
+    schedule: {interval: weekly}
+    groups:
+      nfc-bridge: {patterns: ["*"]}
+
+  # The python base image of the app, the test image and the bridge.
+  - package-ecosystem: docker
+    directories: ["/", "/nfc-cardreader"]
+    schedule: {interval: weekly}
+    ignore:
+      # A Python minor version is a decision (Django has to support it), not a weekly update.
+      - dependency-name: python
+        update-types: ["version-update:semver-minor"]
+
+  # postgres, mosquitto and caddy. A PostgreSQL major means a dump and restore of every
+  # device's database - never a weekly update.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule: {interval: weekly}
+    ignore:
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
+
+  # The actions, pinned to commits in the workflows - Dependabot moves the pin and its comment.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly}
+    groups:
+      actions: {patterns: ["*"]}
