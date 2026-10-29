@@ -358,8 +358,8 @@ html, body.kiosk { overflow: hidden; }
 .maintenance-step { color: var(--coffee-light); min-height: 1.5em; }
 
 /* Ranking: tabs top left (the corner buttons sit top right), below them the award ceremony
-   - a GIF (scripts/make_podium_gif.py) between a retro banner and the names. Both are text,
-   so one GIF serves every ranking and both languages. */
+   - a video (scripts/make_podium_gif.py) between a retro banner and the names. Both are text,
+   so one video serves every ranking and both languages. */
 .ranking { width: 100%; height: 100%; align-self: stretch; display: flex; flex-direction: column; gap: 14px; }
 .ranking-tabs { display: flex; gap: 10px; margin-right: 150px; }
 .ranking-tabs a {

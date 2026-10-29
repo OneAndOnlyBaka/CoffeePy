@@ -1,5 +1,5 @@
 """Draws the kiosk ranking's pillory view for when nobody owes anything into
-static/kiosk/img/ranking/pillory_empty.gif.
+static/kiosk/img/ranking/pillory_empty.webm.
 
     /tmp/gif/bin/python scripts/make_idle_executioner_gif.py      # venv with pillow, see make_wait_gifs.py
 
@@ -200,4 +200,4 @@ def frames():
 
 
 if __name__ == "__main__":
-    save("pillory_empty.gif", frames(), FRAME_MS)
+    save("pillory_empty", frames(), FRAME_MS)

@@ -387,12 +387,29 @@ mind before changing it:
 - **Current Raspberry Pi OS drives HDMI through KMS**, where `hdmi_group`/`hdmi_mode`/
   `hdmi_cvt` are ignored. A panel with no usable EDID (the documented 1024x600 one) stays
   black unless the mode is forced with `video=` on the kernel command line.
+- **What the device needs is measured, not guessed** - the manual's "What the device needs"
+  has the numbers (Pi 3, 1 GB, 2026-10-29): about 530 MB RAM in use plus 340 MB in zram swap,
+  so nothing under 1 GB works; the kiosk's Chromium is most of the CPU. `resources.sh`
+  (pi-device skill) measures per process group; mind the ranking screen's 30s idle return
+  when measuring it. Every `docker compose build` leaves the replaced image dangling, a few
+  hundred MB each - `install.sh`'s image step and the update watcher prune them (only
+  dangling ones: the rollback copies are tagged).
+- **`CmaFree` is not the GPU's free memory.** The kernel lends the 256MB CMA area to ordinary
+  movable memory, and on a 1GB Pi under pressure it is always near zero. What the GPU holds is
+  `/sys/kernel/debug/dri/0/bo_stats`: 12MB on the wait screen, about 19MB on the ranking.
+  The ranking's animations are lossless VP9 4:4:4 videos (`scripts/make_podium_gif.py`
+  `save()`), not GIFs: measured A/B on the Pi, about 14% less browser CPU for the same picture
+  and the same RAM - not the GPU memory that was the reason to try. A video needs up to a
+  second to start, so each has its first frame as `poster`, which `kiosk/index.html` keeps
+  loaded: the static files' 60s max-age would otherwise leave the stage empty while the poster
+  is revalidated.
 - **The Pi 3's GPU has 256MB (CMA), and GPU rasterization fills it with GIF frames**:
   Chromium keeps every decoded frame of an animated GIF as a texture, the ranking's GIFs
   are 120-160 frames of ~1MB, and the GPU process then dies (`dmesg`: "Failed to allocate
   from GEM DMA helper", `gpu-recent-crash-count` in its arguments). Hence
   `--disable-gpu-rasterization` in `install/kiosk/openbox-autostart`. A new long animation
-  is worth a look at `/sys/kernel/debug/dri/0/bo_stats` on the device while it plays.
+  is worth a look at `/sys/kernel/debug/dri/0/bo_stats` on the device while it plays (with
+  GPU rasterization on - off, as it is, the GPU stays near 20MB).
 - **After a power cut, Chromium's network service crashes at its first start** ("Network service
   crashed or was terminated" in `$XDG_RUNTIME_DIR/chromium.log`; three times in three tries; once
   also after a clean reboot, when the night rest had delayed the start - never after a killed

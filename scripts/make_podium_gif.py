@@ -1,4 +1,4 @@
-"""Draws the kiosk ranking's award ceremony into static/kiosk/img/ranking/podium.gif.
+"""Draws the kiosk ranking's award ceremony into static/kiosk/img/ranking/podium.webm.
 
     /tmp/gif/bin/python scripts/make_podium_gif.py      # venv with pillow, see make_wait_gifs.py
 
@@ -12,6 +12,8 @@ serves every ranking and both languages.
 """
 import math
 import os
+import subprocess
+import tempfile
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -329,17 +331,27 @@ def frames(n=120):
 
 
 def save(name, frames, duration):
+    """Writes static/kiosk/img/ranking/<name>.webm and its first frame as <name>.png. The frames
+    go through a GIF first - its 128-colour palette is the look - and then into a lossless VP9
+    video, which the Pi's browser plays with about 14% less CPU than the GIF. 4:4:4, because pixel
+    art's one-pixel edges would bleed colour with the usual halved chroma. The PNG is the video's
+    poster: Chromium needs up to a second to start a video, and the stage stays empty until then."""
     os.makedirs(OUT, exist_ok=True)
     strip = Image.new("RGB", (OUT_W, OUT_H * len(frames)))
     for k, frame in enumerate(frames):
         strip.paste(frame, (0, OUT_H * k))
     palette = strip.quantize(colors=128, method=Image.Quantize.MEDIANCUT)
     quantized = [f.quantize(palette=palette, dither=Image.Dither.NONE) for f in frames]
-    path = os.path.join(OUT, name)
-    quantized[0].save(path, save_all=True, append_images=quantized[1:], duration=duration, loop=0,
-                      optimize=True, disposal=1)
+    path = os.path.join(OUT, f"{name}.webm")
+    quantized[0].save(os.path.join(OUT, f"{name}.png"), optimize=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        gif = os.path.join(tmp, f"{name}.gif")
+        quantized[0].save(gif, save_all=True, append_images=quantized[1:], duration=duration, loop=0,
+                          optimize=True, disposal=1)
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", gif, "-c:v", "libvpx-vp9", "-lossless", "1",
+                        "-pix_fmt", "yuv444p", "-row-mt", "1", "-an", path], check=True)
     print(f"{path}: {len(frames)} frames, {os.path.getsize(path) // 1024} KB")
 
 
 if __name__ == "__main__":
-    save("podium.gif", frames(), 80)
+    save("podium", frames(), 80)

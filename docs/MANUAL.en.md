@@ -45,14 +45,48 @@ are in the [README](../README.md).
 
 | Part | Notes |
 |---|---|
-| Raspberry Pi | **3 Model B or newer** (3, 3+, 4, 5, Zero 2 W). A 1 GB Pi 3 is enough; a Pi 4 with 2 GB+ has more headroom. |
-| microSD card | 16 GB or more, preferably A1/A2 – it's the system disk. |
-| Power supply | The official one for your model. Cheap supplies are the most common cause of flaky USB devices and touchscreens. |
+| Raspberry Pi | **3 Model B or newer with at least 1 GB of RAM** (3, 3+, 4, 5). A 1 GB Pi 3 is enough but already uses compressed swap; a Pi 4 with 2 GB+ has more headroom. The Zero 2 W (512 MB) is not enough – see [What the device needs](#what-the-device-needs). |
+| microSD card | 16 GB or more, preferably A1/A2 – it's the system disk. 32 GB leave room for updates. |
+| Power supply | The official one for your model. Cheap supplies are the most common cause of flaky USB devices and touchscreens – the old device with version 1 ran on too little voltage and kept restarting because of it. |
+| Heatsink (recommended) | Without cooling a Pi 3 runs at a little over 60 °C in operation; under sustained load 83 °C was measured, just below where it throttles itself. A passive heatsink and vents in the housing are enough. |
 | Touchscreen | 1024×600 (e.g. [Adafruit #2396](https://www.adafruit.com/product/2396)). The official 7" display (800×480) works too. |
 | NFC reader | **ACR122U** by Advanced Card Systems – the only supported reader. |
 | Real-time clock | **DS3231** module with a CR2032 battery, so the Pi keeps the right time without internet. Wire it to I²C-1: VCC→pin 1, GND→pin 6, SDA→pin 3, SCL→pin 5. CoffeePy checks it regularly and warns when it is missing, doesn't answer or has lost the time. **Replace the battery every two to three years**, warning or not (see [When something goes wrong](#8-when-something-goes-wrong)). |
 | Cards | Any MIFARE cards or key fobs (ISO 14443A) – one per member. Many company or transit cards work as well. |
 | USB stick (recommended) | For automatic backups. Nothing to prepare: you set it up in the dashboard (see [Backups](#backups)) – that erases it. |
+
+### What the device needs
+
+Measured on 29 Oct 2026 on a **Raspberry Pi 3 Model B (1 GB)** running Raspberry Pi OS 13
+(64-bit), with a real office's data: 24 members, 8,672 orders since 2023.
+
+| | Kiosk waiting ("apply your card") | Kiosk showing the ranking |
+|---|---|---|
+| **CPU** (4 cores) | about 0.7 cores – the browser 0.4 of them, the app 0.1 | about 1 core – the browser alone 0.7 |
+| **Memory** (905 MB usable) | about 530 MB used, 340 MB in compressed swap, 330–380 MB available | as on the left, the browser needs 60 MB more |
+| **Graphics memory** (256 MB) | about 12 MB | about 19 MB |
+| **Temperature** without cooling | 60 °C, no throttling | 61 °C, no throttling |
+
+The kiosk's browser needs by far the most: it asks for new cards twice a second and plays
+the animations. The app answers it in 0.25 seconds on average. The ranking's animations are
+videos rather than GIFs – the same picture for about a seventh less of the browser's CPU time.
+
+**Space on the SD card:**
+
+| | |
+|---|---|
+| Operating system | 3–5 GB (Lite), more with the desktop |
+| CoffeePy's running programs (images) | about 0.9 GB |
+| The copy of the previous version after an update (for **Back to …**) | about 0.9 GB |
+| Database | 12 MB |
+| System journal | up to about 50 MB |
+
+On the test device (with the desktop image) 8 GB were used in all. With this data a backup on
+the stick is only about **200 KB** – any stick will do.
+
+**Times:** after switching on, the kiosk is ready in about a minute and a half, after a power
+cut in up to three and a half. An update takes about seven minutes, the first installation
+considerably longer because it builds the app.
 
 ### Housing
 
