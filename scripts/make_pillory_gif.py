@@ -1,4 +1,4 @@
-"""Draws the kiosk ranking's pillory view into static/kiosk/img/ranking/pillory.gif.
+"""Draws the kiosk ranking's pillory view into static/kiosk/img/ranking/pillory.webm.
 
     /tmp/gif/bin/python scripts/make_pillory_gif.py      # venv with pillow, see make_wait_gifs.py
 
@@ -177,4 +177,4 @@ def frames():
 
 
 if __name__ == "__main__":
-    save("pillory.gif", frames(), FRAME_MS)
+    save("pillory", frames(), FRAME_MS)

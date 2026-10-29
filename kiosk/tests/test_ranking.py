@@ -34,7 +34,7 @@ class RankingBadgeTestCase(TestCase):
         response = self.client.get(reverse("kiosk:panel"))
         self.assertEqual(self.podium(response), {1: "Alice X.", 2: "Bob X.", 3: "Carol X."})
         self.assertNotContains(response, "Dave")
-        self.assertContains(response, "podium.gif")
+        self.assertContains(response, "podium.webm")
         self.assertContains(response, '<div class="podium-banner">All time</div>', html=False)
 
     def test_month_tab_names_the_month_in_the_banner(self):
@@ -43,8 +43,8 @@ class RankingBadgeTestCase(TestCase):
         with translation.override("de"):
             month = date_format(timezone.localtime(), "F")
         self.assertContains(response, f'<div class="podium-banner">{month}</div>', html=False)
-        self.assertContains(response, "vault.gif")  # still running - no podium yet
-        self.assertNotContains(response, "podium.gif")
+        self.assertContains(response, "vault.webm")  # still running - no podium yet
+        self.assertNotContains(response, "podium.webm")
         self.assertEqual([place for place, _ in response.context["podium"]], [1, 2, 3])
         self.assertEqual(self.podium(response)[1], "Alice X.")
 
@@ -87,8 +87,8 @@ class RankingBadgeTestCase(TestCase):
 
         self.client.get(reverse("kiosk:ranking_view", args=["pillory"]))
         response = self.client.get(reverse("kiosk:panel"))
-        self.assertContains(response, "ranking/pillory.gif")
-        self.assertNotContains(response, "podium.gif")
+        self.assertContains(response, "ranking/pillory.webm")
+        self.assertNotContains(response, "podium.webm")
         self.assertContains(response, '<div class="podium-banner">Shame</div>', html=False)
         # in the ticker - twice, so the band runs on without a gap
         self.assertEqual(response.content.decode().count("<b>Dave X.</b>"), 2)
@@ -99,9 +99,9 @@ class RankingBadgeTestCase(TestCase):
         self.assertContains(response, "Everyone has paid up!")
         self.assertNotContains(response, "ticker-track")
         # the executioner with nothing to do instead of the walk of shame
-        self.assertContains(response, "ranking/pillory_empty.gif")
+        self.assertContains(response, "ranking/pillory_empty.webm")
         self.assertContains(response, '<div class="podium-banner">No shame</div>', html=False)
-        self.assertNotContains(response, "ranking/pillory.gif")
+        self.assertNotContains(response, "ranking/pillory.webm")
 
     def test_ranking_nav_opens_on_the_podium_again(self):
         self.client.get(reverse("kiosk:ranking_view", args=["pillory"]))
@@ -111,7 +111,7 @@ class RankingBadgeTestCase(TestCase):
 
     def test_unknown_tab_is_ignored(self):
         self.client.get(reverse("kiosk:ranking_view", args=["nonsense"]))
-        self.assertContains(self.client.get(reverse("kiosk:panel")), "podium.gif")
+        self.assertContains(self.client.get(reverse("kiosk:panel")), "podium.webm")
 
 
 class OrderScreenBadgeTestCase(TestCase):

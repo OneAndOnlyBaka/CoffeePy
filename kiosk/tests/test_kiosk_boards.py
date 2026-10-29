@@ -37,7 +37,7 @@ class KioskBoardsTestCase(TestCase):
         boards(False, True)
         panel = self.nav("ranking")
         self.assertContains(panel, 'data-ranking="1"')
-        self.assertContains(panel, "pillory_empty.gif")  # straight to the pillory, the only tab
+        self.assertContains(panel, "pillory_empty.webm")  # straight to the pillory, the only tab
         self.assertNotContains(panel, "ranking-tabs")
         self.client.get(reverse("kiosk:ranking_view", args=["alltime"]))
         self.assertEqual(self.client.session["ranking_view"], "pillory")

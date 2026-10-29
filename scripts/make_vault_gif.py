@@ -1,4 +1,4 @@
-"""Draws the kiosk ranking's month view into static/kiosk/img/ranking/vault.gif.
+"""Draws the kiosk ranking's month view into static/kiosk/img/ranking/vault.webm.
 
     /tmp/gif/bin/python scripts/make_vault_gif.py      # venv with pillow, see make_wait_gifs.py
 
@@ -346,4 +346,4 @@ def frames():
 
 
 if __name__ == "__main__":
-    save("vault.gif", frames(), FRAME_MS)
+    save("vault", frames(), FRAME_MS)

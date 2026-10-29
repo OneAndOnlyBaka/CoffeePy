@@ -65,13 +65,15 @@ Gemessen am 29.10.2026 auf einem **Raspberry Pi 3 Model B (1 GB)** mit Raspberry
 
 | | Kiosk wartet („Karte auflegen“) | Kiosk zeigt die Rangliste |
 |---|---|---|
-| **Prozessor** (4 Kerne) | rund 0,7 Kerne – davon der Browser 0,4, die App 0,1 | rund 1,1 Kerne – der Browser allein 0,8 |
+| **Prozessor** (4 Kerne) | rund 0,7 Kerne – davon der Browser 0,4, die App 0,1 | rund 1 Kern – der Browser allein 0,7 |
 | **Arbeitsspeicher** (905 MB nutzbar) | rund 530 MB belegt, 340 MB komprimiert ausgelagert, 330–380 MB frei | wie links, der Browser braucht 60 MB mehr |
-| **Grafikspeicher** (256 MB) | genug frei | fast voll (unter 1 MB frei) – die großen Animationen |
+| **Grafikspeicher** (256 MB) | rund 12 MB | rund 19 MB |
 | **Temperatur** ohne Kühlung | 60 °C, keine Drosselung | 61 °C, keine Drosselung |
 
 Der Browser am Kiosk braucht mit Abstand am meisten: Er fragt zweimal pro Sekunde nach neuen
-Karten und spielt die Animationen ab. Die App antwortet ihm im Mittel in 0,25 Sekunden.
+Karten und spielt die Animationen ab. Die App antwortet ihm im Mittel in 0,25 Sekunden. Die
+Animationen der Rangliste sind Videos statt GIFs – bei gleichem Bild braucht der Browser dafür
+rund ein Siebtel weniger Rechenzeit.
 
 **Speicherplatz auf der SD-Karte:**
 

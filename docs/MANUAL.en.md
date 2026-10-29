@@ -62,13 +62,14 @@ Measured on 29 Oct 2026 on a **Raspberry Pi 3 Model B (1 GB)** running Raspberry
 
 | | Kiosk waiting ("apply your card") | Kiosk showing the ranking |
 |---|---|---|
-| **CPU** (4 cores) | about 0.7 cores – the browser 0.4 of them, the app 0.1 | about 1.1 cores – the browser alone 0.8 |
+| **CPU** (4 cores) | about 0.7 cores – the browser 0.4 of them, the app 0.1 | about 1 core – the browser alone 0.7 |
 | **Memory** (905 MB usable) | about 530 MB used, 340 MB in compressed swap, 330–380 MB available | as on the left, the browser needs 60 MB more |
-| **Graphics memory** (256 MB) | enough left | nearly full (under 1 MB free) – the big animations |
+| **Graphics memory** (256 MB) | about 12 MB | about 19 MB |
 | **Temperature** without cooling | 60 °C, no throttling | 61 °C, no throttling |
 
 The kiosk's browser needs by far the most: it asks for new cards twice a second and plays
-the animations. The app answers it in 0.25 seconds on average.
+the animations. The app answers it in 0.25 seconds on average. The ranking's animations are
+videos rather than GIFs – the same picture for about a seventh less of the browser's CPU time.
 
 **Space on the SD card:**
 
