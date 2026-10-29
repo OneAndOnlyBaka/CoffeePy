@@ -60,6 +60,14 @@ window.addEventListener("load", function () {
         <div class="wait-card"><p>{% translate "Loading…" %}</p></div>
     </main>
 </div>
+<!-- The ranking videos' posters, held by the page: an image already in the document is reused
+     without asking the server again, so the stage is never empty while a video starts. -->
+<div hidden>
+    <img src="{% static 'kiosk/img/ranking/podium.png' %}" alt="">
+    <img src="{% static 'kiosk/img/ranking/vault.png' %}" alt="">
+    <img src="{% static 'kiosk/img/ranking/pillory.png' %}" alt="">
+    <img src="{% static 'kiosk/img/ranking/pillory_empty.png' %}" alt="">
+</div>
 <!-- Lives outside #panel so the 500ms poll never touches it while it's open. -->
 <div id="qr-modal" class="modal-overlay"
      hx-on:click="if (event.target === event.currentTarget) event.currentTarget.classList.remove('open')">

@@ -399,7 +399,10 @@ mind before changing it:
   `/sys/kernel/debug/dri/0/bo_stats`: 12MB on the wait screen, about 19MB on the ranking.
   The ranking's animations are lossless VP9 4:4:4 videos (`scripts/make_podium_gif.py`
   `save()`), not GIFs: measured A/B on the Pi, about 14% less browser CPU for the same picture
-  and the same RAM - not the GPU memory that was the reason to try.
+  and the same RAM - not the GPU memory that was the reason to try. A video needs up to a
+  second to start, so each has its first frame as `poster`, which `kiosk/index.html` keeps
+  loaded: the static files' 60s max-age would otherwise leave the stage empty while the poster
+  is revalidated.
 - **The Pi 3's GPU has 256MB (CMA), and GPU rasterization fills it with GIF frames**:
   Chromium keeps every decoded frame of an animated GIF as a texture, the ranking's GIFs
   are 120-160 frames of ~1MB, and the GPU process then dies (`dmesg`: "Failed to allocate

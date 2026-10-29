@@ -331,11 +331,11 @@ def frames(n=120):
 
 
 def save(name, frames, duration):
-    """Writes static/kiosk/img/ranking/<name>.webm. The frames go through a GIF first - its
-    128-colour palette is the look - and then into a lossless VP9 video: Chromium keeps every
-    decoded frame of an animated GIF, 120-200 MB of the Pi 3's 256 MB of GPU memory for one of
-    these, while a video holds only the frame it shows. 4:4:4, because pixel art's one-pixel
-    edges would bleed colour with the usual halved chroma."""
+    """Writes static/kiosk/img/ranking/<name>.webm and its first frame as <name>.png. The frames
+    go through a GIF first - its 128-colour palette is the look - and then into a lossless VP9
+    video, which the Pi's browser plays with about 14% less CPU than the GIF. 4:4:4, because pixel
+    art's one-pixel edges would bleed colour with the usual halved chroma. The PNG is the video's
+    poster: Chromium needs up to a second to start a video, and the stage stays empty until then."""
     os.makedirs(OUT, exist_ok=True)
     strip = Image.new("RGB", (OUT_W, OUT_H * len(frames)))
     for k, frame in enumerate(frames):
@@ -343,6 +343,7 @@ def save(name, frames, duration):
     palette = strip.quantize(colors=128, method=Image.Quantize.MEDIANCUT)
     quantized = [f.quantize(palette=palette, dither=Image.Dither.NONE) for f in frames]
     path = os.path.join(OUT, f"{name}.webm")
+    quantized[0].save(os.path.join(OUT, f"{name}.png"), optimize=True)
     with tempfile.TemporaryDirectory() as tmp:
         gif = os.path.join(tmp, f"{name}.gif")
         quantized[0].save(gif, save_all=True, append_images=quantized[1:], duration=duration, loop=0,

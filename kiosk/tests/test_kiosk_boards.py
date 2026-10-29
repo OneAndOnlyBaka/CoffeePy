@@ -48,6 +48,7 @@ class KioskBoardsTestCase(TestCase):
         self.assertContains(panel, "ranking-tabs")
         self.assertNotContains(panel, reverse("kiosk:ranking_view", args=["pillory"]))
         self.assertContains(panel, "disableremoteplayback")  # or Chromium lays its cast button over it
+        self.assertContains(panel, 'poster="/static/kiosk/img/ranking/podium.png"')  # seen before the video starts
 
     def test_switched_off_while_on_screen(self):
         boards(True, True)
