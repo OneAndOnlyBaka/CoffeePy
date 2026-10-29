@@ -231,16 +231,16 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
     </nav>
     {% endif %}
     {% comment %}
-    The animations are videos, not GIFs: Chromium keeps every decoded frame of an animated GIF in
-    the Pi 3's 256 MB of GPU memory - one of these took 120-200 MB - while a video holds the frame
-    it shows (scripts/make_podium_gif.py). Like a GIF it restarts when it is swapped in again, so
-    the panel stays byte-identical from poll to poll here as well.
+    The animations are lossless videos, not GIFs: measured on the Pi, the browser needs about 14%
+    less CPU for the same picture (scripts/make_podium_gif.py). Like a GIF a video restarts when
+    it is swapped in again, so the panel stays byte-identical from poll to poll here as well.
+    disableremoteplayback hides the grey cast button Chromium otherwise lays over every video.
     {% endcomment %}
     <div class="podium-stage">
         <div class="podium-banner">{{ banner }}</div>
         {% if ranking_view == "pillory" %}
         {% if rows %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.webm' %}" autoplay loop muted playsinline disablepictureinpicture aria-hidden="true"></video>
+        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.webm' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
         {% comment %}
         The list twice in a row, moved left by exactly one copy's width per animation round
         (kiosk.css) - so the band never runs out. A CSS animation, like the video, survives the
@@ -259,14 +259,14 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
             </div>
         </div>
         {% else %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.webm' %}" autoplay loop muted playsinline disablepictureinpicture aria-hidden="true"></video>
+        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.webm' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
         <div class="podium-names ticker"><b class="ticker-clear">{% translate "Everyone has paid up!" %}</b></div>
         {% endif %}
         {% else %}
         {% if ranking_view == "month" %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/vault.webm' %}" autoplay loop muted playsinline disablepictureinpicture aria-hidden="true"></video>
+        <video class="podium-gif" src="{% static 'kiosk/img/ranking/vault.webm' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
         {% else %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/podium.webm' %}" autoplay loop muted playsinline disablepictureinpicture aria-hidden="true"></video>
+        <video class="podium-gif" src="{% static 'kiosk/img/ranking/podium.webm' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
         {% endif %}
         <div class="podium-names{% if ranking_view == 'month' %} standings{% endif %}">
             {% for place, row in podium %}

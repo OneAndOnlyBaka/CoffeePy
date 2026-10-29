@@ -47,6 +47,7 @@ class KioskBoardsTestCase(TestCase):
         panel = self.nav("ranking")
         self.assertContains(panel, "ranking-tabs")
         self.assertNotContains(panel, reverse("kiosk:ranking_view", args=["pillory"]))
+        self.assertContains(panel, "disableremoteplayback")  # or Chromium lays its cast button over it
 
     def test_switched_off_while_on_screen(self):
         boards(True, True)
