@@ -12,13 +12,18 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
 from coffee import services
-from coffee.models import AltUidCapture, CASH_METHOD_NAME, MemberDevice, MemberLinkToken, Payment, PaymentMethod
+from coffee.models import (
+    AltUidCapture, AuditLogEntry, CASH_METHOD_NAME, MemberDevice, MemberLinkToken, Payment, PaymentMethod,
+)
 
 from dashboard import audit
 
 from .decorators import ROLLING_SESSION_SECONDS, portal_login_required
 
 CARD_ADD_CAPTURE_SECONDS = 60
+# Generous: a member re-opening an old QR photo a few times must not be locked out.
+LINK_LOCK_AFTER_FAILURES = 10
+LINK_LOCK_MINUTES = 15
 
 
 def _label_for_device(request) -> str:
@@ -29,7 +34,28 @@ def _label_for_device(request) -> str:
     return "Browser"
 
 
+def _link_locked(request) -> bool:
+    """Whether this address has opened too many unknown or expired links lately. The token
+    can't be guessed (256 bits), but every failed try is an audit row - unthrottled, anyone
+    on the network could fill the SD card with them and keep the kiosk's ranking cache
+    (keyed on the newest audit id) recomputing. Counted from the audit log, like the
+    dashboard's lock, so it holds across all gunicorn workers; the first refused request of
+    a lock is logged, the rest aren't - that is the point."""
+    ip = audit.client_ip(request)
+    since = timezone.now() - timedelta(minutes=LINK_LOCK_MINUTES)
+    recent = AuditLogEntry.objects.filter(ip=ip, created_at__gte=since, source=AuditLogEntry.SOURCE_PORTAL)
+    if recent.filter(action="portal.login", outcome=AuditLogEntry.OUTCOME_FAILURE).count() < LINK_LOCK_AFTER_FAILURES:
+        return False
+    if not recent.filter(action="portal.link_locked").exists():
+        audit.log(request, "portal.link_locked", actor="", outcome=AuditLogEntry.OUTCOME_FAILURE,
+                  details=f"{LINK_LOCK_AFTER_FAILURES} invalid links within {LINK_LOCK_MINUTES} minutes")
+    return True
+
+
 def link(request, token):
+    if _link_locked(request):
+        # Also for a valid token: otherwise the lock would only slow down the guessing.
+        return render(request, "portal/link_invalid.html", {"locked_minutes": LINK_LOCK_MINUTES}, status=429)
     link_token = MemberLinkToken.objects.select_related("member").filter(token=token).first()
     if link_token is None or link_token.is_expired():
         audit.log(request, "portal.login", actor="", details="link unknown or expired", outcome="failure")

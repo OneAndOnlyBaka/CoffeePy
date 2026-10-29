@@ -11,6 +11,9 @@
         <div class="card">
             {% include "includes/language_switch.html" %}
             <h1>{% translate "This link is no longer valid" %}</h1>
+            {% if locked_minutes %}
+            <p class="msg error">{% blocktranslate trimmed with minutes=locked_minutes %}Too many invalid links were opened from this device - links are refused here for up to {{ minutes }} minutes.{% endblocktranslate %}</p>
+            {% endif %}
             <p>{% blocktranslate trimmed %}The link may have expired, already been used, or this device may have been logged out. Ask an admin for a fresh "Link this phone" QR code from the kiosk's Settings screen.{% endblocktranslate %}</p>
             <p class="muted">{% blocktranslate trimmed %}Your browser warns about this site? <a href="{{ certificate_url }}">Download the device certificate</a> and install it once.{% endblocktranslate %}</p>
         </div>

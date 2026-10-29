@@ -5,7 +5,8 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from coffee.models import Member, MemberDevice, MemberLinkToken
+from coffee.models import AuditLogEntry, Member, MemberDevice, MemberLinkToken
+from portal.views import LINK_LOCK_AFTER_FAILURES, LINK_LOCK_MINUTES
 
 
 class LinkBootstrapTestCase(TestCase):
@@ -90,3 +91,46 @@ class PortalIndexTestCase(TestCase):
 
         response = self.client.get(reverse("portal:index"))
         self.assertRedirects(response, reverse("portal:link_invalid"))
+
+
+class LinkGuessingLockTestCase(TestCase):
+    def setUp(self):
+        self.alice = Member.objects.create(uid=42, nickname="Alice X.")
+
+    def _open(self, token, ip="192.168.4.20"):
+        return Client(HTTP_X_FORWARDED_FOR=ip).get(reverse("portal:link", args=[token]))
+
+    def _guess(self, times, ip="192.168.4.20"):
+        for i in range(times):
+            self._open(f"guess-{i}", ip)
+
+    def _valid_token(self):
+        return MemberLinkToken.objects.create(member=self.alice, expires_at=timezone.now() + timedelta(minutes=5)).token
+
+    def test_a_few_invalid_links_dont_lock(self):
+        self._guess(LINK_LOCK_AFTER_FAILURES - 1)
+        self.assertRedirects(self._open(self._valid_token()), reverse("portal:index"))
+
+    def test_too_many_invalid_links_lock_even_a_valid_one(self):
+        self._guess(LINK_LOCK_AFTER_FAILURES)
+        token = self._valid_token()
+        response = self._open(token)
+        self.assertEqual(response.status_code, 429)
+        self.assertContains(response, "Too many invalid links", status_code=429)
+        self.assertTrue(MemberLinkToken.objects.filter(token=token).exists())
+
+    def test_a_lock_writes_one_audit_row_not_one_per_try(self):
+        self._guess(LINK_LOCK_AFTER_FAILURES)
+        rows = AuditLogEntry.objects.count()
+        self._guess(50)
+        self.assertEqual(AuditLogEntry.objects.count(), rows + 1)
+        self.assertEqual(AuditLogEntry.objects.get(action="portal.link_locked").ip, "192.168.4.20")
+
+    def test_the_lock_is_per_address(self):
+        self._guess(LINK_LOCK_AFTER_FAILURES)
+        self.assertRedirects(self._open(self._valid_token(), ip="192.168.4.21"), reverse("portal:index"))
+
+    def test_the_lock_ends(self):
+        self._guess(LINK_LOCK_AFTER_FAILURES)
+        AuditLogEntry.objects.update(created_at=timezone.now() - timedelta(minutes=LINK_LOCK_MINUTES + 1))
+        self.assertRedirects(self._open(self._valid_token()), reverse("portal:index"))

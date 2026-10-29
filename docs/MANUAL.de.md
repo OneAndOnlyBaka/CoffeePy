@@ -452,6 +452,8 @@ ein verlorenes Gerät ab.
 
 Ein Link, der abgelaufen ist oder schon benutzt wurde, führt hierher – dann einfach am Kiosk
 einen neuen erzeugen.
+Nach zehn ungültigen Links innerhalb von 15 Minuten nimmt ein Handy bis zu einer Viertelstunde lang
+keinen Link mehr an – so kann niemand Links auf gut Glück durchprobieren.
 
 ![Link ungültig](pictures/manual/de/portal-link-invalid.png)
 
