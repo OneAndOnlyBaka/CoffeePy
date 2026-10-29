@@ -431,6 +431,8 @@ the bottom of the page.
 ![Portal devices](pictures/manual/en/portal-devices.png)
 
 A link that has expired or was already used ends up here – just create a new one on the kiosk.
+After ten invalid links within 15 minutes, a phone gets no more links accepted for up to a quarter of
+an hour – so nobody can try out links at random.
 
 ![Link no longer valid](pictures/manual/en/portal-link-invalid.png)
 

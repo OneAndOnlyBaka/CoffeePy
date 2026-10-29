@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 00:24+0100\n"
+"POT-Creation-Date: 2026-10-29 22:39+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -2403,6 +2403,14 @@ msgstr "Link nicht mehr gültig"
 
 msgid "This link is no longer valid"
 msgstr "Dieser Link ist nicht mehr gültig"
+
+#, python-format
+msgid ""
+"Too many invalid links were opened from this device - links are refused here "
+"for up to %(minutes)s minutes."
+msgstr ""
+"Von diesem Gerät wurden zu viele ungültige Links geöffnet - Links werden hier "
+"bis zu %(minutes)s Minuten lang abgelehnt."
 
 msgid ""
 "The link may have expired, already been used, or this device may have been "
