@@ -1,3 +1,8 @@
+# The project's name, not the directory's: an image without `image:` (nfc-bridge) is named after
+# it, and a bundle built in a checkout called anything but "coffeepy" carried an nfc-bridge
+# image the device never ran - it kept its old one. The device's /opt/coffeepy gave this name.
+name: coffeepy
+
 services:
   db:
     image: postgres:16-alpine

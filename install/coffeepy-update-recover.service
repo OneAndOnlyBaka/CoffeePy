@@ -1,0 +1,19 @@
+[Unit]
+Description=CoffeePy: undo an update a power cut interrupted, before the stack starts
+# Only when there is one - every other boot doesn't pay for a Python start (boot time is CPU).
+ConditionPathExists=/opt/coffeepy/data/updates/journal.json
+Requires=docker.service
+After=docker.service
+# Before, not Requires: the stack has to start even if this fails - and with the old version's
+# compose file back in place, it starts that one.
+Before=coffeepy.service coffeepy-update-watcher.service
+
+[Service]
+Type=oneshot
+Environment=COFFEEPY_DIR=/opt/coffeepy
+ExecStart=/usr/bin/python3 /opt/coffeepy/install/update_watcher.py --recover
+# A rollback loads the database and waits for /health/ (HEALTH_TIMEOUT) - on a Pi 3, minutes.
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

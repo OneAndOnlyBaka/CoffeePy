@@ -242,7 +242,10 @@ screenshot tooling draws single screens with its functions.
 ## Installing on the device
 
 Trying something on the real test Pi (deploy, screenshots, the kiosk's browser, load and
-page timings, update bundles) goes through the `pi-device` skill in `.claude/skills/`.
+page timings, update bundles) goes through the `pi-device` skill in `.claude/skills/`. A larger
+change to the update path (PostgreSQL version, watcher, recovery, data migrations) is only done
+after the `upgrade-test` skill's full run: the Pi downgraded two releases, updated hop by hop
+through the real mechanism, every hop checked for lost data.
 
 `install/install.sh` turns a plain Raspberry Pi OS Lite into the kiosk. It replaced both a
 two-phase setup script and a pi-gen image build; what those cost us is worth keeping in
@@ -357,12 +360,24 @@ mind before changing it:
   device). An update bundle with its images is bigger than that on a Pi 3 (`ls -l` the output of
   `build_update_bundle.sh`), so neither `build_update_bundle.sh` nor `update_watcher.py` may stage
   it there.
-- **Updates are signed, checked, and undoable** (`install/update_watcher.py`): the bundle's
+- **Updates are signed, checked, and only go forward** (`install/update_watcher.py`): the bundle's
   `manifest.json` is signed with the key from `scripts/update_signing_key.sh` (public half in
   `install/update-signing.pub`, installed to `/etc/coffeepy/`), names the platform, the space
   it needs and every file's checksum. Before an update the database goes to the SD card
   (`data/updates/pre-update/`, never the backup stick) and the running images are tagged
-  `:coffeepy-previous-*`; if `/health/` doesn't answer afterwards, all of it goes back. A new
+  `:coffeepy-previous-*`; if `/health/` doesn't answer afterwards, all of it goes back. Once it
+  does, those copies are deleted - there is deliberately no rollback by hand: a version that came
+  up is fixed by the next update. The one way back the version check lets through - not offered
+  anywhere, just not refused - is a pre-release (SemVer with a `-`) to a release of its major
+  version (`back_to_release`); migrations the release doesn't know are reversed by the running
+  image first (`migrate_back`, after the dump: one that can't be reversed costs a rollback, not
+  data). A power
+  cut mid-update is caught at the next boot: every step goes into `data/updates/journal.json`
+  before it changes anything, `coffeepy-update-recover.service` (before the stack) puts the old
+  version back and the bundle into `incoming/` again - at most three attempts. The dump is
+  gzipped plain SQL and checked for pg_dump's closing line before anything relies on it: psql
+  commits a dump cut off mid-data (measured), so `load_database` only sends `COMMIT` after the
+  whole of it. Files the next boot needs are replaced atomically (`write_file`, `replace_dir`). A new
   `.env` setting reaches existing devices through `env_defaults` in the manifest (taken from
   `.env.example`). The watcher runs `install.sh --only=hardware,services,kiosk` itself, with
   `COFFEEPY_FROM_WATCHER=1` - then it must not restart the watcher, not touch the
@@ -393,7 +408,7 @@ mind before changing it:
   (pi-device skill) measures per process group; mind the ranking screen's 30s idle return
   when measuring it. Every `docker compose build` leaves the replaced image dangling, a few
   hundred MB each - `install.sh`'s image step and the update watcher prune them (only
-  dangling ones: the rollback copies are tagged).
+  dangling ones: the old version's images stay tagged until its successor came up).
 - **`CmaFree` is not the GPU's free memory.** The kernel lends the 256MB CMA area to ordinary
   movable memory, and on a 1GB Pi under pressure it is always near zero. What the GPU holds is
   `/sys/kernel/debug/dri/0/bo_stats`: 12MB on the wait screen, about 19MB on the ranking.

@@ -580,8 +580,9 @@ quiet_networkmanager() {
 step_services() {
 	log "Installing the systemd units"
 	local unit
-	for unit in coffeepy.service coffeepy-update-watcher.service coffeepy-storage.service \
-	            coffeepy-rtc-sync.service coffeepy-rtc-sync.timer coffeepy-watchdog.service coffeepy-watchdog.timer; do
+	for unit in coffeepy.service coffeepy-update-watcher.service coffeepy-update-recover.service \
+	            coffeepy-storage.service coffeepy-rtc-sync.service coffeepy-rtc-sync.timer \
+	            coffeepy-watchdog.service coffeepy-watchdog.timer; do
 		if [ "${DRY_RUN}" = "1" ]; then
 			info "[dry-run] install ${unit} (paths pointing at ${TARGET_DIR})"
 		else
@@ -590,7 +591,7 @@ step_services() {
 		fi
 	done
 	run systemctl daemon-reload
-	run systemctl enable coffeepy.service coffeepy-update-watcher.service
+	run systemctl enable coffeepy.service coffeepy-update-watcher.service coffeepy-update-recover.service
 	# docker.service itself waits for network-online.target, and NetworkManager only declares
 	# that once ethernet got a lease or gave up - ~30s on every boot of a box that never has an
 	# uplink. Nothing here needs one: the kiosk is localhost, phones come in over the AP.
@@ -602,7 +603,7 @@ step_services() {
 	run install -m 0644 "${SCRIPT_DIR}/update-signing.pub" /etc/coffeepy/update-signing.pub
 	# The watcher runs this step itself after an update - restarting it then would cut the
 	# update short; it hands over to its new version on its own once it is done.
-	# try-restart, not restart: the watcher Requires coffeepy.service, so starting it on a
+	# try-restart, not restart: the watcher Wants coffeepy.service, so starting it on a
 	# fresh device would start the stack - and `compose up` would build the images itself,
 	# before step_images, until systemd's start timeout kills it. step_verify starts it.
 	[ "${COFFEEPY_FROM_WATCHER:-0}" = "1" ] || run systemctl try-restart coffeepy-update-watcher.service

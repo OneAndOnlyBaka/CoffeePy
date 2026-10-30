@@ -77,7 +77,7 @@ videos rather than GIFs – the same picture for about a seventh less of the bro
 |---|---|
 | Operating system | 3–5 GB (Lite), more with the desktop |
 | CoffeePy's running programs (images) | about 0.9 GB |
-| The copy of the previous version after an update (for **Back to …**) | about 0.9 GB |
+| During an update: the new version next to the running one | about 0.9 GB more, until it has come up |
 | Database | 12 MB |
 | System journal | up to about 50 MB |
 
@@ -660,8 +660,8 @@ to the stick; if the restore fails, nothing is changed. An encrypted backup need
 
 #### Update
 
-Upload an update bundle and follow it being installed (see [Updates](#updates)). **Back to …**
-returns to the version before the last update. **Versions** lists exactly what runs on the
+Upload an update bundle and follow it being installed (see [Updates](#updates)). There is no
+way back to an earlier version by hand. **Versions** lists exactly what runs on the
 device: the CoffeePy version and its commit, Python, Django, the database, the operating
 system, Docker, and every container with the id of its image – **Copy all** puts the whole list
 on the clipboard, ready for a bug report. The CoffeePy version alone is also at the bottom of
@@ -754,15 +754,24 @@ can upload it to a device's dashboard right away and follow it being installed.
 Otherwise upload the bundle in the dashboard under **Update**. The device then:
 
 1. checks the **signature** and every file's checksum, that the bundle is meant for this device,
-   that there is room, and that it isn't older than what's installed (unless *Allow installing
-   an older version* is ticked),
+   that there is room, and that it isn't older than what's installed - the one exception: a
+   device running a pre-release (a test build, its version has a "-" such as 2.1.0-beta.3) takes
+   a release of the same major version, 2.0.2 say; the device first takes its database back to
+   what that release knows,
 2. saves the database and the running version **to the SD card** (never to the backup stick),
 3. installs it – the kiosk shows "We'll be right back" with a progress bar, the update page the log,
 4. checks that the new version answers. If it doesn't, the previous version **goes back
    automatically**, data included.
 
-**Back to …** on the update page returns to the version before the last update by hand. The
-data then also goes back to the state before that update.
+Once the new version has come up, the copy of the previous one is deleted: **updates only go
+forward**. Something wrong with a version is fixed by the next update, not by going back – there
+is no button for that (a test build going back to its release, see above, is the one exception). The database dumps under *Saved before updates* stay on the SD card as
+copies of the data.
+
+**A power cut during an update** does no harm. When the device starts again, it first puts the
+version from before the update back, data included (the kiosk shows "Repairing an interrupted
+update"), and then installs the same bundle again from the start – at most three times. A
+bundle that failed on its own, rather than because of the power cut, is not retried.
 
 For scripts there is `./scripts/build_update_bundle.sh` (its options are listed at the top of
 the script); an update also works from a PC through the provisioning tool.

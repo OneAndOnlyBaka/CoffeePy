@@ -155,8 +155,6 @@ step_upload() {
 	ask DEVICE_HOST "$(t "Device" "Gerät")" "$(t "Its address, as in the browser (e.g. 192.168.4.1)." "Seine Adresse wie im Browser (z.B. 192.168.4.1).")" check_host || return 0
 	ask DEVICE_USER "$(t "Dashboard admin" "Dashboard-Admin")" "$(t "An admin of the device's dashboard." "Ein Admin des Dashboards auf dem Gerät.")" check_nonempty || return 0
 	ask DEVICE_PASSWORD "$(t "Password" "Passwort")" "$(t "Their dashboard password." "Das Dashboard-Passwort.")" check_nonempty secret || return 0
-	local downgrade=0
-	ui_confirm "$(t "Older version" "Ältere Version")" "$(t "Allow installing it if it is older than what the device runs?" "Installieren erlauben, falls es älter ist als die Version auf dem Gerät?")" no && downgrade=1
 
 	local base="https://${DEVICE_HOST}" jar="${WORK}/cookies" token
 	# The device signs its own certificate; its CA is offered at /certificate/. For this one
@@ -173,7 +171,7 @@ step_upload() {
 	token="$(awk '$6 == "csrftoken" {print $7}' "${jar}")"
 	ui_progress 15 "$(t "Uploading" "Wird hochgeladen")" "$(basename "${BUNDLE}") · $(du -h "${BUNDLE}" | cut -f1)"
 	curl -sk --max-time 3600 -b "${jar}" -c "${jar}" -o /dev/null -e "${base}/dashboard/update/" \
-		-F "csrfmiddlewaretoken=${token}" -F "allow_downgrade=$([ "${downgrade}" = 1 ] && echo 1 || echo 0)" \
+		-F "csrfmiddlewaretoken=${token}" \
 		-F "bundle=@${BUNDLE}" "${base}/dashboard/update/upload/" \
 		|| fail "$(t "The upload broke off." "Das Hochladen ist abgebrochen.")"
 

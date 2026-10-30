@@ -27,12 +27,15 @@ class UpdatePageTestCase(FakeDevice, TestCase):
 
     def test_page(self):
         self.write("installed.json", {"version": "v2", "applied_at": time.time()})
-        self.write("previous.json", {"installed": {"version": "v1"}})
+        self.write("previous.json", {"installed": {"version": "v1"}})  # an older watcher's, mid-update
         (self.updates / "pre-update").mkdir()
-        (self.updates / "pre-update" / "before-v1.dump").write_bytes(b"x")
+        (self.updates / "pre-update" / "before-v1.dump").write_bytes(b"x")  # an older watcher's
+        (self.updates / "pre-update" / "before-v2.sql.gz").write_bytes(b"x")
         response = self.client.get(reverse("dashboard:update"))
-        for text in ("v2", "Back to v1", "before-v1.dump", "No update processed yet."):
+        for text in ("v2", "before-v1.dump", "before-v2.sql.gz", "No update processed yet."):
             self.assertContains(response, text)
+        self.assertNotContains(response, "Back to")  # only ever forward
+        self.assertNotContains(response, "allow_downgrade")
 
     def test_page_on_a_fresh_device(self):
         response = self.client.get(reverse("dashboard:update"))
@@ -41,14 +44,22 @@ class UpdatePageTestCase(FakeDevice, TestCase):
 
     def test_upload(self):
         bundle = SimpleUploadedFile("coffeepy-update-v3.tar", b"TAR")
+        # An old form's downgrade box is ignored: an older version only gets in as the watcher allows.
         self.client.post(reverse("dashboard:update_upload"), {"bundle": bundle, "allow_downgrade": "1"})
         self.assertEqual((self.updates / "incoming" / "coffeepy-update-v3.tar").read_bytes(), b"TAR")
         options = json.loads((self.updates / "incoming" / "coffeepy-update-v3.tar.options.json").read_text())
-        self.assertEqual(options, {"allow_downgrade": True, "requested_by": "boss"})
-        self.assertEqual(AuditLogEntry.objects.get(action="update.upload").details, "downgrade allowed")
+        self.assertEqual(options, {"requested_by": "boss"})
+        self.assertEqual(AuditLogEntry.objects.get(action="update.upload").details, "")
         response = self.client.post(reverse("dashboard:update_upload"),
                                     {"bundle": SimpleUploadedFile("again.tar", b"TAR")}, follow=True)
         self.assertContains(response, "already being applied")  # one waiting is enough
+
+    def test_no_upload_while_an_interrupted_update_waits(self):
+        self.write("journal.json", {"bundle": "coffeepy-update-v2.tar", "phase": "switched"})
+        response = self.client.post(reverse("dashboard:update_upload"),
+                                    {"bundle": SimpleUploadedFile("u.tar", b"x")}, follow=True)
+        self.assertContains(response, "already being applied")
+        self.assertFalse((self.updates / "incoming" / "u.tar").exists())
 
     def test_upload_refused(self):
         response = self.client.post(reverse("dashboard:update_upload"),
@@ -62,15 +73,6 @@ class UpdatePageTestCase(FakeDevice, TestCase):
         self.write("state.json", {"state": "running", "updated": time.time()})
         response = self.client.post(reverse("dashboard:update_upload"),
                                     {"bundle": SimpleUploadedFile("u.tar", b"x")}, follow=True)
-        self.assertContains(response, "already being applied")
-
-    def test_rollback(self):
-        response = self.client.post(reverse("dashboard:update_rollback"), follow=True)
-        self.assertContains(response, "no previous version")
-        self.write("previous.json", {"installed": {"version": "v1"}})
-        self.client.post(reverse("dashboard:update_rollback"))
-        self.assertEqual(json.loads((self.updates / "incoming" / "rollback.request").read_text()), {"requested_by": "boss"})
-        response = self.client.post(reverse("dashboard:update_rollback"), follow=True)
         self.assertContains(response, "already being applied")
 
     def test_status(self):

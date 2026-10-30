@@ -81,7 +81,7 @@ rund ein Siebtel weniger Rechenzeit.
 |---|---|
 | Betriebssystem | 3–5 GB (Lite), mit Desktop mehr |
 | Die laufenden Programme von CoffeePy (Images) | rund 0,9 GB |
-| Die Sicherungskopie der vorigen Version nach einem Update (für **Zurück zu …**) | rund 0,9 GB |
+| Während eines Updates: die neue Version neben der laufenden | rund 0,9 GB mehr, bis sie läuft |
 | Datenbank | 12 MB |
 | Systemprotokoll | bis rund 50 MB |
 
@@ -695,7 +695,7 @@ fehl, bleibt alles, wie es war. Ein verschlüsseltes Backup braucht die Passphra
 #### Update
 
 Ein Update-Paket hochladen und verfolgen, wie es eingespielt wird (siehe [Updates](#updates)).
-**Zurück zu …** kehrt zur Version vor dem letzten Update zurück. **Versionen** listet genau, was
+Einen Weg zurück zu einer früheren Version von Hand gibt es nicht. **Versionen** listet genau, was
 auf dem Gerät läuft: die CoffeePy-Version und ihren Commit, Python, Django, die Datenbank, das
 Betriebssystem, Docker und jeden Container mit der ID seines Images – **Alle kopieren** legt die
 ganze Liste in die Zwischenablage, fertig für eine Fehlermeldung. Die CoffeePy-Version allein
@@ -791,16 +791,27 @@ es auf Wunsch gleich ins Dashboard eines Geräts hochladen und verfolgen, wie es
 Sonst lädst du das Paket im Dashboard unter **Update** hoch. Das Gerät
 
 1. prüft die **Signatur** und die Prüfsumme jeder Datei, ob das Paket für dieses Gerät gedacht
-   ist, ob genug Platz da ist und ob es nicht älter als das Installierte ist (außer *Installation
-   einer älteren Version als der installierten erlauben* ist angehakt),
+   ist, ob genug Platz da ist und ob es nicht älter als das Installierte ist – mit einer Ausnahme:
+   Ein Gerät mit einem Vorab-Stand (einem Test-Build, seine Version hat ein „-“ wie 2.1.0-beta.3)
+   nimmt ein Release derselben Hauptversion an, etwa 2.0.2; die Datenbank bringt das Gerät dafür
+   vorher auf den Stand, den dieses Release kennt,
 2. sichert die Datenbank und die laufende Version **auf die SD-Karte** (nie auf den Backup-Stick),
 3. spielt es ein – der Kiosk zeigt „Wir sind gleich wieder da“ mit Fortschrittsbalken, die
    Update-Seite den Verlauf,
 4. prüft, ob die neue Version antwortet. Wenn nicht, kommt die vorige Version **automatisch
    zurück**, samt Daten.
 
-**Zurück zu …** auf der Update-Seite kehrt von Hand zur Version vor dem letzten Update zurück.
-Die Daten gehen dabei ebenfalls auf den Stand vor diesem Update zurück.
+Sobald die neue Version läuft, wird die Kopie der vorigen gelöscht: **Updates gehen nur nach
+vorne**. Ist an einer Version etwas falsch, behebt das das nächste Update, nicht ein Schritt
+zurück – dafür gibt es keinen Knopf (ein Test-Build, der zu seinem Release zurückgeht, siehe oben,
+ist die einzige Ausnahme). Die Datenbank-Sicherungen unter *Vor Updates gesichert*
+bleiben als Kopie der Daten auf der SD-Karte.
+
+**Ein Stromausfall während eines Updates** schadet nicht. Beim nächsten Start setzt das Gerät
+zuerst die Version von vor dem Update wieder ein, samt Daten (der Kiosk zeigt „Unterbrochenes
+Update wird repariert“), und spielt dann dasselbe Paket noch einmal von vorne ein – höchstens
+dreimal. Ein Paket, das von sich aus gescheitert ist und nicht am Stromausfall, wird nicht
+wiederholt.
 
 Für Scripte gibt es `./scripts/build_update_bundle.sh` (seine Optionen stehen am Anfang des
 Scripts); ein Update geht auch über das Provisioning-Tool von einem PC aus.

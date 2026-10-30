@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 22:39+0100\n"
+"POT-Creation-Date: 2026-10-30 07:53+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -1622,17 +1622,6 @@ msgstr "Installierte Version"
 msgid "applied %(when)s"
 msgstr "eingespielt %(when)s"
 
-msgid ""
-"Go back to the previous version? The data goes back to the state before the "
-"last update."
-msgstr ""
-"Zur vorigen Version zurück? Die Daten gehen auf den Stand vor dem letzten "
-"Update zurück."
-
-#, python-format
-msgid "Back to %(version)s"
-msgstr "Zurück zu %(version)s"
-
 msgid "Status"
 msgstr "Status"
 
@@ -1658,9 +1647,6 @@ msgstr ""
 
 msgid "Update bundle"
 msgstr "Update-Paket"
-
-msgid "Allow installing an older version than the installed one"
-msgstr "Installation einer älteren Version als der installierten erlauben"
 
 msgid "Upload and install"
 msgstr "Hochladen und installieren"
@@ -1692,11 +1678,11 @@ msgid "Saved before updates"
 msgstr "Vor Updates gesichert"
 
 msgid ""
-"The database as it was before each of the last updates - on the SD card, for "
-"going back."
+"The database as it was before each of the last updates - a copy of the data, "
+"on the SD card."
 msgstr ""
-"Die Datenbank im Stand vor jedem der letzten Updates – auf der SD-Karte, für "
-"den Weg zurück."
+"Die Datenbank im Stand vor jedem der letzten Updates – eine Kopie der Daten, "
+"auf der SD-Karte."
 
 msgid "Edit user"
 msgstr "Benutzer bearbeiten"
@@ -1961,12 +1947,6 @@ msgstr "Bitte lade ein .tar-Update-Paket hoch."
 #, python-format
 msgid "Uploaded %(name)s - it is checked and applied now."
 msgstr "%(name)s hochgeladen – es wird jetzt geprüft und eingespielt."
-
-msgid "There is no previous version to go back to."
-msgstr "Es gibt keine vorige Version, zu der man zurückkönnte."
-
-msgid "Going back to the previous version - this takes a few minutes."
-msgstr "Zurück zur vorigen Version – das dauert ein paar Minuten."
 
 msgid "Admin access"
 msgstr "Admin-Zugang"
@@ -2299,6 +2279,12 @@ msgstr "Neue Version wird vorbereitet"
 msgid "Restarting"
 msgstr "Wird neu gestartet"
 
+msgid "Going back to the previous version"
+msgstr "Vorige Version wird wiederhergestellt"
+
+msgid "Repairing an interrupted update"
+msgstr "Unterbrochenes Update wird repariert"
+
 msgid "Setting up the WiFi"
 msgstr "WLAN wird eingerichtet"
 
@@ -2409,8 +2395,8 @@ msgid ""
 "Too many invalid links were opened from this device - links are refused here "
 "for up to %(minutes)s minutes."
 msgstr ""
-"Von diesem Gerät wurden zu viele ungültige Links geöffnet - Links werden hier "
-"bis zu %(minutes)s Minuten lang abgelehnt."
+"Von diesem Gerät wurden zu viele ungültige Links geöffnet - Links werden "
+"hier bis zu %(minutes)s Minuten lang abgelehnt."
 
 msgid ""
 "The link may have expired, already been used, or this device may have been "
@@ -2509,6 +2495,26 @@ msgstr "Welcher Kaffee"
 msgid "CoffeePy is being updated. This page comes back on its own."
 msgstr ""
 "CoffeePy wird gerade aktualisiert. Diese Seite kommt von selbst wieder."
+
+#~ msgid "Allow installing an older version than the installed one"
+#~ msgstr "Installation einer älteren Version als der installierten erlauben"
+
+#~ msgid ""
+#~ "Go back to the previous version? The data goes back to the state before "
+#~ "the last update."
+#~ msgstr ""
+#~ "Zur vorigen Version zurück? Die Daten gehen auf den Stand vor dem letzten "
+#~ "Update zurück."
+
+#, python-format
+#~ msgid "Back to %(version)s"
+#~ msgstr "Zurück zu %(version)s"
+
+#~ msgid "There is no previous version to go back to."
+#~ msgstr "Es gibt keine vorige Version, zu der man zurückkönnte."
+
+#~ msgid "Going back to the previous version - this takes a few minutes."
+#~ msgstr "Zurück zur vorigen Version – das dauert ein paar Minuten."
 
 #~ msgid "Pay &amp; Stats"
 #~ msgstr "Zahlen &amp; Statistik"

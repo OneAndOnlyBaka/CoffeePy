@@ -51,7 +51,6 @@ urlpatterns = [
     path("backup/<str:source>/<str:filename>/restore/", views_backup.backup_restore, name="backup_restore"),
     path("update/", views_update.update, name="update"),
     path("update/upload/", views_update.update_upload, name="update_upload"),
-    path("update/rollback/", views_update.update_rollback, name="update_rollback"),
     path("update/status/", views_update.update_status, name="update_status"),
     path("import/", views.import_legacy_db, name="import_legacy_db"),
     path("import/status/", views.import_status, name="import_status"),

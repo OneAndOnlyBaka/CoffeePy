@@ -1,7 +1,8 @@
 """install/update_watcher.py against a simulated device: real bundles (tar, manifest, Ed25519
 signature checked by the real openssl), docker and compose replaced by a model that records
-what was done - so every check, the update, the automatic and the manual rollback run
+what was done - so every check, the update, the automatic rollback and a power cut at any step run
 without Docker."""
+import gzip
 import hashlib
 import importlib.util
 import io
@@ -21,6 +22,14 @@ from django.test import SimpleTestCase
 
 HAS_OPENSSL = bool(shutil.which("openssl"))
 SIGN_SCRIPT = settings.BASE_DIR / "scripts" / "sign_update_bundle.sh"
+# What `pg_dump --format plain | gzip` gives - its end as PostgreSQL 16.10+ writes it.
+DUMP = gzip.compress(b"COPY public.t (i) FROM stdin;\n1\n\\.\n\n--\n-- PostgreSQL database dump complete\n--\n\n"
+                     b"\\unrestrict abc\n\n")
+
+
+class PowerCut(BaseException):
+    """Not an Exception: nothing in the watcher may catch it - a power cut runs no except: and
+    no rollback (the finally: blocks it does run only tidy up the temporary directory)."""
 
 
 def load_watcher(project, pubkey):
@@ -41,9 +50,13 @@ class FakeDocker:
         self.images = ["coffeepy-web:latest", "postgres:16-alpine"]
         self.tags = {}
         self.restored = []
+        self.dump = DUMP
         self.fail = set()
         self.ps = (b'{"ID":"aaa111","Service":"web","Image":"coffeepy-web:latest","State":"running"}\n'
                    b'{"ID":"bbb222","Service":"db","Image":"postgres:16-alpine","State":"running"}\n')
+        # The migrations the new image knows, and those the database has - the same, normally.
+        self.known = [["coffee", "0001_initial"], ["coffee", "0002_more"], ["dashboard", "0001_initial"]]
+        self.applied = [tuple(m) for m in self.known]
 
     def run(self, *args, stdin=None, cwd=None, check=True):
         args = tuple(str(a) for a in args)
@@ -60,18 +73,29 @@ class FakeDocker:
                     raise self.error(f"{failing} failed")
                 return SimpleNamespace(returncode=1, stdout=b"", stderr=b"failed")
         stdout = b""
-        if args[:3] == ("docker", "compose", "ps"):
+        if args[:5] == ("docker", "compose", "ps", "-q", "db"):
+            stdout = b"bbb222\n"
+        elif args[:3] == ("docker", "compose", "ps"):
             stdout = self.ps
+        elif args[:2] == ("docker", "inspect") and "{{range" in args[3]:
+            stdout = b"coffeepy_default \n"
+        elif args[:2] == ("docker", "run") and "MigrationLoader" in args[-1]:
+            leaves = {}
+            for app, name in self.known:
+                leaves[app] = max(leaves.get(app, ""), name)
+            stdout = b"some warning\n" + json.dumps({"nodes": self.known, "leaves": sorted(leaves.items())}).encode()
+        elif args[:2] == ("docker", "compose") and "django_migrations" in args[-1]:
+            stdout = "".join(f"{app} {name}\n" for app, name in self.applied).encode()
         elif args[:2] == ("docker", "inspect"):
             stdout = b"aaa111ffffff sha256:0123456789abcdef\nbbb222ffffff sha256:fedcba9876543210\n"
         elif args[:2] == ("docker", "version") or args[:3] == ("docker", "compose", "version"):
             stdout = b"28.1.1"
         elif args[:2] == ("docker", "compose") and "config" in args:
             stdout = "\n".join(self.images).encode()
-        elif args[:2] == ("docker", "compose") and "pg_dump" in args:
-            stdout = b"PGDMP-dump"
-        elif args[:2] == ("docker", "compose") and args[2:5] == ("exec", "-T", "db") and "sh" in args:
-            self.restored.append(stdin)
+        elif args[:2] == ("docker", "compose") and args[2:5] == ("exec", "-T", "db") and "pg_dump" in args[-1]:
+            stdout = self.dump
+        elif args[:2] == ("docker", "compose") and args[2:5] == ("exec", "-T", "db") and "psql" in args[-1]:
+            self.restored.append((args[-1], stdin))
         elif args[:2] == ("docker", "tag"):
             self.tags[args[3]] = args[2]
         return SimpleNamespace(returncode=0, stdout=stdout, stderr=b"", key=key)
@@ -168,14 +192,21 @@ class UpdateWatcherTestCase(SimpleTestCase):
         self.assertNotIn("DJANGO_LANGUAGE_CODE=en", env)
         self.assertEqual(self.docker.tags, {"coffeepy-web:coffeepy-previous-latest": "coffeepy-web:latest",
                                             "postgres:coffeepy-previous-16-alpine": "postgres:16-alpine"})
-        self.assertEqual(len(list(self.watcher.PRE_UPDATE.glob("*.dump"))), 1)
+        self.assertEqual(len(list(self.watcher.PRE_UPDATE.glob("*.sql.gz"))), 1)
         self.assertIn(("docker", "load", "-i"), [c[:3] for c in self.docker.calls])
         self.assertIn(str(self.project / "install" / "install.sh"), [c[0] for c in self.docker.calls])
         self.assertIn(("systemctl", "restart", "--no-block", "coffeepy-update-watcher.service"), self.docker.calls)
         self.assertFalse(bundle.exists())
         self.assertFalse(self.watcher.MAINTENANCE_FILE.exists())
         self.assertEqual(self.events(), [("update.start", "success"), ("update.apply", "success")])
-        self.assertTrue(json.loads(self.watcher.PREVIOUS_FILE.read_text())["images"])
+        # No way back once it came up: the old version's copies are gone, its images untagged for prune.
+        self.assertFalse(self.watcher.PREVIOUS_FILE.exists())
+        self.assertFalse((self.watcher.UPDATES / "install.previous").exists())
+        self.assertFalse((self.watcher.UPDATES / "docker-compose.yml.previous").exists())
+        removed = [c for c in self.docker.calls if c[:3] == ("docker", "image", "rm")]
+        self.assertEqual([c[3] for c in removed], ["coffeepy-web:coffeepy-previous-latest",
+                                                   "postgres:coffeepy-previous-16-alpine"])
+        self.assertLess(self.docker.calls.index(removed[-1]), self.docker.calls.index(("docker", "image", "prune", "-f")))
 
     def test_with_os_packages_without_install(self):
         state = self.apply(self.bundle(install=False, os_packages=True))
@@ -200,7 +231,9 @@ class UpdateWatcherTestCase(SimpleTestCase):
             dump.write_bytes(b"x")
             os.utime(dump, (k, k))
         self.apply(self.bundle())
-        self.assertEqual(len(list(self.watcher.PRE_UPDATE.glob("*.dump"))), self.watcher.KEEP_PRE_UPDATE)
+        kept = [*self.watcher.PRE_UPDATE.glob("*.sql.gz"), *self.watcher.PRE_UPDATE.glob("*.dump")]
+        self.assertEqual(len(kept), self.watcher.KEEP_PRE_UPDATE)
+        self.assertIn("old3.dump", [p.name for p in kept])  # an older watcher's: kept by age, like the rest
 
     # --- refused before anything changes ---
 
@@ -294,9 +327,47 @@ class UpdateWatcherTestCase(SimpleTestCase):
             self.assert_refused(self.apply(self.bundle()), "Not enough space")
 
     def test_older_than_installed(self):
-        self.watcher.write_json(self.watcher.INSTALLED_FILE, {"version": "v3", "built_at": time.time() + 1000})
-        self.assert_refused(self.apply(self.bundle()), "older than what is installed")
-        self.assertEqual(self.apply(self.bundle(), {"allow_downgrade": True})["state"], "done")
+        self.watcher.write_json(self.watcher.INSTALLED_FILE, {"version": "2.1.0", "built_at": time.time() + 1000})
+        self.assert_refused(self.apply(self.bundle(version="2.0.2")), "updates only go forward")
+        # What an older dashboard still sends changes nothing: there is no going back by hand.
+        self.assert_refused(self.apply(self.bundle(version="2.0.2"), {"allow_downgrade": True}), "only go forward")
+
+    def test_a_pre_release_only_goes_back_to_a_release_of_its_major_version(self):
+        later = time.time() + 1000
+        for running, bundle in (("3.0.0-beta.1", "2.0.2"), ("2.1.0-feature-x.5", "2.1.0-feature-y.2"),
+                                ("2.1.0-feature-x.5", "nightly"), ("dev", "2.0.2")):
+            with self.subTest(running=running, bundle=bundle):
+                self.watcher.write_json(self.watcher.INSTALLED_FILE, {"version": running, "built_at": later})
+                self.assert_refused(self.apply(self.bundle(version=bundle)), "only go forward")
+
+    def test_a_pre_release_goes_back_to_its_release(self):
+        self.watcher.write_json(self.watcher.INSTALLED_FILE, {"version": "v2.0.2-7-g303aaeb+dirty",
+                                                              "built_at": time.time() + 1000})
+        self.docker.applied += [("coffee", "0003_pre_release"), ("prerelease_app", "0001_initial")]
+        state = self.apply(self.bundle(version="2.0.2"))
+        self.assertEqual(state["state"], "done", state)
+        self.assertFalse(self.watcher.ACTIVE.exists())  # the release's watcher wouldn't clear it
+        migrate = [c for c in self.docker.calls if "manage.py" in c]
+        previous = "coffeepy-web:coffeepy-previous-latest"
+        env = ("docker", "run", "--rm", "--env-file", str(self.project / ".env"), "-e", "COFFEEPY_PREPARE=0",
+               "--network", "coffeepy_default", previous, "python", "manage.py", "migrate")
+        # By the version that knows these migrations - the running one - after the dump, before the start.
+        self.assertEqual(migrate, [(*env, "coffee", "0002_more", "--no-input"),
+                                   (*env, "prerelease_app", "zero", "--no-input")])
+        dump = next(i for i, c in enumerate(self.docker.calls) if "pg_dump" in c[-1])
+        up = self.docker.calls.index(("docker", "compose", "up", "-d", "--remove-orphans"))
+        self.assertLess(dump, self.docker.calls.index(migrate[0]))
+        self.assertLess(self.docker.calls.index(migrate[-1]), up)
+        log = (self.watcher.STATUS_DIR / "coffeepy-update-v2.tar.log").read_text()
+        self.assertIn("Database migrations taken back: coffee to 0002_more, prerelease_app to zero", log)
+
+    def test_a_migration_that_cant_be_taken_back_rolls_the_update_back(self):
+        self.docker.applied.append(("coffee", "0003_pre_release"))
+        self.docker.fail.add("manage.py migrate")
+        state = self.apply(self.bundle())
+        self.assertEqual(state["state"], "rolled_back", state)
+        self.assertEqual(len(self.docker.restored), 1)  # the dump from before, back in
+        self.assertEqual((self.project / "docker-compose.yml").read_text(), "services: {old: {}}\n")
 
     def test_damaged_file(self):
         self.assert_refused(self.apply(self.bundle(tamper=True)), "images.tar in the bundle is damaged")
@@ -317,7 +388,8 @@ class UpdateWatcherTestCase(SimpleTestCase):
         self.assertEqual(state["state"], "rolled_back", state)
         self.assertEqual((self.project / "docker-compose.yml").read_text(), "services: {old: {}}\n")
         self.assertEqual((self.project / "install" / "install.sh").read_text(), "#!/bin/sh\n")
-        self.assertEqual(self.docker.restored, [b"PGDMP-dump"])
+        self.assertEqual([stdin for _, stdin in self.docker.restored], [DUMP])
+        self.assertIn("gunzip -c && echo 'COMMIT;'", self.docker.restored[0][0])
         self.assertIn(("docker", "tag", "coffeepy-web:coffeepy-previous-latest", "coffeepy-web:latest"), self.docker.calls)
         self.assertFalse(self.watcher.PREVIOUS_FILE.exists())
         self.assertIn(("update.apply", "failure"), self.events())
@@ -333,25 +405,251 @@ class UpdateWatcherTestCase(SimpleTestCase):
         self.docker.fail.add("load")
         self.assertEqual(self.apply(self.bundle())["state"], "rolled_back")
 
-    def test_rollback_by_hand(self):
-        self.apply(self.bundle())
-        (self.watcher.INCOMING / "rollback.request").write_text(json.dumps({"requested_by": "boss"}))
-        self.watcher.cycle()
-        state = self.state()
-        self.assertEqual((state["state"], state["kind"]), ("rolled_back", "rollback"))
-        self.assertEqual((self.project / "docker-compose.yml").read_text(), "services: {old: {}}\n")
-        self.assertEqual(self.events()[-1], ("update.rollback", "success"))
-        (self.watcher.INCOMING / "rollback.request").write_text("{}")
-        self.watcher.cycle()  # nothing to go back to any more
-        self.assertEqual(self.state()["state"], "failed")
-        self.assertEqual(self.events()[-1], ("update.rollback", "failure"))
+    def test_rolled_back_on_a_device_without_install_dir(self):
+        shutil.rmtree(self.project / "install")
+        self.health = [False, True]
+        self.assertEqual(self.apply(self.bundle(install=False))["state"], "rolled_back")
+        self.assertFalse((self.project / "install").exists())
 
-    def test_rollback_without_a_saved_install_dir(self):
+    # --- the database dump ---
+
+    def test_an_incomplete_dump_stops_the_update_before_the_switch(self):
+        for dump, text in ((gzip.compress(b"COPY public.t (i) FROM stdin;\n1\n"), "is incomplete"),
+                           (b"not gzip at all", "is damaged")):
+            with self.subTest(text):
+                self.docker.dump = dump
+                state = self.apply(self.bundle())
+                self.assertEqual(state["state"], "rolled_back", state)
+                self.assertIn(text, state["message"])
+                self.assertEqual((self.project / "docker-compose.yml").read_text(), "services: {old: {}}\n")
+                self.assertEqual(self.docker.restored, [])  # the database was never touched
+                self.assertIn(("docker", "compose", "up", "-d", "--remove-orphans"), self.docker.calls)  # writers back
+                self.assertFalse(self.watcher.PREVIOUS_FILE.exists())  # nothing to go back to by hand
+                self.assertFalse(self.watcher.JOURNAL_FILE.exists())
+
+    def test_when_the_running_version_doesnt_come_back_after_an_incomplete_dump(self):
+        self.docker.dump = gzip.compress(b"partial")
+        self.health = [False]
+        state = self.apply(self.bundle())
+        self.assertEqual(state["state"], "failed")
+        self.assertIn("does not come up either", state["message"])
+        self.assertTrue(self.watcher.JOURNAL_FILE.exists())  # for the next start
+
+    def test_writers_are_stopped_before_the_dump(self):
         self.apply(self.bundle())
-        shutil.rmtree(self.watcher.UPDATES / "install.previous")
-        (self.watcher.INCOMING / "rollback.request").write_text("{}")
+        calls = [" ".join(c) for c in self.docker.calls]
+        stop = calls.index("docker compose stop web mqtt-listener backup")
+        dump = next(k for k, c in enumerate(calls) if "pg_dump" in c)
+        load = next(k for k, c in enumerate(calls) if c.startswith("docker load"))
+        self.assertLess(load, stop)  # the app keeps serving while the images load
+        self.assertLess(stop, dump)
+
+    def test_a_dump_changed_since_it_was_saved_is_not_loaded(self):
+        def new_version_fails():
+            next(self.watcher.PRE_UPDATE.glob("*.sql.gz")).write_bytes(DUMP + b"x")
+            return False
+
+        self.patch(self.watcher, "healthy", lambda timeout=None: new_version_fails())
+        state = self.apply(self.bundle())
+        self.assertEqual(state["state"], "failed")
+        self.assertIn("checksum", state["message"])
+        self.assertEqual(self.docker.restored, [])
+
+    def test_an_older_watchers_rollback_copies_go_at_the_first_start(self):
+        (self.watcher.PRE_UPDATE / "before-v1.dump").write_bytes(b"PGDMP")
+        self.watcher.write_json(self.watcher.PREVIOUS_FILE, {"images": ["coffeepy-web:latest"],
+                                                             "database": "before-v1.dump", "installed": {}})
+        (self.watcher.UPDATES / "docker-compose.yml.previous").write_text("services: {v1: {}}\n")
+        (self.watcher.UPDATES / "install.previous").mkdir()
+        (self.watcher.INCOMING / "rollback.request").write_text("{}")  # asked for in the old dashboard
+        self.watcher.main(once=True)
+        self.assertIn(("docker", "image", "rm", "coffeepy-web:coffeepy-previous-latest"), self.docker.calls)
+        for gone in (self.watcher.PREVIOUS_FILE, self.watcher.UPDATES / "docker-compose.yml.previous",
+                     self.watcher.UPDATES / "install.previous", self.watcher.INCOMING / "rollback.request"):
+            self.assertFalse(gone.exists(), gone)
+        self.assertTrue((self.watcher.PRE_UPDATE / "before-v1.dump").exists())  # a copy of the data: stays
+        self.assertEqual(self.docker.restored, [])
+
+    # --- power cuts: what the next boot finds ---
+
+    def cut_power_at(self, phase):
+        """The update stops dead right after the journal recorded `phase` - nothing of it runs
+        any more, not even its error handling."""
+        real = self.watcher.journal
+
+        def journal(name, *args, **kwargs):
+            real(name, *args, **kwargs)
+            if name == phase:
+                raise PowerCut(phase)
+
+        patcher = mock.patch.object(self.watcher, "journal", side_effect=journal)
+        patcher.start()
+        return patcher
+
+    def interrupted(self, phase, **bundle_args):
+        bundle = self.bundle(**bundle_args)
+        patcher = self.cut_power_at(phase)
+        try:
+            with self.assertRaises(PowerCut):
+                self.apply(bundle, {"requested_by": "boss", "note": "kept"})
+        finally:
+            patcher.stop()
+        return bundle
+
+    def test_a_power_cut_at_any_step_is_undone_and_the_update_runs_again(self):
+        old_compose = "services: {old: {}}\n"
+        for phase in self.watcher.PHASES:
+            with self.subTest(phase):
+                (self.project / "docker-compose.yml").write_text(old_compose)
+                shutil.rmtree(self.project / "install")
+                (self.project / "install").mkdir()
+                (self.project / "install" / "install.sh").write_text("#!/bin/sh\n")
+                self.docker.calls.clear()
+                self.docker.restored.clear()
+                bundle = self.interrupted(phase)
+                self.assertTrue(self.watcher.JOURNAL_FILE.exists())
+                self.assertTrue((self.watcher.ACTIVE / bundle.name).exists() or bundle.exists())
+
+                self.assertTrue(self.watcher.recover())
+                self.assertEqual((self.project / "docker-compose.yml").read_text(), old_compose)
+                self.assertEqual((self.project / "install" / "install.sh").read_text(), "#!/bin/sh\n")
+                self.assertFalse(self.watcher.JOURNAL_FILE.exists())
+                self.assertFalse(self.watcher.ACTIVE.exists())
+                self.assertFalse(self.watcher.PREVIOUS_FILE.exists())
+                self.assertEqual(self.state()["state"], "rolled_back")
+                self.assertIn("attempt 2 of 3", self.state()["message"])
+                if phase != "accepted":
+                    self.assertIn(("docker", "tag", "coffeepy-web:coffeepy-previous-latest", "coffeepy-web:latest"),
+                                  self.docker.calls)
+                self.assertEqual(len(self.docker.restored), 1 if phase == "switched" else 0)
+                options = json.loads(bundle.with_name(bundle.name + ".options.json").read_text())
+                self.assertEqual(options, {"requested_by": "boss", "note": "kept", "attempt": 2})
+
+                self.watcher.cycle()  # and again, from the start
+                self.assertEqual(self.state()["state"], "done", phase)
+                self.assertEqual((self.project / "docker-compose.yml").read_text(), "services: {new: {}}\n")
+                self.assertFalse(bundle.exists())
+                self.assertFalse(self.watcher.JOURNAL_FILE.exists())
+                log = (self.watcher.STATUS_DIR / f"{bundle.name}.log").read_text()
+                self.assertIn("The update was interrupted", log)  # one log over all attempts
+                self.assertIn("attempt 2 of 3", log)
+        self.assertIn(("update.recover", "success"), self.events())
+
+    def test_a_power_cut_while_the_new_version_starts(self):
+        bundle = self.bundle()
+        self.patch(self.watcher, "healthy", mock.Mock(side_effect=[PowerCut("verify"), True]))
+        with self.assertRaises(PowerCut):
+            self.apply(bundle)
+        self.assertEqual((self.project / "docker-compose.yml").read_text(), "services: {new: {}}\n")
+        self.watcher.recover()
+        self.assertEqual((self.project / "docker-compose.yml").read_text(), "services: {old: {}}\n")
+        self.assertEqual([stdin for _, stdin in self.docker.restored], [DUMP])  # the new version may have migrated
+        self.assertTrue((self.watcher.INCOMING / bundle.name).exists())
+
+    def test_a_power_cut_in_the_last_attempt_is_not_tried_again(self):
+        bundle = self.bundle()
+        bundle.with_name(bundle.name + ".options.json").write_text(json.dumps({"attempt": 3}))
+        patcher = self.cut_power_at("loaded")
+        with self.assertRaises(PowerCut):
+            self.watcher.process_bundle(bundle)
+        patcher.stop()
+        self.watcher.recover()
+        self.assertIn("stays on the version before it", self.state()["message"])
+        self.assertFalse(bundle.exists())
+        self.assertFalse(self.watcher.ACTIVE.exists())
+        self.assertEqual(self.events()[-1], ("update.recover", "failure"))
+
+    def test_cut_before_the_bundle_moved_and_out_of_attempts(self):
+        bundle = self.bundle()
+        bundle.with_name(bundle.name + ".options.json").write_text(json.dumps({"attempt": 3}))
+        patcher = self.cut_power_at("accepted")
+        with self.assertRaises(PowerCut):
+            self.watcher.process_bundle(bundle)
+        patcher.stop()
+        self.assertTrue(bundle.exists())  # still in incoming/
+        self.watcher.recover()
+        self.assertFalse(bundle.exists())  # or it would start over as a first attempt
+        self.assertFalse(bundle.with_name(bundle.name + ".options.json").exists())
+
+    def test_an_update_whose_rollback_failed_waits_for_the_next_start(self):
+        self.health = [False, False]  # the new version doesn't come up, nor does the old one
+        bundle = self.bundle()
+        self.assertEqual(self.apply(bundle)["state"], "failed")
+        self.assertTrue(self.watcher.JOURNAL_FILE.exists())
+        self.assertTrue((self.watcher.ACTIVE / bundle.name).exists())
+        other = self.bundle(name="other.tar")
         self.watcher.cycle()
+        self.assertTrue(other.exists())  # nothing new before the device is back
+        self.health = [False]
+        self.watcher.recover()  # the next start: still no luck
+        self.assertEqual(self.state()["state"], "failed")
+        self.assertIn("tried again when the device restarts", self.state()["message"])
+        self.assertEqual(self.events()[-1], ("update.recover", "failure"))
+        self.watcher.recover()  # and the one after
         self.assertEqual(self.state()["state"], "rolled_back")
+        self.assertFalse(self.watcher.JOURNAL_FILE.exists())
+        self.assertFalse((self.watcher.INCOMING / bundle.name).exists())  # it failed on its own: not again
+
+    def test_a_rollback_that_finished_before_the_journal_learned_of_it(self):
+        self.watcher.write_json(self.watcher.JOURNAL_FILE, {"bundle": "b.tar", "phase": "switched", "retry": True,
+                                                            "images": ["coffeepy-web:latest"]})
+        self.assertTrue(self.watcher.recover())
+        self.assertEqual(self.state()["state"], "rolled_back")
+        self.assertEqual(self.docker.restored, [])  # previous.json gone: the database is back already
+        self.assertIn("stays on the version before it", self.state()["message"])  # no bundle to run again
+
+    def test_recover_without_a_journal_tidies_up(self):
+        (self.watcher.UPDATES / ".work-old").mkdir()
+        (self.watcher.ACTIVE).mkdir()
+        (self.watcher.ACTIVE / "left.tar").write_bytes(b"x")
+        self.assertFalse(self.watcher.recover())
+        self.assertFalse((self.watcher.UPDATES / ".work-old").exists())
+        self.assertFalse(self.watcher.ACTIVE.exists())
+        self.assertEqual(self.docker.calls, [])
+
+    def test_main_recovers_first(self):
+        with mock.patch.object(self.watcher, "recover") as recover, mock.patch.object(self.watcher, "cycle") as cycle:
+            self.assertEqual(self.watcher.main(recover_only=True), 0)
+        recover.assert_called_once()
+        cycle.assert_not_called()
+        with mock.patch.object(self.watcher, "recover", side_effect=RuntimeError("boom")), \
+                mock.patch.object(self.watcher, "cycle") as cycle:
+            self.assertEqual(self.watcher.main(once=True), 0)
+        cycle.assert_called_once()
+
+    # --- files a power cut must not leave half-written ---
+
+    def test_replacing_install_dir(self):
+        target, new = self.root / "target", self.root / "new"
+        for directory, text in ((target, "old"), (new, "new")):
+            directory.mkdir()
+            (directory / "f").write_text(text)
+        with mock.patch.object(self.watcher, "_exchange", side_effect=OSError("EINVAL")):
+            self.watcher.replace_dir(new, target)  # the fallback
+        self.assertEqual((target / "f").read_text(), "new")
+        self.assertFalse(new.exists())
+        new.mkdir()
+        (new / "f").write_text("newer")
+        self.watcher.replace_dir(new, target)
+        self.assertEqual((target / "f").read_text(), "newer")
+        self.assertFalse(new.exists())
+        shutil.rmtree(target)
+        new.mkdir()
+        self.watcher.replace_dir(new, target)  # a device that had no install/ yet
+        self.assertTrue(target.is_dir())
+        with self.assertRaises(OSError):
+            self.watcher._exchange(self.root / "missing", target)
+        with mock.patch.object(self.watcher.ctypes, "CDLL", return_value=object()), self.assertRaises(OSError):
+            self.watcher._exchange(new, target)
+
+    def test_env_defaults_on_a_device_without_env(self):
+        (self.project / ".env").unlink()
+        self.assertEqual(self.watcher.add_env_defaults({"A": "1"}), ["A"])
+        self.assertEqual(os.stat(self.project / ".env").st_mode & 0o777, 0o600)
+        (self.project / ".env").chmod(0o640)
+        self.watcher.add_env_defaults({"B": "2"})
+        self.assertEqual(os.stat(self.project / ".env").st_mode & 0o777, 0o640)  # kept
+        self.assertIn("A=1\n", (self.project / ".env").read_text())
 
     # --- the rest ---
 
