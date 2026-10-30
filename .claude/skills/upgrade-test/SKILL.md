@@ -44,7 +44,8 @@ test?". Always settle:
 - **Which power cuts** (default: the three under "Robustness"), and whether a hop of an old
   watcher is cut too.
 - **Hardware the developer has to touch**: a card tap (never fake one - no `NfcScan` rows), a
-  backup stick for backup/restore across versions.
+  backup stick for backup/restore across versions (step 7). **Look at the stick before it is
+  formatted** - mount it read-only and list it; the developer decides about what's on it.
 - **Time.** A full run takes 2-3 hours of the device: ~25 min install, ~15 min per bundle
   build, ~10 min per update, ~5 min per power cut.
 
@@ -67,8 +68,9 @@ Keep every output (fingerprints, logs, timings) in the scratchpad - `$S` below.
 3. **Load the data** as agreed, then **the baseline**: `fingerprint.py $S/fp-base.json`.
 4. **Each hop**: `apply.sh v2.0.1` (it waits and prints the log), then the checks below, then
    `fingerprint.py $S/fp-<hop>.json $S/fp-base.json`. Always compare with the *baseline*, not
-   the previous hop. Do one hop through the dashboard's upload instead of `apply.sh` (curl with
-   a cookie jar, as in pi-device "Update bundles") - that path is what admins use.
+   the previous hop. Do one hop through the dashboard's upload instead of `apply.sh` -
+   `dashboard.sh /dashboard/update/upload/ bundle=@~/bundles/NAME.tar`, then `apply.sh --follow
+   NAME` - that path is what admins use.
 5. **Robustness** on the final version, with the new watcher in charge - apply `current` again
    (same version is allowed) and cut it each time:
    - `powercut.sh loaded 5` - images loaded, dump running: only the tags go back.
@@ -83,6 +85,16 @@ Keep every output (fingerprints, logs, timings) in the scratchpad - `$S` below.
 6. **Stability** once at the end: two reboots (cold, `sudo systemctl reboot`), and after each
    the checks; pi-device `resources.sh 60`, `load.py mixed`, `page_timings.py` (every page, with
    the seeded history), time until the kiosk is usable (pi-device "Measuring").
+7. **Backups across versions**, when a stick is in: set it up through the *old* release's
+   dashboard (`dashboard.sh /dashboard/backup/usb/setup/ disk=/dev/sda confirm=1`, ~20s), then
+   on every version of the path `dashboard.sh /dashboard/backup/now/`, `fingerprint.py
+   $S/bk-<v>.json` and `django.sh .claude/skills/upgrade-test/scripts/marker.py <v>` (a new coffee
+   sort plus 100 on order 1: a change made *after* that backup). After each update the stick must still be "own". On the
+   final version restore every backup, oldest first (`dashboard.sh
+   /dashboard/backup/own/FILE/restore/ parts=database confirm=DELETE`, poll `dashboard.sh GET
+   /dashboard/backup/restore/status/`): `marker.py` without a tag lists the markers - only
+   those set before it may be there, and the
+   fingerprint against `bk-<v>.json` only differs as below.
 
 A change to the watcher itself has a catch: the first hop onto it is applied by the *old*
 watcher, without the new protection. Cutting that hop shows what a real device risks once -
@@ -124,18 +136,21 @@ cut, hardware not touched) as plainly as what passed. Numbers, not impressions.
 - **A login rule stricter than the admin's password blocks the dashboard upload**: the login
   works, then every page redirects to the password change (`auth.password_outdated`), and the
   upload's 302 looks like success. Seed a password policy the `.env` admin still meets;
-  `upload.sh` now refuses any redirect but the update page.
+  `dashboard.sh` prints where every POST went and the page's messages.
 - **An old release names the nfc-bridge image after its build directory** (no `name:` in its
   compose file) - `bundle.sh` builds in a directory called `coffeepy` for that reason.
 - **The dev machine may drop the Pi's AP** ("No route to host"): `nmcli connection up CoffeePy`.
 - **A fingerprint that becomes the baseline must hash its own columns**: after a migration
   added one, a hash over the old baseline's columns compared with one over the new ones and
   reported every order as changed. `fingerprint.py` keeps both apart now (`md5` vs `cmp`).
-- `load.py`'s kiosk part goes through 443, where Caddy answers `/kiosk/` with a 404 - its
-  errors there are expected; the kiosk's times come from `page_timings.py`.
+- **A backup is taken inside the "Back up now" request**, before that request's own
+  `backup.trigger` audit row: restored, the row is missing and `backup.restore` takes its id -
+  the fingerprint reports the audit table (and `auth_user`'s `last_login`) as changed. Those two
+  are expected after a restore; anything else is not.
 - Measured 2026-10-30, Pi 3: an update 8-11 min (v2.0.1's watcher 10 min, the step back to a
   release 11 min incl. 11s of migrate_back), a recovery after a power cut 27s (at loaded) to
-  72s (at switched+40), the kiosk polling 93-96s after a cold boot.
+  72s (at switched+40), the kiosk polling 93-96s after a cold boot; formatting a 4GB stick ~20s,
+  a restore of the seeded data 17-21s, also from a v2.0.0 backup onto the working tree.
 - `install_version.sh` and `bundle.sh` overwrite `~/CoffeePy` and `~/coffeepy-src` on the Pi;
   pi-device's `sync.sh`/`deploy.sh` afterwards put the working tree back.
 

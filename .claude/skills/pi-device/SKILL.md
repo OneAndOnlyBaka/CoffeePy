@@ -77,9 +77,11 @@ about a Pi 3. Report numbers, not impressions.
 
 - `resources.sh [SECONDS]` - CPU and memory per process group, temperature, throttling.
   (`docker stats` shows 0B: the Pi kernel disables the memory cgroup.)
-- `python3 -I scripts/load.py kiosk|mixed|burst` - HTTP latency/throughput from here. It
-  goes through Caddy on 443 with `Host: 192.168.4.1` (PUBLIC_HOST); a wrong host is a fast **400** - check
-  the errors column before believing a number.
+- `python3 -I scripts/load.py kiosk|mixed|burst` - HTTP latency/throughput from here. Portal
+  and dashboard go through Caddy on 443 with `Host: 192.168.4.1` (PUBLIC_HOST); a wrong host is a
+  fast **400** - check the errors column before believing a number. The kiosk only exists on the
+  Pi's 127.0.0.1:8443, so its requests go through an SSH tunnel (a 404 there means they didn't).
+  Not while the Pi builds images - the numbers then measure the build.
 - `django.sh perf_data.py seed` → `django.sh page_timings.py` → `django.sh perf_data.py
   cleanup` - every page's server time against five years of synthetic history. An empty
   database makes every page look fast; the kiosk rows are the ones that matter (polled
