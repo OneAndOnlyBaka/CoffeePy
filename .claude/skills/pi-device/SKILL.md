@@ -116,6 +116,9 @@ about a Pi 3. Report numbers, not impressions.
 - **Provisioning changes go through `scripts/provision.sh`** where possible (interactive in
   tmux, or `--answers ... --unattended` with `PI_PASSWORD` from `.device/pi.env`) - that tests
   the tool along with the change. It re-runs every installer step (`--force`), ~20 minutes.
+  **Always with `SSH_AFTER_INSTALL=on`** for the test Pi: the installer's `ssh` step otherwise
+  switches SSH off at the end, and every script here loses the device. If that happened, log in
+  to the dashboard (System → SSH → Switch SSH on) - the storage helper turns it on within seconds.
 - **Session-restarting commands** (`kiosk-browser.sh on/off`, `deploy.sh kiosk`,
   `startup-timeline.sh`) interrupt whoever is using the touchscreen - say so if the user
   might be at the device.

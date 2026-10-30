@@ -23,10 +23,11 @@ updates:
       - dependency-name: python
         update-types: ["version-update:semver-minor"]
 
-  # postgres, mosquitto and caddy. A PostgreSQL major means a dump and restore of every
-  # device's database - never a weekly update.
+  # postgres, mosquitto and caddy, pinned to exact versions so that two builds of one commit
+  # ship the same images. A PostgreSQL major means a dump and restore of every device's
+  # database - never a weekly update.
   - package-ecosystem: docker-compose
-    directory: /
+    directories: ["/", "/nfc-cardreader"]
     schedule: {interval: weekly}
     ignore:
       - dependency-name: postgres

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 07:53+0100\n"
+"POT-Creation-Date: 2026-10-30 18:17+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -1562,6 +1562,35 @@ msgstr ""
 "werden nicht gebucht. Das Handy-Portal und die Backups laufen weiter; am "
 "Morgen startet der Kiosk von selbst wieder."
 
+msgid "SSH"
+msgstr "SSH"
+
+msgid ""
+"Remote login to the device's operating system - what the provisioning tool "
+"and maintenance need. It is off after the installation; switched on here, it "
+"stays on, across restarts too, until it is switched off."
+msgstr ""
+"Fernanmeldung am Betriebssystem des Geräts - die braucht das "
+"Provisionierungs-Tool und die Wartung. Nach der Installation ist sie aus; "
+"hier eingeschaltet, bleibt sie an, auch über Neustarts hinweg, bis sie "
+"wieder ausgeschaltet wird."
+
+msgid "Unknown - the device's storage service is not running."
+msgstr "Unbekannt - der Speicherdienst des Geräts läuft nicht."
+
+msgid ""
+"SSH is on: anyone on the network who knows the password of the Pi's user can "
+"log in to the device. Switch it off once you no longer need it."
+msgstr ""
+"SSH ist an: Jeder im Netz, der das Passwort des Pi-Benutzers kennt, kann "
+"sich am Gerät anmelden. Schalte es aus, sobald du es nicht mehr brauchst."
+
+msgid "Switch SSH off"
+msgstr "SSH ausschalten"
+
+msgid "Switch SSH on"
+msgstr "SSH einschalten"
+
 msgid "CPU"
 msgstr "CPU"
 
@@ -1674,6 +1703,26 @@ msgstr ""
 "Die Angaben zum Gerät selbst (Betriebssystem, Container) erscheinen, sobald "
 "der Update-Watcher sie geschrieben hat - wenige Sekunden nach seinem Start."
 
+msgid "Operating system"
+msgstr "Betriebssystem"
+
+msgid ""
+"An OS bundle (<code>scripts/build_os_bundle.sh</code>) brings the device's "
+"operating system packages up to date - upload it above, like an update, "
+"signed the same way. Which packages it carries is up to whoever builds it; "
+"start from this device's list. There is no going back from an OS update: the "
+"database is saved first, and the device restarts if the update needs that."
+msgstr ""
+"Ein OS-Paket (<code>scripts/build_os_bundle.sh</code>) bringt die "
+"Betriebssystem-Pakete des Geräts auf den neuesten Stand - lade es oben hoch "
+"wie ein Update, genauso signiert. Welche Pakete es enthält, entscheidet, wer "
+"es baut; geh von der Liste dieses Geräts aus. Ein OS-Update lässt sich nicht "
+"zurücknehmen: Vorher wird die Datenbank gesichert, und das Gerät startet "
+"neu, wenn das Update es braucht."
+
+msgid "Download the installed packages"
+msgstr "Installierte Pakete herunterladen"
+
 msgid "Saved before updates"
 msgstr "Vor Updates gesichert"
 
@@ -1762,6 +1811,9 @@ msgstr ""
 "Es gilt nicht für %(host)s - Browser, die diese Adresse nutzen, zeigen eine "
 "Warnung."
 
+msgid "applied"
+msgstr "eingespielt"
+
 msgid "Version"
 msgstr "Version"
 
@@ -1773,9 +1825,6 @@ msgstr "Branch"
 
 msgid "Committed"
 msgstr "Committet"
-
-msgid "applied"
-msgstr "eingespielt"
 
 msgid "Installed by update"
 msgstr "Per Update eingespielt"
@@ -1804,9 +1853,6 @@ msgstr "Schlüssel von CoffeePy"
 msgid "Model"
 msgstr "Modell"
 
-msgid "Operating system"
-msgstr "Betriebssystem"
-
 msgid "Kernel"
 msgstr "Kernel"
 
@@ -1815,6 +1861,9 @@ msgstr "Plattform"
 
 msgid "Update signature"
 msgstr "Update-Signatur"
+
+msgid "OS bundle"
+msgstr "OS-Paket"
 
 msgid "As of"
 msgstr "Stand"
@@ -1836,6 +1885,12 @@ msgstr "Bitte beide Konten auswählen."
 
 msgid "Pick two different accounts."
 msgstr "Bitte zwei verschiedene Konten auswählen."
+
+msgid "SSH is being switched on - reload in a few seconds."
+msgstr "SSH wird eingeschaltet - lade die Seite in ein paar Sekunden neu."
+
+msgid "SSH is being switched off - reload in a few seconds."
+msgstr "SSH wird ausgeschaltet - lade die Seite in ein paar Sekunden neu."
 
 msgid "Saved - the kiosk follows with its next poll."
 msgstr "Gespeichert - der Kiosk folgt mit seiner nächsten Abfrage."
@@ -2287,6 +2342,9 @@ msgstr "Unterbrochenes Update wird repariert"
 
 msgid "Setting up the WiFi"
 msgstr "WLAN wird eingerichtet"
+
+msgid "Securing remote access"
+msgstr "Fernzugang wird abgesichert"
 
 msgid "Starting CoffeePy"
 msgstr "CoffeePy wird gestartet"

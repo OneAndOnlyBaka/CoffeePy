@@ -79,7 +79,7 @@ talk to the app through files under `/opt/coffeepy/data/`, never through Docker 
 | Unit | What it does |
 |---|---|
 | `coffeepy.service` | the `docker compose` stack |
-| `coffeepy-storage.service` | `install/storage_helper.py`: sees USB sticks, formats/adopts/ejects the backup stick on the dashboard's request (`data/storage/`) |
+| `coffeepy-storage.service` | `install/storage_helper.py`: sees USB sticks, formats/adopts/ejects the backup stick on the dashboard's request (`data/storage/`); also switches SSH on and off (dashboard → System) |
 | `coffeepy-update-watcher.service` | `install/update_watcher.py`: picks up uploaded update bundles and applies them ([Offline updates](#offline-updates)) |
 | `coffeepy-update-recover.service` | before the stack starts: puts back an update a power cut interrupted |
 | `coffeepy-watchdog.timer` | every minute: restarts the kiosk session if its browser stopped polling, the stack if `/health/` stops answering - at most three times an hour |
@@ -239,6 +239,29 @@ flowchart LR
   (taken from `.env.example`).
 - The watcher also runs the installer's `hardware`, `services` and `kiosk` steps from the
   bundle, so a host-side change (a new unit, a kiosk fix) arrives with the update.
+
+### Operating system updates
+
+The images carry the app; the host's own packages - kernel, firmware, Chromium, OpenSSH,
+Docker - are Raspberry Pi OS's. An offline device gets their updates through an **OS bundle**,
+which goes the same way as an app bundle: built on a machine with internet
+(`scripts/build_os_bundle.sh --packages LIST`), signed with `sign_update_bundle.sh`, uploaded
+on the update page. Its manifest says `"kind": "os"`; it holds the packages (`os.tar`, resolved
+against the Raspberry Pi OS archives with their whole dependency closure) and the one script
+that installs them, `install/os_update.sh`, signed along with them. That script only updates
+what is installed, keeps the device's configuration files and asks for a restart when kernel,
+firmware, libc or systemd changed.
+
+The watcher checks it like an app bundle - plus that the device runs the bundle's OS release,
+and against the last OS bundle (`os-installed.json`) rather than the app's version - saves the
+database, runs the script, restarts the device if asked to (the maintenance screen stays up
+across it) and waits for `/health/`. There is no rollback: apt has none. A power cut in the
+middle leaves dpkg half done, which `coffeepy-update-recover.service` finishes at the next boot
+(`dpkg --configure -a`); uploading the bundle again completes it.
+
+Which packages go in is the operator's decision: CoffeePy runs on more than one kind of
+hardware. The update page offers the device's installed packages (`os-packages.txt`, refreshed
+by the watcher) as the list to start from - SSH is off on a device in use.
 
 ## Maintenance screen
 

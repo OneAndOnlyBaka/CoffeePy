@@ -44,6 +44,31 @@
     </form>
 </div>
 
+<div class="card">
+    <h2>{% translate "SSH" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}
+        Remote login to the device's operating system - what the provisioning tool and maintenance need. It is
+        off after the installation; switched on here, it stays on, across restarts too, until it is switched off.
+    {% endblocktranslate %}</p>
+    {% if ssh is None %}
+    <p class="muted">{% translate "Unknown - the device's storage service is not running." %}</p>
+    {% else %}
+    {% if ssh.active %}
+    <p class="msg warning">{% blocktranslate trimmed %}
+        SSH is on: anyone on the network who knows the password of the Pi's user can log in to the device.
+        Switch it off once you no longer need it.
+    {% endblocktranslate %}</p>
+    {% endif %}
+    {% if ssh.error %}<p class="msg error">{{ ssh.error }}</p>{% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="ssh">
+        <input type="hidden" name="enabled" value="{% if ssh.active %}0{% else %}1{% endif %}">
+        <button type="submit" class="{% if ssh.active %}btn{% else %}secondary{% endif %}">{% if ssh.active %}{% translate "Switch SSH off" %}{% else %}{% translate "Switch SSH on" %}{% endif %}</button>
+    </form>
+    {% endif %}
+</div>
+
 {% comment %}
 The bar widths are CSS - "width: 12,5%" in German would be dropped, so they stay unlocalized.
 {% endcomment %}

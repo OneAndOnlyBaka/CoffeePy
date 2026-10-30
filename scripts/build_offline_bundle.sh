@@ -46,6 +46,11 @@ SKIP_IMAGES="${SKIP_IMAGES:-0}"
 # DEBS_ONLY=1: just the packages and the Compose plugin, as one tar at OUTPUT - what an
 # update bundle carries for an offline device's security updates (build_update_bundle.sh).
 DEBS_ONLY="${DEBS_ONLY:-0}"
+# Another list than the installer's - an OS bundle's (build_os_bundle.sh), which may be a
+# device's whole dpkg list. SKIP_MISSING=1 leaves out what the archives don't have (a package
+# installed by hand, or from elsewhere) instead of failing.
+PACKAGE_LIST="${PACKAGE_LIST:-${INSTALL_DIR}/packages.txt}"
+SKIP_MISSING="${SKIP_MISSING:-0}"
 
 # shellcheck source=../install/versions.env
 . "${INSTALL_DIR}/versions.env"
@@ -76,8 +81,9 @@ log "Collecting packages from the Raspberry Pi OS archives"
 # of Debian, archive.raspberrypi.com the Pi-specific packages (chromium, rpd-plym-splash).
 # Both are what a real Pi has configured, and only there do these names resolve.
 "${DOCKER}" run --rm --platform "${PLATFORM}" \
-	-v "${INSTALL_DIR}/packages.txt":/packages.txt:ro \
+	-v "$(realpath "${PACKAGE_LIST}")":/packages.txt:ro \
 	-v "${BUNDLE}/debs":/out \
+	-e SKIP_MISSING="${SKIP_MISSING}" \
 	"debian:${RELEASE}-slim" bash -euc '
 		export DEBIAN_FRONTEND=noninteractive
 		apt-get update -qq
@@ -120,7 +126,12 @@ log "Collecting packages from the Raspberry Pi OS archives"
 			candidate="$(apt-cache policy "${p}" 2>/dev/null | awk "/Candidate:/ {print \$2; exit}")"
 			[ -n "${candidate}" ] && [ "${candidate}" != "(none)" ] || missing="${missing} ${p}"
 		done
-		[ -z "${missing}" ] || { echo "Not available for ${arch}:${missing}" >&2; exit 1; }
+		if [ -n "${missing}" ] && [ "${SKIP_MISSING}" = 1 ]; then
+			echo "Left out, not in the archives for ${arch}:${missing}" >&2
+			for p in ${missing}; do packages=" ${packages} "; packages="${packages/ ${p} / }"; done
+		elif [ -n "${missing}" ]; then
+			echo "Not available for ${arch}:${missing}" >&2; exit 1
+		fi
 
 		# Two things this must not do, both learned the hard way:
 		#

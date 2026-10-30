@@ -109,11 +109,11 @@ existing measures in place; *accepted* means the operator is told in the manual 
 | R8 | Dashboard published to the internet | not foreseen by the product; lockout and password rules still hold | 1 | 3 | low | manual: say not to |
 | R9 | A forged or tampered update bundle | Ed25519-signed manifest, per-file SHA-256, platform and space check, forward only; key never in CI | 1 | 3 | low | - |
 | R10 | Signature check switched off on a device in use | labelled "development only" in the provisioning tool; permanent warning on the update page | 1 | 3 | low | - |
-| R11 | Known vulnerabilities in the OS, Chromium, the kernel or SSH on an offline device | `apt` at installation; a bundle *can* carry OS packages (`--with-os-packages`), but the release bundles don't, and only `install/packages.txt` and its dependencies are in it - not the kernel, firmware, `openssh-server` | 2 | 3 | **high** | A1 |
-| R12 | Known vulnerabilities in the app's own images | `pip-audit` + Grype fail CI on anything fixable; Dependabot weekly; exceptions documented in `.grype.yaml` | 1 | 3 | low | assess the two CPython CVEs for exploitability (A5) |
-| R13 | Known vulnerabilities in third-party images (postgres, mosquitto, caddy) | only reported by CI; floating tags, newest at build time | 2 | 2 | medium | A4 |
-| R14 | SSH with the Imager's password, reachable from the network | outside CoffeePy; SECURITY.md advises a key or a strong password | 2 | 3 | **high** | A2 |
-| R15 | Lost or stolen backup stick | written to one registered stick only; optional AES-256 (`BACKUP_PASSPHRASE`) - **off by default** | 2 | 2 | medium | A3 |
+| R11 | Known vulnerabilities in the OS, Chromium, the kernel or SSH on an offline device | `apt` at installation; **OS bundles** (`scripts/build_os_bundle.sh`): any set of packages - best the device's own list, downloadable on the update page - signed like an app bundle, applied through the same update page by the script signed into the bundle (`install/os_update.sh`), which only updates what is installed; database saved first, restart when kernel or firmware changed. Building and applying them is the operator's job: CoffeePy runs on more than one kind of hardware | 2 | 3 | medium (operator's) | A1 ✓ |
+| R12 | Known vulnerabilities in the app's own images | `pip-audit` + Grype fail CI on anything fixable; Dependabot weekly; each exception in `.grype.yaml` says why it can't be taken and whether the code is reachable (CVE-2025-15367: `poplib`, never imported) | 1 | 3 | low | A5 ✓ |
+| R13 | Known vulnerabilities in third-party images (postgres, mosquitto, caddy) | pinned to exact versions in `docker-compose.yml`, moved weekly by Dependabot; CI reports their findings without failing - their packages are theirs to fix | 2 | 2 | medium | A4 ✓ (accepted: reported only) |
+| R14 | SSH with the Imager's password, reachable from the network | **off after the installation** (`install.sh`'s `ssh` step; `--keep-ssh` / the provisioning tool's "SSH" setting keep it); an admin switches it on in the dashboard (System → SSH), audited, with a warning for as long as it is on | 1 | 3 | low | A2 ✓ |
+| R15 | Lost or stolen backup stick | written to one registered stick only; AES-256 with `BACKUP_PASSPHRASE`, which the provisioning tool generates unless declined (and puts into its saved summary); the backup page warns while backups are unencrypted | 1 | 2 | low | A3 ✓ |
 | R16 | Stolen device or SD card read out | `.env` root-only; no disk encryption | 1 | 2 | low | accepted (physical access out of scope), stated here |
 | R17 | Theft or loss of the device CA key | only on the device, kept by the installer; never leaves it | 1 | 2 | low | - |
 | R18 | Data loss by a broken update, restore or a power cut | pre-update dump, automatic rollback, journaled recovery at boot, restore in one transaction, 100 % coverage on that code; upgrade test across releases | 2 | 2 | medium → low | - |
@@ -128,16 +128,16 @@ existing measures in place; *accepted* means the operator is told in the manual 
 | Requirement (Annex I, part I) | How CoffeePy meets it | Gap |
 |---|---|---|
 | (1) security appropriate to the risks | this assessment; [SECURITY.md](SECURITY.md) | - |
-| (2)(a) no known exploitable vulnerabilities when made available | CI audit fails on every fixable finding; Dependabot | OS packages (R11), third-party images (R13), CPython exceptions not yet assessed (A5) |
-| (2)(b) secure by default configuration, reset to original state | no default passwords, ranking and pillory off, kiosk local only, signature check on; reset in System (`coffee/purge.py`) | backups unencrypted by default (A3) |
-| (2)(c) security updates, automatic by default with opt-out where applicable; users notified | signed offline bundles via the dashboard. *Automatic* updates are not applicable: the device is offline by design and has nothing to fetch from | no notice of a newer release on the device - operators must watch GitHub (A6) |
+| (2)(a) no known exploitable vulnerabilities when made available | CI audit fails on every fixable finding; Dependabot; exceptions assessed for reachability | OS packages depend on the operator building OS bundles (R11); third-party images reported only (R13) |
+| (2)(b) secure by default configuration, reset to original state | no default passwords, ranking and pillory off, kiosk local only, signature check on, SSH off, backups encrypted (provisioning tool); reset in System (`coffee/purge.py`) | a device installed with `install.sh` alone has unencrypted backups - the backup page says so |
+| (2)(c) security updates, automatic by default with opt-out where applicable; users notified | signed offline bundles for the app and the OS via the dashboard. *Automatic* updates are not applicable: the device is offline by design and has nothing to fetch from | no notice of a newer release on the device - operators watch GitHub (accepted) |
 | (2)(d) protection from unauthorised access, reporting it | Django auth, roles, lockout, idle logout, card/portal tokens; failed logins and invalid links in the audit log | - |
-| (2)(e) confidentiality of data at rest and in transit | HTTPS everywhere, WPA2; backup encryption optional | data at rest on the SD card unencrypted (R16, accepted); backup default (A3) |
+| (2)(e) confidentiality of data at rest and in transit | HTTPS everywhere, WPA2; backups encrypted unless declined | data at rest on the SD card unencrypted (R16, accepted) |
 | (2)(f) integrity of data, programs and configuration, reporting corruption | signed updates, checksummed backups read back, one-transaction restore, Caddy's hashed config files, audit log | - |
 | (2)(g) data minimisation | "First L." names, no e-mail or phone, no tracking; see [PRIVACY.md](PRIVACY.md#what-is-processed) | - |
 | (2)(h) availability, resilience against denial of service | watchdog, auto-recovery, rate limits on logins and links | no general request rate limit at Caddy - low, the device is on a LAN |
 | (2)(i) minimise negative impact on other devices and networks | offline, no outgoing connections, no forwarding | - |
-| (2)(j) limit attack surfaces | one published port (+ local 8443), no Django admin, web container without host access | SSH (A2) |
+| (2)(j) limit attack surfaces | one published port (+ local 8443), no Django admin, web container without host access, SSH off unless switched on | - |
 | (2)(k) reduce the impact of an incident | containers, least-privilege host helpers, per-device secrets, rollback | - |
 | (2)(l) record and monitor security-relevant activity, with an opt-out | audit log of every change, retention `AUDIT_RETENTION_DAYS`; the opt-out the Annex asks for is the retention setting - switching the log off would also switch off the lockouts | - |
 | (2)(m) remove all data and settings securely, transfer data | reset in System; backup and restore to move the data to another device | reset deletes rows, not the SD card's blocks - for disposal, wipe or destroy the card (A7) |
@@ -146,33 +146,33 @@ existing measures in place; *accepted* means the operator is told in the manual 
 
 | Requirement (Annex I, part II) | How CoffeePy meets it | Gap |
 |---|---|---|
-| (1) identify components, SBOM | CycloneDX SBOM per image with each release (Syft) | the host's Raspberry Pi OS packages are not in it (A1) |
-| (2) address vulnerabilities without delay, with security updates | Dependabot, CI audit, release on every push to `master` | OS packages (A1) |
+| (1) identify components, SBOM | CycloneDX SBOM per image with each release (Syft); the host's installed packages on the device's update page (`os-packages.txt`) | the host's packages are not in the release SBOM - they differ per device |
+| (2) address vulnerabilities without delay, with security updates | Dependabot, CI audit, release on every push to `master`; OS bundles for the host | - |
 | (3) regular tests and reviews | test suite on SQLite and PostgreSQL, coverage gates, lint, upgrade test on the real device | - |
-| (4) disclose fixed vulnerabilities (description, impact, severity, remedy) | - | no advisories yet (A6) |
-| (5) coordinated vulnerability disclosure policy | SECURITY.md asks for an issue without details | no private channel, no policy (A6) |
-| (6) contact address for reports | the maintainer via GitHub | no stated address (A6) |
+| (4) disclose fixed vulnerabilities (description, impact, severity, remedy) | release notes | no separate advisories (accepted, A6) |
+| (5) coordinated vulnerability disclosure policy | SECURITY.md asks for an issue without details, or the maintainer first | accepted for a hobby project (A6) |
+| (6) contact address for reports | the maintainer via GitHub | accepted (A6) |
 | (7) secure distribution of updates | signed manifest, checksums, forward-only, key outside CI | - |
-| (8) updates free of charge, with advisory messages | MIT, releases free on GitHub; release notes | advisories (A6) |
+| (8) updates free of charge, with advisory messages | MIT, releases free on GitHub; release notes | - |
 
 ## Open actions
 
-For the repository, in order of residual risk. A manufacturer of a ready-built device would
-have to close A1, A2 and A6 before placing it on the market, and add their own: a support
+For the repository. A manufacturer of a ready-built device would
+have to build OS bundles for their hardware (A1) and set up a real disclosure process (A6) before placing it on the market, and add their own: a support
 period of at least five years (Art. 13(8)), Annex II user information, Annex VII technical
 documentation, the EU declaration of conformity and CE marking, and a process to report
 actively exploited vulnerabilities to ENISA's single reporting platform within 24 hours
 (Art. 14).
 
-| ID | Action | For |
+| ID | Action | Status |
 |---|---|---|
-| A1 | Release bundles carry the OS's security updates: build them `--with-os-packages`, widen the set to the base system (kernel, firmware, `openssh-server`, `openssl`, `libc6`, ...), and add the host's packages to the SBOM | R11, (2)(a), II(1)-(2) |
-| A2 | Installer hardens SSH: key-only by default, or offer to switch it off; the provisioning tool asks | R14, (2)(j) |
-| A3 | Make backup encryption the default (the provisioning tool proposes a passphrase), or warn in the dashboard while backups are unencrypted | R15, (2)(b), (2)(e) |
-| A4 | Pin third-party images by digest and let Dependabot move them; fail CI on fixable findings in them too | R13, (2)(a) |
-| A5 | Record for CVE-2025-15367 and CVE-2026-12345 whether the affected CPython code is reachable from the app, in `.grype.yaml` | R12, (2)(a) |
-| A6 | Vulnerability handling: enable GitHub private vulnerability reporting, rewrite SECURITY.md's last paragraph as a disclosure policy with a contact and response times, publish GitHub security advisories for fixed issues; optionally the dashboard shows the release date of the running version so an admin sees its age | II(4)-(6), (8), (2)(c) |
-| A7 | Manual: how to dispose of a device or SD card, and not to expose the device to the internet | (2)(m), R8 |
+| A1 | OS bundles: `scripts/build_os_bundle.sh` builds one from any package list, `sign_update_bundle.sh` signs it, the update page applies it with the script signed into it; the update page offers the device's installed packages as the list to start from | done - what goes in is the operator's (R11) |
+| A2 | SSH off after the installation (`install.sh` step `ssh`, `--keep-ssh`; provisioning tool setting "SSH"); dashboard System → SSH switches it on and off through the storage helper, audited | done |
+| A3 | The provisioning tool generates a backup passphrase unless declined and shows it in its summary; the backup page warns while backups are unencrypted | done |
+| A4 | Third-party images pinned to exact versions (not digests: a `docker load`ed image has none, and the watcher's rollback tags are made from the tag); the watcher untags a version the compose file no longer names | done - their findings stay reported only (accepted) |
+| A5 | `.grype.yaml`: CVE-2026-12345 dropped (fixed in Python 3.14.9, the images run 3.14.10); CVE-2025-15367 recorded as not reachable (`poplib`) | done |
+| A6 | Vulnerability reports by issue (without details) or to the maintainer first, as SECURITY.md says | accepted - no separate advisories or policy |
+| A7 | Manual: disposing of a device or SD card; not exposing the device to the internet; SSH and OS bundles | open - with the manual update |
 
 ## Review
 

@@ -17,6 +17,14 @@ A bundle (scripts/build_update_bundle.sh) is a tar with
   os.tar             Raspberry Pi OS packages from install/packages.txt, for an offline
                      device's security updates (optional)
 
+An OS bundle (scripts/build_os_bundle.sh, "kind": "os" in its manifest) carries no images:
+  os.tar             operating system packages, chosen by whoever built it
+  os-update.sh       install/os_update.sh - the only thing that installs them, signed with them
+It goes through the same checks (and the device's OS release has to match the bundle's), then
+apply_os: the database to the SD card, the script, a restart if it asks for one, /health/.
+apt has no way back, so there is no rollback - an OS update cut short is finished by dpkg at
+the next boot (recover_os), and uploading the bundle again completes it.
+
 Before anything changes, the bundle is checked: signature and checksums, platform, free
 space, and that it isn't older than what runs - with one exception: a device on a pre-release
 may go back to a release of the same major version (back_to_release). Then
@@ -41,7 +49,8 @@ power cut leaves the old one or the new one, never half of either (write_file, r
 
 This is deliberately the only piece of the system with Docker on the host - the web
 container never gets docker.sock. It talks to the dashboard through files in data/updates/:
-state.json (what it is doing), installed.json (what is installed), status/<bundle>.log.
+state.json (what it is doing), installed.json (what is installed), status/<bundle>.log;
+os-installed.json and os-packages.txt (the OS bundle last applied, the packages installed).
 Python's standard library only: it runs on the plain Raspberry Pi OS python3.
 """
 import ctypes
@@ -72,6 +81,11 @@ STATE_FILE = UPDATES / "state.json"
 INSTALLED_FILE = UPDATES / "installed.json"
 PREVIOUS_FILE = UPDATES / "previous.json"
 SYSTEM_FILE = UPDATES / "system.json"
+OS_INSTALLED_FILE = UPDATES / "os-installed.json"
+OS_PENDING_FILE = UPDATES / "os-pending.json"  # an OS update under way, or the restart after it
+OS_PACKAGES_FILE = UPDATES / "os-packages.txt"  # what an OS bundle for this device would start from
+OS_FILES = ("os.tar", "os-update.sh")
+REBOOT_REQUIRED = Path("/run/reboot-required")
 MAINTENANCE_FILE = PROJECT_DIR / "data" / "maintenance" / "status.json"
 EVENTS_FILE = PROJECT_DIR / "data" / "storage" / "events.jsonl"
 PUBLIC_KEY = Path(os.environ.get("COFFEEPY_UPDATE_PUBKEY", "/etc/coffeepy/update-signing.pub"))
@@ -330,7 +344,13 @@ def check_bundle(manifest, bundle):
     needed = int(manifest.get("required_mb", 0)) + bundle.stat().st_size // (1 << 20)
     if free_mb < needed:
         raise UpdateError(f"Not enough space: {free_mb} MB free, {needed} MB needed.")
-    current = installed()
+    if manifest.get("kind") == "os":
+        if any(name not in manifest.get("files", {}) for name in OS_FILES):
+            raise UpdateError("This OS bundle lacks its packages or its script - build it with scripts/build_os_bundle.sh.")
+        if manifest.get("release") != _os_field("VERSION_CODENAME"):
+            raise UpdateError(f"The OS bundle is for {manifest.get('release')}, this device runs "
+                              f"{_os_field('VERSION_CODENAME') or 'an unknown release'}.")
+    current = (read_json(OS_INSTALLED_FILE, {}) or {}) if manifest.get("kind") == "os" else installed()
     if (manifest.get("built_at", 0) < current.get("built_at", 0)
             and not back_to_release(current.get("version"), manifest.get("version"))):
         raise UpdateError(f"The bundle ({manifest.get('version')}) is older than what is installed "
@@ -539,8 +559,14 @@ def forget_previous():
     they only take room - its images most of all (about 0.9 GB on a Pi). Untagged here, they go
     with the next prune; the dumps in pre-update/ stay, as copies of the data."""
     previous = read_json(PREVIOUS_FILE, {}) or {}
-    for image in previous.get("images", []):
+    images = previous.get("images", [])
+    in_use = set(current_images()) if images else set()
+    for image in images:
         run("docker", "image", "rm", previous_tag(image), check=False)  # only the tag, while another one holds it
+        if image not in in_use:
+            # The third-party images are pinned to exact versions: postgres:16.15-alpine would
+            # otherwise stay tagged - and kept from prune - once the compose file names 16.16.
+            run("docker", "image", "rm", image, check=False)
     shutil.rmtree(UPDATES / "install.previous", ignore_errors=True)
     (UPDATES / "docker-compose.yml.previous").unlink(missing_ok=True)
     PREVIOUS_FILE.unlink(missing_ok=True)
@@ -605,6 +631,81 @@ def apply(job, manifest, workdir):
         run(str(PROJECT_DIR / "install" / "install.sh"), "--only=hardware,services,kiosk", "--yes")
 
 
+def apply_os(job, manifest, workdir):
+    """An OS bundle: no images, no rollback - apt has none. Failing before the script runs is
+    a refusal like any other (raised); from then on the outcome is the job's."""
+    version = manifest.get("version")
+    job.step("save", 20, "Saving the current data ...")
+    save_database(f"before-{version}")
+    with tarfile.open(workdir / "os.tar") as tar:
+        tar.extractall(workdir / "os", filter="data")
+    pending = {"bundle": job.name, "version": version, "started": time.time()}
+    write_json(OS_PENDING_FILE, {**pending, "phase": "packages"})
+    job.step("packages", 40, "Installing the operating system updates ...")
+    try:
+        result = run("bash", str(workdir / "os-update.sh"), str(workdir / "os"))
+    except UpdateError as exc:
+        OS_PENDING_FILE.unlink()
+        job.finish("failed", f"The operating system update failed: {exc} - what it had installed stays.")
+        event("os_update.apply", job.name, details=str(exc), outcome="failure")
+        return
+    output = result.stdout.decode(errors="replace")
+    for line in output.splitlines()[-10:]:
+        job.say(line)
+    # Shown on the update page, not only in the log: a security fix apt kept back is still missing.
+    note = " Some packages were kept back - see the log." if "Kept back" in output else ""
+    pending["note"] = note
+    write_json(OS_INSTALLED_FILE, {"version": version, "built_at": manifest.get("built_at"), "applied_at": time.time()})
+    if REBOOT_REQUIRED.exists():
+        # The maintenance screen stays up across it: recover_os() ends it once the app answers.
+        write_json(OS_PENDING_FILE, {**pending, "phase": "restart"})
+        job.step("restart", 80, "Restarting the device for the new kernel or firmware ...")
+        event("os_update.apply", job.name, details=f"{version}, restarting")
+        run("systemctl", "reboot", check=False)
+        return
+    OS_PENDING_FILE.unlink()
+    os_verified(job, version, "os_update.apply", note)
+
+
+def os_verified(job, version, action, note=""):
+    job.step("verify", 90, "Waiting for CoffeePy to answer ...")
+    if healthy():
+        job.finish("done", f"Operating system update {version} applied.{note}", version=version)
+        event(action, job.name, details=str(version))
+    else:
+        job.finish("failed", f"Operating system update {version} applied, but CoffeePy did not answer within "
+                             f"{HEALTH_TIMEOUT} seconds.")
+        event(action, job.name, details=f"{version}: no answer", outcome="failure")
+
+
+def recover_os(boot):
+    """What an OS update left: packages cut short (dpkg finishes them - at boot, before the
+    stack, when nothing else uses them), or the restart it asked for (checked by the watcher
+    once the stack is up). Returns whether there was something."""
+    data = read_json(OS_PENDING_FILE)
+    if not data:
+        return False
+    name, version = data.get("bundle", "?"), data.get("version")
+    # Never taken up again by itself: it would start over with every boot it cuts short.
+    (INCOMING / name).unlink(missing_ok=True)
+    (INCOMING / f"{name}.options.json").unlink(missing_ok=True)
+    if data.get("phase") == "restart":
+        if boot:
+            return True  # the watcher, after the stack started, checks it
+        OS_PENDING_FILE.unlink()
+        os_verified(Job(name, fresh=False), version, "os_update.restart", data.get("note", ""))
+        return True
+    job = Job(name, fresh=False)
+    job.step("recover", 10, "The operating system update was interrupted - finishing what dpkg had begun ...")
+    result = run("dpkg", "--configure", "-a", check=False)
+    OS_PENDING_FILE.unlink()
+    job.finish("failed", "The operating system update was interrupted. "
+                         + ("dpkg finished what it had begun - " if result.returncode == 0 else "dpkg could not finish it - ")
+                         + "upload the bundle again to complete it.")
+    event("os_update.recover", name, details=str(version), outcome="failure")
+    return True
+
+
 def accept(bundle, options_file, attempt):
     """The checked bundle from incoming/ to active/, where nothing takes it up again by itself -
     the journal first, so that a power cut in between still finds it."""
@@ -638,6 +739,9 @@ def process_bundle(bundle):
         job.say(f"Bundle {manifest.get('version')} for {manifest.get('platform')}: signature and checks passed")
         job.step("unpack", 15, "Unpacking the update ...")
         unpack(bundle, manifest, workdir)
+        if manifest.get("kind") == "os":
+            apply_os(job, manifest, workdir)
+            return True
         bundle, options_file = accept(bundle, options_file, attempt)
         accepted = True
         apply(job, manifest, workdir)
@@ -670,9 +774,10 @@ def process_bundle(bundle):
         shutil.rmtree(workdir, ignore_errors=True)
         # Gone once it is over either way: applied, it is no longer needed (the rollback has its
         # own copies); refused or rolled back, it would only fail again. Only an update cut short
-        # - the journal still there - keeps it, for recover(). active/ goes with it: after a step
-        # back to a release, that release's watcher knows nothing of it.
-        if not JOURNAL_FILE.exists():
+        # - the journal still there - keeps it, for recover(), and so does an OS update stopped in
+        # its packages, for recover_os(). active/ goes with it: after a step back to a release,
+        # that release's watcher knows nothing of it.
+        if not JOURNAL_FILE.exists() and (read_json(OS_PENDING_FILE, {}) or {}).get("phase") != "packages":
             bundle.unlink(missing_ok=True)
             options_file.unlink(missing_ok=True)
             shutil.rmtree(ACTIVE, ignore_errors=True)
@@ -770,14 +875,23 @@ def _containers():
     return sorted(out, key=lambda c: c["service"])
 
 
-def _os_release():
+def _os_field(name):
     try:
         for line in Path("/etc/os-release").read_text().splitlines():
-            if line.startswith("PRETTY_NAME="):
+            if line.startswith(f"{name}="):
                 return line.partition("=")[2].strip('"')
     except OSError:
         pass
     return ""
+
+
+def write_os_packages():
+    """The installed packages, one per line - the list an OS bundle for this device starts from
+    (the dashboard offers it, since SSH is off on a device in use)."""
+    result = _output("dpkg-query", "-W", "-f", "${db:Status-Abbrev} ${Package}\\n")
+    packages = sorted({line.split()[1] for line in result.splitlines() if line.startswith("ii ")})
+    if packages:
+        write_file(OS_PACKAGES_FILE, ("\n".join(packages) + "\n").encode())
 
 
 def _signature():
@@ -796,11 +910,12 @@ def write_system_info():
     except OSError:
         model = ""
     write_json(SYSTEM_FILE, {
-        "updated": time.time(), "model": model, "os": _os_release(), "kernel": platform.release(),
+        "updated": time.time(), "model": model, "os": _os_field("PRETTY_NAME"), "kernel": platform.release(),
         "platform": host_platform(), "docker": _output("docker", "version", "--format", "{{.Server.Version}}"),
         "compose": _output("docker", "compose", "version", "--short"), "containers": _containers(),
-        "signature": _signature(),
+        "signature": _signature(), "os_bundle": read_json(OS_INSTALLED_FILE),
     })
+    write_os_packages()
 
 
 def cycle(last_system=0.0):
@@ -827,6 +942,7 @@ def main(once=False, recover_only=False):
         # At boot coffeepy-update-recover.service got here first; this one is for a watcher
         # that died mid-update without a reboot (systemd restarts it).
         recover()
+        recover_os(boot=recover_only)
     except Exception as exc:  # noqa: BLE001 - keep watching
         log(f"recovery failed: {exc}")
     if recover_only:

@@ -1,6 +1,6 @@
 services:
   mosquitto:
-    image: eclipse-mosquitto:2
+    image: eclipse-mosquitto:2.1.2-alpine
     container_name: mosquitto
     ports:
       - "1883:1883"
@@ -24,7 +24,7 @@ services:
     restart: unless-stopped
 
   mqtt-client:
-    image: eclipse-mosquitto:2
+    image: eclipse-mosquitto:2.1.2-alpine
     container_name: mqtt-client
     depends_on:
       - mosquitto

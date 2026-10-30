@@ -63,6 +63,15 @@
     <textarea id="versions-text" hidden readonly>{{ version_text }}</textarea>
 </div>
 
+<div class="card">
+    <h2>{% translate "Operating system" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}An OS bundle (<code>scripts/build_os_bundle.sh</code>) brings the device's
+    operating system packages up to date - upload it above, like an update, signed the same way. Which packages
+    it carries is up to whoever builds it; start from this device's list. There is no going back from an OS
+    update: the database is saved first, and the device restarts if the update needs that.{% endblocktranslate %}</p>
+    {% if os_packages %}<a class="btn secondary" href="{% url 'dashboard:update_packages' %}">{% translate "Download the installed packages" %}</a>{% endif %}
+</div>
+
 {% if pre_update %}
 <div class="card">
     <h2>{% translate "Saved before updates" %}</h2>

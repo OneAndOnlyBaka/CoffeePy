@@ -451,12 +451,26 @@ def export_payments(request):
     return response
 
 
+def _ssh_status():
+    """{"active", "error"} as the host's storage helper last saw it - None while it doesn't run."""
+    status = backups.storage_status()
+    return status.get("ssh") if status.get("helper_running") and "active" in status.get("ssh", {}) else None
+
+
 @login_required
 @superuser_required
 def system_dashboard(request):
     policy, boards = NightPolicy.current(), KioskBoards.current()
     form = NightPolicyForm(instance=policy)
     boards_form = KioskBoardsForm(instance=boards)
+    if request.method == "POST" and request.POST.get("form") == "ssh":
+        # The host's storage helper switches it (install/storage_helper.py), within seconds.
+        enabled = request.POST.get("enabled") == "1"
+        backups.storage_request("ssh", enabled=enabled, requested_by=request.user.get_username())
+        audit.log(request, "ssh.enable" if enabled else "ssh.disable")
+        messages.success(request, _("SSH is being switched on - reload in a few seconds.") if enabled
+                         else _("SSH is being switched off - reload in a few seconds."))
+        return redirect("dashboard:system_dashboard")
     if request.method == "POST" and request.POST.get("form") == "boards":
         boards_form = KioskBoardsForm(request.POST, instance=boards)
         if boards_form.is_valid():
@@ -475,7 +489,7 @@ def system_dashboard(request):
             return redirect("dashboard:system_dashboard")
     return render(request, "dashboard/system_dashboard.html", {
         "stats": system_stats.gather(), "public_host": public_host(), "night_form": form,
-        "boards_form": boards_form,
+        "boards_form": boards_form, "ssh": _ssh_status(),
         # Without PUBLIC_HOST the address is detected inside the container - usually the
         # container's own, which no phone reaches (coffee/network.py).
         "public_host_guessed": not settings.PUBLIC_HOST,

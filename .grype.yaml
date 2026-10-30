@@ -4,14 +4,11 @@
 # base image without the finding makes the rule simply match nothing).
 ignore:
   # Fixed only in CPython 3.15, not backported to 3.14 - which is the newest Python that Django
-  # 5.2 (this app's LTS) supports. Revisit with the move to a Django that supports 3.15.
+  # 5.2 (this app's LTS) supports. Not reachable here: it is a command injection through newlines
+  # in poplib's commands, and neither the app nor the bridge imports poplib (no e-mail at all).
+  # Revisit with the move to a Django that supports 3.15.
   - vulnerability: CVE-2025-15367
     package:
       name: python
       type: binary
-    reason: "fixed only in Python 3.15, which Django 5.2 LTS does not support"
-  - vulnerability: CVE-2026-12345
-    package:
-      name: python
-      type: binary
-    reason: "fixed only in Python 3.15, which Django 5.2 LTS does not support"
+    reason: "poplib only, which nothing here imports; fixed only in Python 3.15, which Django 5.2 LTS does not support"

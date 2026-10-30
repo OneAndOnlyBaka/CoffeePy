@@ -11,7 +11,7 @@ from datetime import datetime
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -75,7 +75,21 @@ def update(request):
         "state": watcher_state(),
         "pending": _pending(),
         "pre_update": [{"name": p.name, "size": p.stat().st_size, "time": p.stat().st_mtime} for p in pre_update],
+        "os_packages": (settings.UPDATE_DIR / "os-packages.txt").is_file(),
     })
+
+
+@login_required
+@superuser_required
+@require_GET
+def update_packages(request):
+    """The host's installed packages, as the watcher lists them - what scripts/build_os_bundle.sh
+    --packages starts from. Here because SSH is off on a device in use."""
+    path = settings.UPDATE_DIR / "os-packages.txt"
+    if not path.is_file():
+        raise Http404
+    return FileResponse(open(path, "rb"), as_attachment=True, filename="coffeepy-os-packages.txt",
+                        content_type="text/plain")
 
 
 @login_required

@@ -48,6 +48,7 @@ class FakeDocker:
         self.project, self.error = project, error
         self.calls = []
         self.images = ["coffeepy-web:latest", "postgres:16-alpine"]
+        self.next_images = None  # what the new compose file names, once it is up
         self.tags = {}
         self.restored = []
         self.dump = DUMP
@@ -98,6 +99,8 @@ class FakeDocker:
             self.restored.append((args[-1], stdin))
         elif args[:2] == ("docker", "tag"):
             self.tags[args[3]] = args[2]
+        elif args[:4] == ("docker", "compose", "up", "-d") and self.next_images:
+            self.images = self.next_images
         return SimpleNamespace(returncode=0, stdout=stdout, stderr=b"", key=key)
 
 
@@ -454,6 +457,163 @@ class UpdateWatcherTestCase(SimpleTestCase):
         self.assertEqual(state["state"], "failed")
         self.assertIn("checksum", state["message"])
         self.assertEqual(self.docker.restored, [])
+
+    def test_an_image_the_new_version_no_longer_names_is_untagged(self):
+        self.docker.images = ["coffeepy-web:latest", "postgres:16.15-alpine"]
+        self.docker.next_images = ["coffeepy-web:latest", "postgres:16.16-alpine"]
+        state = self.apply(self.bundle())
+        self.assertEqual(state["state"], "done", state)
+        removed = [c[3] for c in self.docker.calls if c[:3] == ("docker", "image", "rm")]
+        self.assertEqual(removed, ["coffeepy-web:coffeepy-previous-latest",
+                                   "postgres:coffeepy-previous-16.15-alpine", "postgres:16.15-alpine"])
+
+    # --- OS bundles ---
+
+    def os_bundle(self, release="trixie", built_at=None, script=True, name="coffeepy-os-trixie-1-arm64.tar"):
+        work = Path(tempfile.mkdtemp(dir=self.root, prefix="build-"))
+        (work / "Packages").write_text("")
+        with tarfile.open(work / "os.tar", "w") as tar:
+            tar.add(work / "Packages", "debs/Packages")
+        (work / "os-update.sh").write_text("#!/bin/bash\n")
+        members = ["os.tar", "os-update.sh"] if script else ["os.tar"]
+        manifest = {"format": 2, "kind": "os", "version": "os-trixie-1", "built_at": built_at or time.time(),
+                    "platform": "linux/arm64", "release": release, "required_mb": 1,
+                    "files": {n: hashlib.sha256((work / n).read_bytes()).hexdigest() for n in members}}
+        (work / "manifest.json").write_text(json.dumps(manifest))
+        subprocess.run(["openssl", "pkeyutl", "-sign", "-inkey", str(self.key), "-rawin",
+                        "-in", str(work / "manifest.json"), "-out", str(work / "manifest.sig")], check=True)
+        path = self.watcher.INCOMING / name
+        with tarfile.open(path, "w") as tar:
+            for member in ["manifest.json", "manifest.sig", *members]:
+                tar.add(work / member, member)
+        return path
+
+    def os_device(self, release="trixie"):
+        self.patch(self.watcher, "_os_field", lambda name: release if name == "VERSION_CODENAME" else "")
+        self.reboot = self.root / "reboot-required"
+        mock.patch.object(self.watcher, "REBOOT_REQUIRED", self.reboot).start()
+        self.addCleanup(mock.patch.stopall)
+
+    def ran_script(self):
+        return [c for c in self.docker.calls if c[0] == "bash" and c[1].endswith("os-update.sh")]
+
+    def test_an_os_update(self):
+        self.os_device()
+        bundle = self.os_bundle()
+        original = self.docker.run
+
+        def run(*args, **kwargs):
+            if args[0] == "bash":
+                original(*args, **kwargs)
+                return SimpleNamespace(returncode=0, stdout=b"Brought up to date: 3 package(s).\nKept back, ...: libx\n",
+                                       stderr=b"")
+            return original(*args, **kwargs)
+
+        self.watcher.run.side_effect = run
+        state = self.apply(bundle, {"requested_by": "boss"})
+        self.assertEqual(state["state"], "done", state)
+        self.assertIn("Brought up to date: 3 package(s).", (self.watcher.STATUS_DIR / f"{bundle.name}.log").read_text())
+        self.assertIn("Some packages were kept back", state["message"])
+        [script] = self.ran_script()
+        self.assertTrue(script[2].endswith("/os"))
+        self.assertEqual(len(list(self.watcher.PRE_UPDATE.glob("before-os-trixie-1_*.sql.gz"))), 1)
+        self.assertEqual(json.loads(self.watcher.OS_INSTALLED_FILE.read_text())["version"], "os-trixie-1")
+        self.assertFalse(self.watcher.INSTALLED_FILE.exists())  # the app's version is not the OS bundle's
+        self.assertNotIn(("docker", "load", "-i"), [c[:3] for c in self.docker.calls])
+        self.assertFalse(self.watcher.OS_PENDING_FILE.exists())
+        self.assertFalse(bundle.exists())
+        self.assertFalse(self.watcher.MAINTENANCE_FILE.exists())
+        self.assertEqual(self.events(), [("update.start", "success"), ("os_update.apply", "success")])
+
+    def test_an_os_update_that_asks_for_a_restart(self):
+        self.os_device()
+        self.reboot.write_text("*** System restart required ***\n")
+        state = self.apply(self.os_bundle())
+        self.assertEqual((state["state"], state["step"]), ("running", "restart"))
+        self.assertIn(("systemctl", "reboot"), self.docker.calls)
+        self.assertEqual(json.loads(self.watcher.OS_PENDING_FILE.read_text())["phase"], "restart")
+        self.assertTrue(self.watcher.MAINTENANCE_FILE.exists())  # across the restart
+        self.assertEqual(list(self.watcher.INCOMING.glob("*.tar")), [])  # or it would restart again and again
+        # The early recovery at boot leaves it to the watcher, which waits for the stack.
+        self.assertTrue(self.watcher.recover_os(boot=True))
+        self.assertTrue(self.watcher.OS_PENDING_FILE.exists())
+        self.health = [False]
+        self.watcher.main(once=True)
+        self.assertEqual(self.state()["state"], "failed")
+        self.assertIn("did not answer", self.state()["message"])
+        self.assertFalse(self.watcher.OS_PENDING_FILE.exists())
+        self.assertFalse(self.watcher.MAINTENANCE_FILE.exists())
+        self.assertEqual(self.events()[-1], ("os_update.restart", "failure"))
+
+    def test_an_os_update_whose_script_fails(self):
+        self.os_device()
+        self.docker.fail.add("os-update.sh")
+        state = self.apply(self.os_bundle())
+        self.assertEqual(state["state"], "failed")
+        self.assertIn("operating system update failed", state["message"])
+        self.assertFalse(self.watcher.OS_INSTALLED_FILE.exists())
+        self.assertFalse(self.watcher.OS_PENDING_FILE.exists())
+        self.assertEqual(self.events()[-1], ("os_update.apply", "failure"))
+
+    def test_an_os_bundle_is_refused_before_anything_changes(self):
+        self.os_device(release="bookworm")
+        state = self.apply(self.os_bundle())
+        self.assertIn("is for trixie, this device runs bookworm", state["message"])
+        self.os_device(release="")
+        self.assertIn("an unknown release", self.apply(self.os_bundle())["message"])
+        self.os_device()
+        self.assertIn("lacks its packages or its script", self.apply(self.os_bundle(script=False))["message"])
+        self.watcher.write_json(self.watcher.OS_INSTALLED_FILE, {"built_at": time.time() + 60})
+        self.assertIn("only go forward", self.apply(self.os_bundle())["message"])
+        self.docker.fail.add("pg_dump")
+        self.watcher.OS_INSTALLED_FILE.unlink()
+        self.assertIn("refused", self.apply(self.os_bundle())["message"])
+        self.assertEqual(self.ran_script(), [])
+        self.assertFalse(self.watcher.OS_PENDING_FILE.exists())
+
+    def test_an_os_update_a_power_cut_interrupted(self):
+        self.os_device()
+        bundle = self.os_bundle()
+        original = self.docker.run
+
+        def run(*args, **kwargs):
+            if args[0] == "bash":
+                raise PowerCut("in the middle of apt")
+            return original(*args, **kwargs)
+
+        self.watcher.run.side_effect = run
+        with self.assertRaises(PowerCut):
+            self.apply(bundle)
+        self.assertTrue(bundle.exists())
+        self.assertEqual(json.loads(self.watcher.OS_PENDING_FILE.read_text())["phase"], "packages")
+        self.watcher.run.side_effect = original
+        self.assertEqual(self.watcher.main(recover_only=True), 0)  # at boot, before the stack
+        self.assertIn(("dpkg", "--configure", "-a"), self.docker.calls)
+        self.assertFalse(bundle.exists())  # not taken up again by itself
+        self.assertFalse(self.watcher.OS_PENDING_FILE.exists())
+        self.assertIn("dpkg finished what it had begun", self.state()["message"])
+        self.assertEqual(self.events()[-1], ("os_update.recover", "failure"))
+        self.assertFalse(self.watcher.recover_os(boot=True))  # nothing left
+
+    def test_an_interrupted_os_update_dpkg_cant_finish(self):
+        self.os_device()
+        self.watcher.write_json(self.watcher.OS_PENDING_FILE, {"bundle": "b.tar", "version": "v", "phase": "packages"})
+        self.docker.fail.add("dpkg")
+        self.assertTrue(self.watcher.recover_os(boot=False))
+        self.assertIn("dpkg could not finish it", self.state()["message"])
+
+    def test_the_installed_packages_for_an_os_bundle(self):
+        original = self.docker.run
+
+        def run(*args, **kwargs):
+            if args[0] == "dpkg-query":
+                return SimpleNamespace(returncode=0, stdout=b"ii  zlib1g\nrc  gone\nii  bash\n", stderr=b"")
+            return original(*args, **kwargs)
+
+        self.watcher.run.side_effect = run
+        self.watcher.write_json(self.watcher.OS_INSTALLED_FILE, {"version": "os-trixie-1"})
+        self.assertEqual(self.system()["os_bundle"], {"version": "os-trixie-1"})
+        self.assertEqual(self.watcher.OS_PACKAGES_FILE.read_text(), "bash\nzlib1g\n")
 
     def test_an_older_watchers_rollback_copies_go_at_the_first_start(self):
         (self.watcher.PRE_UPDATE / "before-v1.dump").write_bytes(b"PGDMP")

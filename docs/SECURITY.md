@@ -112,9 +112,10 @@ default) are deleted.
 
 - Written only to the **one stick** this device set up (its metadata carries the device and
   the stick id), never to a stick that merely happens to be plugged in.
-- **Optional encryption**: with `BACKUP_PASSPHRASE` every backup is AES-256 encrypted with a
-  key derived by PBKDF2 (600,000 iterations, salted); the passphrase is passed to `openssl`
-  through the environment, never on a command line. Without the passphrase a backup can't be
+- **Encrypted**: with `BACKUP_PASSPHRASE` - which the provisioning tool generates unless you
+  decline - every backup is AES-256 encrypted with a key derived by PBKDF2 (600,000
+  iterations, salted); the passphrase is passed to `openssl` through the environment, never on
+  a command line. Without the passphrase a backup can't be
   restored.
 - Every backup is **read back and checksummed** (`.sha256`) right after it is written.
 - A **restore saves the current state first** and replaces the database in one transaction: a
@@ -133,6 +134,9 @@ default) are deleted.
   The one exception is a pre-release going back to its release.
 - **Self-healing.** The database is saved before every update; if the new version doesn't
   answer, or the power fails mid-update, the device returns to the version before it by itself.
+- **The operating system** is updated the same way: an OS bundle, signed, carries the packages
+  and the one script that installs them - nothing else on the device installs packages from an
+  upload. Building one is the operator's job ([ARCHITECTURE.md](ARCHITECTURE.md#operating-system-updates)).
 
 ## The device
 
@@ -143,9 +147,11 @@ default) are deleted.
   the provisioning tool can save them to a file readable only by you.
 - **Clock integrity**: the DS3231 keeps time offline; a clock that jumps back is put forward
   again, so audit entries and lockouts keep their order.
-- **SSH and the operating system** are Raspberry Pi OS's own - CoffeePy doesn't open or harden
-  them. Use a strong password or a key for the Pi's user, and keep the Pi physically in its
-  housing.
+- **SSH is off** after the installation (unless the provisioning tool's "SSH" setting keeps
+  it): nothing on a running kiosk needs it. An admin switches it on in the dashboard (System →
+  SSH) for the provisioning tool or maintenance - audited, and with a warning for as long as
+  it is on. Use a strong password or a key for the Pi's user, and keep the Pi physically in
+  its housing.
 
 ## Development and supply chain
 
@@ -167,8 +173,8 @@ default) are deleted.
 - **A QR code can be photographed.** Whoever scans a member's link QR code first, within its
   five minutes, gets that member's portal. The member notices (their own scan fails), sees the
   extra device and can log it out.
-- **Unencrypted backups are readable** by whoever has the stick. Set a passphrase if the stick
-  might leave the building.
+- **Unencrypted backups are readable** by whoever has the stick - the backup page says so
+  while there is no passphrase.
 - **An admin sees everything** - hand out the admin role sparingly.
 
 Found a security problem? Please open an issue without details, or contact the maintainer

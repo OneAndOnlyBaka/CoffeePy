@@ -1,7 +1,7 @@
 """install/storage_helper.py against a simulated host: block devices from a model instead of
 lsblk, a mount is a symlink from the mount point to the stick's directory. Every path the
 helper takes - setting up, pulling out, plugging back in, another device's stick, adopting,
-ejecting, a restored identity, settings - without root and without a device."""
+ejecting, a restored identity, settings, SSH - without root and without a device."""
 import importlib.util
 import json
 import os
@@ -34,6 +34,7 @@ class FakeHost:
         self.commands = []
         self.fail = set()  # command names that fail
         self.new_partition = True
+        self.ssh = set()  # the SSH units that run
 
     # --- the model ---
     def plug(self, path, serial="S1", vendor="SanDisk", model="Cruzer", label="", fstype="vfat", partitioned=True):
@@ -100,11 +101,19 @@ class FakeHost:
         elif name == "mkfs.ext4":
             volume = args[-1]
             self.volumes[volume].update(label="COFFEEBAK", fstype="ext4")
+        elif args[:3] == ("systemctl", "enable", "--now"):
+            self.ssh.add(args[-1])
+        elif args[:3] == ("systemctl", "disable", "--now"):
+            self.ssh.discard(args[-1])
+        elif args[:2] == ("systemctl", "is-active"):
+            return "".join("active\n" if unit in self.ssh else "inactive\n" for unit in args[2:])
         return ""
 
     def subprocess_run(self, args, **kwargs):
-        self.run(*args)
-        return subprocess.CompletedProcess(args, 0, "", "")
+        try:
+            return subprocess.CompletedProcess(args, 0, self.run(*args), "")
+        except RuntimeError as exc:  # what the helper's run() raises on, plain subprocess.run reports
+            return subprocess.CompletedProcess(args, 1, "", str(exc))
 
 
 class StorageHelperTestCase(SimpleTestCase):
@@ -308,6 +317,32 @@ class StorageHelperTestCase(SimpleTestCase):
         self.assertEqual(status["request"], {})
         status = self.request("explode")
         self.assertIn("Unknown request", status["request"]["message"])
+
+    def test_ssh_on_and_off(self):
+        self.host.ssh = {"ssh.socket"}  # an image that starts it on demand
+        status = self.cycle()
+        self.assertTrue(status["ssh"]["active"])
+        status = self.request("ssh", enabled=False, requested_by="boss")
+        self.assertEqual((status["ssh"]["active"], status["ssh"]["error"]), (False, ""))
+        self.assertEqual(status["request"], {})  # not the stick's: the backup page shows nothing
+        status = self.request("ssh", enabled=True, requested_by="boss")
+        self.assertTrue(status["ssh"]["active"])
+        self.assertEqual(self.host.ssh, {"ssh.service"})
+        self.assertEqual(self.events(), ["ssh.disable", "ssh.enable"])
+
+    def test_ssh_state_is_asked_for_only_now_and_then(self):
+        self.cycle()
+        self.host.ssh = {"ssh.service"}
+        self.assertFalse(self.cycle()["ssh"]["active"])
+        self.helper.ssh["checked"] -= self.helper.SSH_SECONDS
+        self.assertTrue(self.cycle()["ssh"]["active"])
+
+    def test_ssh_that_cant_be_switched(self):
+        self.host.fail.add("systemctl")
+        status = self.request("ssh", enabled=True)
+        self.assertIn("systemctl: failed", status["ssh"]["error"])
+        lines = [json.loads(line) for line in (self.storage / "events.jsonl").read_text().splitlines()]
+        self.assertEqual([(e["action"], e["outcome"]) for e in lines], [("ssh.enable", "failure")])
 
     def test_mounted_info_for_a_disk_it_no_longer_lists(self):
         self.host.mounted[self.helper.OWN] = "/dev/gone1"

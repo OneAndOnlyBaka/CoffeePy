@@ -387,6 +387,15 @@ mind before changing it:
   no `pi` on a current image). Until `--only` took a list, those steps never ran at all. A device can
   trust its own key instead (`/etc/coffeepy/update-signing.own.pub`, from `provision.sh`; no
   update replaces it) or check nothing (`UPDATE_VERIFY_SIGNATURE=false`).
+- **The host's OS is updated by OS bundles** (`scripts/build_os_bundle.sh`, `"kind": "os"`): no
+  images, no rollback, the packages are whatever the operator lists (the update page offers the
+  device's `os-packages.txt`). The only code that installs them is `install/os_update.sh`, copied
+  *into* the bundle and signed with it - keep it the one way packages get onto a device from an
+  upload. Its forward check is against `os-installed.json`, not the app's `installed.json`; a power
+  cut in it is finished by `dpkg --configure -a` at boot (`recover_os`), never retried by itself.
+- **SSH is off after the installation** (`install.sh` step `ssh`, unless `--keep-ssh`); the
+  dashboard's System page switches it through the storage helper. Provision the test Pi with
+  `SSH_AFTER_INSTALL=on`, or the next deploy finds no way in.
 - **Which code runs is `coffeepy-version.json`** (`scripts/write_version.sh`: GitVersion's
   SemVer from `GitVersion.yml` - the release workflow hands it in as `COFFEEPY_VERSION`, a local
   `gitversion` is asked, else git describe - and the commit), git-ignored and written into the tree by everything that builds or ships it -
@@ -440,9 +449,11 @@ CI's `audit` job fails on every known vulnerability that an upgrade fixes (Depen
 PRs keep it there, `.github/dependabot.yml`): `pip-audit` per
 requirements file (`scripts/audit_python.py` tells fixable from not-yet-fixed) and Grype on
 the two images this repo builds. Other people's images (postgres, mosquitto, caddy) are only
-reported - their packages are theirs to fix, and every build pulls their newest tag. What can't
-be fixed yet goes into `.grype.yaml` with its reason, never silently: the two CPython CVEs there
-are fixed only in 3.15, which Django 5.2 doesn't support. The images run Python 3.14 and
+reported - their packages are theirs to fix - and pinned to exact versions that Dependabot moves
+(not to digests: a `docker load`ed image has none, and the watcher's `:coffeepy-previous-*` tags
+are made from the tag). What can't be fixed yet goes into `.grype.yaml` with its reason - and
+whether the affected code is reachable from here at all - never silently: the CPython CVE there
+is fixed only in 3.15, which Django 5.2 doesn't support. The images run Python 3.14 and
 upgrade the base image's pip, because both lagged behind their fixes.
 
 ## The device is offline

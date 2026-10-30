@@ -82,3 +82,13 @@ class InstallerTestCase(SimpleTestCase):
         # And without the watcher, the installer's own status goes again when it exits.
         self.sourced(f'TARGET_DIR="{self.root}"; start_maintenance')
         self.assertFalse(status.exists())
+
+    def test_ssh_is_switched_off_unless_kept(self):
+        result = self.dry_run("--only=ssh")
+        self.assertIn("[dry-run] systemctl disable --now ssh.service", result.stdout)
+        self.assertIn("[dry-run] systemctl disable --now ssh.socket", result.stdout)
+        result = self.dry_run("--only=ssh", "--keep-ssh")
+        self.assertIn("Leaving SSH as it is", result.stdout)
+        self.assertNotIn("systemctl disable", result.stdout)
+        # The update watcher's run never reaches it.
+        self.assertNotIn("Step ssh", self.dry_run("--only=hardware,services,kiosk").stdout)

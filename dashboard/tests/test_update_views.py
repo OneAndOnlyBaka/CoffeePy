@@ -85,6 +85,15 @@ class UpdatePageTestCase(FakeDevice, TestCase):
         self.assertEqual(data["state"]["state"], "stale")  # nothing moved for half an hour: dead
         self.assertIn("Loading", data["log"])
 
+    def test_the_installed_packages_for_an_os_bundle(self):
+        self.assertNotContains(self.client.get(reverse("dashboard:update")), "Download the installed packages")
+        self.assertEqual(self.client.get(reverse("dashboard:update_packages")).status_code, 404)
+        (self.updates / "os-packages.txt").write_text("bash\nzlib1g\n")
+        self.assertContains(self.client.get(reverse("dashboard:update")), "Download the installed packages")
+        response = self.client.get(reverse("dashboard:update_packages"))
+        self.assertEqual(b"".join(response.streaming_content), b"bash\nzlib1g\n")
+        self.assertIn("coffeepy-os-packages.txt", response["Content-Disposition"])
+
     def test_managers_are_kept_out(self):
         User.objects.create_user(username="helper", password="pw")
         client = Client()
@@ -120,12 +129,14 @@ class VersionListTestCase(FakeDevice, TestCase):
 
     def test_everything_listed_and_copyable(self):
         (self.updates / "installed.json").write_text(json.dumps({"version": "v2.1", "applied_at": 1793013212}))
-        response = self.page(self.SYSTEM, {"version": "0be2def-dirty", "commit": "0be2def64ad5", "branch": "main"})
+        system = {**self.SYSTEM, "os_bundle": {"version": "os-trixie-20261030-1200", "applied_at": 1793013212}}
+        response = self.page(system, {"version": "0be2def-dirty", "commit": "0be2def64ad5", "branch": "main"})
         text = response.context["version_text"]
         for expected in ("[CoffeePy]", "Version: 0be2def-dirty", "Commit: 0be2def64ad5", "Branch: main",
                          "Installed by update: v2.1 (applied 2026-", "Python: ", "Django: ",
                          "Model: Raspberry Pi 3", "Docker Compose: 5.5.0",
                          "Update signature: CoffeePy's key 0123456789abcdef",
+                         "OS bundle: os-trixie-20261030-1200 (applied 2026-",
                          "web: coffeepy-web:latest @0123456789ab", "migrate: coffeepy-web:latest @0123456789ab (exited)"):
             self.assertIn(expected, text)
         self.assertNotIn("Committed:", text)  # nothing to say - left out
@@ -155,6 +166,8 @@ class VersionListTestCase(FakeDevice, TestCase):
         self.assertNotIn("[Containers]", response.context["version_text"])
 
     def test_helpers_when_something_is_missing(self):
+        self.assertEqual(versions._os_bundle({}), "")
+        self.assertEqual(versions._os_bundle({"version": "os-trixie-1"}), "os-trixie-1")
         self.assertEqual(versions._package("no-such-package-here"), "")
         with mock.patch.object(versions.subprocess, "run", side_effect=OSError):
             self.assertEqual(versions._pg_dump(), "")

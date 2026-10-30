@@ -13,8 +13,10 @@
 #   --yes         don't ask before the steps that change networking
 #   --force       re-run steps that are already recorded as done
 #   --skip-ap     leave networking alone (keep the Pi on your existing WiFi/ethernet)
+#   --keep-ssh    leave SSH on; without, the ssh step switches it off (the dashboard's
+#                 System page switches it on again)
 #   --only=STEP[,STEP...]  run just these steps, in their usual order (preflight packages
-#                 app hardware kiosk services images ap verify)
+#                 app hardware kiosk services images ap ssh verify)
 #   --offline=DIR install from an unpacked offline bundle - no internet needed at all
 #                 (see scripts/build_offline_bundle.sh)
 #
@@ -59,10 +61,11 @@ DRY_RUN=0
 ASSUME_YES=0
 FORCE=0
 SKIP_AP=0
+KEEP_SSH=0
 ONLY=""
 OFFLINE_DIR=""
 
-ALL_STEPS="preflight packages app hardware kiosk services images ap verify"
+ALL_STEPS="preflight packages app hardware kiosk services images ap ssh verify"
 
 
 # --------------------------------------------------------------------------- plumbing
@@ -740,6 +743,23 @@ step_ap() {
 	run systemctl restart hostapd
 }
 
+# Left on with the Imager's password, SSH is a way in for anyone on the network - and nothing
+# on a running kiosk needs it. Switching it off here leaves the session this probably runs
+# in alone (Debian's ssh.service has KillMode=process); the storage helper switches it on
+# again when an admin asks for that on the dashboard's System page.
+step_ssh() {
+	if [ "${KEEP_SSH}" = "1" ]; then
+		log "Leaving SSH as it is (--keep-ssh)"
+		return 0
+	fi
+	log "Switching SSH off - the dashboard's System page switches it on again"
+	local unit
+	for unit in ssh.service ssh.socket; do
+		systemctl cat "${unit}" >/dev/null 2>&1 || [ "${DRY_RUN}" = "1" ] || continue
+		run systemctl disable --now "${unit}"
+	done
+}
+
 step_verify() {
 	log "Checking the result"
 	local failures=0
@@ -817,7 +837,7 @@ usage() { sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 step_weight() {
 	case "$1" in
 		preflight) echo 3 ;; packages) echo 8 ;; app) echo 30 ;; hardware) echo 33 ;; kiosk) echo 36 ;;
-		services) echo 40 ;; images) echo 44 ;; ap) echo 88 ;; verify) echo 92 ;; *) echo 0 ;;
+		services) echo 40 ;; images) echo 44 ;; ap) echo 88 ;; ssh) echo 90 ;; verify) echo 92 ;; *) echo 0 ;;
 	esac
 }
 start_maintenance() {
@@ -841,6 +861,7 @@ for arg in "$@"; do
 		--yes|-y)  ASSUME_YES=1 ;;
 		--force)   FORCE=1 ;;
 		--skip-ap) SKIP_AP=1 ;;
+		--keep-ssh) KEEP_SSH=1 ;;
 		--only=*)  ONLY="${arg#--only=}" ;;
 		--offline=*) OFFLINE_DIR="${arg#--offline=}" ;;
 		-h|--help) usage 0 ;;
