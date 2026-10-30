@@ -24,7 +24,7 @@ values and create it (mode 600).
 script uses key auth. A re-flashed Pi changes its host key - `--setup` clears the old one.
 
 The image so far was Raspberry Pi OS **Desktop** 64-bit (trixie) on ethernet, not the Lite
-the README documents - `install.sh` disables the desktop's lightdm itself.
+docs/QUICKSTART.md documents - `install.sh` disables the desktop's lightdm itself.
 
 ## Install and deploy
 

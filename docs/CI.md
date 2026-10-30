@@ -1,7 +1,7 @@
 # Build, checks and releases
 
 How CoffeePy is tested, audited, built and published on GitHub. For using and installing it,
-see the [manual](MANUAL.md) and the [README](../README.md); for changing the code,
+see the [manual](MANUAL.md) and the [quickstart](QUICKSTART.md); for changing the code,
 [CLAUDE.md](../CLAUDE.md).
 
 ## Checks on every push and pull request

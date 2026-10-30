@@ -25,8 +25,9 @@ and pay from there.
 > negligence and injury to life, body or health is not affected where the law does not allow
 > excluding it.
 
-This manual covers every screen. Technical details (architecture, development, internals)
-are in the [README](../README.md).
+This manual covers every screen. Technical details are in English under [docs](README.md): the
+[architecture](ARCHITECTURE.md), [how the numbers are calculated](CALCULATIONS.md), the
+[security mechanisms](SECURITY.md), [GDPR-compliant operation](PRIVACY.md) and the [quickstart](QUICKSTART.md).
 
 **Contents**
 
@@ -169,7 +170,7 @@ change it:
 | Updates | Which **signature** an update has to carry: CoffeePy's key, **your own key**, or **no check (development only)** (see [Your own signing key](#your-own-signing-key)). |
 | Display | Screen mode. The documented 1024×600 display doesn't report its resolution, so it needs the preset. |
 | Web workers | Processes serving the web app: 2 for a Pi 3, 3–4 for a Pi 4 or 5. |
-| Install from | Internet, or an offline bundle (for Pis without internet, see the README). |
+| Install from | Internet, or an offline bundle (for Pis without internet, see the [quickstart](QUICKSTART.md#installing-without-internet)). |
 
 Input is checked right away – a WiFi password, for instance, needs at least 8 characters:
 
@@ -863,6 +864,9 @@ What helps, without being legal advice:
   backup password if it might leave the building.
 - The dashboard needs a login; an admin sees everything. Hand out the roles sparingly
   (**Dashboard users**).
+
+In detail, with retention periods, the rights of the people concerned and a checklist before
+going live: [Running CoffeePy in line with the GDPR](PRIVACY.md).
 
 ### Language
 

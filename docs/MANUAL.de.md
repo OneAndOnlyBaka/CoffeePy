@@ -28,8 +28,9 @@ verknüpfen und sehen dort ihre Statistik und zahlen.
 > Haftung für Vorsatz, grobe Fahrlässigkeit und für Schäden an Leben, Körper oder Gesundheit
 > bleibt unberührt, soweit das Gesetz sie nicht ausschließen lässt.
 
-Diese Anleitung erklärt alle Oberflächen. Technische Details (Aufbau, Entwicklung, Interna)
-stehen in der [README](../README.md).
+Diese Anleitung erklärt alle Oberflächen. Technische Details stehen auf Englisch unter
+[docs](README.md): der [Aufbau](ARCHITECTURE.md), [wie die Zahlen berechnet werden](CALCULATIONS.md),
+die [Sicherheitsmechanismen](SECURITY.md), der [DSGVO-konforme Betrieb](PRIVACY.md) und der [Schnellstart](QUICKSTART.md).
 
 **Inhalt**
 
@@ -175,7 +176,7 @@ auswählen, um sie zu ändern:
 | Updates | Welche **Signatur** ein Update tragen muss: Schlüssel von CoffeePy, **eigener Schlüssel** oder **keine Prüfung (nur Entwicklung)** (siehe [Eigener Signierschlüssel](#eigener-signierschlüssel)). |
 | Display | Bildschirmmodus. Das dokumentierte 1024×600-Display meldet seine Auflösung nicht und braucht deshalb die Vorgabe. |
 | Web-Worker | Prozesse für die Web-App: 2 für einen Pi 3, 3–4 für einen Pi 4 oder 5. |
-| Installieren aus | Internet oder ein Offline-Paket (für Pis ohne Internet, siehe README). |
+| Installieren aus | Internet oder ein Offline-Paket (für Pis ohne Internet, siehe [Schnellstart](QUICKSTART.md#installing-without-internet)). |
 
 Eingaben werden sofort geprüft – zum Beispiel muss ein WLAN-Passwort mindestens 8 Zeichen
 haben:
@@ -905,6 +906,9 @@ Was dabei hilft, ohne Rechtsberatung zu sein:
   Backup-Passwort setzen, wenn er das Haus verlassen könnte.
 - Das Dashboard ist nur mit Anmeldung erreichbar; wer Admin ist, sieht alles. Vergib die
   Rollen sparsam (**Dashboard-Benutzer**).
+
+Ausführlich, mit Aufbewahrungsfristen, Betroffenenrechten und einer Checkliste vor dem
+Start: [DSGVO-konformer Betrieb](PRIVACY.md) (Englisch).
 
 ### Sprache
 

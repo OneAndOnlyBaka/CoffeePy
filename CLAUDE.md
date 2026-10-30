@@ -1,12 +1,13 @@
 # Working on CoffeePy
 
 Notes for whoever (or whatever) edits this repo next. [README.md](README.md) covers what the
-project *is* and how to deploy it; this file covers what bites you while changing it.
+project *is*, [docs/](docs/README.md) how it is built and deployed; this file covers what bites
+you while changing it.
 
 ## Running things
 
 No Django is installed system-wide on the dev box - use the git-ignored `.venv`, or make one
-first if the checkout has none (see README's Development section). Then:
+first if the checkout has none (see the Development section of docs/QUICKSTART.md). Then:
 
 ```bash
 export DJANGO_TEST_SQLITE=1 DJANGO_SECRET_KEY=dev   # both are required, also for tests

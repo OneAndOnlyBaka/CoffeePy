@@ -6,7 +6,7 @@ description: Keeps CoffeePy's user manual (docs/MANUAL.de.md + docs/MANUAL.en.md
 # The user manual
 
 `docs/MANUAL.de.md` and `docs/MANUAL.en.md` are the manual for the people who set up and use
-CoffeePy - not for developers (that is the README and CLAUDE.md). They have the same structure,
+CoffeePy - not for developers (that is docs/ and CLAUDE.md). They have the same structure,
 section for section, and every screen of the product appears in both as a screenshot in that
 language under `docs/pictures/manual/<de|en>/<name>.png`. `docs/MANUAL.md` only links the two.
 
