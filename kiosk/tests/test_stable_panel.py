@@ -55,3 +55,18 @@ class StablePanelTestCase(TestCase):
         self.assertEqual(client.post(reverse("kiosk:order_confirm")).status_code, 403)
         client.post(reverse("kiosk:order_confirm"), HTTP_X_CSRFTOKEN=token)
         self.assertEqual(Order.objects.count(), 1)
+
+    def test_editing_settings_keeps_the_panel_and_still_extends_the_time(self):
+        """Typing a name or picking a coffee calls settings_touch. When that changed the rendered
+        deadline, the next poll swapped the panel mid-edit: the pick jumped back, typed text was
+        lost, and the teardown crashed Chromium (seen on the device, 2026-10-31)."""
+        start = time.time()
+        first = self.log_in("settings")
+        with mock.patch("time.time", return_value=start + 15):
+            self.client.post(reverse("kiosk:settings_touch"))
+            self.assertEqual(first, self.client.get(reverse("kiosk:panel")).content)
+        with mock.patch("time.time", return_value=start + 25):  # past the shown 20s, within the touch's
+            self.assertEqual(first, self.client.get(reverse("kiosk:panel")).content)
+        with mock.patch("time.time", return_value=start + 40):
+            self.assertIn(b"Apply your card", self.client.get(reverse("kiosk:panel")).content)
+        self.assertNotIn("shown_deadline", self.client.session)

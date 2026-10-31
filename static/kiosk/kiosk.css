@@ -205,7 +205,13 @@ html, body.kiosk { overflow: hidden; }
 }
 
 .coffee-option input { width: 32px; height: 32px; }
-.coffee-option.selected { background: var(--accent); color: var(--text-inverse); }
+.coffee-option.selected,
+.coffee-option:has(input:checked) { background: var(--accent); color: var(--text-inverse); }
+/* Settings' favourite coffee: the same tiles, side by side, so the name field stays in view. */
+fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
+fieldset.field legend { padding: 0; margin-bottom: 8px; }
+.coffee-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.coffee-grid .coffee-option { min-height: 76px; padding: 12px 18px; }
 .coffee-option .price { margin-left: auto; font-weight: 600; }
 
 .action-row {
@@ -291,17 +297,30 @@ html, body.kiosk { overflow: hidden; }
 .field-with-osk input { flex: 1; min-height: 76px; font-size: 1.2rem; }
 .osk-open-btn { flex: 0 0 auto; white-space: nowrap; font-size: 1.2rem; padding: 12px 28px; min-height: 76px; }
 
-/* Standalone /kiosk/keyboard/ page - a separate page entirely, never re-rendered while
-   the user is on it, so it fills the whole viewport rather than overlaying #panel.
-   Fullscreen by design: the keyboard is the only thing on this page, so every row and
-   key stretches to use all the space it's given instead of clustering at a fixed size. */
-.keyboard-page { height: 100vh; padding: 12px; }
-.keyboard-page form { display: flex; flex-direction: column; height: 100%; gap: 10px; }
-.keyboard-page input { flex: 0 0 auto; font-size: 2rem; padding: 18px; text-align: center; }
+/* The on-screen keyboard (osk.js): fills the screen above everything but the maintenance
+   cover, so every row and key stretches to the space there is. Hidden with visibility, never
+   display: none - switching display builds and tears down its layout, and that teardown is
+   where Chromium's renderer crashes (CLAUDE.md). The key set not in use (.off) likewise. */
+.osk-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  background: var(--cream);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  visibility: hidden;
+  pointer-events: none;
+}
+.osk-modal.open { visibility: visible; pointer-events: auto; }
+.osk-modal input { flex: 0 0 auto; font-size: 2rem; padding: 18px; text-align: center; }
+.osk-keys { position: relative; flex: 1; min-height: 0; }
+.osk-keys .osk { position: absolute; inset: 0; }
+.osk-keys .osk.off { visibility: hidden; }
 
-.keyboard-page .action-row { flex: 0 0 auto; gap: 10px; }
-.keyboard-page .action-row .btn,
-.keyboard-page .action-row button { flex: 1; min-height: 80px; font-size: 1.3rem; }
+.osk-modal .action-row { flex: 0 0 auto; gap: 10px; }
+.osk-modal .action-row button { flex: 1; min-height: 80px; font-size: 1.3rem; }
 
 .osk {
   background: var(--coffee-dark);

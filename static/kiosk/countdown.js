@@ -18,6 +18,22 @@
     });
   }
 
+  // Typing a name or picking a coffee on Settings gives the member more time (views.settings_touch).
+  // The server keeps rendering the deadline it showed - a new one would swap the panel mid-edit -
+  // so the visible countdown is moved on here, by the same amount, once the server has it.
+  document.body.addEventListener("htmx:afterRequest", (evt) => {
+    const path = evt.detail.requestConfig && evt.detail.requestConfig.path;
+    if (!evt.detail.successful || !path) return;
+    // A pick on Order (views.order_select) is the same, and turns the automatic checkout off.
+    const picked = path.endsWith("/order/select/");
+    if (!picked && !path.endsWith("/settings/touch/")) return;
+    document.querySelectorAll(".countdown[data-touch-seconds]").forEach((el) => {
+      el.dataset.deadline = Date.now() + Number(el.dataset.touchSeconds) * 1000;
+      if (picked && el.dataset.pickedText) el.dataset.text = el.dataset.pickedText;
+    });
+    render();
+  });
+
   render();
   setInterval(render, 250);
   // A freshly swapped-in screen would otherwise show an empty countdown for a moment.

@@ -471,7 +471,17 @@ mind before changing it:
   The same teardown runs when htmx swaps a differing panel: while the order, pay and settings
   screens changed on every poll (countdown, csrf token), sitting on them crashed it 3 times in
   8 × 25s (2026-10-31; some dumps a few instructions further on, `+0xe3f1058`, fault 0x18 - the
-  same function); byte-identical, 0 in 16. Hence the rule above.
+  same function); byte-identical, 0 in 16. Hence the rule above. **The same goes for anything that
+  tears a layout down in the kiosk page**: the on-screen keyboard rebuilt all its keys on Shift
+  (a crash per Shift) and was a page of its own (a crash on the way there or back) - now it is an
+  overlay that is always laid out and only made visible (`static/kiosk/osk.js`); the settings
+  screen's touch moved the rendered deadline, so the poll swapped the panel mid-edit; a pick on
+  Order re-rendered the panel (10 crashes in 15 picks, measured) - now it answers 204 and the
+  browser shows the pick. Mind `panel_stable_swap.js` there: a response that swaps nothing must
+  not become its "last response", or the next poll looks new and swaps anyway (it did, after every
+  pick). Build once, change text and attributes, hide with `visibility`, never navigate. And no
+  `<select>` on the kiosk: its dropdown is a popup window, which under Openbox nobody could pick
+  from - choices are tiles (radio buttons, highlighted with `:has(:checked)`).
 
 ## Every PR is audited
 

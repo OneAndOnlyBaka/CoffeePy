@@ -96,10 +96,10 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
             {% endif %}
             <div class="coffee-list">
                 {% for sort in coffee_sorts %}
-                <label class="coffee-option {% if sort.pk == selected_coffee_id %}selected{% endif %}">
+                <label class="coffee-option">
                     <input type="radio" name="coffee_id" value="{{ sort.pk|unlocalize }}"
                            {% if sort.pk == selected_coffee_id %}checked{% endif %}
-                           hx-post="{% url 'kiosk:order_select' %}" hx-trigger="change">
+                           hx-post="{% url 'kiosk:order_select' %}" hx-trigger="change" hx-swap="none">
                     <span>{{ sort.name }}</span>
                     <span class="price">{{ sort.price }}€</span>
                 </label>
@@ -109,9 +109,11 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
         <div class="action-row panel-footer">
             <button type="button" class="danger" hx-post="{% url 'kiosk:order_cancel' %}">✕ {% translate "Cancel" %}</button>
             {% if deadline_ms %}
-            {% if auto_checkout %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic checkout in {{ seconds }}s{% endblocktranslate %}
-            {% else %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}{% endif %}
-            <span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>
+            {% blocktranslate trimmed with seconds="{s}" asvar logout_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}
+            {% blocktranslate trimmed with seconds="{s}" asvar checkout_text %}Automatic checkout in {{ seconds }}s{% endblocktranslate %}
+            <span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-touch-seconds="{{ touch_seconds|unlocalize }}"
+                  data-text="{% if auto_checkout %}{{ checkout_text|force_escape }}{% else %}{{ logout_text|force_escape }}{% endif %}"
+                  data-picked-text="{{ logout_text|force_escape }}"></span>
             {% endif %}
             <button type="button" class="success primary-action" hx-post="{% url 'kiosk:order_confirm' %}">✓ {% translate "Order now" %}</button>
         </div>
@@ -133,24 +135,31 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                     <input type="text" name="nickname" value="{{ nickname }}" placeholder="Anna B." maxlength="20"
                            id="nickname-input"
                            hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="keyup changed delay:1s" hx-swap="none">
-                    <a class="btn osk-open-btn" href="{% url 'kiosk:keyboard' %}?field=nickname&value={{ nickname|urlencode }}">{% include "icons/keyboard.svg" %} {% translate "Keyboard" %}</a>
+                    <button type="button" class="btn osk-open-btn" data-osk-for="nickname-input">{% include "icons/keyboard.svg" %} {% translate "Keyboard" %}</button>
                 </div>
             </label>
-            <label class="field">
-                {% translate "Favourite coffee" %}
-                <select name="favourite_coffee_id"
-                        hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="change" hx-swap="none">
+            {% comment %}Tiles, not a <select>: its dropdown is a popup window of its own, which the
+            kiosk's Chromium under Openbox didn't let anyone pick from (seen on the device, 2026-10-31).
+            The highlight is CSS (:has(:checked)) - a pick changes nothing the poll renders.{% endcomment %}
+            <fieldset class="field">
+                <legend>{% translate "Favourite coffee" %}</legend>
+                <div class="coffee-grid">
                     {% for sort in coffee_sorts %}
-                    <option value="{{ sort.pk|unlocalize }}" {% if sort.pk == favourite_coffee_id %}selected{% endif %}>{{ sort.name }}</option>
+                    <label class="coffee-option">
+                        <input type="radio" name="favourite_coffee_id" value="{{ sort.pk|unlocalize }}"
+                               {% if sort.pk == favourite_coffee_id %}checked{% endif %}
+                               hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="change" hx-swap="none">
+                        <span>{{ sort.name }}</span>
+                    </label>
                     {% endfor %}
-                </select>
-            </label>
+                </div>
+            </fieldset>
         </div>
         <div class="action-row panel-footer">
             <button type="button" class="btn secondary" title="{% translate "Link this phone" %}"
                     hx-get="{% url 'kiosk:link_phone_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
                     hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/phone.svg" %} {% translate "Link this phone" %}</button>
-            {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
+            {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-touch-seconds="{{ touch_seconds|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
             <button type="submit" class="success primary-action">{% translate "Save" %}</button>
         </div>
     </form>
@@ -171,18 +180,22 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                 <div class="field-with-osk">
                     <input type="text" inputmode="decimal" name="amount" value="{{ pay_default|unlocalize }}"
                            id="pay-amount-input">
-                    <a class="btn osk-open-btn" href="{% url 'kiosk:keyboard' %}?field=amount&value={{ pay_default|unlocalize|urlencode }}">{% include "icons/keyboard.svg" %} {% translate "Keyboard" %}</a>
+                    <button type="button" class="btn osk-open-btn" data-osk-for="pay-amount-input" data-osk-numeric>{% include "icons/keyboard.svg" %} {% translate "Keyboard" %}</button>
                 </div>
             </label>
             {% if payment_method_names|length > 1 %}
-            <label class="field">
-                {% translate "Paid via" %}
-                <select name="method">
+            {# Tiles, not a <select> - see the favourite coffee on Settings. #}
+            <fieldset class="field">
+                <legend>{% translate "Paid via" %}</legend>
+                <div class="coffee-grid">
                     {% for name in payment_method_names %}
-                    <option value="{{ name }}">{{ name|method_label }}</option>
+                    <label class="coffee-option">
+                        <input type="radio" name="method" value="{{ name }}" {% if forloop.first %}checked{% endif %}>
+                        <span>{{ name|method_label }}</span>
+                    </label>
                     {% endfor %}
-                </select>
-            </label>
+                </div>
+            </fieldset>
             {% endif %}
             {% if payment_method_qr_row %}
             <p class="muted">{% translate "Or scan to pay what you owe directly:" %}</p>

@@ -93,17 +93,29 @@ class KioskPanelTestCase(TestCase):
         start = time.time()
         self.client.get(reverse("kiosk:panel"))  # logs in, deadline = now + 20s
 
+        shown = self.client.get(reverse("kiosk:panel")).content
         with mock.patch("time.time", return_value=start + 15):
             response = self.client.post(reverse("kiosk:order_select"), {"coffee_id": other.pk})
-        self.assertContains(response, "Automatic logout in")
-        self.assertNotContains(response, "Automatic checkout in")
+        # No new panel: re-rendering it swapped it away under the finger - Chromium's crash.
+        self.assertEqual(response.status_code, 204)
+        self.assertContains(self.client.get(reverse("kiosk:panel")), 'data-picked-text="Automatic logout in {s}s"')
 
         with mock.patch("time.time", return_value=start + 25):  # past the card's 20s, within the pick's
-            self.assertContains(self.client.get(reverse("kiosk:panel")), "lungo")
+            self.assertEqual(self.client.get(reverse("kiosk:panel")).content, shown)
         with mock.patch("time.time", return_value=start + 40):
             response = self.client.get(reverse("kiosk:panel"))
         self.assertContains(response, "Apply your card")
         self.assertEqual(Order.objects.count(), 0)
+
+    def test_a_picked_sort_is_what_order_now_books(self):
+        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        other = CoffeeSort.objects.create(name="lungo", price=Decimal("0.40"), machine_strokes=1)
+        self._scan("AABBCCDD")
+        self.client.get(reverse("kiosk:panel"))
+        self.client.post(reverse("kiosk:order_select"), {"coffee_id": other.pk})
+        self.client.post(reverse("kiosk:order_confirm"))
+        self.assertEqual(Order.objects.get().coffee_sort, other)
+        self.assertNotIn("shown_order", self.client.session)
 
     def test_member_deleted_while_logged_in_logs_out_instead_of_failing(self):
         Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
