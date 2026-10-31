@@ -14,7 +14,7 @@ start screen is **Order**.
 3. Something else? Tap the sort, then **Order now**.
 4. **Changed your mind?** Tap **Cancel** – nothing is booked.
 
-A jug counts as two cups.
+With many sorts, yours come first under **For you**, the rest is behind **More sorts ›**. A jug counts as two cups.
 
 ## The first time
 

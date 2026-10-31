@@ -94,15 +94,28 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
             {% if month_reminder_balance %}
             <p class="msg error">{% blocktranslate trimmed with amount=month_reminder_balance %}Reminder: you still owe {{ amount }}€ from last month - please settle up soon (see Pay).{% endblocktranslate %}</p>
             {% endif %}
-            <div class="coffee-list">
-                {% for sort in coffee_sorts %}
-                <label class="coffee-option">
-                    <input type="radio" name="coffee_id" value="{{ sort.pk|unlocalize }}"
-                           {% if sort.pk == selected_coffee_id %}checked{% endif %}
-                           hx-post="{% url 'kiosk:order_select' %}" hx-trigger="change" hx-swap="none">
-                    <span>{{ sort.name }}</span>
-                    <span class="price">{{ sort.price }}€</span>
-                </label>
+            {% comment %}Pages, not a scrolling list, once there are more sorts than fit - see
+            views.SORTS_WITHOUT_SCROLL. Turning a page counts as a pick (order_select): whoever
+            browses is choosing, and the favourite isn't booked under their fingers.{% endcomment %}
+            <div class="sort-pages{% if sort_pages|length > 1 %} paged{% endif %}">
+                {% for page in sort_pages %}
+                <div class="sort-page{% if page.index == sort_page %} current{% endif %}" data-page="{{ page.index }}">
+                    {% if page.heading %}<h2 class="sort-group">{{ page.heading }}</h2>{% endif %}
+                    <div class="coffee-list">
+                        {% if page.back %}<button type="button" class="coffee-option sort-nav" data-sort-page="{{ page.index|add:-1 }}"
+                                hx-post="{% url 'kiosk:order_select' %}" hx-swap="none">‹ {% translate "Back" %}</button>{% endif %}
+                        {% for sort in page.sorts %}
+                        <label class="coffee-option">
+                            <input type="radio" name="coffee_id" value="{{ sort.pk|unlocalize }}"
+                                   {% if sort.pk == selected_coffee_id %}checked{% endif %}
+                                   hx-post="{% url 'kiosk:order_select' %}" hx-trigger="change" hx-swap="none">
+                            <span class="sort-text"><span>{{ sort.name }}</span><span class="price">{{ sort.price }}€</span></span>
+                        </label>
+                        {% endfor %}
+                        {% if page.next %}<button type="button" class="coffee-option sort-nav" data-sort-page="{{ page.index|add:1 }}"
+                                hx-post="{% url 'kiosk:order_select' %}" hx-swap="none">{{ page.next }} ›</button>{% endif %}
+                    </div>
+                </div>
                 {% endfor %}
             </div>
         </div>
@@ -143,14 +156,25 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
             The highlight is CSS (:has(:checked)) - a pick changes nothing the poll renders.{% endcomment %}
             <fieldset class="field">
                 <legend>{% translate "Favourite coffee" %}</legend>
-                <div class="coffee-grid">
-                    {% for sort in coffee_sorts %}
-                    <label class="coffee-option">
-                        <input type="radio" name="favourite_coffee_id" value="{{ sort.pk|unlocalize }}"
-                               {% if sort.pk == favourite_coffee_id %}checked{% endif %}
-                               hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="change" hx-swap="none">
-                        <span>{{ sort.name }}</span>
-                    </label>
+                <div class="sort-pages{% if sort_pages|length > 1 %} paged{% endif %}">
+                    {% for page in sort_pages %}
+                    <div class="sort-page{% if page.index == sort_page %} current{% endif %}" data-page="{{ page.index }}">
+                        {% if page.heading %}<h2 class="sort-group">{{ page.heading }}</h2>{% endif %}
+                        <div class="coffee-grid">
+                            {% if page.back %}<button type="button" class="coffee-option sort-nav" data-sort-page="{{ page.index|add:-1 }}"
+                                    hx-post="{% url 'kiosk:settings_touch' %}" hx-swap="none">‹ {% translate "Back" %}</button>{% endif %}
+                            {% for sort in page.sorts %}
+                            <label class="coffee-option">
+                                <input type="radio" name="favourite_coffee_id" value="{{ sort.pk|unlocalize }}"
+                                       {% if sort.pk == favourite_coffee_id %}checked{% endif %}
+                                       hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="change" hx-swap="none">
+                                <span>{{ sort.name }}</span>
+                            </label>
+                            {% endfor %}
+                            {% if page.next %}<button type="button" class="coffee-option sort-nav" data-sort-page="{{ page.index|add:1 }}"
+                                    hx-post="{% url 'kiosk:settings_touch' %}" hx-swap="none">{{ page.next }} ›</button>{% endif %}
+                        </div>
+                    </div>
                     {% endfor %}
                 </div>
             </fieldset>

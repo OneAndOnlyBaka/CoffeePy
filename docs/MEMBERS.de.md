@@ -14,7 +14,8 @@ Der Startbildschirm ist **Bestellen**.
 3. Etwas anderes? Die Sorte antippen, dann **Jetzt bestellen**.
 4. **Doch nicht?** **Abbrechen** tippen – es wird nichts gebucht.
 
-Eine Kanne zählt als zwei Tassen.
+Stehen viele Sorten zur Auswahl, sind deine zuerst unter **Für dich**, die übrigen erreichst du
+mit **Weitere Sorten ›**. Eine Kanne zählt als zwei Tassen.
 
 ## Zum ersten Mal hier
 

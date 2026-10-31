@@ -302,7 +302,7 @@ def pay(request):
 def _reset_session_state(request):
     request.session["logged_in"] = False
     for key in (
-        "uid", "deadline", "shown_deadline", "shown_order", "order_coffee_id", "order_auto_checkout", "is_new_user",
+        "uid", "deadline", "shown_deadline", "shown_order", "sort_order", "order_coffee_id", "order_auto_checkout", "is_new_user",
         "pending_nickname", "pending_favourite", "name_error", "then_order",
     ):
         request.session.pop(key, None)
@@ -335,6 +335,7 @@ def _start_session(request, mode, uid, is_new_user=False):
     )
     request.session.pop("shown_deadline", None)
     request.session.pop("shown_order", None)
+    request.session.pop("sort_order", None)
     request.session["order_coffee_id"] = None
     request.session["order_auto_checkout"] = True
 
@@ -720,6 +721,47 @@ def _rank_badge(uid, ranking_rows):
     return None
 
 
+# More sorts than this and they don't fit the screens (measured at 1024x600: three across on
+# Order, four on Settings). Then they come in pages, never a scrolling list: a swipe followed by
+# leaving the screen crashed Chromium's renderer 2 times in 8 on the device (2026-10-31) - the
+# teardown of a scrolled list. The first page is "For you": the favourite, the member's most
+# ordered, everyone's most ordered; then the rest, alphabetical, behind "More sorts".
+SORTS_WITHOUT_SCROLL = 12
+# (tiles per page, "For you" tiles) - a page is the grid's cells: back/next take one each.
+SORT_PAGES_ORDER = (9, 6)       # three by three
+SORT_PAGES_SETTINGS = (8, 6)    # four by two, next to the name field
+
+
+def _sort_pages(request, sorts, member, selected_id, layout):
+    """The pages of sort tiles for the order or settings screen, and which one shows first (the
+    one with the selected sort). The order is worked out once a session and kept in it: every
+    poll then renders the same bytes (and the Pi isn't counting orders twice a second)."""
+    if len(sorts) <= SORTS_WITHOUT_SCROLL:
+        return [{"index": 0, "heading": None, "sorts": sorts}], 0
+    cells, for_you = layout
+    preferred = request.session.get("sort_order")
+    if preferred is None:
+        preferred = request.session["sort_order"] = services.preferred_sorts(member, for_you)
+    by_id = {sort.pk: sort for sort in sorts}
+    first = [by_id[pk] for pk in preferred if pk in by_id][:for_you]
+    rest = [sort for sort in sorts if sort not in first]
+    # A new card on a new device has neither favourite nor history: no empty "For you" page then.
+    pages = [{"heading": _("For you"), "sorts": first, "next": _("More sorts")}] if first else []
+    per_page = cells - 2
+    chunks = [rest[i:i + per_page] for i in range(0, len(rest), per_page)]
+    for number, chunk in enumerate(chunks, 1):
+        pages.append({
+            "heading": _("More sorts") if len(chunks) == 1 else
+            _("More sorts (%(page)s of %(pages)s)") % {"page": number, "pages": len(chunks)},
+            "sorts": chunk, "next": _("More") if number < len(chunks) else None,
+        })
+    for index, page in enumerate(pages):
+        page["index"] = index
+        page["back"] = index > 0
+    current = next((page["index"] for page in pages if any(sort.pk == selected_id for sort in page["sorts"])), 0)
+    return pages, current
+
+
 def _order_context(request, uid, seconds_left):
     member = Member.objects.filter(uid=uid).first()
     coffee_sorts = list(CoffeeSort.objects.all())
@@ -730,6 +772,7 @@ def _order_context(request, uid, seconds_left):
         or (member.favourite_coffee_id if member else None)
         or (coffee_sorts[0].pk if coffee_sorts else None)
     )
+    sort_pages, sort_page = _sort_pages(request, coffee_sorts, member, selected_id, SORT_PAGES_ORDER)
     # Nudges members who still owe from before this month rolled over - same "ab dem
     # Vormonat" balance the dashboard pillory uses, so it can't say two different things.
     month_reminder_balance = None
@@ -747,7 +790,8 @@ def _order_context(request, uid, seconds_left):
     return {
         "state": "order",
         "member": member,
-        "coffee_sorts": coffee_sorts,
+        "sort_pages": sort_pages,
+        "sort_page": sort_page,
         "selected_coffee_id": selected_id,
         "auto_checkout": shown_auto,
         "month_reminder_balance": month_reminder_balance,
@@ -767,6 +811,7 @@ def _settings_context(request, uid, seconds_left):
         favourite = member.favourite_coffee_id
     else:  # a new card starts on the first sort, as the old dropdown did
         favourite = sorts[0].pk if sorts else None
+    sort_pages, sort_page = _sort_pages(request, sorts, member, favourite, SORT_PAGES_SETTINGS)
     pending = request.session.get("pending_nickname")
     if pending is not None:
         nickname = pending
@@ -784,7 +829,8 @@ def _settings_context(request, uid, seconds_left):
         "name_error": names.message(request.session.get("name_error")),
         "nickname": nickname,
         "favourite_coffee_id": favourite,
-        "coffee_sorts": sorts,
+        "sort_pages": sort_pages,
+        "sort_page": sort_page,
         "seconds_left": seconds_left,
     }
 

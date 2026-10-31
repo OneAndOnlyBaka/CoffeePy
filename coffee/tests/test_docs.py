@@ -131,6 +131,10 @@ class DocFactsTestCase(SimpleTestCase):
         self.assertEqual(ALT_UID_CAPTURE_SECONDS, 60, "the manual says 'within a minute'")
         self.assertInManuals("held to the kiosk within a minute", "innerhalb einer Minute am Kiosk")
 
+    def test_sorts_without_scrolling(self):
+        from kiosk.views import SORTS_WITHOUT_SCROLL
+        self.assertInManuals(f"**more than {SORTS_WITHOUT_SCROLL} sorts**", f"**mehr als {SORTS_WITHOUT_SCROLL} Sorten**")
+
     def test_kiosk_pillory_length(self):
         import inspect
         from coffee import services

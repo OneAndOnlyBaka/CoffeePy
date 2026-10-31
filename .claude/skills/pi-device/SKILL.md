@@ -106,7 +106,7 @@ while the Pi's Chromium crashed on every Shift press, on every trip to the old k
 after 10 of 15 order picks, and a `<select>` couldn't be operated there at all (2026-10-31).
 
 `kiosk-ui-test.sh [ROUNDS]` drives the kiosk's own Chromium with real touch events through
-every screen (settings tiles, keyboard overlay with Shift, order pick/cancel/order now, pay with
+every screen (settings tiles, keyboard overlay with Shift, order pick/cancel/order now, sort pages beyond 12 sorts, pay with
 the numeric keyboard and a method tile, ranking) and reports each renderer crash with the step
 before it. It logs in with **synthetic scans of a test card** - an exception to the rule below,
 so **ask the user for each run**; the script creates and removes its test member, payment method

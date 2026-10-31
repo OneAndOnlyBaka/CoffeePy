@@ -90,6 +90,26 @@ class Kiosk:
         time.sleep(0.25)
         return True
 
+    def swipe_up(self, selector, distance=250):  # kept for comparisons: a list that scrolls
+        """A finger dragged up over the element - a real touch scroll, the compositor's job."""
+        box = self.ev(f"(r => JSON.stringify([r.left + r.width / 2, r.top + r.height * 0.8]))(document.querySelector({json.dumps(selector)}).getBoundingClientRect())")
+        x, y = json.loads(box)
+        self.page.call("Input.dispatchTouchEvent", type="touchStart", touchPoints=[{"x": x, "y": y}])
+        for step in range(1, 11):
+            time.sleep(0.02)
+            self.page.call("Input.dispatchTouchEvent", type="touchMove", touchPoints=[{"x": x, "y": y - distance * step / 10}])
+        self.page.call("Input.dispatchTouchEvent", type="touchEnd", touchPoints=[])
+        time.sleep(0.6)
+
+    def visible_unpicked(self, container, name):
+        """The text of the first tile in sight that isn't the current pick - what a finger would
+        reach without scrolling, and a tap that changes something."""
+        return self.ev(f"""(() => {{ const body = document.querySelector('.panel-body').getBoundingClientRect();
+          const tile = [...document.querySelectorAll('{container} .coffee-option')].find(l => {{
+            const r = l.getBoundingClientRect(); const input = l.querySelector('input[name={name}]');
+            return input && !input.checked && r.top >= body.top && r.bottom <= body.bottom; }});
+          return tile ? tile.querySelector('span').childNodes.length > 1 ? tile.querySelector('.sort-text span').textContent : tile.querySelector('span').textContent : null; }})()""")
+
     def mode(self):
         return self.ev("(document.getElementById('panel-state') || {dataset: {}}).dataset.mode")
 
@@ -144,7 +164,7 @@ for r in range(1, ROUNDS + 1):
     check("settings: logged in", k.wait("document.querySelector('input[name=favourite_coffee_id]')"))
     k.wait("false", 1)
     s0 = k.ev("window.swaps")
-    target = "Espresso" if r % 2 else "Kanne"
+    target = k.visible_unpicked(".coffee-grid", "favourite_coffee_id")
     k.tap(".coffee-grid .coffee-option span", target)
     k.wait("false", 1.5)
     picked = k.ev("(document.querySelector('input[name=favourite_coffee_id]:checked') || {parentElement: {innerText: ''}}).parentElement.innerText.trim()")
@@ -176,9 +196,22 @@ for r in range(1, ROUNDS + 1):
     scan()
     check("order: logged in", k.wait("document.querySelector('input[name=coffee_id]')"))
     k.wait("false", 1)
-    k.tap(".coffee-list .coffee-option span", "Kaffee")
+    k.tap(".coffee-list .coffee-option .sort-text span", k.visible_unpicked(".coffee-list", "coffee_id"))
     check("order: logout countdown after a pick", k.wait("(document.querySelector('.countdown') || {textContent: ''}).textContent.includes('Abmeldung') || (document.querySelector('.countdown') || {textContent: ''}).textContent.includes('logout')", 8),
           k.ev("(document.querySelector('.countdown') || {}).textContent"))
+    if k.ev("!!document.querySelector('.sort-pages.paged')"):
+        # More sorts than fit: they come in pages - turn one, pick from it, then leave
+        step("turn a page")
+        s1 = k.ev("window.swaps")
+        k.tap(".sort-page.current [data-sort-page]:last-child")
+        k.wait("false", 1.5)
+        check("pages: turned", k.ev("document.querySelector('.sort-page.current').dataset.page") != "0")
+        check("pages: no swap on a turn", k.ev("window.swaps") == s1, f"{s1} -> {k.ev('window.swaps')}")
+        name = k.ev("document.querySelector('.sort-page.current .coffee-option .sort-text span').textContent")
+        k.tap(".sort-page.current .coffee-option .sort-text span", name)
+        k.wait("false", 1.5)
+        check("pages: picked on the turned page", k.ev("document.querySelector('input[name=coffee_id]:checked').parentElement.innerText").startswith(name), name)
+        step("cancel after turning a page")
     k.tap(".action-row button.danger")
     check("order: cancel logs out", k.wait("document.getElementById('panel-state') && !document.querySelector('input[name=coffee_id]')", 5))
     check("order: cancel books nothing", sql(f"select count(*) from coffee_order where member_id = {UID}") == before)

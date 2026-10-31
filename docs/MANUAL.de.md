@@ -344,6 +344,12 @@ etwas zu buchen.
 > weder **Abbrechen** noch eine andere Sorte antippst. Ist trotzdem etwas falsch gebucht, sag
 > einem Admin Bescheid – er korrigiert es unter [Buchungen](#buchungen).
 
+Bei **mehr als 12 Sorten** passen nicht alle auf den Bildschirm, sie kommen in Seiten: zuerst
+**Für dich** – dein Lieblingskaffee, die Sorten, die du am häufigsten bestellst, dann die, die
+alle am häufigsten bestellen –, und **Weitere Sorten ›** blättert zu den übrigen, alphabetisch
+(**‹ Zurück** blättert zurück). Dein Lieblingskaffee steht immer auf der ersten Seite; wer
+blättert, wählt aus – dann wird nichts mehr von selbst gebucht.
+
 Die Medaillen neben dem Namen
 zeigen einen Platz unter den Top 3 – insgesamt und in diesem Monat. Wer aus dem Vormonat noch
 etwas schuldet, bekommt hier eine Erinnerung.
@@ -372,7 +378,8 @@ eingerichtet, kannst du den offenen Betrag auch direkt per QR-Code mit dem Handy
 
 Hier änderst du **Namen** und **Lieblingskaffee** und tippst **Speichern**. Getippt wird
 direkt oder über **Tastatur** mit der Bildschirmtastatur – sie hat auch Umlaute, ß, Bindestrich
-und Punkt.
+und Punkt. Der Lieblingskaffee ist eine Kachel pro Sorte – bei mehr als 12 Sorten so gruppiert wie
+beim **Bestellen**.
 
 Der Name ist **Vorname und erster Buchstabe des Nachnamens**, z. B. *Anna B.*, oder ein
 **Kürzel** aus zwei bis vier Großbuchstaben, z. B. *AB* – so wissen alle, wer in der Rangliste und

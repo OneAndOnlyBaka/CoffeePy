@@ -187,11 +187,29 @@ html, body.kiosk { overflow: hidden; }
 .panel-footer { flex: 0 0 auto; }
 .primary-action { margin-left: auto; }
 
+/* A grid, not a column: with the legacy device's seven sorts a column ran 270px past the screen,
+   the preselected favourite out of sight - the coffee booked after 20s was one nobody saw - and
+   reaching it meant touch-scrolling, the kind of layer Chromium's renderer crashes tearing down
+   (CLAUDE.md). Three across, a dozen sorts fit without scrolling. */
 .coffee-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 12px;
 }
+.coffee-list .coffee-option { min-height: 76px; padding: 10px 16px; gap: 12px; }
+/* Name over price: side by side, three across, "Cappuccino 0.45€" ran over the tile's edge. */
+/* Pages of sorts, only with more than fit (kiosk.views.SORTS_WITHOUT_SCROLL): all of them laid
+   out in one grid cell, the others merely invisible - turning a page builds and tears down
+   nothing (sort_pages.js), and no list scrolls (CLAUDE.md, the renderer crash). */
+.sort-pages.paged { display: grid; }
+.sort-pages.paged > .sort-page { grid-area: 1 / 1; display: flex; flex-direction: column; gap: 10px; }
+.sort-pages.paged > .sort-page:not(.current) { visibility: hidden; }
+.coffee-option.sort-nav { justify-content: center; font-weight: 600; background: var(--cream); border: 2px solid var(--cream-dark); color: var(--coffee); }
+/* "For you" and "More sorts" headings. */
+.sort-group { margin: 4px 0 -4px; font-size: 1rem; font-weight: 600; color: var(--coffee); text-transform: uppercase; letter-spacing: 0.04em; }
+fieldset.field .sort-group { margin: 6px 0; }
+.coffee-option .sort-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.coffee-option .sort-text .price { margin-left: 0; font-size: 1rem; }
 
 .coffee-option {
   display: flex;
@@ -204,14 +222,17 @@ html, body.kiosk { overflow: hidden; }
   font-size: 1.3rem;
 }
 
-.coffee-option input { width: 32px; height: 32px; }
+.coffee-option input { width: 32px; height: 32px; flex: 0 0 auto; }  /* a two-line name squeezed it */
+.coffee-option .price { white-space: nowrap; }
 .coffee-option.selected,
 .coffee-option:has(input:checked) { background: var(--accent); color: var(--text-inverse); }
 /* Settings' favourite coffee: the same tiles, side by side, so the name field stays in view. */
 fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 fieldset.field legend { padding: 0; margin-bottom: 8px; }
-.coffee-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-.coffee-grid .coffee-option { min-height: 76px; padding: 12px 18px; }
+.coffee-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.coffee-grid .coffee-option { min-height: 56px; padding: 6px 14px; gap: 10px; font-size: 1.15rem; }
+/* Settings: twelve sorts fit next to the name field without scrolling (measured at 1024x600). */
+.panel-body:has(.coffee-grid) { gap: 10px; }
 .coffee-option .price { margin-left: auto; font-weight: 600; }
 
 .action-row {

@@ -325,6 +325,12 @@ out, booking nothing.
 > **Cancel** nor another sort. If something was booked wrongly anyway, tell an admin – they
 > correct it under [Bookings](#bookings).
 
+With **more than 12 sorts** they don't all fit on the screen and come in pages: **For you**
+first – your favourite, the sorts you order most, then the ones everyone orders most – and
+**More sorts ›** turns to the rest, alphabetically (**‹ Back** turns back). Your favourite is
+always on the page you see first; turning a page counts as choosing, so nothing is booked by
+itself any more.
+
 The medals next to your name show a place in the top 3 – all time
 and this month. Whoever still owes money from last month gets a reminder here.
 
@@ -351,7 +357,8 @@ your phone via QR code.
 ![Settings – apply your card](pictures/manual/en/kiosk-wait-settings.png)
 
 Change your **name** and **favourite coffee** here and tap **Save**. Type directly, or use
-the on-screen keyboard via **Keyboard** – it has umlauts, ß, hyphen and full stop too.
+the on-screen keyboard via **Keyboard** – it has umlauts, ß, hyphen and full stop too. The
+favourite coffee is a tile per sort – with more than 12 sorts grouped like on **Order**.
 
 The name is **first name and the first letter of the last name**, like *Anna B.*, or a **short
 code** of two to four capitals, like *AB* – so everyone knows who is on the ranking and the

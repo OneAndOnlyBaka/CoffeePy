@@ -481,7 +481,10 @@ mind before changing it:
   not become its "last response", or the next poll looks new and swaps anyway (it did, after every
   pick). Build once, change text and attributes, hide with `visibility`, never navigate. And no
   `<select>` on the kiosk: its dropdown is a popup window, which under Openbox nobody could pick
-  from - choices are tiles (radio buttons, highlighted with `:has(:checked)`).
+  from - choices are tiles (radio buttons, highlighted with `:has(:checked)`). Nor a list that has
+  to be scrolled: a swipe and then leaving the screen crashed it 2 times in 8 - more coffee sorts
+  than fit (`kiosk.views.SORTS_WITHOUT_SCROLL`) come in pages, stacked in one grid cell and
+  switched by `visibility` (`static/kiosk/sort_pages.js`).
 
 ## Every PR is audited
 
