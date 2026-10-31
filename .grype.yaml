@@ -12,3 +12,14 @@ ignore:
       name: python
       type: binary
     reason: "poplib only, which nothing here imports; fixed only in Python 3.15, which Django 5.2 LTS does not support"
+  # tempfile.TemporaryDirectory's cleanup races with whoever swaps a directory in its tree for a
+  # symlink. Fixed on CPython's 3.14 branch (python/cpython#157579), not yet in a 3.14 release -
+  # drop this once python:3.14-slim carries it. The app does use TemporaryDirectory (backups, TLS),
+  # but only under data/storage and data/tls, which nothing but the app itself and root can write:
+  # whoever could swap the symlink in already has those rights. And on Linux shutil.rmtree is
+  # fd-based (avoids_symlink_attacks), which leaves only the reset of file flags.
+  - vulnerability: CVE-2026-12345
+    package:
+      name: python
+      type: binary
+    reason: "TemporaryDirectory cleanup race; fixed on CPython 3.14 branch, not yet released; only dirs the app alone can write"

@@ -287,16 +287,39 @@ class OpenBackupTestCase(FakeDevice, TestCase):
 
 @needs_openssl
 class EncryptionTestCase(FakeDevice, TestCase):
-    def test_round_trip_and_wrong_passphrase(self):
+    def test_round_trip(self):
         source = touch(self.root / "plain", "the data")
         backups.encrypt(source, self.root / "enc", "right passphrase")
         self.assertTrue((self.root / "enc").read_bytes().startswith(b"Salted__"))
         backups.decrypt(self.root / "enc", self.root / "back", "right passphrase")
         self.assertEqual((self.root / "back").read_text(), "the data")
+
+    def test_a_decryption_failure(self):
         with self.assertRaises(backups.BackupError) as raised:
-            backups.decrypt(self.root / "enc", self.root / "wrong", "wrong passphrase")
+            backups.decrypt(touch(self.root / "plain", "not encrypted"), self.root / "out", "x")
         self.assertIn("wrong passphrase", str(raised.exception))
-        self.assertFalse((self.root / "wrong").exists())
+        self.assertFalse((self.root / "out").exists())
+
+    def test_wrong_passphrase(self):
+        # Not decrypt() alone: one wrong passphrase in 256 gets through openssl's padding check
+        # (it failed CI once) - open_backup catches those by the tar that isn't there.
+        archive = self.root / "a.backup"
+        with tarfile.open(archive, "w") as tar:
+            tar.add(touch(self.root / "src" / "manifest.json", "{}"), "manifest.json")
+        backups.encrypt(archive, self.root / "a.backup.enc", "right passphrase")
+        for attempt in range(20):
+            with self.assertRaises(backups.BackupError) as raised:
+                with backups.open_backup(self.root / "a.backup.enc", f"wrong passphrase {attempt}"):
+                    pass  # pragma: no cover
+            self.assertIn("wrong passphrase", str(raised.exception))
+
+    def test_noise_that_passed_the_padding_check(self):
+        path = touch(self.root / "x.backup.enc", "Salted__xxxxxxxx")
+        with mock.patch.object(backups, "decrypt", lambda src, dst, secret: dst.write_bytes(os.urandom(4096))):
+            with self.assertRaises(backups.BackupError) as raised:
+                with backups.open_backup(path, "wrong"):
+                    pass  # pragma: no cover
+        self.assertIn("wrong passphrase", str(raised.exception))
 
     def test_an_encryption_failure_is_not_a_wrong_passphrase(self):
         with self.assertRaises(backups.BackupError) as raised:

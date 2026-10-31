@@ -489,6 +489,10 @@ def open_backup(path: Path, secret: str | None = None):
                 raise BackupError(gettext_noop("This backup is encrypted - enter its passphrase."))
             decrypt(path, work / "archive.tar", secret)
             path = work / "archive.tar"
+            # CBC's padding is all openssl tells a wrong passphrase by, and about one in 256 passes
+            # it - what comes out is noise, never the tar an encrypted backup always is.
+            if not tarfile.is_tarfile(path):
+                raise BackupError(gettext_noop("The backup could not be decrypted - wrong passphrase?"))
         if tarfile.is_tarfile(path):
             with tarfile.open(path) as tar:
                 names = tar.getnames()
