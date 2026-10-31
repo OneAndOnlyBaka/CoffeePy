@@ -55,41 +55,48 @@
     }
   }
 
-  function render() {
-    keyboardEl.innerHTML = "";
-    const rows = numeric ? NUMERIC_ROWS : TEXT_ROWS;
-    rows.forEach((row) => {
-      const rowEl = document.createElement("div");
-      rowEl.className = "osk-row";
-      row.forEach((key) => {
-        // "ß".toUpperCase() is "SS" - that one stays as it is.
-        const upper = key.toUpperCase().length === 1 ? key.toUpperCase() : key;
-        const label = !numeric && shift ? upper : key;
-        rowEl.appendChild(makeKey(label, () => insertText(shift ? upper : key)));
-      });
-      keyboardEl.appendChild(rowEl);
-    });
+  // Built once; Shift only relabels the keys. Rebuilding them (innerHTML = "", from inside the
+  // Shift key's own pointerdown) tore their layout down - and that teardown is where Chromium's
+  // renderer crashes (CLAUDE.md): every Shift crashed the page, the reload lost what was typed.
+  const letterKeys = [];
 
-    const bottomRow = document.createElement("div");
-    bottomRow.className = "osk-row";
-    if (!numeric) {
-      bottomRow.appendChild(
-        makeKey(
-          "⇧",
-          () => {
-            shift = !shift;
-            render();
-          },
-          "osk-shift" + (shift ? " active" : "")
-        )
-      );
-      bottomRow.appendChild(makeKey(spaceLabel, () => insertText(" "), "osk-space"));
-    }
-    bottomRow.appendChild(makeKey("⌫", backspace, "osk-backspace"));
-    keyboardEl.appendChild(bottomRow);
+  function upperOf(key) {
+    // "ß".toUpperCase() is "SS" - that one stays as it is.
+    return key.toUpperCase().length === 1 ? key.toUpperCase() : key;
   }
 
-  render();
+  function relabel() {
+    letterKeys.forEach(({ btn, key }) => {
+      btn.textContent = shift ? upperOf(key) : key;
+    });
+    shiftKey.classList.toggle("active", shift);
+  }
+
+  const rows = numeric ? NUMERIC_ROWS : TEXT_ROWS;
+  rows.forEach((row) => {
+    const rowEl = document.createElement("div");
+    rowEl.className = "osk-row";
+    row.forEach((key) => {
+      const btn = makeKey(key, () => insertText(!numeric && shift ? upperOf(key) : key));
+      letterKeys.push({ btn, key });
+      rowEl.appendChild(btn);
+    });
+    keyboardEl.appendChild(rowEl);
+  });
+
+  const bottomRow = document.createElement("div");
+  bottomRow.className = "osk-row";
+  const shiftKey = makeKey("⇧", () => {
+    shift = !shift;
+    relabel();
+  }, "osk-shift");
+  if (!numeric) {
+    bottomRow.appendChild(shiftKey);
+    bottomRow.appendChild(makeKey(spaceLabel, () => insertText(" "), "osk-space"));
+  }
+  bottomRow.appendChild(makeKey("⌫", backspace, "osk-backspace"));
+  keyboardEl.appendChild(bottomRow);
+
   input.focus();
   if (numeric) input.select();
   // A suggested name ("Anna ") is meant to be added to, not typed in front of.

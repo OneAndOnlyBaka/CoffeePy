@@ -14,7 +14,12 @@
     const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     const date = `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`;
     document.querySelectorAll("[data-kiosk-clock]").forEach((el) => {
-      el.innerHTML = `${time} <span class="date">${date}</span>`;
+      // Built once per clock, then only its text changes: replacing the span every second tore
+      // its layout down - the teardown Chromium's renderer crashes in (keyboard_page.js).
+      if (!el.firstChild) el.append(document.createTextNode(""), document.createElement("span"));
+      el.lastChild.className = "date";
+      el.firstChild.nodeValue = `${time} `;
+      el.lastChild.textContent = date;
     });
   }
 
