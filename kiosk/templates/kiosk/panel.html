@@ -86,7 +86,6 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
 {% elif state == "order" %}
 <div class="panel-card">
     <form hx-target="#panel" hx-swap="innerHTML">
-        {% csrf_token %}
         <h1 class="panel-header">{% blocktranslate trimmed with name=member.display_name %}Hi {{ name }}!{% endblocktranslate %}
             {% if alltime_badge %}<span class="rank-badge" title="{% translate "Top 3 all-time" %}">{% include "icons/medal.svg" with place=alltime_badge %}</span>{% endif %}
             {% if month_badge %}<span class="rank-badge" title="{% translate "Top 3 this month" %}">{% include "icons/medal.svg" with place=month_badge %}</span>{% endif %}
@@ -109,8 +108,9 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
         </div>
         <div class="action-row panel-footer">
             <button type="button" class="danger" hx-post="{% url 'kiosk:order_cancel' %}">✕ {% translate "Cancel" %}</button>
-            {% if auto_checkout and seconds_left is not None %}
-            <span class="countdown">{% blocktranslate trimmed with seconds=seconds_left %}Automatic checkout in {{ seconds }}s{% endblocktranslate %}</span>
+            {% if auto_checkout and deadline_ms %}
+            {% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic checkout in {{ seconds }}s{% endblocktranslate %}
+            <span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>
             {% endif %}
             <button type="button" class="success primary-action" hx-post="{% url 'kiosk:order_confirm' %}">✓ {% translate "Order now" %}</button>
         </div>
@@ -120,7 +120,6 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
 {% elif state == "settings" %}
 <div class="panel-card">
     <form hx-post="{% url 'kiosk:settings_save' %}" hx-target="#panel" hx-swap="innerHTML">
-        {% csrf_token %}
         <h1 class="panel-header">{% if is_new_user %}{% translate "Welcome, new card!" %}{% elif name_required %}{% translate "Who are you?" %}{% else %}{% blocktranslate trimmed with name=nickname|default:uid|unlocalize %}Hello {{ name }}!{% endblocktranslate %}{% endif %}</h1>
         <div class="panel-body">
             {% if name_required %}<p>{% translate "Before your coffee: the ranking needs a name your colleagues recognise." %}</p>{% endif %}
@@ -150,7 +149,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
             <button type="button" class="btn secondary" title="{% translate "Link this phone" %}"
                     hx-get="{% url 'kiosk:link_phone_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
                     hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/phone.svg" %} {% translate "Link this phone" %}</button>
-            {% if seconds_left is not None %}<span class="countdown">{% blocktranslate trimmed with seconds=seconds_left %}Automatic logout in {{ seconds }}s{% endblocktranslate %}</span>{% endif %}
+            {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
             <button type="submit" class="success primary-action">{% translate "Save" %}</button>
         </div>
     </form>
@@ -159,15 +158,13 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
 {% elif state == "info_pay" %}
 <div class="panel-card">
     <form hx-post="{% url 'kiosk:pay' %}" hx-target="#panel" hx-swap="innerHTML">
-        {% csrf_token %}
         <h1 class="panel-header">{% blocktranslate trimmed with name=member.display_name %}Hello {{ name }}!{% endblocktranslate %}</h1>
         <div class="panel-body">
             <div class="stats-row">
-                <div class="stat"><span class="label">{% translate "CCT" %}</span><span class="value">{{ total_cups }}</span></div>
-                <div class="stat"><span class="label">{% translate "CCM" %}</span><span class="value">{{ month_cups }}</span></div>
+                <div class="stat"><span class="label">{% translate "Cups in total" %}</span><span class="value">{{ total_cups }}</span></div>
+                <div class="stat"><span class="label">{% translate "Cups this month" %}</span><span class="value">{{ month_cups }}</span></div>
                 <div class="stat"><span class="label">{% translate "Balance" %}</span><span class="value">{{ balance }}€</span></div>
             </div>
-            <p class="muted">{% translate "CC = Cups Count; T/M = Total/Month" %}</p>
             <label class="field">
                 {% translate "Payment amount" %}
                 <div class="field-with-osk">
@@ -202,7 +199,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
             {% endfor %}
         </div>
         <div class="action-row panel-footer">
-            {% if seconds_left is not None %}<span class="countdown">{% blocktranslate trimmed with seconds=seconds_left %}Automatic logout in {{ seconds }}s{% endblocktranslate %}</span>{% endif %}
+            {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
             <button type="submit" class="success primary-action">{% translate "Pay" %}</button>
         </div>
     </form>

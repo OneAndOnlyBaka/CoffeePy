@@ -160,6 +160,15 @@ def devices(request):
 
 
 @portal_login_required
+def my_data(request):
+    """Everything stored about the member, as a file - their right of access (Art. 15 GDPR)
+    without asking an admin. Other people in it (who changed a booking) appear by role only."""
+    who = audit.member_actor(request.member)
+    audit.log(request, "member.export", target=who, actor=who, details="own, portal")
+    return services.member_data_response(request.member, own=True)
+
+
+@portal_login_required
 @require_POST
 def revoke_device(request, device_id):
     device = get_object_or_404(MemberDevice, pk=device_id, member=request.member)

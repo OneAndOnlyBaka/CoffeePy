@@ -185,8 +185,9 @@ step_preflight() {
 	if [ "${ram_mb}" -lt 900 ]; then
 		warn "Less than 1GB of RAM - Postgres, five containers and a browser will not fit."
 		problems=$((problems + 1))
-	elif [ "${ram_mb}" -lt 1200 ] && [ "${arch}" = "arm64" ]; then
-		warn "1GB of RAM with a 64-bit OS is tight; the 32-bit image leaves more headroom."
+	elif [ "${ram_mb}" -lt 1200 ]; then
+		# Measured on a Pi 3 with the 64-bit OS (the manual's "What the device needs") - enough.
+		info "1GB of RAM is enough, but runs on compressed swap - a 2GB Pi has more headroom."
 	fi
 
 	local free_mb; free_mb=$(( $(df --output=avail -k / | tail -1) / 1024 ))

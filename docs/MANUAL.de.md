@@ -135,6 +135,7 @@ es mit den Pfeiltasten, **Enter** und **Esc**.
 **Sprache.** Zuerst wählst du die Sprache des Tools. Sie ist auch der Vorschlag für die
 Standardsprache des Geräts.
 
+<!-- The language screen is bilingual - one picture for both manuals (capture_tui.sh). -->
 ![Sprachauswahl](pictures/manual/de/provision-language.png)
 
 **Begrüßung**, danach die **Adresse des Pi** (wie dein Router sie anzeigt, oder
@@ -297,18 +298,22 @@ nichts.
 Der Touchscreen hat vier Bereiche, links in der Leiste. Oben rechts sitzen runde Knöpfe: Der
 **Schraubenschlüssel** ist der [Admin-Zugang](#admin-zugang) – für Mitglieder ist er nicht
 gedacht –, **DE/EN** schaltet die Sprache des Kiosks um, und ein **rot blinkender** Knopf
-erscheint, wenn am Gerät etwas zu tun ist:
+erscheint, wenn am Gerät etwas zu tun ist – ein **bernsteinfarbener**, wenn ein Admin etwas
+entscheiden muss:
 
 | Zeichen | Bedeutung |
 |---|---|
 | Rot, Datenbank-Symbol | **Backups laufen nicht** – der Backup-Stick fehlt, oder das letzte Backup ist fehlgeschlagen. Details im Dashboard unter **Backup**. |
 | Rot, Uhr-Symbol | **Das Uhrenmodul (RTC) ist defekt** – es fehlt, antwortet nicht, oder seine Batterie ist leer –, oder **die Uhr ging falsch und wurde vorgestellt**. Details auf der **Übersicht** im Dashboard. |
+| Bernstein, Klemmbrett | **Eine Aufgabe für den Admin**: Ausgeschiedene Mitglieder sind zum Löschen vorgeschlagen (siehe [Mitglieder](#mitglieder)). Es zeigt keine Namen und verschwindet, sobald alle gelöscht oder behalten sind – oder die Frist auf 0 steht. |
 
 ![Warnzeichen am Kiosk](pictures/manual/de/kiosk-device-alarm.png)
 
 Außer der Rangliste brauchen alle Bereiche eine Karte. Wer eine Karte auflegt, ist angemeldet,
-bis er fertig ist oder nach 20 Sekunden ohne Eingabe automatisch abgemeldet wird. Ein Tipp auf
-einen Bereich in der Leiste meldet ebenfalls ab. **Bezahlen**, **Einstellungen** und
+bis er fertig ist; nach **20 Sekunden ohne Eingabe** macht der Kiosk selbst weiter – beim
+**Bestellen** wird der vorausgewählte Kaffee **gebucht**, überall sonst wirst du abgemeldet. Der
+rote Countdown neben den Knöpfen zeigt, wie lange noch. Ein Tipp auf einen Bereich in der Leiste meldet
+ebenfalls ab. **Bezahlen**, **Einstellungen** und
 die **Rangliste** springen nach 30 Sekunden ohne Tipp von selbst zurück auf **Bestellen** – so
 findet der Nächste den Kiosk immer bestellbereit vor.
 
@@ -320,8 +325,9 @@ Der Startbildschirm. Er erklärt, was nach dem Auflegen passiert, und zeigt die 
 
 Nach dem Auflegen begrüßt dich der Kiosk mit Namen. Dein Lieblingskaffee ist vorausgewählt;
 tippe einen anderen an, um zu wechseln. **Jetzt bestellen** bucht sofort, **Abbrechen** bricht
-ab, und ohne Eingabe wird nach 20 Sekunden automatisch gebucht. Wählst du eine andere Sorte,
-entfällt die automatische Buchung – dann bestätigst du selbst. Die Medaillen neben dem Namen
+ab, und ohne Eingabe wird nach 20 Sekunden automatisch gebucht. **Wer seine Karte auflegt und
+weggeht, hat einen Kaffee bestellt** – tippe **Abbrechen**, wenn du das nicht wolltest. Wählst
+du eine andere Sorte, entfällt die automatische Buchung – dann bestätigst du selbst. Die Medaillen neben dem Namen
 zeigen einen Platz unter den Top 3 – insgesamt und in diesem Monat. Wer aus dem Vormonat noch
 etwas schuldet, bekommt hier eine Erinnerung.
 
@@ -336,8 +342,8 @@ Animation.
 
 ![Bezahlen – Karte auflegen](pictures/manual/de/kiosk-wait-pay.png)
 
-Hier zahlst du ein. Zur Information zeigt der Bildschirm dazu deine Tassen insgesamt (**CCT**)
-und in diesem Monat (**CCM**) und deinen **Kontostand**. Ist er negativ, steht der offene Betrag schon im Feld – trag ein, was du
+Hier zahlst du ein. Zur Information zeigt der Bildschirm dazu deine **Tassen insgesamt** und
+**diesen Monat** und deinen **Kontostand**. Ist er negativ, steht der offene Betrag schon im Feld – trag ein, was du
 bezahlt hast, wähle die Zahlungsart und tippe **Bezahlen**. Sind Zahlungsmethoden mit Link
 eingerichtet, kannst du den offenen Betrag auch direkt per QR-Code mit dem Handy bezahlen.
 
@@ -358,7 +364,8 @@ Tastatur-Gehämmer (*Asdf*) und ein Name, den schon jemand trägt – dann hilft
 Buchstabe: *Anna Be.* Wessen Name nicht passt – auch wer noch seine Kartennummer als Namen hat –,
 wird beim nächsten Kaffee **zuerst nach dem Namen gefragt** (*Wer bist du?*) und bestellt erst
 danach; nach dem Speichern geht es direkt zur Bestellung. Im Feld steht dann schon, was sich aus
-dem alten Namen machen lässt – aus *Anna* wird *Anna*␣, es fehlt nur der Buchstabe. Fehlt einem
+dem alten Namen machen lässt – aus *Anna* wird „Anna “ mit dem Cursor hinter dem Leerzeichen, es
+fehlt nur der Buchstabe. Fehlt einem
 Namen nur die Form (*Anna B* ohne Punkt), korrigiert der Kiosk ihn ohne Nachfrage.
 
 ![Einstellungen](pictures/manual/de/kiosk-settings.png)
@@ -432,7 +439,9 @@ bleibt danach sechs Monate angemeldet (bei jeder Nutzung verlängert). Die Sprac
 oben rechts um; sie gilt nur für dieses Handy.
 
 **Start** zeigt Tassen, Kontostand und die letzten Bestellungen und Zahlungen. Unten auf der
-Seite findest du das Gerätezertifikat.
+Seite: **Meine Daten herunterladen** – alles, was das Gerät über dich speichert, als eine Datei
+(wer etwas an deinen Daten geändert hat, etwa ein Admin, steht darin nur mit seiner Rolle) – und
+das Gerätezertifikat.
 
 ![Portal Start](pictures/manual/de/portal-home.png)
 
@@ -549,6 +558,12 @@ längst gegangen ist (dann *Als ausgeschieden markieren*). Pro Mitglied:
 - **Geräte abmelden**: meldet alle verknüpften Handys ab.
 - **Als ausgeschieden markieren**: bucht den Kontostand aus und sperrt die Karten; lässt sich
   mit *Reaktivieren* rückgängig machen.
+- **Löschen**: entfernt das Mitglied samt Karten, Bestellungen und Zahlungen – endgültig, bis auf
+  die Backups.
+- **Daten exportieren** (auch auf der Bearbeiten-Seite des Mitglieds): alles, was das Gerät über
+  dieses Mitglied speichert – Karten, verknüpfte Handys, jede Bestellung und Zahlung, seine
+  Einträge im Protokoll – als eine Datei. Das ist die Antwort, wenn jemand wissen will, was
+  über ihn gespeichert ist (Art. 15 DSGVO).
 
 ![Mitglieder](pictures/manual/de/dashboard-members.png)
 
@@ -563,6 +578,19 @@ Unter **Namen** (nur für Admins) trägst du **gesperrte Vornamen** (oder Kürze
 zusätzlich zu den üblichen Platzhaltern, die immer abgelehnt werden. Gedacht für das, worauf
 nur jemand aus dem Team kommt (*Chef*, der Name der Kaffeemaschine …). Wer einen davon schon
 trägt, wird beim nächsten Kaffee nach einem neuen Namen gefragt.
+
+Unter **Ausgeschiedene Mitglieder** (nur für Admins) legst du fest, nach wie vielen Monaten ein
+ausgeschiedenes Mitglied **zum Löschen vorgeschlagen** wird – nur bei ausgeglichenem Kontostand:
+Wer noch etwas schuldet oder Guthaben hat, wird nicht vorgeschlagen. 0, die Voreinstellung,
+heißt nie. Die Vorschläge stehen oben auf der Seite unter **Zum Löschen vorgeschlagen**, als
+Zeile auf der **Übersicht** und als bernsteinfarbenes Zeichen am Kiosk. **Von selbst wird nichts
+gelöscht**: Die Frist misst die Uhr des Geräts, und ein Uhrenmodul mit leerer Batterie kann sie
+verfälschen – prüfe das Ausscheidedatum, dann **Löschen** (mit Karten, Bestellungen und
+Zahlungen, im **Protokoll**) oder **Behalten**: Der Browser fragt nach dem Grund (*kommt im
+Frühjahr wieder*, *eine offene Rechnung wird noch geklärt* …), ohne Grund wird nichts behalten.
+Behaltene Mitglieder stehen unter **Behalten** mit Grund, wer sie behalten hat und wann, und
+werden nicht mehr vorgeschlagen; **Wieder vorschlagen** macht das rückgängig, *Reaktivieren*
+ebenso. In den Backups bleibt ein gelöschtes Mitglied, bis diese aussortiert werden.
 
 ### Buchungen
 
@@ -920,7 +948,7 @@ im Dashboard warnt, solange die Prüfung aus ist.
 Das Gerät sieht jede Minute nach, ob die App antwortet und ob der Browser am Kiosk noch nach
 neuen Karten fragt. Hängt etwas, startet es selbst neu, Schritt für Schritt: erst den
 Kiosk-Bildschirm, hilft das nicht, die App. Antwortet die App drei Minuten lang nicht, startet
-sie gleich neu. Das dauert jeweils eine bis zwei Minuten und steht als
+das Gerät sie gleich neu. Das dauert jeweils eine bis zwei Minuten und steht als
 *watchdog.kiosk_restart* / *watchdog.stack_restart* im **Protokoll**.
 
 Während eines Updates, einer Wiederherstellung oder eines Imports und in den ersten Minuten
@@ -962,7 +990,11 @@ Was dabei hilft, ohne Rechtsberatung zu sein:
 - **Kürzel erlauben**: Wer nicht mit Namen in der Rangliste stehen will, nimmt ein Kürzel wie
   „AB“ (siehe [Einstellungen](#einstellungen) am Kiosk).
 - **Ausgeschiedene markieren** (Dashboard → **Mitglieder**): Ihre Karten sind gesperrt, sie
-  tauchen in Rangliste und Pranger nicht mehr auf.
+  tauchen in Rangliste und Pranger nicht mehr auf. Unter **Ausgeschiedene Mitglieder** lässt du
+  sie nach einer Frist deiner Wahl zum Löschen vorschlagen.
+- **Jemand fragt, was über ihn gespeichert ist**: Mitglieder laden es im Portal selbst herunter
+  (**Meine Daten herunterladen**), Admins mit **Daten exportieren** in seiner Zeile unter
+  **Mitglieder**.
 - **Backups** enthalten dieselben Daten – den Stick so verwahren wie die Daten selbst, und seine
   Passphrase getrennt davon.
 - Das Dashboard ist nur mit Anmeldung erreichbar; wer Admin ist, sieht alles. Vergib die
@@ -986,10 +1018,10 @@ der Kiosk mit dem **DE/EN**-Knopf, Handys und PCs oben rechts im Portal und im D
 | Der Browser warnt vor der Seite. | Das Gerätezertifikat einmal installieren (siehe [oben](#das-zertifikat-installieren)). |
 | **Bad Request (400)** im Browser. | Das Gerät kennt die Adresse nicht, mit der du es aufrufst. Nimm die Adresse aus der Einrichtung (`192.168.4.1`, `coffeepy.local`) oder lass das Provisioning-Tool über die neue Adresse laufen – es trägt sie ein. |
 | Der Bildschirm ist nach dem Einschalten eine Minute lang schwarz, dann weiß. | Normal: Erst startet der Pi, dann der Browser. Nach etwa anderthalb Minuten erscheint der Kiosk – nach einem Stromausfall kann es gut drei Minuten dauern: Dann scheitert der erste Start des Browsers manchmal, und das Gerät startet ihn von selbst noch einmal. |
-| *Kartenleser nicht verfügbar* | Kabel des Lesers prüfen und das Gerät neu starten. |
 | Der Bildschirm ist dunkel, Tippen und Karten bewirken nichts, das Dashboard geht aber. | Die **Nachtruhe** läuft (Dashboard → **System**). Sie endet zur eingestellten Zeit von selbst; zum Ausschalten den Haken entfernen – der Kiosk kommt innerhalb einer Minute. |
 | Der Kiosk zeigte kurz „Aw, Snap!“ (oder wurde weiß) und kam dann von selbst wieder. | Der Browser des Kiosks ist beim Laden der Seite abgestürzt – der Browser von Raspberry Pi OS tut das ab und zu, meist direkt nach einem Update oder einer Wiederherstellung. Das Gerät merkt es innerhalb von Sekunden und lädt die Seite neu; dabei geht nichts verloren. |
 | Der Kiosk war kurz schwarz und startete neu. | Das Gerät hat einen hängenden Kiosk oder die App selbst neu gestartet (siehe [Wenn der Kiosk hängt](#wenn-der-kiosk-hängt)); das **Protokoll** sagt, was es war. Passiert das öfter, steht dort, wo es hakt. |
+| *Kartenleser nicht verfügbar* | Kabel des Lesers prüfen und das Gerät neu starten. |
 | Eine Karte wird nicht erkannt. | Karte flach und ruhig auflegen; eine Karte, die als ausgeschieden markiert ist, wird abgewiesen. |
 | Rotes **Datenbank**-Zeichen am Kiosk | Backups laufen nicht: den Backup-Stick wieder einstecken, oder im Dashboard unter **Backup** nach dem Fehler sehen. |
 | Rotes **Uhr**-Zeichen am Kiosk, oder die Uhrzeit stimmt nicht | Steht auf der Übersicht eine Zeile *Uhrzeit – korrigiert*, ging die Uhr zurück und wurde vorgestellt: unter **Systemzeit** prüfen und stellen oder bestätigen. Sonst sagt die Zeile *Uhrenmodul (RTC)*, warum. *Nicht gefunden* / *Antwortet nicht*: Modul und Verkabelung prüfen. *Hatte die Uhrzeit verloren*: Batterie (CR2032) tauschen, dann unter **Systemzeit** die Zeit korrigieren – das Zeichen verschwindet, sobald das Modul die Zeit über einen Neustart gehalten hat. |
@@ -998,5 +1030,5 @@ der Kiosk mit dem **DE/EN**-Knopf, Handys und PCs oben rechts im Portal und im D
 | Anmeldung abgelehnt, obwohl das Passwort stimmt | Nach zu vielen Fehlversuchen ist das Konto eine Weile gesperrt (standardmäßig 15 Minuten) – abwarten, oder ein Admin setzt unter **Dashboard-Benutzer** ein neues Passwort. |
 | Ein Update wird abgelehnt | Die Update-Seite sagt, warum: keine oder eine falsche Signatur (siehe [Eigener Signierschlüssel](#eigener-signierschlüssel)), ein Paket für eine andere Plattform, zu wenig Platz oder eine ältere Version als die installierte. Ein OS-Paket wird auch abgelehnt, wenn es für ein anderes Release von Raspberry Pi OS gebaut wurde. |
 | Das Provisioning-Tool meldet *Connection refused*. | SSH ist auf dem Gerät aus – schalte es im Dashboard ein (**System › SSH**) und versuch es noch einmal. |
-| *Some packages were kept back* nach einem OS-Update | Siehe [Updates des Betriebssystems](#updates-des-betriebssystems): Nimm auf, was davon abhängt, in die Paketliste auf und baue das Paket noch einmal. |
+| *Some packages were kept back* nach einem OS-Update | Siehe [Updates des Betriebssystems](#updates-des-betriebssystems): Nimm, was davon abhängt, in die Paketliste auf und baue das Paket noch einmal. |
 | Das Handy erreicht das Dashboard nicht. | Ist es mit dem WLAN des Geräts verbunden? Mobile Daten kurz ausschalten, manche Handys verlassen ein WLAN ohne Internet sonst. |

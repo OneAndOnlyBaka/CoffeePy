@@ -7,7 +7,7 @@ essential requirements of its Annex I set against what the software does. It bui
 system); the data protection side is [PRIVACY.md](PRIVACY.md).
 
 It describes the software as of this version; it is **not legal advice**. Assessed
-2026-10-30; it is reviewed with every change listed under [Review](#review).
+2026-10-31; it is reviewed with every change listed under [Review](#review).
 
 - [Does the CRA apply?](#does-the-cra-apply)
 - [The product](#the-product)
@@ -110,7 +110,7 @@ existing measures in place; *accepted* means the operator is told in the manual 
 | R9 | A forged or tampered update bundle | Ed25519-signed manifest, per-file SHA-256, platform and space check, forward only; key never in CI | 1 | 3 | low | - |
 | R10 | Signature check switched off on a device in use | labelled "development only" in the provisioning tool; permanent warning on the update page | 1 | 3 | low | - |
 | R11 | Known vulnerabilities in the OS, Chromium, the kernel or SSH on an offline device | `apt` at installation; **OS bundles** (`scripts/build_os_bundle.sh`): any set of packages - best the device's own list, downloadable on the update page - signed like an app bundle, applied through the same update page by the script signed into the bundle (`install/os_update.sh`), which only updates what is installed; database saved first, restart when kernel or firmware changed. Building and applying them is the operator's job: CoffeePy runs on more than one kind of hardware | 2 | 3 | medium (operator's) | A1 ✓ |
-| R12 | Known vulnerabilities in the app's own images | `pip-audit` + Grype fail CI on anything fixable; Dependabot weekly; each exception in `.grype.yaml` says why it can't be taken and whether the code is reachable (CVE-2025-15367: `poplib`, never imported) | 1 | 3 | low | A5 ✓ |
+| R12 | Known vulnerabilities in the app's own images | `pip-audit` + Grype fail CI on anything fixable; Dependabot weekly; each exception in `.grype.yaml` says why it can't be taken and whether the code is reachable (CVE-2025-15367: `poplib`, never imported; CVE-2026-12345: `TemporaryDirectory`, only in directories nothing but the app can write) | 1 | 3 | low | A5 ✓ |
 | R13 | Known vulnerabilities in third-party images (postgres, mosquitto, caddy) | pinned to exact versions in `docker-compose.yml`, moved weekly by Dependabot; CI reports their findings without failing - their packages are theirs to fix | 2 | 2 | medium | A4 ✓ (accepted: reported only) |
 | R14 | SSH with the Imager's password, reachable from the network | **off after the installation** (`install.sh`'s `ssh` step; `--keep-ssh` / the provisioning tool's "SSH" setting keep it); an admin switches it on in the dashboard (System → SSH), audited, with a warning for as long as it is on | 1 | 3 | low | A2 ✓ |
 | R15 | Lost or stolen backup stick | written to one registered stick only; AES-256 with `BACKUP_PASSPHRASE`, which the provisioning tool generates unless declined (and puts into its saved summary); the backup page warns while backups are unencrypted | 1 | 2 | low | A3 ✓ |
@@ -149,16 +149,16 @@ existing measures in place; *accepted* means the operator is told in the manual 
 | (1) identify components, SBOM | CycloneDX SBOM per image with each release (Syft); the host's installed packages on the device's update page (`os-packages.txt`) | the host's packages are not in the release SBOM - they differ per device |
 | (2) address vulnerabilities without delay, with security updates | Dependabot, CI audit, release on every push to `master`; OS bundles for the host | - |
 | (3) regular tests and reviews | test suite on SQLite and PostgreSQL, coverage gates, lint, upgrade test on the real device | - |
-| (4) disclose fixed vulnerabilities (description, impact, severity, remedy) | release notes | no separate advisories (accepted, A6) |
-| (5) coordinated vulnerability disclosure policy | SECURITY.md asks for an issue without details, or the maintainer first | accepted for a hobby project (A6) |
-| (6) contact address for reports | the maintainer via GitHub | accepted (A6) |
+| (4) disclose fixed vulnerabilities (description, impact, severity, remedy) | release notes; a GitHub security advisory for a reported vulnerability once it is fixed | - |
+| (5) coordinated vulnerability disclosure policy | SECURITY.md: report privately through GitHub's private vulnerability reporting; fixed first, published after | - |
+| (6) contact address for reports | the repository's Security tab → *Report a vulnerability* | - |
 | (7) secure distribution of updates | signed manifest, checksums, forward-only, key outside CI | - |
 | (8) updates free of charge, with advisory messages | MIT, releases free on GitHub; release notes | - |
 
 ## Open actions
 
 For the repository. A manufacturer of a ready-built device would
-have to build OS bundles for their hardware (A1) and set up a real disclosure process (A6) before placing it on the market, and add their own: a support
+have to build OS bundles for their hardware (A1) and run the disclosure process themselves (A6) before placing it on the market, and add their own: a support
 period of at least five years (Art. 13(8)), Annex II user information, Annex VII technical
 documentation, the EU declaration of conformity and CE marking, and a process to report
 actively exploited vulnerabilities to ENISA's single reporting platform within 24 hours
@@ -170,8 +170,8 @@ actively exploited vulnerabilities to ENISA's single reporting platform within 2
 | A2 | SSH off after the installation (`install.sh` step `ssh`, `--keep-ssh`; provisioning tool setting "SSH"); dashboard System → SSH switches it on and off through the storage helper, audited | done |
 | A3 | The provisioning tool generates a backup passphrase unless declined and shows it in its summary; the backup page warns while backups are unencrypted | done |
 | A4 | Third-party images pinned to exact versions (not digests: a `docker load`ed image has none, and the watcher's rollback tags are made from the tag); the watcher untags a version the compose file no longer names | done - their findings stay reported only (accepted) |
-| A5 | `.grype.yaml`: CVE-2026-12345 dropped (fixed in Python 3.14.9, the images run 3.14.10); CVE-2025-15367 recorded as not reachable (`poplib`) | done |
-| A6 | Vulnerability reports by issue (without details) or to the maintainer first, as SECURITY.md says | accepted - no separate advisories or policy |
+| A5 | `.grype.yaml`: every exception says why and whether it is reachable - CVE-2025-15367 (`poplib`, never imported) and CVE-2026-12345 (`TemporaryDirectory` cleanup race, fixed on CPython's 3.14 branch but in no release yet; it was dropped once too early and failed CI on 2026-10-31) | done - drop CVE-2026-12345 with the next `python:3.14-slim` that carries the fix |
+| A6 | GitHub's private vulnerability reporting switched on; SECURITY.md points to it; fixed vulnerabilities get an advisory | done |
 | A7 | Manual: "Keeping it safe" (not on the internet, SSH off, signed updates, encrypted backups, disposing of SD card and stick), operating system updates, the SSH switch | done |
 
 ## Review

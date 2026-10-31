@@ -24,6 +24,8 @@ their card says, a lost phone, a lost backup stick, a broken update, a power cut
 
 ## Network
 
+How it is set up: [ARCHITECTURE.md](ARCHITECTURE.md#network-and-https).
+
 - **One way in.** Only Caddy publishes ports: 443 for the network, and 8443 on `127.0.0.1`
   only, for the kiosk's own browser. The app server (8000), PostgreSQL, MQTT and port 80 are
   not reachable from outside the device (`docker-compose.yml`).
@@ -110,6 +112,8 @@ default) are deleted.
 
 ## Backups
 
+How they are made and restored: [ARCHITECTURE.md](ARCHITECTURE.md#backups).
+
 - Written only to the **one stick** this device set up (its metadata carries the device and
   the stick id), never to a stick that merely happens to be plugged in.
 - **Encrypted**: with `BACKUP_PASSPHRASE` - which the provisioning tool generates unless you
@@ -122,6 +126,8 @@ default) are deleted.
   broken backup rolls back instead of leaving an empty database.
 
 ## Updates
+
+How an update runs: [ARCHITECTURE.md](ARCHITECTURE.md#offline-updates).
 
 - **Signed bundles.** Each update bundle's manifest is signed with an Ed25519 key; the device
   checks the signature against the project's key or the device's own
@@ -177,5 +183,7 @@ default) are deleted.
   while there is no passphrase.
 - **An admin sees everything** - hand out the admin role sparingly.
 
-Found a security problem? Please open an issue without details, or contact the maintainer
-first, so devices in use can be updated before it is public.
+Found a security problem? Please report it privately: the repository's **Security** tab →
+**Report a vulnerability** ([GitHub's private vulnerability reporting](https://github.com/OneAndOnlyBaka/CoffeePy/security/advisories/new)) -
+not as a public issue, so devices in use can be updated before it is public. Once it is fixed,
+it is published as a security advisory with the release that fixes it.

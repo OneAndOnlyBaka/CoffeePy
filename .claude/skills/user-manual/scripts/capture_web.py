@@ -117,7 +117,10 @@ class Browser:
             height = self.js("Math.ceil(document.documentElement.scrollHeight)")
             self.viewport(width, height)
             time.sleep(0.4)
-        data = self.page.call("Page.captureScreenshot", format="png")["data"]
+        result = self.page.call("Page.captureScreenshot", format="png")
+        if "data" not in result:  # Chromium's own error - a crashed renderer, mostly
+            raise RuntimeError(f"no screenshot of {name}: {result}")
+        data = result["data"]
         if full:
             self.viewport(width, 800)
         with open(f"{OUT}/{self.lang}/{name}.png", "wb") as f:

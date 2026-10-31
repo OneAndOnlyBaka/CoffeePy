@@ -92,8 +92,13 @@ immediately. Consequences, all of which have already caused bugs:
   card" screens' clock is filled in by `static/kiosk/clock.js` instead of `{% now %}`.
   `test_wait_screen_is_identical_from_poll_to_poll` guards that. Their GIFs come from
   `scripts/make_wait_gifs.py`.
-- **Screens with a form always differ per poll anyway**: Django re-masks `{% csrf_token %}` on
-  every render. Never key anything on "the panel HTML changed".
+- **Every screen stays byte-identical from poll to poll** until something happens - not only for
+  the GIFs: each swap of a differing panel tears its layout down, and that is where Chromium's
+  renderer crashes (below). So no `{% csrf_token %}` inside `#panel` (Django re-masks it on every
+  render; the token goes along as `hx-headers` on `.kiosk-frame`, rendered once per page load),
+  and the countdowns are a fixed `data-deadline` that `static/kiosk/countdown.js` counts down.
+  `kiosk/tests/test_stable_panel.py` guards order, pay and settings. Still never key anything on
+  "the panel HTML changed" - it also changes with every tap.
 - **The QR modal lives outside `#panel`** so the poll can't wipe it mid-scan - so nothing
   removes it either. `panel.html` renders `data-panel-key="<state>:<uid>"` and
   `panel_modal.js` closes the modal when that changes (auto-logout, next member's card).
@@ -457,19 +462,29 @@ mind before changing it:
   after the watchdog's ~4 minutes. Symbols: `apt-get download chromium-dbgsym` (same build id
   as `/usr/lib/chromium/chromium`), unpack with `dpkg-deb -x`, `addr2line -f -C -e` the
   `.debug` file with the offsets from the dump. Recheck with every new Chromium.
+  The same teardown runs when htmx swaps a differing panel: while the order, pay and settings
+  screens changed on every poll (countdown, csrf token), sitting on them crashed it 3 times in
+  8 × 25s (2026-10-31; some dumps a few instructions further on, `+0xe3f1058`, fault 0x18 - the
+  same function); byte-identical, 0 in 16. Hence the rule above.
 
 ## Every PR is audited
 
 CI's `audit` job fails on every known vulnerability that an upgrade fixes (Dependabot's weekly
 PRs keep it there, `.github/dependabot.yml`): `pip-audit` per
 requirements file (`scripts/audit_python.py` tells fixable from not-yet-fixed) and Grype on
-the two images this repo builds. Other people's images (postgres, mosquitto, caddy) are only
+the two images this repo builds (`scripts/audit_images.py`: a CPython finding that only a newer
+Python *minor* fixes is a warning on the PR, not a failure - no dependency update can fix it, and
+it used to turn every Dependabot PR red). Other people's images (postgres, mosquitto, caddy) are only
 reported - their packages are theirs to fix - and pinned to exact versions that Dependabot moves
 (not to digests: a `docker load`ed image has none, and the watcher's `:coffeepy-previous-*` tags
 are made from the tag). What can't be fixed yet goes into `.grype.yaml` with its reason - and
-whether the affected code is reachable from here at all - never silently: the CPython CVE there
-is fixed only in 3.15, which Django 5.2 doesn't support. The images run Python 3.14 and
-upgrade the base image's pip, because both lagged behind their fixes.
+whether the affected code is reachable from here at all - never silently: the CPython CVEs there
+are fixed only in 3.15 or 3.16, and Django 5.2 (LTS) supports up to 3.14. The images run Python 3.14 and
+upgrade the base image's pip, because both lagged behind their fixes. Dependabot's ignore rules
+for Docker images match `"*postgres"`/`"*python"`: it names them `library/postgres` in the
+compose file, and a plain `postgres` let a PostgreSQL major through.
+Django stays on its LTS release (`requirements.txt` `<6.0`, and an ignore rule for its majors): the
+grouped weekly PR once widened the range to 6.1, which v2.0.2-v2.0.5 shipped.
 
 ## The device is offline
 

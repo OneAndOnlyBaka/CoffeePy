@@ -67,6 +67,17 @@
             {% if user.is_superuser %}<a href="{% url 'dashboard:system_time' %}" class="btn secondary btn-sm">{% translate "System time" %}</a>{% endif %}
         </div>
         {% endif %}
+        {% if due_members %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "Members" %}</span>
+                <span class="list-row-meta">{% blocktranslate trimmed with count=due_members|length %}Departed members
+                suggested for deletion: {{ count }}{% endblocktranslate %}</span>
+            </div>
+            <span class="badge task-badge">● {% translate "to review" %}</span>
+            <a href="{% url 'dashboard:members' %}#due" class="btn secondary btn-sm">{% translate "Review" %}</a>
+        </div>
+        {% endif %}
         {% if clock_corrected %}
         <div class="list-row">
             <div class="list-row-text">

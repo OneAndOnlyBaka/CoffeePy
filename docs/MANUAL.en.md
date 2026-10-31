@@ -130,6 +130,7 @@ It needs nothing but Bash, SSH and tar, and changes nothing on your PC. Use the 
 **Language.** First you pick the tool's language. It is also what the tool suggests as the
 device's default language.
 
+<!-- The language screen is bilingual - one picture for both manuals (capture_tui.sh). -->
 ![Language](pictures/manual/de/provision-language.png)
 
 **Welcome**, then the **Pi's address** (as your router shows it, or `raspberrypi.local`), the
@@ -284,18 +285,20 @@ Keeping the old device's SD card until the first weeks have gone well costs noth
 The touchscreen has four sections, in the bar on the left. Round buttons sit top right:
 the **wrench** is the [admin access](#admin-access) – it isn't meant for members –, **DE/EN**
 switches the kiosk's language, and a **blinking red** button appears when something on the
-device needs looking after:
+device needs looking after – an **amber** one when an admin has something to decide:
 
 | Sign | Meaning |
 |---|---|
 | Red, database symbol | **Backups are not running** – the backup stick is missing, or the last backup failed. Details under **Backup** in the dashboard. |
 | Red, clock symbol | **The clock module (RTC) is faulty** – missing, not answering, or its battery is flat –, or **the clock was wrong and has been put forward**. Details on the dashboard's **Overview**. |
+| Amber, clipboard | **A task for the admin**: departed members are suggested for deletion (see [Members](#members)). It shows no names and goes once each of them is deleted or kept – or once the period is set to 0. |
 
 ![Warning sign on the kiosk](pictures/manual/en/kiosk-device-alarm.png)
 
 Apart from the ranking, every section needs a card. Holding up a card logs you in until you're
-done, or logs you out automatically after 20 seconds without input. Tapping a section in the
-bar logs out too. **Pay**, **Settings** and the **Ranking** go back to **Order** by
+done; after **20 seconds without input** the kiosk finishes for you – on **Order** it **books**
+the preselected coffee, everywhere else it logs you out. A red countdown next to the buttons
+shows how long is left. Tapping a section in the bar logs out too. **Pay**, **Settings** and the **Ranking** go back to **Order** by
 themselves after 30 seconds without a tap – so the next person always finds the kiosk ready to
 order.
 
@@ -307,8 +310,9 @@ The start screen. It explains what happens when you hold up your card and shows 
 
 After the card, the kiosk greets you by name. Your favourite coffee is preselected; tap another
 one to switch. **Order now** books right away, **Cancel** backs out, and without any input it
-books automatically after 20 seconds. Picking a different sort turns the automatic booking off
-– then you confirm yourself. The medals next to your name show a place in the top 3 – all time
+books automatically after 20 seconds. **Whoever holds up their card and walks away has
+ordered a coffee** – tap **Cancel** if you didn't mean to. Picking a different sort turns the
+automatic booking off – then you confirm yourself. The medals next to your name show a place in the top 3 – all time
 and this month. Whoever still owes money from last month gets a reminder here.
 
 ![Order](pictures/manual/en/kiosk-order.png)
@@ -321,8 +325,8 @@ Then a thank-you – with a different animation depending on how many cups it's 
 
 ![Pay – apply your card](pictures/manual/en/kiosk-wait-pay.png)
 
-This is where you pay in. For information, the screen also shows your cups in total (**CCT**)
-and this month (**CCM**) and your **balance**. If it's
+This is where you pay in. For information, the screen also shows your **cups in total**
+and **this month** and your **balance**. If it's
 negative, the amount owed is already in the field – enter what you paid, pick how, and tap
 **Pay**. With payment methods that have a link, you can also pay what you owe straight from
 your phone via QR code.
@@ -334,7 +338,7 @@ your phone via QR code.
 ![Settings – apply your card](pictures/manual/en/kiosk-wait-settings.png)
 
 Change your **name** and **favourite coffee** here and tap **Save**. Type directly, or use
-the on-screen keyboard via **Keyboard**. – it has umlauts, ß, hyphen and full stop too.
+the on-screen keyboard via **Keyboard** – it has umlauts, ß, hyphen and full stop too.
 
 The name is **first name and the first letter of the last name**, like *Anna B.*, or a **short
 code** of two to four capitals, like *AB* – so everyone knows who is on the ranking and the
@@ -343,7 +347,7 @@ mashing (*Asdf*) and a name somebody already has – a second letter helps then:
 Whoever's name doesn't fit – including those still named after their card number – is **asked
 for a name first** at their next coffee (*Who are you?*) and orders after that; saving goes
 straight on to the order. The field already holds what can be made of the old name – *Anna*
-becomes *Anna*␣, only the letter is missing. A name that only lacks the form (*Anna B* without
+becomes “Anna ” with the cursor after the space, so only the letter is missing. A name that only lacks the form (*Anna B* without
 the full stop) is put right by the kiosk without asking.
 
 ![Settings](pictures/manual/en/kiosk-settings.png)
@@ -412,8 +416,9 @@ Every member can link their phone: on the kiosk, hold your card up under **Setti
 six months (extended every time it's used). Switch the language top right; it applies to this
 phone only.
 
-**Home** shows cups, balance and the latest orders and payments. The device certificate is at
-the bottom of the page.
+**Home** shows cups, balance and the latest orders and payments. At the bottom of the page:
+**Download my data** – everything the device stores about you, as one file (people who changed
+something about you, an admin say, appear by their role only) – and the device certificate.
 
 ![Portal home](pictures/manual/en/portal-home.png)
 
@@ -522,6 +527,11 @@ you, even for a card without a name, whether someone still uses it or its owner 
   a replacement card without ending up with a second account.
 - **Revoke devices**: logs out all linked phones.
 - **Mark as departed**: writes off the balance and blocks the cards; *Reactivate* undoes it.
+- **Delete**: removes the member with their cards, orders and payments – for good, apart from
+  the backups.
+- **Export data** (also on the member's edit page): everything the device stores about this
+  member – cards, linked phones, every order and payment, their audit log entries – as one
+  file. That is the answer when someone asks what is stored about them (Art. 15 GDPR).
 
 ![Members](pictures/manual/en/dashboard-members.png)
 
@@ -536,6 +546,18 @@ Under **Names** (admins only) you enter **blocked first names** (or short codes)
 usual placeholders, which are always refused. Meant for what only someone on the team would
 think of (*Boss*, the coffee machine's name …). Whoever already goes by one of them is asked
 for a new name at their next coffee.
+
+Under **Departed members** (admins only) you set after how many months a departed member is
+**suggested for deletion** – only those whose balance is settled: whoever still owes money, or
+has credit left, isn't suggested. 0, the default, means never. The suggestions appear at the
+top of the page under **Suggested for deletion**, as a row on the **Overview** and as an amber
+sign on the kiosk. **Nothing is deleted by itself**: the period is measured with the device's
+clock, and a clock module with a flat battery can put that wrong – check the departure date,
+then **Delete** (with cards, orders and payments, in the **Audit log**) or **Keep**: the browser
+asks why (*comes back in spring*, *an open bill is being settled* …), and without a reason
+nothing is kept. Kept members are listed under **Kept** with the reason, who kept them and when,
+and are no longer suggested; **Suggest again** undoes it, and so does *Reactivate*. Backups
+still hold a deleted member until they are thinned out.
 
 ### Bookings
 
@@ -624,7 +646,7 @@ and the installer set it; by hand: `PUBLIC_HOST=` with the device's address.
 choose *Like the weekdays*, *Off all day* or *Times of its own* (*Weekend: off from* / *on again
 from*). A night belongs to the day it starts on: Friday night runs to Saturday morning by the
 weekday times, and after a Sunday that was off all day the kiosk comes back on Monday at *On
-again from*. At night, cards at the machine are **not booked** - not later in the morning
+again from*. At night, cards at the machine are **not booked** – not later in the morning
 either. The phone portal, the backups and the dashboard keep running. A change takes effect
 within a minute and shows up in the **Audit log** as *night.update*.
 
@@ -769,7 +791,7 @@ can upload it to a device's dashboard right away and follow it being installed.
 Otherwise upload the bundle in the dashboard under **Update**. The device then:
 
 1. checks the **signature** and every file's checksum, that the bundle is meant for this device,
-   that there is room, and that it isn't older than what's installed - the one exception: a
+   that there is room, and that it isn't older than what's installed – the one exception: a
    device running a pre-release (a test build, its version has a "-" such as 2.1.0-beta.3) takes
    a release of the same major version, 2.0.2 say; the device first takes its database back to
    what that release knows,
@@ -878,8 +900,8 @@ first, then, if that didn't help, the app. If the app doesn't answer for three m
 restarts that right away. Each takes a minute or two and shows up in the **Audit log** as
 *watchdog.kiosk_restart* / *watchdog.stack_restart*.
 
-It stays out of updates, restores and imports, the first minutes after switching on and - for
-the kiosk - the night rest, and
+It stays out of updates, restores and imports, the first minutes after switching on and – for
+the kiosk – the night rest, and
 after three restarts within an hour it gives up (*watchdog.gave_up*): a restart doesn't help
 then, and it is time to look at the audit log. Pulling the plug is only left for when even
 that has no effect.
@@ -917,7 +939,10 @@ What helps, without being legal advice:
 - **Allow short codes**: whoever doesn't want their name in the ranking takes a code like "AB"
   (see [Settings](#settings) at the kiosk).
 - **Mark people who left** (dashboard → **Members**): their cards are blocked, and they no
-  longer appear in the ranking or the pillory.
+  longer appear in the ranking or the pillory. Under **Departed members** you have them
+  suggested for deletion after a period of your choosing.
+- **Someone asks what is stored about them**: members download it themselves in the portal
+  (**Download my data**), admins with **Export data** on their row under **Members**.
 - **Backups** hold the same data – keep the stick as you would the data itself, and its
   passphrase apart from it.
 - The dashboard needs a login; an admin sees everything. Hand out the roles sparingly
@@ -941,8 +966,8 @@ with its **DE/EN** button, phones and PCs at the top right of the portal and of 
 | The browser warns about the site. | Install the device certificate once (see [above](#installing-the-certificate)). |
 | **Bad Request (400)** in the browser. | The device doesn't know the address you're using. Use the address from setup (`192.168.4.1`, `coffeepy.local`), or run the provisioning tool over the new address – it adds it. |
 | After switching on, the screen is black, then white, for a minute. | Normal: the Pi starts first, then the browser. The kiosk appears after about a minute and a half – after a power cut it can take a good three minutes: the browser's first start then sometimes fails, and the device starts it again by itself. |
-| The screen is dark, taps and cards do nothing, but the dashboard works. | The **Night rest** is on (dashboard → **System**). It ends by itself at the set time; to stop it, untick it - the kiosk comes back within a minute. |
-| The kiosk briefly showed "Aw, Snap!" (or went white) and then came back by itself. | The kiosk's browser crashed while loading the page - the browser of Raspberry Pi OS does that now and then, mostly right after an update or a restore. The device notices within seconds and reloads the page; nothing is lost. |
+| The screen is dark, taps and cards do nothing, but the dashboard works. | The **Night rest** is on (dashboard → **System**). It ends by itself at the set time; to stop it, untick it – the kiosk comes back within a minute. |
+| The kiosk briefly showed "Aw, Snap!" (or went white) and then came back by itself. | The kiosk's browser crashed while loading the page – the browser of Raspberry Pi OS does that now and then, mostly right after an update or a restore. The device notices within seconds and reloads the page; nothing is lost. |
 | The kiosk went black for a moment and started again. | The device restarted a hanging kiosk or the app by itself (see [When the kiosk hangs](#when-the-kiosk-hangs)); the **Audit log** says which. If it happens often, that is where to look for why. |
 | *Card reader not available* | Check the reader's cable and restart the device. |
 | A card isn't recognised. | Hold it flat and still; a card marked as departed is turned away. |

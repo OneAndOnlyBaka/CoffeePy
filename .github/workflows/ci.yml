@@ -108,8 +108,11 @@ jobs:
           for image in $(docker compose config --images | sort -u); do
             case "$image" in
               coffeepy-*)
-                echo "== $image - fails on anything fixable"
-                "$GRYPE" "docker:$image" --only-fixed --fail-on negligible || status=1 ;;
+                # The table for whoever reads the log, the JSON for audit_images.py: it fails on
+                # what an upgrade fixes, and only warns about what needs a newer Python minor.
+                echo "== $image - fails on anything an upgrade fixes"
+                "$GRYPE" "docker:$image" --only-fixed -o table -o json=grype.json
+                scripts/audit_images.py grype.json || status=1 ;;
               *)
                 echo "== $image - not ours, for information"
                 "$GRYPE" "docker:$image" --only-fixed || true ;;

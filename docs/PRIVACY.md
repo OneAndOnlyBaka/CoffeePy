@@ -40,8 +40,11 @@ CoffeePy never learns whether or what was paid there - a payment is what the mem
 the machine. Ranking and pillory are an optional extra on top (see below). Possible legal
 bases are an agreement among those who share the machine (Art. 6 (1) (b) GDPR) or a
 legitimate interest in settling the costs (Art. 6 (1) (f)); in an employment context also
-§ 26 BDSG and, where it exists, a works agreement. Which one applies is the controller's
-decision.
+a works agreement, where there is one. § 26 (1) BDSG, long the usual basis for employee data
+in Germany, is doubtful since the CJEU's judgment of 30 March 2023 (C-34/21), which found the
+very similar Hessian rule not to be a valid "more specific rule" under Art. 88 GDPR - better
+not to rely on it alone. A coffee list is voluntary and not part of anyone's job, which makes
+(b) or (f) the more natural fit anyway. Which one applies is the controller's decision.
 
 ## Where it is kept - and where it is not
 
@@ -57,7 +60,7 @@ decision.
 | Data | Kept | Deleted by |
 |---|---|---|
 | Members, orders, payments | until the member is deleted, or the database reset | an admin (Members → Delete; System → Reset) |
-| A departed member's data | kept for the history, hidden from rankings and pillory | deleting the member |
+| A departed member's data | kept for the history, hidden from rankings and pillory; with a period set under Members → Departed members, suggested for deletion once it is over and the balance is settled | an admin deleting the member - never automatically |
 | Audit log (with IP addresses) | `AUDIT_RETENTION_DAYS`, **90 days** by default | automatically, hourly |
 | Raw card taps (`NfcScan`) | about **one hour** | automatically |
 | One-time phone links | **5 minutes**, or until used | automatically |
@@ -66,10 +69,14 @@ decision.
 | Copies before a restore | the newest few, on the stick | automatically |
 | Database copies before an update | the last **3** updates, on the SD card | automatically |
 
-**Order and payment history has no automatic deletion.** CoffeePy can't know when a debt is
-settled for good or how long the group wants its history. The controller should decide on a
-period - for example: delete members a few months after they left and their balance is
-settled - and do it in the dashboard. Remember that backups still contain deleted data until
+**Order and payment history is never deleted automatically.** CoffeePy can't know how long
+the group wants its history, and the period would be measured with the device's clock, which a
+flat clock-module battery can put wrong. The controller should decide on a period and set it
+under Members → **Departed members**: a departed member whose balance is settled is then
+suggested for deletion once it is over - on the Members page, the overview and as an amber
+sign on the kiosk - and an admin deletes them, or keeps them with a reason that stays on
+record (both audited). Members who still owe money or have credit are not suggested - whether a
+debt is written off for good is the admin's call. Remember that backups still contain deleted data until
 they rotate out (up to 12 months with the defaults).
 
 ## Privacy by default
@@ -92,11 +99,11 @@ they rotate out (up to 12 months with the defaults).
 | Right | How CoffeePy supports it |
 |---|---|
 | Information (Art. 13/14) | the controller informs; this page and the manual's privacy section describe the processing |
-| Access (Art. 15) | members see their cups, balance and bookings in the portal and on the kiosk's Pay screen; a dashboard user can export all orders and payments as CSV (dashboard overview) and pick out one member's rows by their uid |
+| Access (Art. 15) | members see their cups, balance and bookings in the portal and on the kiosk's Pay screen, and download everything stored about them there (**Download my data**: cards, phones, orders, payments, audit entries - other people in them by role only); a dashboard user gets the same with **Export data** on a member |
 | Rectification (Art. 16) | members change their name at the kiosk (Settings); admins correct names and bookings in the dashboard, each correction logged |
 | Erasure (Art. 17) | Members → Delete removes the member with their cards, orders, payments and linked phones; audit entries and backups follow within their retention periods |
 | Restriction (Art. 18) | Mark as departed: cards blocked, hidden from rankings and pillory, data kept |
-| Data portability (Art. 20) | the CSV exports |
+| Data portability (Art. 20) | **Download my data** in the portal, **Export data** in the dashboard (JSON); the CSV exports for everyone |
 | Objection (Art. 21) | a short code instead of a name; the ranking and pillory can be switched off for everyone |
 
 ## Works council
@@ -138,9 +145,13 @@ What the operator adds:
 1. Decide who is the controller and who administers the device.
 2. Inform the members: what is recorded, why, who sees it, how long it is kept (Art. 13).
 3. Involve the works council, where there is one.
-4. Decide whether the ranking and the pillory are switched on - and tell people.
-5. Set the audit retention (`AUDIT_RETENTION_DAYS`) and a backup passphrase in the
+4. Check whether a data protection impact assessment is needed (Art. 35) and write down the
+   result. For a coffee list it will usually be no - little data, no special categories, no
+   automated decisions - but with the ranking and pillory on at a workplace, the check
+   belongs on record.
+5. Decide whether the ranking and the pillory are switched on - and tell people.
+6. Set the audit retention (`AUDIT_RETENTION_DAYS`) and a backup passphrase in the
    provisioning tool if needed.
-6. Set the backup generations in the dashboard to what you want to keep.
-7. Fix a period after which departed members are deleted.
-8. Hand out dashboard roles sparingly.
+7. Set the backup generations in the dashboard to what you want to keep.
+8. Fix a period after which departed members are deleted (Members → Departed members).
+9. Hand out dashboard roles sparingly.

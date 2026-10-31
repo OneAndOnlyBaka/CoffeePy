@@ -51,6 +51,13 @@
 </div>
 
 <div class="card">
+    <h2>{% translate "Your data" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}Everything this device stores about you - cards, linked phones, every
+    coffee and payment, and the log entries about you - as one file.{% endblocktranslate %}</p>
+    <a href="{% url 'portal:my_data' %}" class="btn secondary btn-block">{% translate "Download my data" %}</a>
+</div>
+
+<div class="card">
     <h2>{% translate "Security warning in your browser?" %}</h2>
     <p class="muted">{% blocktranslate trimmed %}This device signs its own certificate. Install it once and the warning
     is gone - on iPhone, also enable it under Settings &rsaquo; General &rsaquo; About &rsaquo;

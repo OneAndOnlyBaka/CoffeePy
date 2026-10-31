@@ -2,7 +2,7 @@
 # Builds one tarball that install.sh can install a device from with no internet at all.
 #
 #   ./scripts/build_offline_bundle.sh [platform] [output.tar]
-#   platform: linux/arm/v7 (default, 32-bit Raspberry Pi OS) or linux/arm64
+#   platform: linux/arm64 (default, 64-bit Raspberry Pi OS) or linux/arm/v7 (32-bit)
 #
 # On the device:
 #   tar xf coffeepy-offline-<date>.tar -C /tmp

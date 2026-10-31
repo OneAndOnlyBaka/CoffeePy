@@ -34,10 +34,13 @@ port 443 by default - allow it with `sysctl net.ipv4.ip_unprivileged_port_start=
 
 ## Install it on a Raspberry Pi
 
-Start from a plain **Raspberry Pi OS Lite** (32-bit is the right choice on a 1GB Pi 3B -
-see the manual's [What you need](MANUAL.en.md#1-what-you-need)), flashed with Raspberry Pi
-Imager. Set a user and, in "Edit Settings", enable SSH and your WiFi so the Pi has internet
-for the install; it only needs that until the very last step.
+Start from a plain **Raspberry Pi OS Lite (64-bit)**, flashed with Raspberry Pi Imager - what
+the releases are built for and the device was measured on (the manual's
+[What the device needs](MANUAL.en.md#what-the-device-needs)); 32-bit works too, with bundles
+built for `linux/arm/v7`. Set a user and, in "Edit Settings", enable SSH. The Pi needs
+internet for the install, until the very last step: a **network cable** is the better choice -
+that last step can turn the Pi's WiFi into CoffeePy's own access point, and a connection over
+its previous WiFi then drops. Enter your WiFi in the Imager only if there is no cable.
 
 ### From your Linux PC (recommended)
 
@@ -111,8 +114,8 @@ have one - or to install the identical set of bits on several devices - build a 
 a dev machine first:
 
 ```bash
-./scripts/build_offline_bundle.sh                 # linux/arm/v7 by default
-./scripts/build_offline_bundle.sh linux/arm64     # for a 64-bit Pi OS
+./scripts/build_offline_bundle.sh                 # linux/arm64 by default
+./scripts/build_offline_bundle.sh linux/arm/v7    # for a 32-bit Pi OS
 ```
 
 It collects the `.deb` packages from the *real* Raspberry Pi OS archives (Raspbian plus
@@ -137,8 +140,8 @@ of built. Everything else is identical, including the hardware and kiosk configu
 
 The bundle carries the complete recursive dependency closure rather than only what a
 solver thinks is missing, so it does not matter what the collection container had
-installed. For a 32-bit target that is currently 784 packages, about 500MB, plus the app
-images - expect roughly 1.5GB in total, which is a USB stick rather than an email. In
+installed. Last counted (for a 32-bit target) that was 784 packages, about 500MB, plus the
+app images - expect roughly 1.5GB in total, which is a USB stick rather than an email. In
 exchange it is bigger than an online install's download, and it is tied to one OS release -
 build it for the release your device runs (`RELEASE=trixie` by default).
 

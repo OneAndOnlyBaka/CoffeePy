@@ -111,3 +111,28 @@ class KioskBoards(models.Model):
     def kiosk_views(self) -> list[str]:
         """The ranking screen's tabs, in order - empty: no ranking button at all."""
         return (["alltime", "month"] if self.ranking else []) + (["pillory"] if self.pillory else [])
+
+
+class MemberRetention(models.Model):
+    """After how many months a departed member with a settled balance is suggested for deletion -
+    on the Members page, the overview and as a task sign on the kiosk (services.departed_members_due).
+    Never deleted by itself: the period is measured with the device's clock, which a flat RTC
+    battery can put wrong, and a deleted member is gone for good. 0, the default, suggests
+    nothing - how long a group keeps its history is the controller's decision (docs/PRIVACY.md)."""
+
+    departed_months = models.PositiveSmallIntegerField(default=0)
+
+    @classmethod
+    def current(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+
+class DeletionHold(models.Model):
+    """A departed member an admin decided to keep although the period is over - with the reason,
+    so the next admin knows why (an open dispute, a returning colleague ...). Such a member is no
+    longer suggested for deletion (services.departed_members_due); reactivating them drops it."""
+
+    member = models.OneToOneField("coffee.Member", on_delete=models.CASCADE, related_name="deletion_hold")
+    reason = models.CharField(max_length=200)
+    held_by = models.CharField(max_length=150, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

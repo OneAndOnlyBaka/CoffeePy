@@ -231,8 +231,13 @@ html, body.kiosk { overflow: hidden; }
 .field .field-hint, .field .msg { font-weight: 400; font-size: 1rem; }
 
 .stats-row { display: flex; gap: 20px; }
+/* A column with the value at the bottom: a label that wraps ("Tassen diesen Monat") would
+   otherwise push its value below the others'. */
 .stat {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   background: var(--cream-dark);
   border-radius: var(--radius);
   padding: 24px;
@@ -430,3 +435,5 @@ html, body.kiosk { overflow: hidden; }
 .device-alarms { position: absolute; top: 16px; right: 152px; display: flex; flex-direction: row-reverse; gap: 12px; }
 .device-alarm { position: static; background: var(--danger); animation: device-alarm 1.2s ease-in-out infinite; }
 @keyframes device-alarm { 50% { opacity: 0.35; } }
+/* Not a fault but a task for the admin (departed members to review): amber, and steady. */
+.device-alarm.admin-task { background: var(--accent); animation: none; }

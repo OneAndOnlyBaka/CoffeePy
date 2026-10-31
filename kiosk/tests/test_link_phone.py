@@ -105,10 +105,9 @@ class PanelStateMarkerTestCase(TestCase):
         self.assertNotEqual(before.content, after.content)
 
     def test_marker_is_stable_across_polls_of_the_same_screen(self):
-        """Otherwise the modal would close under a member who is still scanning it. Note
-        the rest of the settings screen does differ per poll - its csrf token is re-masked
-        on every render and the logout countdown ticks - so the marker, not the response,
-        is what the modal can be keyed on."""
+        """Otherwise the modal would close under a member who is still scanning it. The marker,
+        not the response, is what the modal is keyed on: the response also changes with what
+        the member does on the screen."""
         self.open_settings()
 
         second = self.client.get(reverse("kiosk:panel"))
