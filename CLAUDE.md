@@ -463,13 +463,19 @@ mind before changing it:
 CI's `audit` job fails on every known vulnerability that an upgrade fixes (Dependabot's weekly
 PRs keep it there, `.github/dependabot.yml`): `pip-audit` per
 requirements file (`scripts/audit_python.py` tells fixable from not-yet-fixed) and Grype on
-the two images this repo builds. Other people's images (postgres, mosquitto, caddy) are only
+the two images this repo builds (`scripts/audit_images.py`: a CPython finding that only a newer
+Python *minor* fixes is a warning on the PR, not a failure - no dependency update can fix it, and
+it used to turn every Dependabot PR red). Other people's images (postgres, mosquitto, caddy) are only
 reported - their packages are theirs to fix - and pinned to exact versions that Dependabot moves
 (not to digests: a `docker load`ed image has none, and the watcher's `:coffeepy-previous-*` tags
 are made from the tag). What can't be fixed yet goes into `.grype.yaml` with its reason - and
-whether the affected code is reachable from here at all - never silently: the CPython CVE there
-is fixed only in 3.15, which Django 5.2 doesn't support. The images run Python 3.14 and
-upgrade the base image's pip, because both lagged behind their fixes.
+whether the affected code is reachable from here at all - never silently: the CPython CVEs there
+are fixed only in 3.15 or 3.16, and Django 5.2 (LTS) supports up to 3.14. The images run Python 3.14 and
+upgrade the base image's pip, because both lagged behind their fixes. Dependabot's ignore rules
+for Docker images match `"*postgres"`/`"*python"`: it names them `library/postgres` in the
+compose file, and a plain `postgres` let a PostgreSQL major through.
+Django stays on its LTS release (`requirements.txt` `<6.0`, and an ignore rule for its majors): the
+grouped weekly PR once widened the range to 6.1, which v2.0.2-v2.0.5 shipped.
 
 ## The device is offline
 

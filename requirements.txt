@@ -1,4 +1,4 @@
-Django>=6.1.2,<6.2
+Django>=5.2.18,<6.0
 # psycopg's binary build ships no armv7 wheel, and a 1GB Pi 3B runs the 32-bit OS - pip
 # would fall back to compiling it against libpq there. The pure-Python
 # implementation talks to the same libpq through ctypes (libpq5 arrives with
