@@ -33,7 +33,8 @@ works completely offline, and everyone checks their own balance on their phone.
 
 ### At the machine
 - **One tap per coffee.** Any MIFARE card or key fob works - many company and transit cards
-  already do. Your favourite coffee is preselected; after 20 seconds it is booked by itself.
+  already do. Your favourite coffee is preselected and booked by itself after a few seconds -
+  or tap Cancel. Only checking your balance? Tap Pay first: nothing is booked there.
 - **A jug counts as two cups.** Every coffee sort has its price and its number of machine
   strokes, so a double or a jug is counted - and charged - for what it is.
 - **Pay where you drink.** The kiosk shows what you owe and offers QR codes for PayPal or any
@@ -85,6 +86,7 @@ uses. The housing is printable:
 |---|---|
 | **Try it or install it** | [Quickstart](docs/QUICKSTART.md) - on a PC in four commands, on a Pi with the provisioning tool |
 | **Use it** | The manual in [English](docs/MANUAL.en.md) or [German](docs/MANUAL.de.md) - every screen, with screenshots |
+| **Hang it up** | One page for members, to print and put next to the machine: [English](docs/MEMBERS.en.md) · [German](docs/MEMBERS.de.md) |
 | **Understand it** | [Architecture](docs/ARCHITECTURE.md) (system and software) and [how the numbers are calculated](docs/CALCULATIONS.md) |
 | **Trust it** | [Security mechanisms](docs/SECURITY.md) and [running it in line with the GDPR](docs/PRIVACY.md) |
 | **Change it** | [Development](docs/QUICKSTART.md#development) and [CLAUDE.md](CLAUDE.md) |

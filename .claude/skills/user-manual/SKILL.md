@@ -22,6 +22,12 @@ the same piece of work:
 
 Say in the report which manual sections and screenshots were updated - or why none were.
 
+`docs/MEMBERS.de.md` + `.en.md` is the one page members get next to the machine - ordering,
+cancelling, paying, the phone. It quotes button names like the manual, but **no numbers**
+(seconds, months, limits): it points at what the screen shows, so the manual stays the one
+place for them. `coffee/tests/test_docs.py` fails on a digit there, on manuals whose sections or
+screenshots differ between the languages, and on any broken link or `#anchor` in docs/.
+
 **Unless the user defers it.** When they say to build something first and update the docs and
 screenshots only after they've checked it ("erst anschauen, dann Bilder und Doku"), that order
 wins over the rule above, until they explicitly approve:
@@ -38,11 +44,11 @@ wins over the rule above, until they explicitly approve:
 
 | Change in ... | Manual section | Screenshots |
 |---|---|---|
-| `kiosk/templates/`, `static/kiosk/`, `kiosk/views.py` texts | 4. Kiosk | `kiosk-*` |
-| `portal/` | 5. Phone portal | `portal-*` |
+| `kiosk/templates/`, `static/kiosk/`, `kiosk/views.py` texts | 4. Kiosk, and the member sheet (`docs/MEMBERS.*.md`) | `kiosk-*` |
+| `portal/` | 5. Phone portal, and the member sheet | `portal-*` |
 | `dashboard/` | 6. Dashboard (and 3. First steps for login/setup) | `dashboard-*` |
 | `scripts/provision.sh`, `.env.example`, `install/install.sh` options | 2. Installation (the settings table!) | `provision-*` |
-| update watcher, backups, `install/maintenance.sh`, certificates | 7. Running and maintaining, 8. Troubleshooting | `kiosk-maintenance`, `dashboard-update/backup/certificate` |
+| update watcher, backups, `install/maintenance.sh`, certificates | 7. Running and maintaining, 8. Troubleshooting | `kiosk-maintenance`, `dashboard-update`, `-backup`, `-certificate` |
 | `locale/de/LC_MESSAGES/django.po` (wording) | wherever the text is quoted | the screens showing it |
 | hardware, housing | 1. What you need | - |
 

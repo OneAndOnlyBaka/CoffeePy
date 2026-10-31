@@ -6,7 +6,7 @@ name: Release
 #      docker-compose.yml - Postgres, Mosquitto and Caddy included - plus the compose file and
 #      install/, in one tar for /dashboard/update/. Devices only take it with
 #      UPDATE_VERIFY_SIGNATURE=false: the signing key never leaves the dev machine, so CI
-#      can't sign (sign a bundle there with scripts/build_update_bundle.sh instead).
+#      can't sign (sign a bundle there with scripts/sign_update_bundle.sh instead).
 #   3. A CycloneDX SBOM of every image in the bundle (Syft) - what a device runs, down to
 #      the Python and Alpine packages, for checking it against new vulnerabilities without
 #      the device and for the Cyber Resilience Act's documentation duty.

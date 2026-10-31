@@ -86,6 +86,25 @@ class KioskPanelTestCase(TestCase):
         self.assertContains(response, "Thank you")
         self.assertEqual(Order.objects.count(), 1)
 
+    def test_picking_a_sort_gives_time_to_confirm_and_books_nothing_by_itself(self):
+        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        other = CoffeeSort.objects.create(name="lungo", price=Decimal("0.40"), machine_strokes=1)
+        self._scan("AABBCCDD")
+        start = time.time()
+        self.client.get(reverse("kiosk:panel"))  # logs in, deadline = now + 20s
+
+        with mock.patch("time.time", return_value=start + 15):
+            response = self.client.post(reverse("kiosk:order_select"), {"coffee_id": other.pk})
+        self.assertContains(response, "Automatic logout in")
+        self.assertNotContains(response, "Automatic checkout in")
+
+        with mock.patch("time.time", return_value=start + 25):  # past the card's 20s, within the pick's
+            self.assertContains(self.client.get(reverse("kiosk:panel")), "lungo")
+        with mock.patch("time.time", return_value=start + 40):
+            response = self.client.get(reverse("kiosk:panel"))
+        self.assertContains(response, "Apply your card")
+        self.assertEqual(Order.objects.count(), 0)
+
     def test_member_deleted_while_logged_in_logs_out_instead_of_failing(self):
         Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         self._scan("AABBCCDD")

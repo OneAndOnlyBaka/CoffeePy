@@ -108,8 +108,9 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
         </div>
         <div class="action-row panel-footer">
             <button type="button" class="danger" hx-post="{% url 'kiosk:order_cancel' %}">✕ {% translate "Cancel" %}</button>
-            {% if auto_checkout and deadline_ms %}
-            {% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic checkout in {{ seconds }}s{% endblocktranslate %}
+            {% if deadline_ms %}
+            {% if auto_checkout %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic checkout in {{ seconds }}s{% endblocktranslate %}
+            {% else %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}{% endif %}
             <span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>
             {% endif %}
             <button type="button" class="success primary-action" hx-post="{% url 'kiosk:order_confirm' %}">✓ {% translate "Order now" %}</button>

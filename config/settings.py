@@ -156,10 +156,6 @@ LOGIN_URL = "dashboard:login"
 LOGIN_REDIRECT_URL = "dashboard:index"
 LOGOUT_REDIRECT_URL = "dashboard:login"
 
-# Kiosk session/auto-logout timings (seconds), matching the legacy Tkinter app.
-KIOSK_ORDER_AUTO_CHECKOUT_SECONDS = 20
-KIOSK_AUTO_LOGOUT_SECONDS = 20
-
 # Where uploaded update bundles are written for the host-level watcher to pick up.
 # What the watcher reports back (state.json, installed.json, previous.json, pre-update/).
 UPDATE_DIR = Path(os.environ.get("UPDATE_DIR", BASE_DIR / "updates"))

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 11:46+0100\n"
+"POT-Creation-Date: 2026-10-31 16:38+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -2299,6 +2299,10 @@ msgstr ""
 msgid "Automatic checkout in %(seconds)ss"
 msgstr "Automatische Buchung in %(seconds)s s"
 
+#, python-format
+msgid "Automatic logout in %(seconds)ss"
+msgstr "Automatische Abmeldung in %(seconds)s s"
+
 msgid "Order now"
 msgstr "Jetzt bestellen"
 
@@ -2326,10 +2330,6 @@ msgstr ""
 
 msgid "Link this phone"
 msgstr "Dieses Handy verknüpfen"
-
-#, python-format
-msgid "Automatic logout in %(seconds)ss"
-msgstr "Automatische Abmeldung in %(seconds)s s"
 
 msgid "Cups in total"
 msgstr "Tassen insgesamt"

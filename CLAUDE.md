@@ -1,7 +1,7 @@
 # Working on CoffeePy
 
 Notes for whoever (or whatever) edits this repo next. [README.md](README.md) covers what the
-project *is*, [docs/](docs/README.md) how it is built and deployed; this file covers what bites
+project *is*, [docs/](docs/INDEX.md) how it is built and deployed; this file covers what bites
 you while changing it.
 
 ## Running things
@@ -19,7 +19,7 @@ python manage.py runserver
 `DJANGO_TEST_SQLITE=1` swaps Postgres for a local SQLite file; without it every command tries
 to reach the `db` container. CI (`.github/workflows/ci.yml`) runs that suite (plus `makemigrations --check`), the same
 suite against PostgreSQL with the coverage below, the audit (see "Every PR is audited"), and
-a lint job of correctness checks only: ruff `F`, ShellCheck errors, zizmor on the workflows,
+a lint job of correctness checks only: ruff `F`/`E9`, ShellCheck errors, zizmor on the workflows,
 gitleaks over the history. No formatter, no type checker.
 The suite only grows, so don't trust a count or a duration written down anywhere: the last
 lines of a run say how many tests ran and how long they took, and `skipped=N` how many need
@@ -46,7 +46,8 @@ Rules that hold across all four:
 - **Queries live in `coffee/services.py`**, not in views. It's ported from the legacy app's
   `DatabaseConnector` and is where anything aggregate belongs.
 - **"Cups" means `Order.machine_strokes`**, not `Order` rows - a jug is two cups. Every
-  ranking, statistic and comparison counts strokes. Getting this wrong is invisible in tests
+  ranking, statistic and comparison counts strokes (the one exception, the statistics page's sort
+  distribution, counts orders on purpose - docs/CALCULATIONS.md). Getting this wrong is invisible in tests
   with one-stroke fixtures.
 - **Everything that changes data gets an audit row** via `dashboard.audit.log(request,
   "noun.verb", …)`, right after the change succeeds - in the dashboard, the kiosk and the
@@ -75,7 +76,11 @@ Rules that hold across all four:
   the manual's demo members (`demo_data.py` NAMES).
 - Tests live in `<app>/tests/test_*.py`. UI text is bilingual - see "Two languages" below.
 - **A change users can see also changes the manual** (`docs/MANUAL.de.md` + `.en.md`, with
-  screenshots in both languages) - the `user-manual` skill in `.claude/skills/` has the
+  screenshots in both languages; what members do at the kiosk or on the phone also the one-page
+  `docs/MEMBERS.de.md` + `.en.md`, which carries no numbers on purpose - `coffee/tests/test_docs.py`
+  checks that, the two manuals' sections and screenshots, every link in docs/, and the numbers the
+  manuals take from the code). Before a branch is done, the `doc-drift` skill's report
+  (`drift_report.py --since master`) lists every doc line that names what the branch changed - the `user-manual` skill in `.claude/skills/` has the
   mapping and the capture scripts. Not done until both manuals match - unless the user says
   to review it first: then no screenshots and no manual edits until they approve (see the skill).
 
@@ -190,7 +195,7 @@ The web container can't touch block devices, so `install/storage_helper.py` does
 - **The stick reaches the containers through an `rslave` bind of `/srv/coffeepy-usb`**
   (`docker-compose.yml`) - a stick plugged in after the container started still shows up.
 - **`pg_dump`/`pg_restore` in the image are newer than the server** (17 against 16). A 17 dump
-  has `SET transaction_timeout`, which 16 rejects; `backups.restore` filters it. A restore
+  has `SET transaction_timeout`, which 16 rejects; `backups.restore_database` filters it. A restore
   is one psql transaction (drop + load): a broken backup rolls back instead of leaving an
   empty database - which is exactly what happened once with a two-step restore.
 - A restore replaces the dashboard logins and sessions too - the restoring admin may be
@@ -395,8 +400,9 @@ mind before changing it:
 - **The host's OS is updated by OS bundles** (`scripts/build_os_bundle.sh`, `"kind": "os"`): no
   images, no rollback, the packages are whatever the operator lists (the update page offers the
   device's `os-packages.txt`). The only code that installs them is `install/os_update.sh`, copied
-  *into* the bundle and signed with it - keep it the one way packages get onto a device from an
-  upload. Its forward check is against `os-installed.json`, not the app's `installed.json`; a power
+  *into* the bundle and signed with it. The one other way packages get onto a device from an
+  upload is an app bundle built `--with-os-packages`: just `install/packages.txt`'s set, through
+  `install.sh --only=packages` - keep it at those two. Its forward check is against `os-installed.json`, not the app's `installed.json`; a power
   cut in it is finished by `dpkg --configure -a` at boot (`recover_os`), never retried by itself.
 - **SSH is off after the installation** (`install.sh` step `ssh`, unless `--keep-ssh`); the
   dashboard's System page switches it through the storage helper. Provision the test Pi with
@@ -458,7 +464,7 @@ mind before changing it:
   Taking the layout down first (`display: none`, two frames, then reload) did not help.
   `install/kiosk/openbox-autostart` therefore watches for new dumps every 2s and presses F5
   (`xdotool`, in `install/packages.txt`) - or, on a device that has no xdotool yet (packages
-  only come with an OS bundle), restarts Chromium; the kiosk is back 10-25s later instead of
+  only come with an OS bundle or an app bundle built `--with-os-packages`), restarts Chromium; the kiosk is back 10-25s later instead of
   after the watchdog's ~4 minutes. Symbols: `apt-get download chromium-dbgsym` (same build id
   as `/usr/lib/chromium/chromium`), unpack with `dpkg-deb -x`, `addr2line -f -C -e` the
   `.debug` file with the offsets from the dump. Recheck with every new Chromium.
@@ -479,7 +485,7 @@ reported - their packages are theirs to fix - and pinned to exact versions that 
 (not to digests: a `docker load`ed image has none, and the watcher's `:coffeepy-previous-*` tags
 are made from the tag). What can't be fixed yet goes into `.grype.yaml` with its reason - and
 whether the affected code is reachable from here at all - never silently: the CPython CVEs there
-are fixed only in 3.15 or 3.16, and Django 5.2 (LTS) supports up to 3.14. The images run Python 3.14 and
+are fixed only in 3.15 or 3.16 - or on 3.14's branch but in no release yet - and Django 5.2 (LTS) supports up to 3.14. The images run Python 3.14 and
 upgrade the base image's pip, because both lagged behind their fixes. Dependabot's ignore rules
 for Docker images match `"*postgres"`/`"*python"`: it names them `library/postgres` in the
 compose file, and a plain `postgres` let a PostgreSQL major through.

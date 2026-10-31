@@ -5,8 +5,8 @@
 #   platform: linux/arm64 (default, 64-bit Raspberry Pi OS) or linux/arm/v7 (32-bit)
 #
 # On the device:
-#   tar xf coffeepy-offline-<date>.tar -C /tmp
-#   sudo /tmp/coffeepy-offline/repo/install/install.sh --offline=/tmp/coffeepy-offline
+#   tar xf coffeepy-offline-<date>.tar -C ~
+#   sudo ~/coffeepy-offline/repo/install/install.sh --offline=$HOME/coffeepy-offline
 #
 # What goes in, and why each part cannot simply be downloaded on the Pi later:
 #
@@ -215,4 +215,4 @@ cat "${BUNDLE}/manifest.txt" | sed 's/^/   /'
 echo
 echo "   On the device (no internet needed):"
 echo "     tar xf $(basename "${OUTPUT}") -C /tmp"
-echo "     sudo /tmp/coffeepy-offline/repo/install/install.sh --offline=/tmp/coffeepy-offline"
+echo "     sudo ~/coffeepy-offline/repo/install/install.sh --offline=$HOME/coffeepy-offline"

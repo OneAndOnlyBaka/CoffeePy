@@ -199,6 +199,9 @@ def order_select(request):
         if coffee_id:
             request.session["order_coffee_id"] = int(coffee_id)
         request.session["order_auto_checkout"] = False
+        # Whoever picks a sort confirms it themselves - with time for that from the pick on, and a
+        # logout countdown in place of the checkout one. The card's deadline left only what remained.
+        request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
     return _render_panel(request)
 
 
