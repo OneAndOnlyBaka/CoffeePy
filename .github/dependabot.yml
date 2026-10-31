@@ -8,6 +8,12 @@ updates:
     schedule: {interval: weekly}
     groups:
       python: {patterns: ["*"]}
+    ignore:
+      # The app stays on Django's LTS release (5.2, supported until April 2028): a major is a
+      # decision with its own upgrade work, not a weekly update - the grouped PR once took it
+      # from 5.2 to 6.1 unnoticed. Security fixes to the LTS still arrive as patch updates.
+      - dependency-name: "django"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: pip
     directory: /nfc-cardreader
     schedule: {interval: weekly}
@@ -20,8 +26,9 @@ updates:
     schedule: {interval: weekly}
     ignore:
       # A Python minor version is a decision (Django has to support it), not a weekly update.
-      - dependency-name: python
-        update-types: ["version-update:semver-minor"]
+      # "*": Dependabot names Docker Hub's official images "library/python" in some files.
+      - dependency-name: "*python"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
 
   # postgres, mosquitto and caddy, pinned to exact versions so that two builds of one commit
   # ship the same images. A PostgreSQL major means a dump and restore of every device's
@@ -30,7 +37,8 @@ updates:
     directories: ["/", "/nfc-cardreader"]
     schedule: {interval: weekly}
     ignore:
-      - dependency-name: postgres
+      # "*": here it is "library/postgres" - a plain "postgres" let PR #17 (16 -> 18) through.
+      - dependency-name: "*postgres"
         update-types: ["version-update:semver-major"]
 
   # The actions, pinned to commits in the workflows - Dependabot moves the pin and its comment.

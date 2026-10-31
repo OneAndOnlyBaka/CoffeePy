@@ -2,16 +2,19 @@
 # every vulnerability a newer release fixes. Each entry says why that fix can't be taken yet -
 # drop it as soon as it can (and the audit will tell once the reason is gone: a newer
 # base image without the finding makes the rule simply match nothing).
+#
+# A CPython finding that only a newer Python minor fixes doesn't fail the audit anyway
+# (scripts/audit_images.py: a warning on the PR) - the images run 3.14, the newest Python that
+# Django 5.2 supports. It comes here once someone has looked at whether it is reachable.
 ignore:
-  # Fixed only in CPython 3.15, not backported to 3.14 - which is the newest Python that Django
-  # 5.2 (this app's LTS) supports. Not reachable here: it is a command injection through newlines
-  # in poplib's commands, and neither the app nor the bridge imports poplib (no e-mail at all).
-  # Revisit with the move to a Django that supports 3.15.
+  # Fixed only in CPython 3.15, not backported to 3.14. Not reachable here: it is a command
+  # injection through newlines in poplib's commands, and neither the app nor the bridge imports
+  # poplib (no e-mail at all). Revisit with the move to a Django that supports 3.15.
   - vulnerability: CVE-2025-15367
     package:
       name: python
       type: binary
-    reason: "poplib only, which nothing here imports; fixed only in Python 3.15, which Django 5.2 LTS does not support"
+    reason: "poplib only, which nothing here imports; fixed only in Python 3.15, which Django 5.2 does not support"
   # tempfile.TemporaryDirectory's cleanup races with whoever swaps a directory in its tree for a
   # symlink. Fixed on CPython's 3.14 branch (python/cpython#157579), not yet in a 3.14 release -
   # drop this once python:3.14-slim carries it. The app does use TemporaryDirectory (backups, TLS),
@@ -23,3 +26,11 @@ ignore:
       name: python
       type: binary
     reason: "TemporaryDirectory cleanup race; fixed on CPython 3.14 branch, not yet released; only dirs the app alone can write"
+  # http.client misreading a chunked HTTP *response* with a non-hex or negative size. Fixed only
+  # in CPython 3.16. Not reachable at run time: neither the app nor the bridge makes an HTTP
+  # request (offline device); only pip does, while the image is built, against PyPI.
+  - vulnerability: CVE-2026-103995
+    package:
+      name: python
+      type: binary
+    reason: "http.client response parsing; nothing here makes HTTP requests at run time; fixed only in Python 3.16"
