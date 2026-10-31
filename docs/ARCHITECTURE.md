@@ -133,8 +133,9 @@ own port 8000 are not published at all.
   certificate regardless, so a bad upload can never lock the touchscreen out.
 
 `dashboard/tls.py` explains the moving parts: it writes the certificates and the Caddyfile,
-named after their own hash so Caddy's `--watch` reloads them. Rootless Podman can't bind
-port 443 by default - allow it with `sysctl net.ipv4.ip_unprivileged_port_start=443`.
+named after their own hash so Caddy's `--watch` reloads them. How phones install the CA is
+the manual's [First steps](MANUAL.en.md#3-first-steps); running the stack on a PC, the
+[Quickstart](QUICKSTART.md#try-it-on-a-pc).
 
 ### Reachable address for QR codes
 
@@ -282,9 +283,8 @@ is put forward by `coffee/clock.py` in the backup service's minutely tick: when 
 within a boot or stands behind the newest audit entry - never back, and not at all once NTP
 set it.
 
-`/dashboard/system-time/` (superuser only) is the offline fallback if the RTC drifts or
-isn't fitted - normally `install/install.sh` enables the DS3231 RTC overlay so NTP
-isn't needed at all.
+Without a module, or with one that has lost the time, `/dashboard/system-time/` (superuser
+only) sets the clock by hand.
 
 ---
 
@@ -333,7 +333,7 @@ erDiagram
 
 | Model | Notes |
 |---|---|
-| `Member` | primary key is the card's uid; a name like "Anna B." (`coffee/names.py`); `departed_at` takes them out of rankings and the pillory |
+| `Member` | primary key is the card's uid; a name like "Anna B." (`coffee/names.py`); `departed_at` takes them out of rankings and the pillory - and, with a period set (`dashboard.models.MemberRetention`), suggested for deletion once it is over and their balance is settled (`services.departed_members_due`: Members page, overview, an amber sign on the kiosk) unless an admin kept them with a reason (`DeletionHold`); never deleted by itself, the clock may be wrong |
 | `MemberCard` | additional cards of a member; `AltUidCapture` arms the kiosk to link the next tap |
 | `CoffeeSort` | name, price, machine strokes (a jug is two) |
 | `Order` | member, sort, `value` and `machine_strokes` copied from the sort at the time of the order, `created_at` |

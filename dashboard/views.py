@@ -36,13 +36,14 @@ from coffee.network import public_host
 
 from . import audit, import_jobs, night, system_clock, system_stats, tls
 from .decorators import superuser_required
-from .models import AccountSecurity, KioskBoards, NamePolicy, NightPolicy, PasswordPolicy
+from .models import AccountSecurity, DeletionHold, KioskBoards, MemberRetention, NamePolicy, NightPolicy, PasswordPolicy
 from .forms import (
     ROLE_ADMIN,
     AdminSetPasswordForm,
     CoffeeSortForm,
     DashboardUserForm,
     MemberForm,
+    MemberRetentionForm,
     OrderForm,
     OwnPasswordChangeForm,
     NamePolicyForm,
@@ -61,7 +62,8 @@ def index(request):
         request,
         "dashboard/index.html",
         {"reader_status": reader_status, "public_host": public_host(), "overview": services.dashboard_overview(),
-         "backup_health": backups.health(), "rtc_health": rtc.health(), "clock_corrected": clock.corrected()},
+         "backup_health": backups.health(), "rtc_health": rtc.health(), "clock_corrected": clock.corrected(),
+         "due_members": services.departed_members_due(MemberRetention.current().departed_months)},
     )
 
 
@@ -183,7 +185,10 @@ def member_list(request):
         member.name_issue = None if member.is_departed else names.message(
             names.problem(names.normalize(member.nickname), member=member, extra_blocked=blocked))
     return render(request, "dashboard/members.html",
-                  {"members": members, "name_policy_form": NamePolicyForm(instance=NamePolicy.current())})
+                  {"members": members, "name_policy_form": NamePolicyForm(instance=NamePolicy.current()),
+                   "retention_form": MemberRetentionForm(instance=MemberRetention.current()),
+                   "due_members": services.departed_members_due(MemberRetention.current().departed_months),
+                   "holds": DeletionHold.objects.select_related("member").order_by("member__nickname")})
 
 
 @login_required
@@ -195,6 +200,54 @@ def member_name_rules(request):
         policy = form.save()
         audit.log(request, "name_policy.update", details=", ".join(policy.blocked_list())[:500])
     return redirect("dashboard:members")
+
+
+@login_required
+@superuser_required
+@require_POST
+def member_retention(request):
+    form = MemberRetentionForm(request.POST, instance=MemberRetention.current())
+    if form.is_valid():
+        retention = form.save()
+        audit.log(request, "member_retention.update", details=f"{retention.departed_months} month(s)")
+    else:
+        messages.error(request, " ".join(form.errors.get("departed_months", [])))
+    return redirect("dashboard:members")
+
+
+@login_required
+@require_POST
+def member_keep(request, uid):
+    """Keeps a departed member suggested for deletion - with the reason, which is required: the
+    next admin has to know why this one stays."""
+    member = get_object_or_404(Member, pk=uid, departed_at__isnull=False)
+    reason = request.POST.get("reason", "").strip()[:200]
+    if not reason:
+        messages.error(request, _("Say why the member is kept."))
+        return redirect(reverse("dashboard:members") + "#due")
+    DeletionHold.objects.update_or_create(member=member, defaults={"reason": reason,
+                                                                   "held_by": request.user.get_username()})
+    audit.log(request, "member.keep", target=audit.member_actor(member), details=reason)
+    return redirect(reverse("dashboard:members") + "#due")
+
+
+@login_required
+@require_POST
+def member_keep_undo(request, uid):
+    member = get_object_or_404(Member, pk=uid)
+    DeletionHold.objects.filter(member=member).delete()
+    audit.log(request, "member.keep_undo", target=audit.member_actor(member))
+    return redirect(reverse("dashboard:members") + "#due")
+
+
+@login_required
+def member_export(request, uid):
+    """One member's data as JSON - their right of access (Art. 15 GDPR) without picking their
+    rows out of the full CSV exports."""
+    member = get_object_or_404(Member, pk=uid)
+    response = services.member_data_response(member)
+    audit.log(request, "member.export", target=audit.member_actor(member))
+    return response
 
 
 @login_required
@@ -265,6 +318,7 @@ def member_reactivate(request, uid):
     member = get_object_or_404(Member, pk=uid)
     member.departed_at = None
     member.save(update_fields=["departed_at"])
+    DeletionHold.objects.filter(member=member).delete()  # it was about a departure that is over
     audit.log(request, "member.reactivate", target=member.display_name())
     return redirect("dashboard:members")
 

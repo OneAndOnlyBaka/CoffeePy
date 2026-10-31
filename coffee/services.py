@@ -1,11 +1,14 @@
 """Query logic ported from the legacy DatabaseConnector, using the Django ORM instead of
 string-built SQL."""
+import calendar
 import hashlib
+import json
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django.db.models import Count, F, Max, Q, Sum
-from django.db.models.functions import ExtractHour, ExtractIsoWeekDay, TruncMonth, TruncQuarter
+from django.db.models import Count, DecimalField, F, Max, OuterRef, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce, ExtractHour, ExtractIsoWeekDay, TruncMonth, TruncQuarter
+from django.http import HttpResponse
 from django.utils import timezone
 from django.utils.dates import WEEKDAYS_ABBR
 
@@ -83,6 +86,83 @@ def total_deposit(member: Member, before: datetime | None = None) -> Decimal:
 def account_balance(member: Member, round_value: bool = True) -> Decimal:
     balance = total_payments(member) - total_deposit(member)
     return round(balance, 2) if round_value else balance
+
+
+def months_ago(months: int) -> datetime:
+    """Now, `months` calendar months back - the 31st becomes the last day of a shorter month."""
+    now = timezone.now()
+    year, month = divmod(now.year * 12 + now.month - 1 - months, 12)
+    return now.replace(year=year, month=month + 1, day=min(now.day, calendar.monthrange(year, month + 1)[1]))
+
+
+def departed_members_due(months: int) -> list[Member]:
+    """Departed members whose departure is `months` months past and whose balance is settled -
+    suggested for deletion on the Members page and as a task sign on the kiosk. Only suggested:
+    the period is measured with the device's clock, which can be wrong (a flat RTC battery), and
+    an open balance, owed either way, is the admin's call; so is keeping one with a reason
+    (dashboard.models.DeletionHold). One query - the kiosk asks on every
+    poll of its wait screen. The balance is worked out here, not compared in SQL: SQLite sums
+    decimals as floats."""
+    if not months:
+        return []
+    def total(model):
+        return Coalesce(Subquery(model.objects.filter(member=OuterRef("pk")).values("member")
+                                 .annotate(total=Sum("value")).values("total"), output_field=DecimalField()),
+                        Value(Decimal("0")), output_field=DecimalField())
+
+    candidates = (Member.objects.filter(departed_at__lt=months_ago(months), deletion_hold__isnull=True)
+                  .annotate(paid=total(Payment), drunk=total(Order)).order_by("departed_at"))
+    return [member for member in candidates if round(Decimal(member.paid) - Decimal(member.drunk), 2) == 0]
+
+
+def member_data_response(member: Member, own: bool = False):
+    """member_data as a JSON download - the same file from the dashboard and the portal."""
+    response = HttpResponse(json.dumps(member_data(member, own), indent=1, ensure_ascii=False),
+                            content_type="application/json; charset=utf-8")
+    response["Content-Disposition"] = (
+        f'attachment; filename="coffeepy-member-{member.uid}-{timezone.localdate().isoformat()}.json"')
+    return response
+
+
+def member_data(member: Member, own: bool = False) -> dict:
+    """Everything the device stores about one member, for their right of access (Art. 15 GDPR):
+    the dashboard's per-member export, and with `own` the member's own from the portal. Audit
+    entries are found by "(uid N)" - how dashboard.audit.member_actor names a member, as actor or
+    as target. `own` leaves out other people's data in them: an admin's user name and address
+    become the role ("dashboard", "system")."""
+    def when(value):
+        return value.isoformat() if value else None
+
+    tag = f"(uid {member.uid})"
+
+    def other(entry):
+        return own and tag not in entry.actor
+    return {
+        "exported_at": timezone.now().isoformat(),
+        "member": {
+            "uid": member.uid,
+            "name": member.nickname,
+            "favourite_coffee": member.favourite_coffee.name if member.favourite_coffee else None,
+            "departed_at": when(member.departed_at),
+            "balance": str(account_balance(member)),
+            "cups_total": total_cups(member),
+        },
+        "cards": [{"uid": member.uid, "added_at": None}] + [
+            {"uid": card.uid, "added_at": when(card.created_at)} for card in member.alt_cards.order_by("created_at")],
+        "phones": [{"label": device.label, "linked_at": when(device.created_at), "last_seen_at": when(device.last_seen_at)}
+                   for device in member.devices.order_by("created_at")],
+        "orders": [{"at": when(order.created_at), "coffee_sort": order.coffee_sort.name if order.coffee_sort else None,
+                    "cups": order.machine_strokes, "value": str(order.value), "info": order.info}
+                   for order in member.orders.select_related("coffee_sort").order_by("created_at")],
+        "payments": [{"at": when(payment.created_at), "value": str(payment.value), "method": payment.method_name,
+                      "info": payment.info} for payment in member.payments.order_by("created_at")],
+        "audit_log": [{"at": when(entry.created_at), "action": entry.action,
+                       "actor": entry.source if other(entry) else entry.actor,
+                       "target": entry.target, "details": entry.details, "source": entry.source,
+                       "address": None if other(entry) else entry.ip, "outcome": entry.outcome}
+                      for entry in AuditLogEntry.objects.filter(Q(actor__contains=tag) | Q(target__contains=tag))
+                      .order_by("created_at")],
+    }
 
 
 def ranking_all_time(limit: int = 7):

@@ -11,6 +11,7 @@ urlpatterns = [
     path("pay/", views.pay, name="pay"),
     path("stats/", views.stats, name="stats"),
     path("devices/", views.devices, name="devices"),
+    path("my-data/", views.my_data, name="my_data"),
     path("devices/<int:device_id>/revoke/", views.revoke_device, name="revoke_device"),
     path("cards/", views.cards, name="cards"),
     path("cards/add/", views.card_add_start, name="card_add_start"),

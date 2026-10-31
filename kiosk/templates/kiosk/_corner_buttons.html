@@ -6,7 +6,7 @@ the ranking. Both are plain links/GETs - nothing here may differ from one poll t
 <button type="button" class="info-btn admin-btn" title="{% translate "Admin access" %}" aria-label="{% translate "Admin access" %}"
         hx-get="{% url 'kiosk:qr_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
         hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/wrench.svg" %}</button>
-{% if backup_disturbed or rtc_disturbed or clock_corrected %}
+{% if backup_disturbed or rtc_disturbed or clock_corrected or admin_task %}
 {% comment %}Something on the device is broken - whoever looks after it sees it right here, the details are on the dashboard: backups have stopped (stick missing, failing, ...), or the clock module (RTC) is missing, doesn't answer or lost the time, or the clock had gone back (coffee/clock.py). These only change when that state does, so the poll stays byte-identical.{% endcomment %}
 <div class="device-alarms">
     {% if backup_disturbed %}<span class="info-btn device-alarm" role="img" title="{% translate "Backups are not running - see the dashboard" %}"
@@ -15,6 +15,9 @@ the ranking. Both are plain links/GETs - nothing here may differ from one poll t
           aria-label="{% translate "The clock module (RTC) is faulty - see the dashboard" %}">{% include "icons/clock.svg" %}</span>
     {% elif clock_corrected %}<span class="info-btn device-alarm" role="img" title="{% translate "The clock was wrong and has been put forward - see the dashboard" %}"
           aria-label="{% translate "The clock was wrong and has been put forward - see the dashboard" %}">{% include "icons/clock.svg" %}</span>{% endif %}
+    {% comment %}Not a fault: something only an admin can decide - departed members suggested for deletion. Amber and steady, not red and blinking.{% endcomment %}
+    {% if admin_task %}<span class="info-btn device-alarm admin-task" role="img" title="{% translate "A task for the admin - see the dashboard" %}"
+          aria-label="{% translate "A task for the admin - see the dashboard" %}">{% include "icons/clipboard.svg" %}</span>{% endif %}
 </div>
 {% endif %}
 {% get_current_language as current_language %}

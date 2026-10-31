@@ -72,7 +72,8 @@ class Page:
         while True:
             msg = self.recv()
             if msg.get("id") == self.next_id:
-                return msg.get("result", {})
+                # CDP's own error ("Target crashed", ...) - silently {} it once hid why a call failed
+                return msg["result"] if "result" in msg else {"error": msg.get("error")}
             self.events.append(msg)
 
     def eval(self, expr):

@@ -42,6 +42,7 @@
                     <summary class="btn secondary btn-sm" title="{% translate "More" %}">{% include "icons/dots.svg" %}</summary>
                     <div class="row-more-menu">
                 <a href="{% url 'dashboard:member_alt_uid_start' member.uid %}" class="btn secondary btn-sm">{% translate "Add card" %}</a>
+                <a href="{% url 'dashboard:member_export' member.uid %}" class="btn secondary btn-sm">{% translate "Export data" %}</a>
                 {% if member.device_count %}
                 <form method="post" action="{% url 'dashboard:member_revoke_devices' member.uid %}" onsubmit="return confirm('{{ confirm_revoke|escapejs }}');">
                     {% csrf_token %}
@@ -72,6 +73,61 @@
         {% endfor %}
     </div>
 </div>
+{% if due_members or holds %}
+<div class="card" id="due">
+    <h2>{% translate "Suggested for deletion" %}</h2>
+    <p class="muted">{% blocktranslate trimmed with months=retention_form.instance.departed_months %}Departed longer
+    ago than the period below ({{ months }} months), balance settled. Check the departure date - the device's
+    clock can be wrong - then delete them, or leave them.{% endblocktranslate %}</p>
+    <div class="list">
+        {% for member in due_members %}
+        {% autoescape off %}{% blocktranslate with name=member.display_name asvar confirm_delete %}Delete {{ name }}?{% endblocktranslate %}
+        {% blocktranslate with name=member.display_name asvar ask_reason %}Why is {{ name }} kept? (e.g. comes back in spring){% endblocktranslate %}{% endautoescape %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ member.display_name }}</span>
+                <span class="list-row-meta">{% blocktranslate with date=member.departed_at|date:"SHORT_DATE_FORMAT" %}Departed {{ date }}{% endblocktranslate %}</span>
+            </div>
+            <div class="list-row-actions">
+                <a href="{% url 'dashboard:member_export' member.uid %}" class="btn secondary btn-sm">{% translate "Export data" %}</a>
+                {% comment %}The reason through the browser's own prompt, like Delete's confirm: a menu with a text field fits nowhere in a row of three buttons on a phone.{% endcomment %}
+                <form method="post" action="{% url 'dashboard:member_keep' member.uid %}"
+                      onsubmit="const reason = prompt('{{ ask_reason|escapejs }}'); if (!reason || !reason.trim()) return false; this.reason.value = reason; return true;">
+                    {% csrf_token %}
+                    <input type="hidden" name="reason">
+                    <button type="submit" class="secondary btn-sm">{% translate "Keep" %}</button>
+                </form>
+                <form method="post" action="{% url 'dashboard:member_delete' member.uid %}" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
+                    {% csrf_token %}
+                    <button type="submit" class="danger btn-sm">{% translate "Delete" %}</button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <p class="muted list-empty">{% translate "Nothing to review." %}</p>
+        {% endfor %}
+    </div>
+    {% if holds %}
+    <h3>{% translate "Kept" %}</h3>
+    <div class="list">
+        {% for hold in holds %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ hold.member.display_name }}</span>
+                <span class="list-row-meta">{{ hold.reason }} &middot; {% blocktranslate trimmed with who=hold.held_by date=hold.created_at|date:"SHORT_DATE_FORMAT" %}{{ who }}, {{ date }}{% endblocktranslate %}</span>
+            </div>
+            <div class="list-row-actions">
+                <form method="post" action="{% url 'dashboard:member_keep_undo' hold.member.uid %}">
+                    {% csrf_token %}
+                    <button type="submit" class="secondary btn-sm">{% translate "Suggest again" %}</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 {% if user.is_superuser %}
 <div class="card">
     <h2>{% translate "Names" %}</h2>
@@ -81,6 +137,17 @@
     <form method="post" action="{% url 'dashboard:member_name_rules' %}">
         {% csrf_token %}
         {{ name_policy_form.as_div }}
+        <button type="submit" class="success">{% translate "Save" %}</button>
+    </form>
+</div>
+<div class="card">
+    <h2>{% translate "Departed members" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}"Mark as departed" keeps a member's history. Set a period here, and
+    once it is over and their balance is settled, they are suggested for deletion - here, on the overview
+    and as a sign on the kiosk. Deleting stays your decision.{% endblocktranslate %}</p>
+    <form method="post" action="{% url 'dashboard:member_retention' %}">
+        {% csrf_token %}
+        {{ retention_form.as_div }}
         <button type="submit" class="success">{% translate "Save" %}</button>
     </form>
 </div>

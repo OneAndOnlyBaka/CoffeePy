@@ -5,7 +5,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 from django.utils.translation import gettext_lazy, pgettext_lazy
 
-from .models import POLICY_LIMITS, KioskBoards, NamePolicy, NightPolicy, PasswordPolicy
+from .models import POLICY_LIMITS, KioskBoards, MemberRetention, NamePolicy, NightPolicy, PasswordPolicy
 from coffee import names
 from coffee.models import CASH_METHOD_NAME, BackupSettings, CoffeeSort, Member, Order, Payment, PaymentMethod, payment_method_label
 
@@ -358,6 +358,17 @@ class NamePolicyForm(forms.ModelForm):
         help_texts = {"blocked_names": gettext_lazy(
             "One per line - on top of the usual placeholders (test, name, user, ...), which are always refused.")}
         widgets = {"blocked_names": forms.Textarea(attrs={"rows": 4})}
+
+
+class MemberRetentionForm(forms.ModelForm):
+    departed_months = forms.IntegerField(
+        label=gettext_lazy("Suggest departed members for deletion after (months)"), min_value=0, max_value=120,
+        help_text=gettext_lazy("0: never. Only members whose balance is settled. Nothing is deleted by itself - "
+                               "you decide for each one."))
+
+    class Meta:
+        model = MemberRetention
+        fields = ["departed_months"]
 
 
 class NightPolicyForm(forms.ModelForm):
