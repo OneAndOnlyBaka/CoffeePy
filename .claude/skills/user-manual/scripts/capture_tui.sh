@@ -51,7 +51,11 @@ for lang in "$@"; do
 	text "${PI_USER}"; keys Enter
 	text "${PI_PASSWORD}"; shot "${lang}" provision-password; keys Enter
 	until_screen "Raspberry Pi 3\|Raspberry Pi 4\|Raspberry Pi 5\|Model"
-	sleep 1; shot "${lang}" provision-check; keys Enter
+	sleep 1; shot "${lang}" provision-check
+	# With a warning (connected over the Pi's own WiFi, say) the check asks to continue, "No"
+	# preselected - Enter alone would quit the tool, and every later shot came out blank.
+	tmux capture-pane -t "${SESSION}" -p | grep -q "Continue anyway\|Trotzdem fortfahren" && keys Left
+	keys Enter
 	sleep 2; shot "${lang}" provision-existing; keys Enter
 	sleep 1; shot "${lang}" provision-settings
 	keys Down; keys Down; keys Enter          # WiFi access point
@@ -75,7 +79,8 @@ for lang in "$@"; do
 
 	# Progress and the final summary, drawn with example values.
 	common="source scripts/provision.sh; UI_LANG=${lang}; DEVICE_LANGUAGE=${lang}; tui_init; PI_HOST=192.168.10.13; PI_USER=pi;
-		PUBLIC_HOST=192.168.4.1; ADMIN_USER=admin; ADMIN_PASSWORD=Example-Pass1; AP_ENABLE=yes; AP_SSID=CoffeePy; AP_PASSPHRASE=Example-WiFi1"
+		PUBLIC_HOST=192.168.4.1; ADMIN_USER=admin; ADMIN_PASSWORD=Example-Pass1; AP_ENABLE=yes; AP_SSID=CoffeePy; AP_PASSPHRASE=Example-WiFi1;
+		BACKUP_PASSPHRASE=Example-Backup-Passphrase1; SSH_AFTER_INSTALL=off"
 	start bash -c "'${common}; CURRENT_STEP=3; PROGRESS_TITLE=\"\$(t \"Installing on\" \"Installation auf\") 192.168.10.13\";
 		ui_progress 61 \"\$(step_label images)\" \"Step 9/15 : RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt\"; sleep 600'"
 	until_screen "61%"

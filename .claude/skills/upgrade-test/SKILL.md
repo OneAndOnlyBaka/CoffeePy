@@ -114,7 +114,8 @@ PostgreSQL migration, say) has to wait for the second update after it.
   `docker ps` shows no restarting container; `journalctl -p err -b` and `dmesg -l err` have
   nothing new.
 - Nothing left behind: `data/updates/` holds only incoming/ (empty), installed.json,
-  pre-update/, state.json, status/, system.json; no `coffeepy-previous-*` tag
+  pre-update/, state.json, status/, system.json (and os-packages.txt, os-installed.json from
+  the version with OS bundles on); no `coffeepy-previous-*` tag
   (`docker images`); no maintenance status; `df -h /` against the hop before.
 - The pre-update dump is complete: `zcat … | tail -c 512` ends with pg_dump's
   "database dump complete" (an older watcher writes a custom-format `.dump`).

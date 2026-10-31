@@ -20,7 +20,7 @@ bad=$(sudo docker ps -a --format "{{.Names}} {{.Status}}" | grep -vE " Up |coffe
 [ -z "$bad" ] && echo "containers: all up" || echo "!! containers: $bad"
 restarts=$(sudo docker inspect -f "{{.Name}}={{.RestartCount}}" $(sudo docker ps -q) | grep -v "=0$" || true)
 [ -z "$restarts" ] || echo "!! restarted: $restarts"
-extra=$(sudo ls -A $U | grep -vxE "incoming|installed.json|pre-update|state.json|status|system.json" | tr "\n" " " || true)
+extra=$(sudo ls -A $U | grep -vxE "incoming|installed.json|pre-update|state.json|status|system.json|os-packages.txt|os-installed.json" | tr "\n" " " || true)
 [ -z "$extra" ] && echo "leftovers: none in data/updates" || echo "!! left in data/updates: $extra"
 [ -z "$(sudo ls -A $U/incoming 2>/dev/null)" ] || echo "!! incoming not empty: $(sudo ls -A $U/incoming | tr "\n" " ")"
 tags=$(sudo docker images --format "{{.Repository}}:{{.Tag}}" | grep coffeepy-previous || true)

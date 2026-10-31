@@ -442,6 +442,21 @@ mind before changing it:
   stays on `about:blank` - a white screen, the app answering. The root cause is inside
   Chromium; `install/kiosk/openbox-autostart` restarts a browser whose kiosk hasn't polled
   within `KIOSK_LOAD_SECONDS`. Reproduce with `sync; echo b > /proc/sysrq-trigger`.
+- **Chromium's renderer crashes in about one page load in ten** ("Aw, Snap!", error code 11 -
+  Chromium 156.0.8078.73-1~deb13u1+rpt1, measured 2026-10-31: 3 in 40 reloads, 4-5 in 30
+  maintenance cycles). Every crashpad dump (`~/.config/chromium/Crash Reports/pending/`) has the
+  same frame - a null pointer (fault address 0x8) in `blink::FragmentData::SetLayer`, called from
+  `LayoutBoxModelObject::WillBeDestroyed` < `Element::DetachLayoutTree` < `Document::Shutdown` <
+  `FrameLoader::DetachDocument` < `FrameLoader::CommitNavigation`: Blink falls over tearing down
+  the page it leaves. Chromium's own omnibox popup crashes the same way, so it isn't our page;
+  the kiosk's `location.reload()` after every update, restore or install is just where it shows.
+  Taking the layout down first (`display: none`, two frames, then reload) did not help.
+  `install/kiosk/openbox-autostart` therefore watches for new dumps every 2s and presses F5
+  (`xdotool`, in `install/packages.txt`) - or, on a device that has no xdotool yet (packages
+  only come with an OS bundle), restarts Chromium; the kiosk is back 10-25s later instead of
+  after the watchdog's ~4 minutes. Symbols: `apt-get download chromium-dbgsym` (same build id
+  as `/usr/lib/chromium/chromium`), unpack with `dpkg-deb -x`, `addr2line -f -C -e` the
+  `.debug` file with the offsets from the dump. Recheck with every new Chromium.
 
 ## Every PR is audited
 

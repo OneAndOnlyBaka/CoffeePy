@@ -1571,7 +1571,7 @@ msgid ""
 "stays on, across restarts too, until it is switched off."
 msgstr ""
 "Fernanmeldung am Betriebssystem des Geräts - die braucht das "
-"Provisionierungs-Tool und die Wartung. Nach der Installation ist sie aus; "
+"Provisioning-Tool und die Wartung. Nach der Installation ist sie aus; "
 "hier eingeschaltet, bleibt sie an, auch über Neustarts hinweg, bis sie "
 "wieder ausgeschaltet wird."
 

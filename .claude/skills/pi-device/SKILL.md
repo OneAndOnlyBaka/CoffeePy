@@ -17,7 +17,11 @@ the repo root, e.g. `.claude/skills/pi-device/scripts/pi.sh uptime`.
 
 Connection data is in `.device/pi.env` at the repo root - `PI_HOST`, `PI_USER`,
 `PI_PASSWORD`. It is excluded via `.git/info/exclude`: never commit it, never print the
-password, never copy it anywhere else. If the file is missing, ask the user for the
+password, never copy it anywhere else. Next to it, same rules: `update-signing.key` (+ `.pub`) -
+the private key update bundles for the Pi are signed with (`openssl pkeyutl -sign -rawin -inkey
+.device/update-signing.key ...`; the Pi trusts its public half) - and `pi-coffeepy.env`, a copy
+of the Pi's `/opt/coffeepy/.env` (admin, database, WiFi and backup secrets). Refresh that copy
+after a re-flash or a provisioning run changed them. If the file is missing, ask the user for the
 values and create it (mode 600).
 
 `pi.sh --setup` installs this machine's SSH key and passwordless sudo; after that every
@@ -134,7 +138,7 @@ as above), or drop the file into `/opt/coffeepy/data/updates/incoming/` directly
 land in `data/updates/status/*.log`. Test a broken bundle followed by a good one as well.
 The bundle built there is unsigned and the device refuses it: **never copy the private signing
 key to the Pi** - fetch only `manifest.json`, sign it here (`openssl pkeyutl -sign -rawin -inkey
-~/.config/coffeepy/update-signing.key -in manifest.json -out manifest.sig`) and put `manifest.sig`
+.device/update-signing.key -in manifest.json -out manifest.sig`) and put `manifest.sig`
 back into the tar.
 
 ## Cleaning up

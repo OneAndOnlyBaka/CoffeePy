@@ -106,7 +106,7 @@ existing measures in place; *accepted* means the operator is told in the manual 
 | R5 | A manager exceeding their role | system actions `@superuser_required`; audit log | 1 | 2 | low | - |
 | R6 | Web attacks: XSS, CSRF, SQL injection, host header | template auto-escaping, CSRF middleware, ORM only, `ALLOWED_HOSTS`, `Secure`/`HttpOnly` cookies; test suite | 1 | 3 | low | - |
 | R7 | Eavesdropping on the network or the WiFi | HTTPS with a device CA, WPA2 on the access point; nothing loaded from or sent to external hosts | 1 | 2 | low | - |
-| R8 | Dashboard published to the internet | not foreseen by the product; lockout and password rules still hold | 1 | 3 | low | manual: say not to |
+| R8 | Dashboard published to the internet | not foreseen by the product, the manual says not to ("Keeping it safe"); lockout and password rules still hold | 1 | 3 | low | A7 ✓ |
 | R9 | A forged or tampered update bundle | Ed25519-signed manifest, per-file SHA-256, platform and space check, forward only; key never in CI | 1 | 3 | low | - |
 | R10 | Signature check switched off on a device in use | labelled "development only" in the provisioning tool; permanent warning on the update page | 1 | 3 | low | - |
 | R11 | Known vulnerabilities in the OS, Chromium, the kernel or SSH on an offline device | `apt` at installation; **OS bundles** (`scripts/build_os_bundle.sh`): any set of packages - best the device's own list, downloadable on the update page - signed like an app bundle, applied through the same update page by the script signed into the bundle (`install/os_update.sh`), which only updates what is installed; database saved first, restart when kernel or firmware changed. Building and applying them is the operator's job: CoffeePy runs on more than one kind of hardware | 2 | 3 | medium (operator's) | A1 ✓ |
@@ -140,7 +140,7 @@ existing measures in place; *accepted* means the operator is told in the manual 
 | (2)(j) limit attack surfaces | one published port (+ local 8443), no Django admin, web container without host access, SSH off unless switched on | - |
 | (2)(k) reduce the impact of an incident | containers, least-privilege host helpers, per-device secrets, rollback | - |
 | (2)(l) record and monitor security-relevant activity, with an opt-out | audit log of every change, retention `AUDIT_RETENTION_DAYS`; the opt-out the Annex asks for is the retention setting - switching the log off would also switch off the lockouts | - |
-| (2)(m) remove all data and settings securely, transfer data | reset in System; backup and restore to move the data to another device | reset deletes rows, not the SD card's blocks - for disposal, wipe or destroy the card (A7) |
+| (2)(m) remove all data and settings securely, transfer data | reset in System; backup and restore to move the data to another device; the manual says to wipe or destroy SD card and stick before they leave your hands | reset deletes rows, not the SD card's blocks (accepted, documented) |
 
 ## Annex I part II - vulnerability handling
 
@@ -172,7 +172,7 @@ actively exploited vulnerabilities to ENISA's single reporting platform within 2
 | A4 | Third-party images pinned to exact versions (not digests: a `docker load`ed image has none, and the watcher's rollback tags are made from the tag); the watcher untags a version the compose file no longer names | done - their findings stay reported only (accepted) |
 | A5 | `.grype.yaml`: CVE-2026-12345 dropped (fixed in Python 3.14.9, the images run 3.14.10); CVE-2025-15367 recorded as not reachable (`poplib`) | done |
 | A6 | Vulnerability reports by issue (without details) or to the maintainer first, as SECURITY.md says | accepted - no separate advisories or policy |
-| A7 | Manual: disposing of a device or SD card; not exposing the device to the internet; SSH and OS bundles | open - with the manual update |
+| A7 | Manual: "Keeping it safe" (not on the internet, SSH off, signed updates, encrypted backups, disposing of SD card and stick), operating system updates, the SSH switch | done |
 
 ## Review
 

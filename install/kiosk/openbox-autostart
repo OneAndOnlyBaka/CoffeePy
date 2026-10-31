@@ -59,6 +59,19 @@ fi
 night() { python3 /opt/coffeepy/install/kiosk_night.py; }
 NIGHT_CHECK_SECONDS=30
 
+# A renderer that dies leaves "Aw, Snap!" on the screen until someone presses Reload - and
+# the watchdog only notices minutes later, by the missing polls. Chromium 156 of Raspberry Pi
+# OS does that in about one page load in ten (measured on a Pi 3, 2026-10-31: a SIGSEGV in
+# blink::FragmentData::SetLayer while it tears down the page it leaves, so the kiosk's reload
+# after every update or restore is where it shows). Crashpad writes a dump the moment a
+# renderer dies; a new one is the signal to reload the page (F5 through xdotool) - or, without
+# xdotool (a device updated by a bundle gets packages only from an OS bundle), to restart
+# Chromium. The newest CRASH_KEEP dumps are kept, for a look at what crashed.
+CRASH_DIR="$HOME/.config/chromium/Crash Reports/pending"
+CRASH_MARK="${XDG_RUNTIME_DIR:-/tmp}/kiosk-crash-mark"
+CRASH_CHECK_SECONDS=2
+CRASH_KEEP=20
+
 HEARTBEAT=/opt/coffeepy/data/storage/kiosk-heartbeat
 KIOSK_LOAD_SECONDS=90  # ~30s is usual at boot (first poll after the start), so three times that
 LOG="${XDG_RUNTIME_DIR:-/tmp}/chromium.log"
@@ -107,7 +120,27 @@ while true; do
         done
     ) &
     check=$!
+    touch "$CRASH_MARK"
+    (
+        while sleep "$CRASH_CHECK_SECONDS"; do
+            find "$CRASH_DIR" -name '*.dmp' -newer "$CRASH_MARK" 2>/dev/null | grep -q . || continue
+            touch "$CRASH_MARK"
+            ls -t "$CRASH_DIR"/*.dmp 2>/dev/null | tail -n +"$((CRASH_KEEP + 1))" | while read -r old; do
+                rm -f "$old" "${old%.dmp}.meta"
+            done
+            if command -v xdotool >/dev/null; then
+                echo "$(date -Is) renderer crashed - reloading the kiosk" >> "$LOG"
+                sleep 1  # the crash page has to be up to take the key
+                xdotool key --clearmodifiers F5
+            else
+                echo "$(date -Is) renderer crashed - restarting Chromium (no xdotool)" >> "$LOG"
+                kill "$browser" 2>/dev/null
+                exit 0
+            fi
+        done
+    ) &
+    crashes=$!
     wait "$browser"
-    kill "$check" 2>/dev/null
+    kill "$check" "$crashes" 2>/dev/null
     sleep 2
 done

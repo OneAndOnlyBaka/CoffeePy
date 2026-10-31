@@ -172,10 +172,11 @@ auswählen, um sie zu ändern:
 | WLAN-Access-Point | Der Pi spannt ein eigenes WLAN auf, über das Handys Dashboard und Portal erreichen. Ausschalten, wenn der Pi in deinem bestehenden Netz bleibt. Bei jedem Start wählt er den Kanal (1, 6 oder 11), den die Nachbarnetze am wenigsten stören, mit der höchsten erlaubten Sendeleistung. |
 | Adresse für Handys | Die Adresse in den QR-Codes und im Zertifikat. Mit Access Point `192.168.4.1`, sonst die (am besten feste) Adresse des Pi in deinem Netz. |
 | Zeitzone | Für die Uhr und die Statistiken nach Stunde und Wochentag. |
-| Backups & Protokoll | Ob die Backups auf dem USB-Stick **verschlüsselt** werden (eine Passphrase mit mindestens 12 Zeichen – bewahre sie sicher auf, ohne sie lässt sich kein Backup wiederherstellen), und wie viele Tage das **Protokoll** aufbewahrt wird (standardmäßig 90). Wie oft gesichert wird, stellst du im Dashboard ein. |
+| Backups & Protokoll | Ob die Backups auf dem USB-Stick **verschlüsselt** werden – bei einer neuen Installation erzeugt das Tool eine Passphrase, die du ersetzen oder ablehnen kannst; sie wird am Ende angezeigt, bewahre sie sicher auf: ohne sie lässt sich kein Backup wiederherstellen –, und wie viele Tage das **Protokoll** aufbewahrt wird (standardmäßig 90). Wie oft gesichert wird, stellst du im Dashboard ein. |
 | Updates | Welche **Signatur** ein Update tragen muss: Schlüssel von CoffeePy, **eigener Schlüssel** oder **keine Prüfung (nur Entwicklung)** (siehe [Eigener Signierschlüssel](#eigener-signierschlüssel)). |
 | Display | Bildschirmmodus. Das dokumentierte 1024×600-Display meldet seine Auflösung nicht und braucht deshalb die Vorgabe. |
 | Web-Worker | Prozesse für die Web-App: 2 für einen Pi 3, 3–4 für einen Pi 4 oder 5. |
+| SSH | **Aus nach der Installation** (die Voreinstellung): Ein laufender Kiosk braucht es nicht, und mit dem Passwort aus dem Imager könnte es jeder im Netz versuchen. Um dieses Tool später noch einmal laufen zu lassen, schaltet es ein Admin im Dashboard ein (**System › SSH**). *Bleibt an* lässt es, wie es ist – für ein Testgerät. |
 | Installieren aus | Internet oder ein Offline-Paket (für Pis ohne Internet, siehe [Schnellstart](QUICKSTART.md#installing-without-internet)). |
 
 Eingaben werden sofort geprüft – zum Beispiel muss ein WLAN-Passwort mindestens 8 Zeichen
@@ -194,8 +195,9 @@ Fenster, läuft sie trotzdem weiter. Das dauert 20–40 Minuten, vor allem für 
 ![Installation](pictures/manual/de/provision-progress.png)
 
 **Fertig.** Zum Schluss startet das Tool den Pi neu (Uhr, Display und Kiosk greifen erst
-danach), prüft, ob CoffeePy über HTTPS antwortet, und zeigt die Zugangsdaten. Auf Wunsch
-speichert es sie in einer Datei, die nur du lesen kannst.
+danach), prüft, ob CoffeePy über HTTPS antwortet, und zeigt die Zugangsdaten – mit der
+Backup-Passphrase und ob SSH noch an ist. Auf Wunsch speichert es sie in einer Datei, die nur du
+lesen kannst.
 
 ![Fertig](pictures/manual/de/provision-done.png)
 
@@ -638,6 +640,12 @@ Der Kiosk folgt mit seiner nächsten Abfrage. Die Seite **Pranger** im Dashboard
 das Geld einsammelt, bleibt davon unberührt. Siehe
 [Datenschutz und Arbeitsplatz](#datenschutz-und-arbeitsplatz).
 
+**SSH**: die Fernanmeldung am Betriebssystem des Geräts. Nach der Installation ist sie aus und
+nur nötig, um das [Provisioning-Tool](#das-provisioning-tool) noch einmal laufen zu lassen, oder
+für die Wartung: **SSH einschalten**, und es bleibt an – auch über Neustarts – bis **SSH
+ausschalten**. Solange es an ist, weist eine Warnung darauf hin (wie im Bild oben); beides steht
+als *ssh.enable* / *ssh.disable* im **Protokoll**.
+
 Steht oben unter der Adresse ein Hinweis, die Adresse sei *nur geschätzt*, ist `PUBLIC_HOST` in
 `.env` leer und die Adresse vermutlich die des App-Containers – die QR-Codes führen dann ins
 Leere. Das Provisioning-Tool und der Installer setzen sie; von Hand: `PUBLIC_HOST=` mit der
@@ -682,6 +690,8 @@ Alles rund um den Backup-Stick (wie er funktioniert, steht unter [Backups](#back
 - **Backup wiederherstellen** – vom Stick oder **Aus einer Datei wiederherstellen**.
 - **Backup herunterladen** – das ganze Gerät, wie es gerade ist, als Datei, auch ohne Stick.
 
+Solange die Backups nicht verschlüsselt sind, sagt die Seite das in einem hervorgehobenen Hinweis.
+
 ![Backup](pictures/manual/de/dashboard-backup.png)
 
 Beim Wiederherstellen wählst du, **was**: die Daten (Mitglieder, Buchungen, Kaffeesorten,
@@ -701,7 +711,10 @@ auf dem Gerät läuft: die CoffeePy-Version und ihren Commit, Python, Django, di
 Betriebssystem, Docker und jeden Container mit der ID seines Images – **Alle kopieren** legt die
 ganze Liste in die Zwischenablage, fertig für eine Fehlermeldung. Die CoffeePy-Version allein
 steht auch unten in der Navigation des Dashboards, unten im Handy-Portal und am Kiosk unter den
-QR-Codes für den Admin-Bereich (Schraubenschlüssel).
+QR-Codes für den Admin-Bereich (Schraubenschlüssel). **Betriebssystem** erklärt OS-Pakete (siehe
+[Updates des Betriebssystems](#updates-des-betriebssystems)) und bietet **Installierte Pakete
+herunterladen** an – die Paketliste des Geräts, um eines daraus zu bauen; *OS-Paket* unter
+**Versionen** nennt das zuletzt eingespielte.
 
 ![Update](pictures/manual/de/dashboard-update.png)
 
@@ -748,7 +761,9 @@ Bestätigung musst du `DELETE` eintippen – vorher ein Backup machen!
 Lass einfach das [Provisioning-Tool](#das-provisioning-tool) erneut laufen: Es liest die
 bestehende Konfiguration, du änderst, was du willst, und es spielt die Änderung ein – der Kiosk
 zeigt währenddessen „Wir sind gleich wieder da“. Daten, Datenbankpasswort und Zertifikat
-bleiben erhalten.
+bleiben erhalten. Schalte vorher im Dashboard SSH ein (**System › SSH**) – das Tool verbindet
+sich darüber und schaltet es am Ende wieder aus, außer seine Einstellung *SSH* steht auf *bleibt
+an*.
 
 ### Backups
 
@@ -763,9 +778,10 @@ Das Gerät sichert sich auf **einen USB-Stick**, den du dafür einrichtest:
 
 Ein Backup enthält das ganze Gerät: die Daten, die Geräte-CA und Zertifikate und seine
 Einstellungen – so kann ein Ersatzgerät vollständig übernehmen. Jedes Backup wird nach dem
-Schreiben zurückgelesen und geprüft. Mit einer Passphrase aus dem
-[Provisioning-Tool](#das-provisioning-tool) wird es verschlüsselt (AES-256); ohne kann es jeder
-lesen, der den Stick nimmt – eine bewusste Entscheidung, wenn der Stick im Gehäuse sitzt.
+Schreiben zurückgelesen und geprüft. Mit der Passphrase aus dem
+[Provisioning-Tool](#das-provisioning-tool) – es erzeugt eine, wenn du nicht ablehnst – wird es
+verschlüsselt (AES-256); ohne kann es jeder lesen, der den Stick nimmt, und die Seite **Backup**
+weist darauf hin.
 
 - **Stick abgezogen?** Übersicht und Kiosk zeigen, dass keine Backups laufen. Steckst du den
   **gleichen** Stick wieder ein, geht alles weiter wie gewohnt.
@@ -816,6 +832,37 @@ wiederholt.
 
 Für Scripte gibt es `./scripts/build_update_bundle.sh` (seine Optionen stehen am Anfang des
 Scripts); ein Update geht auch über das Provisioning-Tool von einem PC aus.
+
+#### Updates des Betriebssystems
+
+Ein Update-Paket bringt CoffeePy; das **Betriebssystem** des Geräts – Kernel, Firmware, Browser,
+SSH, Docker – ist Raspberry Pi OS, und ein Gerät ohne Internet bekommt dessen
+Sicherheitsupdates nur über ein **OS-Paket**. Es zu bauen ist deine Sache: CoffeePy läuft auf
+mehr als einer Art Hardware, und nur du weißt, was das System deines Geräts enthalten soll.
+
+1. Im Dashboard unter **Update** auf **Installierte Pakete herunterladen** – die Paketliste des
+   Geräts (`coffeepy-os-packages.txt`).
+2. Auf einem PC mit Internet und Docker: `./scripts/build_os_bundle.sh --packages
+   coffeepy-os-packages.txt` (`--release`, wenn das Gerät nicht trixie hat). Es holt die
+   neuesten Versionen aus den Archiven von Raspberry Pi OS und schreibt
+   `coffeepy-os-<release>-<datum>-arm64-unsigned.tar`.
+3. Signiere es wie jedes Paket: `./scripts/sign_update_bundle.sh <datei> --key
+   ~/.config/coffeepy/update-signing.key`.
+4. Lade es unter **Update** hoch.
+
+Das Gerät prüft es wie ein Update – Signatur, Prüfsummen, Plattform, Platz, dass es neuer ist
+als das letzte OS-Paket und für das System gebaut wurde, das auf dem Gerät läuft. Es sichert die
+Datenbank auf die SD-Karte, spielt die Pakete ein und **startet neu**, wenn ein neuer Kernel oder
+neue Firmware dabei war; „Wir sind gleich wieder da“ bleibt so lange stehen. Aktualisiert wird
+nur, was installiert ist – ein Paket kann nichts Neues installieren.
+
+- **Es gibt keinen Weg zurück** von einem OS-Update – die Kopie der Datenbank ist das Netz.
+- *Some packages were kept back*: Etwas Installiertes braucht genau die alte Version eines
+  Pakets (`libexpat1-dev` hält zum Beispiel `libexpat1` fest). Das Log nennt sie; nimm auf, was
+  davon abhängt, und baue noch einmal.
+- **Ein Stromausfall** während eines OS-Updates: Beim nächsten Start bringt das Gerät zu Ende,
+  was es begonnen hatte, und fängt nicht von selbst neu an. Lade dasselbe Paket noch einmal hoch,
+  um es abzuschließen.
 
 #### Update aus dem GitHub-Release
 
@@ -881,6 +928,20 @@ nach dem Einschalten greift es nicht ein, nachts (**Nachtruhe**) nicht beim Kios
 (*watchdog.gave_up*): Dann hilft ein Neustart nicht, und es ist Zeit, ins Protokoll zu sehen.
 Den Stecker ziehen musst du also nur noch, wenn auch das nichts mehr bewirkt.
 
+### Sicher betreiben
+
+- **Nicht ins Internet.** Das Gerät gehört in dein eigenes Netz oder sein eigenes WLAN. Mach das
+  Dashboard oder Port 443 nie von außen erreichbar (keine Portweiterleitung im Router).
+- **SSH aus**, solange es niemand braucht (Dashboard → **System**), und ein starkes Passwort für
+  den Benutzer des Pi.
+- **Nur signierte Updates** – die Prüfung bleibt an, siehe [Eigener Signierschlüssel](#eigener-signierschlüssel).
+- **Verschlüsselte Backups** – bewahre die Passphrase getrennt vom Stick auf.
+- **Updates des Betriebssystems** ab und zu, siehe [Updates des Betriebssystems](#updates-des-betriebssystems).
+- **Ein Gerät außer Betrieb nehmen**: **Datenbank zurücksetzen** (Dashboard → **System**) leert
+  nur die Datenbank – auf der SD-Karte stehen noch die alten Blöcke und auf dem Backup-Stick die
+  Backups. Lösche oder zerstöre SD-Karte und Stick, bevor sie aus der Hand gehen, oder verwahre
+  den Stick wie die Daten selbst.
+
 ### Datenschutz und Arbeitsplatz
 
 CoffeePy verarbeitet personenbezogene Daten von Kolleginnen und Kollegen: Name, Karten-ID, jede
@@ -902,8 +963,8 @@ Was dabei hilft, ohne Rechtsberatung zu sein:
   „AB“ (siehe [Einstellungen](#einstellungen) am Kiosk).
 - **Ausgeschiedene markieren** (Dashboard → **Mitglieder**): Ihre Karten sind gesperrt, sie
   tauchen in Rangliste und Pranger nicht mehr auf.
-- **Backups** enthalten dieselben Daten – den Stick so verwahren wie die Daten selbst, und ein
-  Backup-Passwort setzen, wenn er das Haus verlassen könnte.
+- **Backups** enthalten dieselben Daten – den Stick so verwahren wie die Daten selbst, und seine
+  Passphrase getrennt davon.
 - Das Dashboard ist nur mit Anmeldung erreichbar; wer Admin ist, sieht alles. Vergib die
   Rollen sparsam (**Dashboard-Benutzer**).
 
@@ -927,6 +988,7 @@ der Kiosk mit dem **DE/EN**-Knopf, Handys und PCs oben rechts im Portal und im D
 | Der Bildschirm ist nach dem Einschalten eine Minute lang schwarz, dann weiß. | Normal: Erst startet der Pi, dann der Browser. Nach etwa anderthalb Minuten erscheint der Kiosk – nach einem Stromausfall kann es gut drei Minuten dauern: Dann scheitert der erste Start des Browsers manchmal, und das Gerät startet ihn von selbst noch einmal. |
 | *Kartenleser nicht verfügbar* | Kabel des Lesers prüfen und das Gerät neu starten. |
 | Der Bildschirm ist dunkel, Tippen und Karten bewirken nichts, das Dashboard geht aber. | Die **Nachtruhe** läuft (Dashboard → **System**). Sie endet zur eingestellten Zeit von selbst; zum Ausschalten den Haken entfernen – der Kiosk kommt innerhalb einer Minute. |
+| Der Kiosk zeigte kurz „Aw, Snap!“ (oder wurde weiß) und kam dann von selbst wieder. | Der Browser des Kiosks ist beim Laden der Seite abgestürzt – der Browser von Raspberry Pi OS tut das ab und zu, meist direkt nach einem Update oder einer Wiederherstellung. Das Gerät merkt es innerhalb von Sekunden und lädt die Seite neu; dabei geht nichts verloren. |
 | Der Kiosk war kurz schwarz und startete neu. | Das Gerät hat einen hängenden Kiosk oder die App selbst neu gestartet (siehe [Wenn der Kiosk hängt](#wenn-der-kiosk-hängt)); das **Protokoll** sagt, was es war. Passiert das öfter, steht dort, wo es hakt. |
 | Eine Karte wird nicht erkannt. | Karte flach und ruhig auflegen; eine Karte, die als ausgeschieden markiert ist, wird abgewiesen. |
 | Rotes **Datenbank**-Zeichen am Kiosk | Backups laufen nicht: den Backup-Stick wieder einstecken, oder im Dashboard unter **Backup** nach dem Fehler sehen. |
@@ -934,5 +996,7 @@ der Kiosk mit dem **DE/EN**-Knopf, Handys und PCs oben rechts im Portal und im D
 | Nach dem Einschalten zeigt der Kiosk die Uhrzeit, zu der das Gerät ausgeschaltet wurde (z. B. morgens die vom Vorabend), oder sie geht nach jedem Stromausfall um die Dauer des Ausfalls nach. | Die **Batterie des Uhrenmoduls ist leer**. Eine fast leere CR2032 (unter etwa 2,3 V) hält noch die Uhrzeit fest, lässt die Uhr aber ohne Strom stehen – das Modul meldet dann keinen Fehler, und ohne Internet kann das Gerät es nicht bemerken. Batterie tauschen, dann unter **Systemzeit** die Zeit stellen. |
 | „Wir sind gleich wieder da“ geht nicht weg. | Läuft gerade ein Update oder eine Wiederherstellung? Den Fortschritt zeigt das Dashboard unter **Update** bzw. **Backup**. Ein Status, der älter als zwei Stunden ist, wird ignoriert; im Zweifel das Gerät neu starten. |
 | Anmeldung abgelehnt, obwohl das Passwort stimmt | Nach zu vielen Fehlversuchen ist das Konto eine Weile gesperrt (standardmäßig 15 Minuten) – abwarten, oder ein Admin setzt unter **Dashboard-Benutzer** ein neues Passwort. |
-| Ein Update wird abgelehnt | Die Update-Seite sagt, warum: keine oder eine falsche Signatur (siehe [Eigener Signierschlüssel](#eigener-signierschlüssel)), ein Paket für eine andere Plattform, zu wenig Platz oder eine ältere Version als die installierte. |
+| Ein Update wird abgelehnt | Die Update-Seite sagt, warum: keine oder eine falsche Signatur (siehe [Eigener Signierschlüssel](#eigener-signierschlüssel)), ein Paket für eine andere Plattform, zu wenig Platz oder eine ältere Version als die installierte. Ein OS-Paket wird auch abgelehnt, wenn es für ein anderes Release von Raspberry Pi OS gebaut wurde. |
+| Das Provisioning-Tool meldet *Connection refused*. | SSH ist auf dem Gerät aus – schalte es im Dashboard ein (**System › SSH**) und versuch es noch einmal. |
+| *Some packages were kept back* nach einem OS-Update | Siehe [Updates des Betriebssystems](#updates-des-betriebssystems): Nimm auf, was davon abhängt, in die Paketliste auf und baue das Paket noch einmal. |
 | Das Handy erreicht das Dashboard nicht. | Ist es mit dem WLAN des Geräts verbunden? Mobile Daten kurz ausschalten, manche Handys verlassen ein WLAN ohne Internet sonst. |

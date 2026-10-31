@@ -15,7 +15,10 @@ SRC="${1:?usage: bundle.sh TAG|. [NAME]}"
 ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 PI="$ROOT/.claude/skills/pi-device/scripts/pi.sh"
 . "$ROOT/.device/pi.env"
-KEY="${KEY:-$HOME/.config/coffeepy/update-signing.key}"
+# The project's signing key: kept in .device/ (git-excluded) next to the Pi's credentials,
+# falling back to where scripts/update_signing_key.sh puts it.
+KEY="${KEY:-$ROOT/.device/update-signing.key}"
+[ -f "$KEY" ] || KEY="$HOME/.config/coffeepy/update-signing.key"
 [ -f "$KEY" ] || { echo "no signing key at $KEY" >&2; exit 1; }
 
 if [ "$SRC" = "." ]; then

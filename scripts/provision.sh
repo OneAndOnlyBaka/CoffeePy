@@ -1074,14 +1074,14 @@ summary_text() { # https-check-result
 	[ "${AP_ENABLE}" = yes ] && wifi="${AP_SSID}  /  $(t password Passwort) ${AP_PASSPHRASE}"
 	local backups
 	backups=$(t "not encrypted" "unverschlüsselt")
-	[ -n "${BACKUP_PASSPHRASE}" ] && backups="$(t passphrase Passphrase) ${BACKUP_PASSPHRASE}  ($(t "needed for every restore" "für jede Wiederherstellung nötig"))"
+	[ -n "${BACKUP_PASSPHRASE}" ] && backups="$(t passphrase Passphrase) ${BACKUP_PASSPHRASE}"
 	printf '%s' "CoffeePy $(t on auf) ${PI_HOST} - $(date '+%Y-%m-%d %H:%M')
 
 Dashboard     https://${PUBLIC_HOST}/dashboard/
 Admin         ${ADMIN_USER}  /  ${ADMIN_PASSWORD}
 $(t "WiFi          " "WLAN          ")${wifi}
 $(t "Backups       " "Backups       ")${backups}
-SSH           $([ "${SSH_AFTER_INSTALL}" = on ] && t "on" "an" || t "off - to run this tool again, switch it on in the dashboard (System)" "aus - um dieses Tool erneut zu starten, im Dashboard einschalten (System)")
+SSH           $([ "${SSH_AFTER_INSTALL}" = on ] && t "on" "an" || t "off - Dashboard › System › SSH switches it on" "aus - einschalten unter Dashboard › System › SSH")
 $(t "Certificate   " "Zertifikat    ")https://${PUBLIC_HOST}/certificate/  ($(t "install once per phone/PC" "einmal pro Handy/PC installieren"))
 $(t "Language      " "Sprache       ")$(language_name "${DEVICE_LANGUAGE}")
 $(t "HTTPS check   " "HTTPS-Prüfung ")${https_ok}

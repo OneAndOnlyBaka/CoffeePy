@@ -14,6 +14,9 @@ x11-xserver-utils
 openbox
 chromium
 unclutter-xfixes
+# Presses F5 for the kiosk session when a Chromium renderer crashed ("Aw, Snap!" - see
+# kiosk/openbox-autostart); without it the session restarts the whole browser instead.
+xdotool
 # The UI's own icons are SVG (templates/icons/), but nicknames entered on a phone or PC
 # can carry emoji - without a colour emoji font those are empty boxes on the kiosk.
 fonts-noto-color-emoji

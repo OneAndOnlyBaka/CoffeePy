@@ -1,7 +1,10 @@
 [Unit]
 Description=CoffeePy: undo an update a power cut interrupted, before the stack starts
 # Only when there is one - every other boot doesn't pay for a Python start (boot time is CPU).
-ConditionPathExists=/opt/coffeepy/data/updates/journal.json
+# Either is enough ("|"): an app update's journal, or an OS update dpkg has to finish
+# (os-pending.json) - before the stack, which runs on the packages it left half done.
+ConditionPathExists=|/opt/coffeepy/data/updates/journal.json
+ConditionPathExists=|/opt/coffeepy/data/updates/os-pending.json
 Requires=docker.service
 After=docker.service
 # Before, not Requires: the stack has to start even if this fails - and with the old version's

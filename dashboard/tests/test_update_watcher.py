@@ -602,6 +602,13 @@ class UpdateWatcherTestCase(SimpleTestCase):
         self.assertTrue(self.watcher.recover_os(boot=False))
         self.assertIn("dpkg could not finish it", self.state()["message"])
 
+    def test_the_boot_recovery_runs_for_os_updates_too(self):
+        # Measured on the test Pi: with only the journal as its condition, a power cut in dpkg was
+        # finished by the watcher - after the stack had started on the half-done packages.
+        unit = (settings.BASE_DIR / "install" / "coffeepy-update-recover.service").read_text()
+        for path in (self.watcher.JOURNAL_FILE, self.watcher.OS_PENDING_FILE):
+            self.assertIn(f"ConditionPathExists=|/opt/coffeepy/data/updates/{path.name}", unit)
+
     def test_the_installed_packages_for_an_os_bundle(self):
         original = self.docker.run
 
