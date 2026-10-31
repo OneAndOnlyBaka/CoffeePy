@@ -21,6 +21,8 @@ the kiosk; use this form for pre-provisioning a card ahead of time instead.{% en
         </label>
         {% endfor %}
         <div class="action-row">
+            {% if instance %}<a href="{% url 'dashboard:member_export' instance.uid %}" class="btn secondary"
+               title="{% translate "Everything stored about this member, as a file - for their right of access" %}">{% translate "Export data" %}</a>{% endif %}
             <a href="{% url 'dashboard:members' %}" class="btn secondary">{% translate "Cancel" %}</a>
             <button type="submit" class="success">{% translate "Save" %}</button>
         </div>

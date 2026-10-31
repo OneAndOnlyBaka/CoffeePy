@@ -12,6 +12,12 @@
 | [CI.md](CI.md) | maintainers | tests, audits, lint, releases, signing update bundles |
 | [CLAUDE.md](../CLAUDE.md) | whoever changes the code | conventions and the traps that already cost time |
 
+**One place per fact.** How something works is described once, in ARCHITECTURE.md;
+SECURITY.md, PRIVACY.md and CRA.md say what it means for their concern and link there; the
+QUICKSTART and the manuals say what to do. A number, version or recommendation (which OS image,
+how much RAM) lives in the manual's [What you need](MANUAL.en.md#1-what-you-need) and is linked,
+not repeated - copies drift apart.
+
 The manuals are in German and English; everything else is in English. The manual's
 screenshots live in `pictures/manual/<language>/` and are retaken with the user-manual skill
 (`.claude/skills/user-manual/`) whenever a screen changes; `pictures/` holds the images the

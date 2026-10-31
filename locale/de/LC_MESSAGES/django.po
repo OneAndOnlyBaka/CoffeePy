@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 18:17+0100\n"
+"POT-Creation-Date: 2026-10-31 11:46+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -305,6 +305,16 @@ msgid ""
 msgstr ""
 "Einer pro Zeile – zusätzlich zu den üblichen Platzhaltern (test, name, user, "
 "…), die immer abgelehnt werden."
+
+msgid "Suggest departed members for deletion after (months)"
+msgstr "Ausgeschiedene Mitglieder zum Löschen vorschlagen nach (Monaten)"
+
+msgid ""
+"0: never. Only members whose balance is settled. Nothing is deleted by "
+"itself - you decide for each one."
+msgstr ""
+"0: nie. Nur Mitglieder mit ausgeglichenem Kontostand. Von selbst wird nichts "
+"gelöscht - du entscheidest bei jedem einzeln."
 
 msgid "Switch the kiosk off at night"
 msgstr "Kiosk nachts ausschalten"
@@ -1115,6 +1125,16 @@ msgstr "defekt"
 msgid "System time"
 msgstr "Systemzeit"
 
+#, python-format
+msgid "Departed members suggested for deletion: %(count)s"
+msgstr "Ausgeschiedene Mitglieder zum Löschen vorgeschlagen: %(count)s"
+
+msgid "to review"
+msgstr "zu prüfen"
+
+msgid "Review"
+msgstr "Prüfen"
+
 msgid "Time"
 msgstr "Uhrzeit"
 
@@ -1189,6 +1209,15 @@ msgstr ""
 "Gedächtnis abgetippt. Die meisten Mitglieder entstehen automatisch, wenn "
 "eine neue Karte zum ersten Mal am Kiosk aufgelegt wird; dieses Formular ist "
 "dafür da, eine Karte schon vorab anzulegen."
+
+msgid ""
+"Everything stored about this member, as a file - for their right of access"
+msgstr ""
+"Alles, was über dieses Mitglied gespeichert ist, als Datei - für sein "
+"Auskunftsrecht"
+
+msgid "Export data"
+msgstr "Daten exportieren"
 
 msgid "Merge members"
 msgstr "Mitglieder zusammenführen"
@@ -1359,6 +1388,39 @@ msgstr "Als ausgeschieden markieren"
 msgid "No members yet."
 msgstr "Noch keine Mitglieder."
 
+msgid "Suggested for deletion"
+msgstr "Zum Löschen vorgeschlagen"
+
+#, python-format
+msgid ""
+"Departed longer ago than the period below (%(months)s months), balance "
+"settled. Check the departure date - the device's clock can be wrong - then "
+"delete them, or leave them."
+msgstr ""
+"Länger ausgeschieden als die Frist unten (%(months)s Monate), Kontostand "
+"ausgeglichen. Prüfe das Ausscheidedatum - die Uhr des Geräts kann falsch "
+"gehen -, dann lösche sie oder lass sie stehen."
+
+#, python-format
+msgid "Why is %(name)s kept? (e.g. comes back in spring)"
+msgstr "Warum wird %(name)s behalten? (z. B. kommt im Frühjahr wieder)"
+
+msgid "Keep"
+msgstr "Behalten"
+
+msgid "Nothing to review."
+msgstr "Nichts zu prüfen."
+
+msgid "Kept"
+msgstr "Behalten"
+
+#, python-format
+msgid "%(who)s, %(date)s"
+msgstr "%(who)s, %(date)s"
+
+msgid "Suggest again"
+msgstr "Wieder vorschlagen"
+
 msgid "Names"
 msgstr "Namen"
 
@@ -1372,6 +1434,20 @@ msgstr ""
 "B. „Anna B.“, oder mit einem Kürzel aus zwei bis vier Großbuchstaben, z. B. "
 "„AB“ – wessen Name nicht passt, wird am Kiosk vor dem nächsten Kaffee nach "
 "einem gefragt."
+
+msgid "Departed members"
+msgstr "Ausgeschiedene Mitglieder"
+
+msgid ""
+"\"Mark as departed\" keeps a member's history. Set a period here, and once "
+"it is over and their balance is settled, they are suggested for deletion - "
+"here, on the overview and as a sign on the kiosk. Deleting stays your "
+"decision."
+msgstr ""
+"„Als ausgeschieden markieren“ behält die Daten eines Mitglieds. Legst du "
+"hier eine Frist fest, wird es danach - bei ausgeglichenem Kontostand - zum "
+"Löschen vorgeschlagen: hier, auf der Übersicht und als Zeichen am Kiosk. "
+"Löschen bleibt deine Entscheidung."
 
 msgid "Login & passwords"
 msgstr "Anmeldung & Passwörter"
@@ -1570,10 +1646,9 @@ msgid ""
 "and maintenance need. It is off after the installation; switched on here, it "
 "stays on, across restarts too, until it is switched off."
 msgstr ""
-"Fernanmeldung am Betriebssystem des Geräts - die braucht das "
-"Provisioning-Tool und die Wartung. Nach der Installation ist sie aus; "
-"hier eingeschaltet, bleibt sie an, auch über Neustarts hinweg, bis sie "
-"wieder ausgeschaltet wird."
+"Fernanmeldung am Betriebssystem des Geräts - die braucht das Provisioning-"
+"Tool und die Wartung. Nach der Installation ist sie aus; hier eingeschaltet, "
+"bleibt sie an, auch über Neustarts hinweg, bis sie wieder ausgeschaltet wird."
 
 msgid "Unknown - the device's storage service is not running."
 msgstr "Unbekannt - der Speicherdienst des Geräts läuft nicht."
@@ -1871,6 +1946,9 @@ msgstr "Stand"
 msgid "Containers"
 msgstr "Container"
 
+msgid "Say why the member is kept."
+msgstr "Gib an, warum das Mitglied behalten wird."
+
 #, python-format
 msgid "Timed out - no card was tapped within %(seconds)s seconds."
 msgstr ""
@@ -2014,6 +2092,9 @@ msgstr "Das Uhrenmodul (RTC) ist defekt – siehe Dashboard"
 
 msgid "The clock was wrong and has been put forward - see the dashboard"
 msgstr "Die Uhr ging falsch und wurde vorgestellt – siehe Dashboard"
+
+msgid "A task for the admin - see the dashboard"
+msgstr "Eine Aufgabe für den Admin – siehe Dashboard"
 
 msgid "Link your phone"
 msgstr "Handy verknüpfen"
@@ -2250,17 +2331,11 @@ msgstr "Dieses Handy verknüpfen"
 msgid "Automatic logout in %(seconds)ss"
 msgstr "Automatische Abmeldung in %(seconds)s s"
 
-msgid "CCT"
-msgstr "CCT"
-
-msgid "CCM"
-msgstr "CCM"
+msgid "Cups in total"
+msgstr "Tassen insgesamt"
 
 msgid "Balance"
 msgstr "Kontostand"
-
-msgid "CC = Cups Count; T/M = Total/Month"
-msgstr "CC = Tassenanzahl (Cups Count); T/M = gesamt/Monat"
 
 msgid "Payment amount"
 msgstr "Betrag"
@@ -2429,6 +2504,20 @@ msgstr "Kaffee"
 msgid "Recent payments"
 msgstr "Letzte Zahlungen"
 
+msgid "Your data"
+msgstr "Deine Daten"
+
+msgid ""
+"Everything this device stores about you - cards, linked phones, every coffee "
+"and payment, and the log entries about you - as one file."
+msgstr ""
+"Alles, was dieses Gerät über dich speichert - Karten, verknüpfte Handys, "
+"jeden Kaffee und jede Zahlung und die Protokolleinträge über dich - als eine "
+"Datei."
+
+msgid "Download my data"
+msgstr "Meine Daten herunterladen"
+
 msgid "Security warning in your browser?"
 msgstr "Sicherheitswarnung im Browser?"
 
@@ -2553,6 +2642,18 @@ msgstr "Welcher Kaffee"
 msgid "CoffeePy is being updated. This page comes back on its own."
 msgstr ""
 "CoffeePy wird gerade aktualisiert. Diese Seite kommt von selbst wieder."
+
+#~ msgid "Reason"
+#~ msgstr "Begründung"
+
+#~ msgid "CCT"
+#~ msgstr "CCT"
+
+#~ msgid "CCM"
+#~ msgstr "CCM"
+
+#~ msgid "CC = Cups Count; T/M = Total/Month"
+#~ msgstr "CC = Tassenanzahl (Cups Count); T/M = gesamt/Monat"
 
 #~ msgid "Allow installing an older version than the installed one"
 #~ msgstr "Installation einer älteren Version als der installierten erlauben"

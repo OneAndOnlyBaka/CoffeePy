@@ -31,7 +31,7 @@ from coffee.models import (
 )
 from coffee.network import public_base_url
 from dashboard import audit
-from dashboard.models import KioskBoards
+from dashboard.models import KioskBoards, MemberRetention
 
 MODE_ORDER = "order"
 MODE_INFO = "info"
@@ -479,6 +479,7 @@ def _render_panel(request):
         ctx["backup_disturbed"] = backups.health()["disturbed"]
         ctx["rtc_disturbed"] = rtc.health()["disturbed"]
         ctx["clock_corrected"] = clock.corrected() is not None
+        ctx["admin_task"] = bool(services.departed_members_due(MemberRetention.current().departed_months))
 
     return render(request, "kiosk/panel.html", ctx)
 
@@ -704,12 +705,18 @@ def _state_context(request, mode):
     seconds_left = max(0, int(deadline - time.time())) if deadline else None
 
     if mode == MODE_ORDER:
-        return _order_context(request, uid, seconds_left)
-    if mode == MODE_SETTINGS:
-        return _settings_context(request, uid, seconds_left)
-    if mode == MODE_INFO:
-        return _info_pay_context(request, uid, seconds_left)
-    return {"state": "wait_for_card"}
+        ctx = _order_context(request, uid, seconds_left)
+    elif mode == MODE_SETTINGS:
+        ctx = _settings_context(request, uid, seconds_left)
+    elif mode == MODE_INFO:
+        ctx = _info_pay_context(request, uid, seconds_left)
+    else:
+        return {"state": "wait_for_card"}
+    # The countdown runs in the browser (static/kiosk/countdown.js) from this fixed moment: the
+    # seconds themselves would make every poll's HTML differ, and each swap of a differing panel
+    # risks Chromium's renderer crash (CLAUDE.md) - measured: two crashes in three orders.
+    ctx["deadline_ms"] = int(deadline * 1000) if deadline else None
+    return ctx
 
 
 def _rank_badge(uid, ranking_rows):

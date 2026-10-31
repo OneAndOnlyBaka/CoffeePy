@@ -9,6 +9,7 @@
 <script src="{% static 'kiosk/panel_modal.js' %}" defer></script>
 <script src="{% static 'kiosk/nav_state.js' %}" defer></script>
 <script src="{% static 'kiosk/clock.js' %}" defer></script>
+<script src="{% static 'kiosk/countdown.js' %}" defer></script>
 <script src="{% static 'kiosk/maintenance.js' %}" defer></script>
 {% comment %}
 Inline on purpose: a page loaded while the stack restarts can get its HTML but lose the CSS
@@ -25,7 +26,12 @@ window.addEventListener("load", function () {
 {% endblock %}
 {% block body_class %}kiosk{% endblock %}
 {% block body %}
-<div class="kiosk-frame" data-mode="{{ mode }}">
+{% comment %}
+The csrf token goes along with every htmx request from here, once per page load: a {% csrf_token %}
+inside #panel is masked anew on every render, so a screen with a form differed on every poll -
+and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
+{% endcomment %}
+<div class="kiosk-frame" data-mode="{{ mode }}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% comment %}
     The buttons swap #panel in place instead of loading a page (see views.nav). hx-sync
     aborts a poll that is still in flight - its answer predates the tap and would put the

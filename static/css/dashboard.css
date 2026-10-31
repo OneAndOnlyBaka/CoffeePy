@@ -274,6 +274,8 @@ table td form { margin: 0; }
 
 pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 input[type="file"] { max-width: 100%; }
+/* Django gives a textarea cols=40, wider than a card on a phone ("Blocked first names"). */
+body.dashboard textarea { max-width: 100%; box-sizing: border-box; }
 .radio-field { border: none; padding: 0; margin: 0 0 16px; }
 .radio-field legend { font-weight: 600; margin-bottom: 4px; }
 .radio-field .checkbox-row { margin: 6px 0; font-weight: 400; }
@@ -282,6 +284,7 @@ input[type="file"] { max-width: 100%; }
 .stat-link:hover { box-shadow: 0 6px 18px rgba(59, 35, 20, 0.18); }
 .stat .sub { display: block; margin-top: 2px; font-size: 0.82em; color: var(--coffee-light); }
 .badge.ok-badge { background: #e2f3e4; color: var(--success); }
+.badge.task-badge { background: #fbeedd; color: #8a5a1c; }
 .btn-block { display: flex; width: 100%; justify-content: center; }
 .login-wrap .field { max-width: none; }
 body.dashboard input[type="datetime-local"], body.dashboard input[type="file"] {
