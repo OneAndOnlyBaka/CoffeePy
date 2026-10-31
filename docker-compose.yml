@@ -1,6 +1,13 @@
+# The project's name, not the directory's: an image without `image:` (nfc-bridge) is named after
+# it, and a bundle built in a checkout called anything but "coffeepy" carried an nfc-bridge
+# image the device never ran - it kept its old one. The device's /opt/coffeepy gave this name.
+name: coffeepy
+
 services:
+  # The images of others are pinned to exact versions (Dependabot moves them): a floating tag
+  # put whatever was newest at build time into a bundle, and two builds of one commit differed.
   db:
-    image: postgres:16-alpine
+    image: postgres:16.15-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-coffeepy}
@@ -19,7 +26,7 @@ services:
       start_interval: 1s
 
   mosquitto:
-    image: eclipse-mosquitto:2
+    image: eclipse-mosquitto:2.1.2-alpine
     restart: unless-stopped
     volumes:
       - ./nfc-cardreader/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro,z
@@ -169,7 +176,7 @@ services:
   # one place /kiosk/ is served). The Caddyfile and certificates are written by the app
   # (dashboard/tls.py); --watch picks up a changed certificate without a restart.
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2.11.7-alpine
     restart: unless-stopped
     command: ["caddy", "run", "--config", "/tls/Caddyfile", "--adapter", "caddyfile", "--watch"]
     depends_on:

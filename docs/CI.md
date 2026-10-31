@@ -1,7 +1,7 @@
 # Build, checks and releases
 
 How CoffeePy is tested, audited, built and published on GitHub. For using and installing it,
-see the [manual](MANUAL.md) and the [README](../README.md); for changing the code,
+see the [manual](MANUAL.md) and the [quickstart](QUICKSTART.md); for changing the code,
 [CLAUDE.md](../CLAUDE.md).
 
 ## Checks on every push and pull request
@@ -13,7 +13,7 @@ job says what failed:
 |---|---|
 | `test` | The Django test suite on SQLite (fast), and `makemigrations --check`: a model change without its migration would only show on a device, as a crash at `migrate`. |
 | `test-postgres` | The same suite against PostgreSQL 16 - the database the device runs - with the image's `pg_dump`/`openssl` ([`docker-compose.test.yml`](../docker-compose.test.yml)). Transactions, locking and date functions behave differently from SQLite: this run found five tests that SQLite had let through. Backup, restore and update code is kept at **100 % line and branch coverage**; the job fails below that. |
-| `audit` | Known vulnerabilities: `pip-audit` per requirements file, and Grype on the two images this repo builds. **Every finding that a newer release fixes fails the build.** One without a fix yet is listed; one that can't be taken yet goes into [`.grype.yaml`](../.grype.yaml) with its reason. The images of others (Postgres, Mosquitto, Caddy) are only reported - their packages are theirs to fix, and every build pulls their newest tag. |
+| `audit` | Known vulnerabilities: `pip-audit` per requirements file, and Grype on the two images this repo builds. **Every finding that a newer release fixes fails the build.** One without a fix yet is listed; one that can't be taken yet goes into [`.grype.yaml`](../.grype.yaml) with its reason. The images of others (Postgres, Mosquitto, Caddy) are only reported - their packages are theirs to fix; they are pinned to exact versions in `docker-compose.yml`, which Dependabot moves weekly. |
 | `lint` | Correctness only, no style: ruff's pyflakes rules (undefined names, unused imports), ShellCheck errors in the installer and other scripts, zizmor on the workflows themselves, gitleaks over the whole history ([`.gitleaksignore`](../.gitleaksignore) lists the known false positives). |
 
 To run the PostgreSQL suite locally: `scripts/test.sh` (Docker or Podman).
@@ -74,6 +74,10 @@ in use:
    first, then writes `coffeepy-update-<version>-arm64.tar` and names the key's fingerprint -
    the one the device shows under *Update › Versions*.
 3. Upload the signed bundle.
+
+**OS bundles** (`scripts/build_os_bundle.sh`, [ARCHITECTURE.md](ARCHITECTURE.md#operating-system-updates))
+are never built here - their packages are the operator's choice - and are signed with the same
+script and key.
 
 Installing the unsigned bundle directly needs the device's signature check off
 (`UPDATE_VERIFY_SIGNATURE=false`) - **for development only**, on a test device. The

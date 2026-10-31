@@ -16,7 +16,7 @@
 #   UI_LANG DEVICE_LANGUAGE PI_HOST PI_USER PI_PASSWORD ADMIN_USER ADMIN_PASSWORD
 #   AP_ENABLE AP_SSID AP_PASSPHRASE PUBLIC_HOST TIME_ZONE
 #   BACKUP_PASSPHRASE AUDIT_RETENTION_DAYS UPDATE_SIGNATURE UPDATE_PUBLIC_KEY GUNICORN_WORKERS
-#   DISPLAY_MODE INSTALL_SOURCE OFFLINE_BUNDLE REBOOT SAVE_SUMMARY
+#   DISPLAY_MODE SSH_AFTER_INSTALL INSTALL_SOURCE OFFLINE_BUNDLE REBOOT SAVE_SUMMARY
 # PI_SSH_OPTS adds options to every ssh call, e.g. "-p 2222" or "-i ~/.ssh/pi_key".
 #
 # Keep this in step with the app: a new .env setting or installer option belongs here as
@@ -60,6 +60,7 @@ UPDATE_SIGNATURE="${UPDATE_SIGNATURE:-}"  # bundled | own | off - what update bu
 UPDATE_PUBLIC_KEY="${UPDATE_PUBLIC_KEY:-}"  # own: the public key file on this machine
 GUNICORN_WORKERS="${GUNICORN_WORKERS:-}"
 DISPLAY_MODE="${DISPLAY_MODE:-}"        # panel | auto | a literal video=... string
+SSH_AFTER_INSTALL="${SSH_AFTER_INSTALL:-}"  # off | on - install.sh --keep-ssh
 INSTALL_SOURCE="${INSTALL_SOURCE:-}"    # internet | offline
 OFFLINE_BUNDLE="${OFFLINE_BUNDLE:-}"
 REBOOT="${REBOOT:-}"
@@ -67,7 +68,7 @@ SAVE_SUMMARY="${SAVE_SUMMARY:-}"
 ANSWER_KEYS="UI_LANG DEVICE_LANGUAGE PI_HOST PI_USER PI_PASSWORD ADMIN_USER ADMIN_PASSWORD
 AP_ENABLE AP_SSID AP_PASSPHRASE PUBLIC_HOST TIME_ZONE
 BACKUP_PASSPHRASE AUDIT_RETENTION_DAYS UPDATE_SIGNATURE UPDATE_PUBLIC_KEY GUNICORN_WORKERS DISPLAY_MODE
-INSTALL_SOURCE OFFLINE_BUNDLE REBOOT SAVE_SUMMARY"
+SSH_AFTER_INSTALL INSTALL_SOURCE OFFLINE_BUNDLE REBOOT SAVE_SUMMARY"
 
 # What the Pi told us (inspect_pi) and what an earlier installation left (load_existing).
 PI_MODEL="" PI_ARCH="" PI_RELEASE="" PI_RAM_MB=0 PI_FREE_MB=0 PI_ONLINE="" PI_IFACE=""
@@ -532,7 +533,13 @@ Das dauert 20-40 Minuten, vor allem für den Bau der App auf dem Pi. An diesem R
 				continue
 			fi
 		else
-			ui_message "$(t "Could not connect" "Keine Verbindung")" "$(printf '%s' "${CONNECT_ERROR}" | grep -v '^Warning: Permanently added' | tail -n 3)"
+			local hint=""
+			# The installer switches SSH off at its end unless asked not to.
+			[[ "${CONNECT_ERROR}" == *"Connection refused"* ]] && hint="
+
+$(t "If CoffeePy is already installed on this Pi, its SSH is off: switch it on in the dashboard (System → SSH), then try again." \
+"Wenn CoffeePy auf diesem Pi schon installiert ist, ist sein SSH aus: Schalte es im Dashboard ein (System → SSH) und versuche es dann noch einmal.")"
+			ui_message "$(t "Could not connect" "Keine Verbindung")" "$(printf '%s' "${CONNECT_ERROR}" | grep -v '^Warning: Permanently added' | tail -n 3)${hint}"
 		fi
 		[ "${UNATTENDED}" = 1 ] && exit 1
 		PI_PASSWORD=""
@@ -643,9 +650,13 @@ defaults() {
 	: "${TIME_ZONE:=$(timedatectl show -p Timezone --value 2>/dev/null || echo Europe/Berlin)}"
 	: "${AUDIT_RETENTION_DAYS:=90}"
 	: "${UPDATE_SIGNATURE:=bundled}"
-	[ "${BACKUP_PASSPHRASE}" != "__unset__" ] || BACKUP_PASSPHRASE=""  # not encrypted unless asked for
+	# Encrypted unless declined: a stick can leave the building, and the passphrase ends up in
+	# the saved summary. An existing installation's choice - empty included - stays (load_existing).
+	[ "${BACKUP_PASSPHRASE}" != "__unset__" ] || BACKUP_PASSPHRASE="$(rand_token 24)"
 	: "${GUNICORN_WORKERS:=$([ "${PI_RAM_MB}" -ge 1800 ] && echo 3 || echo 2)}"
 	: "${DISPLAY_MODE:=panel}"
+	# Not kept from an earlier run: a re-run needs SSH on anyway, and goes back to the default.
+	: "${SSH_AFTER_INSTALL:=off}"
 	: "${INSTALL_SOURCE:=$([ "${PI_ONLINE}" = yes ] && echo internet || echo offline)}"
 	: "${REBOOT:=yes}"
 	: "${SAVE_SUMMARY:=yes}"
@@ -747,6 +758,16 @@ edit_setting() {
 			2) UPDATE_SIGNATURE=off ;;
 		esac
 		;;
+	ssh)
+		if ui_confirm "SSH" "$(t \
+"Leave SSH on after the installation? Off is safer: nothing on a running kiosk needs it, and with the Imager's password anyone on the network could try to log in. To run this tool again later, an admin switches it on in the dashboard (System → SSH)." \
+"SSH nach der Installation anlassen? Aus ist sicherer: Ein laufender Kiosk braucht es nicht, und mit dem Passwort aus dem Imager könnte es jeder im Netz versuchen. Um dieses Tool später noch einmal laufen zu lassen, schaltet es ein Admin im Dashboard ein (System → SSH).")" \
+			"$([ "${SSH_AFTER_INSTALL}" = on ] && echo yes || echo no)"; then
+			SSH_AFTER_INSTALL=on
+		else
+			SSH_AFTER_INSTALL=off
+		fi
+		;;
 	display)
 		local choices=("$(t "1024x600 HDMI panel|the documented touchscreen" "1024x600-HDMI-Panel|der dokumentierte Touchscreen")"
 			"$(t "Detected by the display|for screens that report their resolution" "Vom Bildschirm erkannt|für Bildschirme, die ihre Auflösung melden")"
@@ -810,18 +831,19 @@ step_settings() {
 			"Updates|$(update_label)"
 			"Display|$(display_label)"
 			"$(t "Web workers" "Web-Worker")|${GUNICORN_WORKERS}"
+			"SSH|$([ "${SSH_AFTER_INSTALL}" = on ] && t "stays on" "bleibt an" || t "off after the installation" "aus nach der Installation")"
 			"$(t "Install from" "Installieren aus")|${source_label}"
 			"---"
 			"$(t "Install CoffeePy" "CoffeePy installieren")|${install_label}"
 			"$(t Quit Beenden)|$(t "nothing has been changed on the Pi" "auf dem Pi wurde nichts verändert")"
 		)
-		local keys=(language admin ap address tz backup updates display workers source "" install quit)
+		local keys=(language admin ap address tz backup updates display workers ssh source "" install quit)
 		if ! ui_menu "$(t Settings Einstellungen)" "$(t "Everything that ends up in the Pi's configuration. Pick a line to change it." \
 			"Alles, was in die Konfiguration des Pi kommt. Wähle eine Zeile, um sie zu ändern.")" "${selected}" "${items[@]}"; then
 			continue
 		fi
 		selected=${MENU}
-		[ "${UNATTENDED}" = 1 ] && selected=11
+		[ "${UNATTENDED}" = 1 ] && selected=12  # install
 		case "${keys[$selected]}" in
 			install)
 				if [ "${INSTALL_SOURCE}" = offline ] && [ ! -f "${OFFLINE_BUNDLE}" ]; then
@@ -903,7 +925,7 @@ pack_source() {
 step_percent() {
 	case "$1" in
 		preflight) echo 3 ;; packages) echo 8 ;; app) echo 30 ;; hardware) echo 33 ;;
-		kiosk) echo 36 ;; services) echo 40 ;; images) echo 44 ;; ap) echo 88 ;; verify) echo 92 ;;
+		kiosk) echo 36 ;; services) echo 40 ;; images) echo 44 ;; ap) echo 88 ;; ssh) echo 90 ;; verify) echo 92 ;;
 		*) echo 0 ;;
 	esac
 }
@@ -918,6 +940,7 @@ step_label() {
 		services)  t "Installing services" "Dienste werden installiert" ;;
 		images)    t "Building the app - the long part" "App wird gebaut - der lange Teil" ;;
 		ap)        t "Setting up the WiFi access point" "WLAN-Access-Point wird eingerichtet" ;;
+		ssh)       t "Securing remote access" "Fernzugang wird abgesichert" ;;
 		verify)    t "Starting and checking CoffeePy" "CoffeePy wird gestartet und geprüft" ;;
 		*) echo "$1" ;;
 	esac
@@ -964,6 +987,7 @@ step_install() {
 	local flags="--yes ${offline_flag}"
 	[ "${AP_ENABLE}" = yes ] || flags+=" --skip-ap"
 	[ "${EXISTING_INSTALL}" = 1 ] && flags+=" --force"
+	[ "${SSH_AFTER_INSTALL}" = on ] && flags+=" --keep-ssh"
 	local video_env=""
 	case "${DISPLAY_MODE}" in
 		panel) ;;
@@ -1048,11 +1072,16 @@ summary_text() { # https-check-result
 	local wifi
 	wifi=$(t "(own WiFi off)" "(eigenes WLAN aus)")
 	[ "${AP_ENABLE}" = yes ] && wifi="${AP_SSID}  /  $(t password Passwort) ${AP_PASSPHRASE}"
+	local backups
+	backups=$(t "not encrypted" "unverschlüsselt")
+	[ -n "${BACKUP_PASSPHRASE}" ] && backups="$(t passphrase Passphrase) ${BACKUP_PASSPHRASE}"
 	printf '%s' "CoffeePy $(t on auf) ${PI_HOST} - $(date '+%Y-%m-%d %H:%M')
 
 Dashboard     https://${PUBLIC_HOST}/dashboard/
 Admin         ${ADMIN_USER}  /  ${ADMIN_PASSWORD}
 $(t "WiFi          " "WLAN          ")${wifi}
+$(t "Backups       " "Backups       ")${backups}
+SSH           $([ "${SSH_AFTER_INSTALL}" = on ] && t "on" "an" || t "off - Dashboard › System › SSH switches it on" "aus - einschalten unter Dashboard › System › SSH")
 $(t "Certificate   " "Zertifikat    ")https://${PUBLIC_HOST}/certificate/  ($(t "install once per phone/PC" "einmal pro Handy/PC installieren"))
 $(t "Language      " "Sprache       ")$(language_name "${DEVICE_LANGUAGE}")
 $(t "HTTPS check   " "HTTPS-Prüfung ")${https_ok}

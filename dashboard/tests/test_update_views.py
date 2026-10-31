@@ -27,12 +27,15 @@ class UpdatePageTestCase(FakeDevice, TestCase):
 
     def test_page(self):
         self.write("installed.json", {"version": "v2", "applied_at": time.time()})
-        self.write("previous.json", {"installed": {"version": "v1"}})
+        self.write("previous.json", {"installed": {"version": "v1"}})  # an older watcher's, mid-update
         (self.updates / "pre-update").mkdir()
-        (self.updates / "pre-update" / "before-v1.dump").write_bytes(b"x")
+        (self.updates / "pre-update" / "before-v1.dump").write_bytes(b"x")  # an older watcher's
+        (self.updates / "pre-update" / "before-v2.sql.gz").write_bytes(b"x")
         response = self.client.get(reverse("dashboard:update"))
-        for text in ("v2", "Back to v1", "before-v1.dump", "No update processed yet."):
+        for text in ("v2", "before-v1.dump", "before-v2.sql.gz", "No update processed yet."):
             self.assertContains(response, text)
+        self.assertNotContains(response, "Back to")  # only ever forward
+        self.assertNotContains(response, "allow_downgrade")
 
     def test_page_on_a_fresh_device(self):
         response = self.client.get(reverse("dashboard:update"))
@@ -41,14 +44,22 @@ class UpdatePageTestCase(FakeDevice, TestCase):
 
     def test_upload(self):
         bundle = SimpleUploadedFile("coffeepy-update-v3.tar", b"TAR")
+        # An old form's downgrade box is ignored: an older version only gets in as the watcher allows.
         self.client.post(reverse("dashboard:update_upload"), {"bundle": bundle, "allow_downgrade": "1"})
         self.assertEqual((self.updates / "incoming" / "coffeepy-update-v3.tar").read_bytes(), b"TAR")
         options = json.loads((self.updates / "incoming" / "coffeepy-update-v3.tar.options.json").read_text())
-        self.assertEqual(options, {"allow_downgrade": True, "requested_by": "boss"})
-        self.assertEqual(AuditLogEntry.objects.get(action="update.upload").details, "downgrade allowed")
+        self.assertEqual(options, {"requested_by": "boss"})
+        self.assertEqual(AuditLogEntry.objects.get(action="update.upload").details, "")
         response = self.client.post(reverse("dashboard:update_upload"),
                                     {"bundle": SimpleUploadedFile("again.tar", b"TAR")}, follow=True)
         self.assertContains(response, "already being applied")  # one waiting is enough
+
+    def test_no_upload_while_an_interrupted_update_waits(self):
+        self.write("journal.json", {"bundle": "coffeepy-update-v2.tar", "phase": "switched"})
+        response = self.client.post(reverse("dashboard:update_upload"),
+                                    {"bundle": SimpleUploadedFile("u.tar", b"x")}, follow=True)
+        self.assertContains(response, "already being applied")
+        self.assertFalse((self.updates / "incoming" / "u.tar").exists())
 
     def test_upload_refused(self):
         response = self.client.post(reverse("dashboard:update_upload"),
@@ -64,15 +75,6 @@ class UpdatePageTestCase(FakeDevice, TestCase):
                                     {"bundle": SimpleUploadedFile("u.tar", b"x")}, follow=True)
         self.assertContains(response, "already being applied")
 
-    def test_rollback(self):
-        response = self.client.post(reverse("dashboard:update_rollback"), follow=True)
-        self.assertContains(response, "no previous version")
-        self.write("previous.json", {"installed": {"version": "v1"}})
-        self.client.post(reverse("dashboard:update_rollback"))
-        self.assertEqual(json.loads((self.updates / "incoming" / "rollback.request").read_text()), {"requested_by": "boss"})
-        response = self.client.post(reverse("dashboard:update_rollback"), follow=True)
-        self.assertContains(response, "already being applied")
-
     def test_status(self):
         self.assertEqual(self.client.get(reverse("dashboard:update_status")).json(),
                          {"state": {}, "log": "", "pending": False})
@@ -82,6 +84,15 @@ class UpdatePageTestCase(FakeDevice, TestCase):
         data = self.client.get(reverse("dashboard:update_status")).json()
         self.assertEqual(data["state"]["state"], "stale")  # nothing moved for half an hour: dead
         self.assertIn("Loading", data["log"])
+
+    def test_the_installed_packages_for_an_os_bundle(self):
+        self.assertNotContains(self.client.get(reverse("dashboard:update")), "Download the installed packages")
+        self.assertEqual(self.client.get(reverse("dashboard:update_packages")).status_code, 404)
+        (self.updates / "os-packages.txt").write_text("bash\nzlib1g\n")
+        self.assertContains(self.client.get(reverse("dashboard:update")), "Download the installed packages")
+        response = self.client.get(reverse("dashboard:update_packages"))
+        self.assertEqual(b"".join(response.streaming_content), b"bash\nzlib1g\n")
+        self.assertIn("coffeepy-os-packages.txt", response["Content-Disposition"])
 
     def test_managers_are_kept_out(self):
         User.objects.create_user(username="helper", password="pw")
@@ -118,12 +129,14 @@ class VersionListTestCase(FakeDevice, TestCase):
 
     def test_everything_listed_and_copyable(self):
         (self.updates / "installed.json").write_text(json.dumps({"version": "v2.1", "applied_at": 1793013212}))
-        response = self.page(self.SYSTEM, {"version": "0be2def-dirty", "commit": "0be2def64ad5", "branch": "main"})
+        system = {**self.SYSTEM, "os_bundle": {"version": "os-trixie-20261030-1200", "applied_at": 1793013212}}
+        response = self.page(system, {"version": "0be2def-dirty", "commit": "0be2def64ad5", "branch": "main"})
         text = response.context["version_text"]
         for expected in ("[CoffeePy]", "Version: 0be2def-dirty", "Commit: 0be2def64ad5", "Branch: main",
                          "Installed by update: v2.1 (applied 2026-", "Python: ", "Django: ",
                          "Model: Raspberry Pi 3", "Docker Compose: 5.5.0",
                          "Update signature: CoffeePy's key 0123456789abcdef",
+                         "OS bundle: os-trixie-20261030-1200 (applied 2026-",
                          "web: coffeepy-web:latest @0123456789ab", "migrate: coffeepy-web:latest @0123456789ab (exited)"):
             self.assertIn(expected, text)
         self.assertNotIn("Committed:", text)  # nothing to say - left out
@@ -153,6 +166,8 @@ class VersionListTestCase(FakeDevice, TestCase):
         self.assertNotIn("[Containers]", response.context["version_text"])
 
     def test_helpers_when_something_is_missing(self):
+        self.assertEqual(versions._os_bundle({}), "")
+        self.assertEqual(versions._os_bundle({"version": "os-trixie-1"}), "os-trixie-1")
         self.assertEqual(versions._package("no-such-package-here"), "")
         with mock.patch.object(versions.subprocess, "run", side_effect=OSError):
             self.assertEqual(versions._pg_dump(), "")

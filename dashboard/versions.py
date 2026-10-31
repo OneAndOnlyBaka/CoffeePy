@@ -43,6 +43,12 @@ def _when(timestamp):
     return datetime.fromtimestamp(timestamp, tz=timezone.get_current_timezone()).strftime("%Y-%m-%d %H:%M")
 
 
+def _os_bundle(applied):
+    if not applied.get("version"):
+        return ""
+    return f"{applied['version']} ({_('applied')} {_when(applied['applied_at'])})" if applied.get("applied_at") else applied["version"]
+
+
 def sections(installed, system):
     """[(heading, [(label, value), ...]), ...] - empty values left out."""
     build = settings.COFFEEPY_BUILD
@@ -80,6 +86,7 @@ def sections(installed, system):
             ("Docker", system.get("docker", "")),
             ("Docker Compose", system.get("compose", "")),
             (_("Update signature"), checked),
+            (_("OS bundle"), _os_bundle(system.get("os_bundle") or {})),
             (_("As of"), _when(system["updated"]) if system.get("updated") else ""),
         ]))
         result.append((_("Containers"), [

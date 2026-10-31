@@ -27,7 +27,7 @@
             </div>
         </div>
     </div>
-    {% if not health.encrypted %}<p class="muted">{% blocktranslate trimmed %}The backups are not encrypted: anyone who takes the stick can read them. To encrypt them,
+    {% if not health.encrypted %}<p class="msg warning">{% blocktranslate trimmed %}The backups are not encrypted: anyone who takes the stick can read them. To encrypt them,
         set a backup passphrase with the provisioning tool (BACKUP_PASSPHRASE).{% endblocktranslate %}</p>{% endif %}
     <h2 class="sub-heading">{% translate "Backups on the stick" %}</h2>
     {% include "dashboard/_backup_list.html" with files=own_backups source="own" %}

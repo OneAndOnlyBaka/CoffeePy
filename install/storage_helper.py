@@ -8,7 +8,8 @@ through files in data/storage/, which both see:
   status.json        written here every few seconds: the USB disks plugged in, which of
                      them is this device's backup stick, free space, the last request
   requests/*.json    written by the dashboard: format a disk as this device's stick,
-                     adopt another device's stick, eject - processed here, then deleted
+                     adopt another device's stick, eject, apply restored settings, switch
+                     SSH on or off - processed here, then deleted
   device-id          this device's identity, created here once; the stick carries it
   stick.json         the one stick this device backs up to - set when a stick is set up
                      (formatted or adopted); setting up another one forgets the old one
@@ -50,6 +51,12 @@ INTERVAL = 2.0
 
 # Sticks ejected through the dashboard stay unmounted until they are pulled out.
 ejected = set()
+
+# Debian's daemon and its socket activation - an image may use either. The installer switches
+# both off (install.sh, step_ssh); the dashboard's System page switches the daemon on again.
+SSH_UNITS = ("ssh.service", "ssh.socket")
+SSH_SECONDS = 30  # how often the SSH state is asked for: every cycle would be a systemctl every 2s
+ssh = {}
 
 
 def log(message):
@@ -288,6 +295,39 @@ def mounted_info(target, mount_table, disks):
     }
 
 
+def ssh_state():
+    result = subprocess.run(("systemctl", "is-active", *SSH_UNITS), capture_output=True, text=True)
+    return {"active": "active" in result.stdout.split(), "checked": time.time()}
+
+
+def do_ssh(request):
+    """On stays on, across reboots too, until the dashboard switches it off. Stopping it leaves
+    the sessions that are open alone (ssh.service has KillMode=process)."""
+    if request.get("enabled"):
+        run("systemctl", "enable", "--now", "ssh.service")
+        return "on"
+    run("systemctl", "disable", "--now", "ssh.service")
+    subprocess.run(("systemctl", "disable", "--now", "ssh.socket"), capture_output=True)  # absent on some images
+    return "off"
+
+
+def handle_ssh(request):
+    """Not one of the stick's requests: its outcome goes into status.json's "ssh", not into
+    "request", which the backup page follows."""
+    action = "ssh.enable" if request.get("enabled") else "ssh.disable"
+    actor = request.get("requested_by", "system")
+    try:
+        do_ssh(request)
+        error = ""
+        event(action, actor=actor)
+    except Exception as exc:  # noqa: BLE001 - reported to the dashboard
+        log(f"request {action} failed: {exc}")
+        error = str(exc)
+        event(action, actor=actor, details=error, outcome="failure")
+    ssh.clear()
+    ssh.update(ssh_state(), error=error)
+
+
 # --- requests from the dashboard ----------------------------------------------------------
 
 def find_disk(disks, path, serial):
@@ -389,6 +429,9 @@ def handle_requests(disks, mount_table, our_id, last):
             continue
         path.unlink(missing_ok=True)
         action = request.get("action")
+        if action == "ssh":
+            handle_ssh(request)
+            continue
         result = {"id": request.get("id", path.stem), "action": action, "state": "running", "started": now_iso()}
         last.clear()
         last.update(result)
@@ -432,6 +475,7 @@ def write_status(disks, mount_table, our_id, last):
         # USB disks that are neither - what the dashboard offers to set up.
         "available": [d for d in disks if d["path"] not in in_use],
         "request": dict(last),
+        "ssh": dict(ssh),
     })
 
 
@@ -445,6 +489,8 @@ def cycle(last):
     ejected.intersection_update(present_uuids)  # pulled out: next time it is mounted again
     unmount_gone(mount_table, present)
     mount_table = mounts()
+    if time.time() - ssh.get("checked", 0) >= SSH_SECONDS:
+        ssh.update(ssh_state())
     handle_requests(disks, mount_table, our_id, last)
     if last.get("state") == "done":
         devices = lsblk()

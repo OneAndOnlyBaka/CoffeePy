@@ -25,8 +25,9 @@ and pay from there.
 > negligence and injury to life, body or health is not affected where the law does not allow
 > excluding it.
 
-This manual covers every screen. Technical details (architecture, development, internals)
-are in the [README](../README.md).
+This manual covers every screen. Technical details are in English under [docs](README.md): the
+[architecture](ARCHITECTURE.md), [how the numbers are calculated](CALCULATIONS.md), the
+[security mechanisms](SECURITY.md), [GDPR-compliant operation](PRIVACY.md) and the [quickstart](QUICKSTART.md).
 
 **Contents**
 
@@ -77,7 +78,7 @@ videos rather than GIFs – the same picture for about a seventh less of the bro
 |---|---|
 | Operating system | 3–5 GB (Lite), more with the desktop |
 | CoffeePy's running programs (images) | about 0.9 GB |
-| The copy of the previous version after an update (for **Back to …**) | about 0.9 GB |
+| During an update: the new version next to the running one | about 0.9 GB more, until it has come up |
 | Database | 12 MB |
 | System journal | up to about 50 MB |
 
@@ -165,11 +166,12 @@ change it:
 | WiFi access point | The Pi opens its own WiFi for phones to reach dashboard and portal. Turn it off if the Pi stays on your existing network. At every start it picks the channel (1, 6 or 11) the neighbouring networks disturb least, at the highest transmit power allowed. |
 | Address for phones | The address in QR codes and in the certificate. `192.168.4.1` with the access point, otherwise the Pi's (preferably fixed) address on your network. |
 | Time zone | For the clock and the statistics by hour and weekday. |
-| Backups & audit log | Whether the backups on the USB stick are **encrypted** (a passphrase of at least 12 characters – keep it somewhere safe, no backup can be restored without it), and for how many days the **audit log** is kept (90 by default). How often backups are made is set in the dashboard. |
+| Backups & audit log | Whether the backups on the USB stick are **encrypted** – on a new installation the tool generates a passphrase, which you can replace or decline; it is shown at the end, keep it somewhere safe: no backup can be restored without it –, and for how many days the **audit log** is kept (90 by default). How often backups are made is set in the dashboard. |
 | Updates | Which **signature** an update has to carry: CoffeePy's key, **your own key**, or **no check (development only)** (see [Your own signing key](#your-own-signing-key)). |
 | Display | Screen mode. The documented 1024×600 display doesn't report its resolution, so it needs the preset. |
 | Web workers | Processes serving the web app: 2 for a Pi 3, 3–4 for a Pi 4 or 5. |
-| Install from | Internet, or an offline bundle (for Pis without internet, see the README). |
+| SSH | **Off after the installation** (the default): nothing on a running kiosk needs it, and with the Imager's password anyone on the network could try to log in. To run this tool again later, an admin switches it on in the dashboard (**System › SSH**). *Stays on* leaves it as it is – for a test device. |
+| Install from | Internet, or an offline bundle (for Pis without internet, see the [quickstart](QUICKSTART.md#installing-without-internet)). |
 
 Input is checked right away – a WiFi password, for instance, needs at least 8 characters:
 
@@ -186,8 +188,8 @@ It takes 20–40 minutes, mostly for building the app.
 ![Installing](pictures/manual/en/provision-progress.png)
 
 **Done.** Finally the tool reboots the Pi (clock, display and kiosk only take effect then),
-checks that CoffeePy answers over HTTPS, and shows the credentials. It can save them to a file
-only you can read.
+checks that CoffeePy answers over HTTPS, and shows the credentials – with the backup passphrase
+and whether SSH is still on. It can save them to a file only you can read.
 
 ![Done](pictures/manual/en/provision-done.png)
 
@@ -607,6 +609,12 @@ the most, all time and this month) and the pillory (who owes money), each with a
 kiosk follows with its next poll. The dashboard's **Pillory** page, for whoever collects the
 money, is not affected. See [Privacy and the workplace](#privacy-and-the-workplace).
 
+**SSH**: remote login to the device's operating system. It is off after the installation and
+only needed to run the [provisioning tool](#the-provisioning-tool) again or for maintenance:
+**Switch SSH on**, and it stays on – across restarts too – until **Switch SSH off**. While it is
+on, a warning says so (as in the picture above); both show up in the **Audit log** as
+*ssh.enable* / *ssh.disable*.
+
 If a note under the address says it was *only guessed*, `PUBLIC_HOST` in `.env` is empty and the
 address is probably the app container's – the QR codes then lead nowhere. The provisioning tool
 and the installer set it; by hand: `PUBLIC_HOST=` with the device's address.
@@ -648,6 +656,8 @@ Everything about the backup stick (see [Backups](#backups) for how it works):
 - **Restore a backup** – from the stick, or **Restore from a file**.
 - **Download a backup** – the whole device as it is right now, as a file, also without a stick.
 
+While the backups are not encrypted, the page says so in a highlighted note.
+
 ![Backup](pictures/manual/en/dashboard-backup.png)
 
 When restoring you choose **what**: the data (members, bookings, coffee sorts, dashboard logins),
@@ -660,13 +670,16 @@ to the stick; if the restore fails, nothing is changed. An encrypted backup need
 
 #### Update
 
-Upload an update bundle and follow it being installed (see [Updates](#updates)). **Back to …**
-returns to the version before the last update. **Versions** lists exactly what runs on the
+Upload an update bundle and follow it being installed (see [Updates](#updates)). There is no
+way back to an earlier version by hand. **Versions** lists exactly what runs on the
 device: the CoffeePy version and its commit, Python, Django, the database, the operating
 system, Docker, and every container with the id of its image – **Copy all** puts the whole list
 on the clipboard, ready for a bug report. The CoffeePy version alone is also at the bottom of
 the dashboard's navigation, at the bottom of the phone portal, and on the kiosk below the QR
-codes for the admin area (the wrench).
+codes for the admin area (the wrench). **Operating system** explains OS bundles (see
+[Operating system updates](#operating-system-updates)) and offers **Download the installed
+packages** – the device's own package list, to build one from; *OS bundle* under **Versions**
+names the last one installed.
 
 ![Update](pictures/manual/en/dashboard-update.png)
 
@@ -710,7 +723,9 @@ take a backup first!
 
 Simply run the [provisioning tool](#the-provisioning-tool) again: it reads the existing
 configuration, you change what you want, and it applies the change – the kiosk shows "We'll be
-right back" meanwhile. Data, database password and certificate are kept.
+right back" meanwhile. Data, database password and certificate are kept. First switch SSH on in
+the dashboard (**System › SSH**) – the tool connects over it, and switches it off again at the
+end unless its *SSH* setting says *stays on*.
 
 ### Backups
 
@@ -725,9 +740,9 @@ The device backs itself up to **one USB stick** that you set up for it:
 
 A backup holds the whole device: the data, the device CA and certificates, and its settings –
 so a replacement device can take over completely. Every backup is read back and checked after
-writing. With a passphrase from the [provisioning tool](#the-provisioning-tool) it is
-encrypted (AES-256); without one, anyone who takes the stick can read it – a deliberate choice
-when the stick sits inside the housing.
+writing. With the passphrase from the [provisioning tool](#the-provisioning-tool) – it generates
+one unless you decline – it is encrypted (AES-256); without one, anyone who takes the stick can
+read it, and the **Backup** page says so.
 
 - **Stick pulled out?** The overview and the kiosk show that backups aren't running. Plug the
   **same** stick back in, and everything carries on as before.
@@ -754,18 +769,57 @@ can upload it to a device's dashboard right away and follow it being installed.
 Otherwise upload the bundle in the dashboard under **Update**. The device then:
 
 1. checks the **signature** and every file's checksum, that the bundle is meant for this device,
-   that there is room, and that it isn't older than what's installed (unless *Allow installing
-   an older version* is ticked),
+   that there is room, and that it isn't older than what's installed - the one exception: a
+   device running a pre-release (a test build, its version has a "-" such as 2.1.0-beta.3) takes
+   a release of the same major version, 2.0.2 say; the device first takes its database back to
+   what that release knows,
 2. saves the database and the running version **to the SD card** (never to the backup stick),
 3. installs it – the kiosk shows "We'll be right back" with a progress bar, the update page the log,
 4. checks that the new version answers. If it doesn't, the previous version **goes back
    automatically**, data included.
 
-**Back to …** on the update page returns to the version before the last update by hand. The
-data then also goes back to the state before that update.
+Once the new version has come up, the copy of the previous one is deleted: **updates only go
+forward**. Something wrong with a version is fixed by the next update, not by going back – there
+is no button for that (a test build going back to its release, see above, is the one exception). The database dumps under *Saved before updates* stay on the SD card as
+copies of the data.
+
+**A power cut during an update** does no harm. When the device starts again, it first puts the
+version from before the update back, data included (the kiosk shows "Repairing an interrupted
+update"), and then installs the same bundle again from the start – at most three times. A
+bundle that failed on its own, rather than because of the power cut, is not retried.
 
 For scripts there is `./scripts/build_update_bundle.sh` (its options are listed at the top of
 the script); an update also works from a PC through the provisioning tool.
+
+#### Operating system updates
+
+An update bundle brings CoffeePy; the device's **operating system** – kernel, firmware, browser,
+SSH, Docker – is Raspberry Pi OS, and an offline device only gets its security updates through
+an **OS bundle**. Building one is up to you: CoffeePy runs on more than one kind of hardware,
+and only you know what your device's system should carry.
+
+1. In the dashboard under **Update**, **Download the installed packages** – the device's own
+   list (`coffeepy-os-packages.txt`).
+2. On a PC with internet and Docker: `./scripts/build_os_bundle.sh --packages
+   coffeepy-os-packages.txt` (`--release` if the device doesn't run trixie). It fetches the
+   newest versions from the Raspberry Pi OS archives and writes
+   `coffeepy-os-<release>-<date>-arm64-unsigned.tar`.
+3. Sign it like any bundle: `./scripts/sign_update_bundle.sh <file> --key
+   ~/.config/coffeepy/update-signing.key`.
+4. Upload it under **Update**.
+
+The device checks it like an update – signature, checksums, platform, space, that it is newer
+than the last OS bundle, and that it was built for the system the device runs. It saves the
+database to the SD card, installs the packages and, if a new kernel or firmware came with them,
+**restarts** by itself; "We'll be right back" stays up meanwhile. Only what is installed is
+updated – a bundle can't install anything new.
+
+- **There is no way back** from an OS update – the database copy is the safety net.
+- *Some packages were kept back*: something installed needs exactly the old version of a package
+  (`libexpat1-dev` holds `libexpat1`, say). The log names them; put what depends on them on the
+  list too and build again.
+- **A power cut** during an OS update: at the next start the device finishes what it had begun
+  and doesn't start over by itself. Upload the same bundle again to complete it.
 
 #### Updating from the GitHub release
 
@@ -830,6 +884,20 @@ after three restarts within an hour it gives up (*watchdog.gave_up*): a restart 
 then, and it is time to look at the audit log. Pulling the plug is only left for when even
 that has no effect.
 
+### Keeping it safe
+
+- **Not on the internet.** The device belongs on your own network or its own WiFi. Never make
+  the dashboard or port 443 reachable from outside (no port forwarding in the router).
+- **SSH off** while nobody needs it (dashboard → **System**), and a strong password for the Pi's
+  user.
+- **Signed updates only** – the check stays on, see [Your own signing key](#your-own-signing-key).
+- **Encrypted backups** – keep the passphrase apart from the stick.
+- **Operating system updates** from time to time, see [Operating system updates](#operating-system-updates).
+- **Taking a device out of service**: **Reset database** (dashboard → **System**) only empties
+  the database – the SD card still holds the old blocks, and the backup stick its backups. Wipe
+  or destroy the SD card and the stick before they leave your hands, or keep the stick as you
+  would the data itself.
+
 ### Privacy and the workplace
 
 CoffeePy processes personal data about colleagues: name, card id, every order with its time,
@@ -850,10 +918,13 @@ What helps, without being legal advice:
   (see [Settings](#settings) at the kiosk).
 - **Mark people who left** (dashboard → **Members**): their cards are blocked, and they no
   longer appear in the ranking or the pillory.
-- **Backups** hold the same data – keep the stick as you would the data itself, and set a
-  backup password if it might leave the building.
+- **Backups** hold the same data – keep the stick as you would the data itself, and its
+  passphrase apart from it.
 - The dashboard needs a login; an admin sees everything. Hand out the roles sparingly
   (**Dashboard users**).
+
+In detail, with retention periods, the rights of the people concerned and a checklist before
+going live: [Running CoffeePy in line with the GDPR](PRIVACY.md).
 
 ### Language
 
@@ -871,6 +942,7 @@ with its **DE/EN** button, phones and PCs at the top right of the portal and of 
 | **Bad Request (400)** in the browser. | The device doesn't know the address you're using. Use the address from setup (`192.168.4.1`, `coffeepy.local`), or run the provisioning tool over the new address – it adds it. |
 | After switching on, the screen is black, then white, for a minute. | Normal: the Pi starts first, then the browser. The kiosk appears after about a minute and a half – after a power cut it can take a good three minutes: the browser's first start then sometimes fails, and the device starts it again by itself. |
 | The screen is dark, taps and cards do nothing, but the dashboard works. | The **Night rest** is on (dashboard → **System**). It ends by itself at the set time; to stop it, untick it - the kiosk comes back within a minute. |
+| The kiosk briefly showed "Aw, Snap!" (or went white) and then came back by itself. | The kiosk's browser crashed while loading the page - the browser of Raspberry Pi OS does that now and then, mostly right after an update or a restore. The device notices within seconds and reloads the page; nothing is lost. |
 | The kiosk went black for a moment and started again. | The device restarted a hanging kiosk or the app by itself (see [When the kiosk hangs](#when-the-kiosk-hangs)); the **Audit log** says which. If it happens often, that is where to look for why. |
 | *Card reader not available* | Check the reader's cable and restart the device. |
 | A card isn't recognised. | Hold it flat and still; a card marked as departed is turned away. |
@@ -879,5 +951,7 @@ with its **DE/EN** button, phones and PCs at the top right of the portal and of 
 | After switching on, the kiosk shows the time the device was switched off (in the morning, the evening before), or the clock is behind by the length of every power cut. | The **clock module's battery is flat**. An almost empty CR2032 (below about 2.3 V) still holds the time but lets the clock stand still without power – the module reports no fault then, and without internet the device can't notice. Replace the battery, then set the time under **System time**. |
 | "We'll be right back" doesn't go away. | Is an update or a restore running? The dashboard's **Update** or **Backup** page shows its progress. A status older than two hours is ignored; when in doubt, restart the device. |
 | Login refused although the password is right | Too many failed attempts lock the account for a while (15 minutes by default) – wait, or have an admin set a new password under **Dashboard users**. |
-| An update is refused | The update page says why: no or a wrong signature (see [Your own signing key](#your-own-signing-key)), a bundle for another platform, not enough space, or an older version than the installed one. |
+| An update is refused | The update page says why: no or a wrong signature (see [Your own signing key](#your-own-signing-key)), a bundle for another platform, not enough space, or an older version than the installed one. An OS bundle is also refused when it was built for another Raspberry Pi OS release. |
+| The provisioning tool says *Connection refused*. | SSH is off on the device – switch it on in the dashboard (**System › SSH**) and try again. |
+| *Some packages were kept back* after an OS update | See [Operating system updates](#operating-system-updates): add what depends on them to the package list and build the bundle again. |
 | The phone can't reach the dashboard. | Is it connected to the device's WiFi? Turn mobile data off briefly – some phones leave a WiFi without internet otherwise. |

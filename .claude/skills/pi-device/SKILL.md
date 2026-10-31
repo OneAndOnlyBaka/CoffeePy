@@ -17,14 +17,18 @@ the repo root, e.g. `.claude/skills/pi-device/scripts/pi.sh uptime`.
 
 Connection data is in `.device/pi.env` at the repo root - `PI_HOST`, `PI_USER`,
 `PI_PASSWORD`. It is excluded via `.git/info/exclude`: never commit it, never print the
-password, never copy it anywhere else. If the file is missing, ask the user for the
+password, never copy it anywhere else. Next to it, same rules: `update-signing.key` (+ `.pub`) -
+the private key update bundles for the Pi are signed with (`openssl pkeyutl -sign -rawin -inkey
+.device/update-signing.key ...`; the Pi trusts its public half) - and `pi-coffeepy.env`, a copy
+of the Pi's `/opt/coffeepy/.env` (admin, database, WiFi and backup secrets). Refresh that copy
+after a re-flash or a provisioning run changed them. If the file is missing, ask the user for the
 values and create it (mode 600).
 
 `pi.sh --setup` installs this machine's SSH key and passwordless sudo; after that every
 script uses key auth. A re-flashed Pi changes its host key - `--setup` clears the old one.
 
 The image so far was Raspberry Pi OS **Desktop** 64-bit (trixie) on ethernet, not the Lite
-the README documents - `install.sh` disables the desktop's lightdm itself.
+docs/QUICKSTART.md documents - `install.sh` disables the desktop's lightdm itself.
 
 ## Install and deploy
 
@@ -77,9 +81,11 @@ about a Pi 3. Report numbers, not impressions.
 
 - `resources.sh [SECONDS]` - CPU and memory per process group, temperature, throttling.
   (`docker stats` shows 0B: the Pi kernel disables the memory cgroup.)
-- `python3 -I scripts/load.py kiosk|mixed|burst` - HTTP latency/throughput from here. It
-  goes through Caddy on 443 with `Host: 192.168.4.1` (PUBLIC_HOST); a wrong host is a fast **400** - check
-  the errors column before believing a number.
+- `python3 -I scripts/load.py kiosk|mixed|burst` - HTTP latency/throughput from here. Portal
+  and dashboard go through Caddy on 443 with `Host: 192.168.4.1` (PUBLIC_HOST); a wrong host is a
+  fast **400** - check the errors column before believing a number. The kiosk only exists on the
+  Pi's 127.0.0.1:8443, so its requests go through an SSH tunnel (a 404 there means they didn't).
+  Not while the Pi builds images - the numbers then measure the build.
 - `django.sh perf_data.py seed` → `django.sh page_timings.py` → `django.sh perf_data.py
   cleanup` - every page's server time against five years of synthetic history. An empty
   database makes every page look fast; the kiosk rows are the ones that matter (polled
@@ -114,6 +120,9 @@ about a Pi 3. Report numbers, not impressions.
 - **Provisioning changes go through `scripts/provision.sh`** where possible (interactive in
   tmux, or `--answers ... --unattended` with `PI_PASSWORD` from `.device/pi.env`) - that tests
   the tool along with the change. It re-runs every installer step (`--force`), ~20 minutes.
+  **Always with `SSH_AFTER_INSTALL=on`** for the test Pi: the installer's `ssh` step otherwise
+  switches SSH off at the end, and every script here loses the device. If that happened, log in
+  to the dashboard (System → SSH → Switch SSH on) - the storage helper turns it on within seconds.
 - **Session-restarting commands** (`kiosk-browser.sh on/off`, `deploy.sh kiosk`,
   `startup-timeline.sh`) interrupt whoever is using the touchscreen - say so if the user
   might be at the device.
@@ -129,7 +138,7 @@ as above), or drop the file into `/opt/coffeepy/data/updates/incoming/` directly
 land in `data/updates/status/*.log`. Test a broken bundle followed by a good one as well.
 The bundle built there is unsigned and the device refuses it: **never copy the private signing
 key to the Pi** - fetch only `manifest.json`, sign it here (`openssl pkeyutl -sign -rawin -inkey
-~/.config/coffeepy/update-signing.key -in manifest.json -out manifest.sig`) and put `manifest.sig`
+.device/update-signing.key -in manifest.json -out manifest.sig`) and put `manifest.sig`
 back into the tar.
 
 ## Cleaning up

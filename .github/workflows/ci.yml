@@ -62,7 +62,7 @@ jobs:
   # dependencies and in the images this repo builds. One without a fix yet is reported, not
   # failed on; one that can't be taken yet is in .grype.yaml with its reason. The images of
   # others (postgres, mosquitto, caddy) are only reported: their packages are theirs to fix,
-  # and the release build pulls their newest tag anyway.
+  # and Dependabot moves their pinned versions (docker-compose.yml) as soon as they do.
   audit:
     runs-on: ubuntu-latest
     steps:

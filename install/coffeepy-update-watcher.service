@@ -1,6 +1,8 @@
 [Unit]
 Description=CoffeePy offline update watcher
-Requires=coffeepy.service
+# Wants, not Requires: a stack that fails to start must not keep away the one thing that
+# can bring a working version (an update, a rollback).
+Wants=coffeepy.service
 After=coffeepy.service
 
 [Service]

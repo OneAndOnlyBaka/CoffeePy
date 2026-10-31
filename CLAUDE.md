@@ -1,12 +1,13 @@
 # Working on CoffeePy
 
 Notes for whoever (or whatever) edits this repo next. [README.md](README.md) covers what the
-project *is* and how to deploy it; this file covers what bites you while changing it.
+project *is*, [docs/](docs/README.md) how it is built and deployed; this file covers what bites
+you while changing it.
 
 ## Running things
 
 No Django is installed system-wide on the dev box - use the git-ignored `.venv`, or make one
-first if the checkout has none (see README's Development section). Then:
+first if the checkout has none (see the Development section of docs/QUICKSTART.md). Then:
 
 ```bash
 export DJANGO_TEST_SQLITE=1 DJANGO_SECRET_KEY=dev   # both are required, also for tests
@@ -242,7 +243,10 @@ screenshot tooling draws single screens with its functions.
 ## Installing on the device
 
 Trying something on the real test Pi (deploy, screenshots, the kiosk's browser, load and
-page timings, update bundles) goes through the `pi-device` skill in `.claude/skills/`.
+page timings, update bundles) goes through the `pi-device` skill in `.claude/skills/`. A larger
+change to the update path (PostgreSQL version, watcher, recovery, data migrations) is only done
+after the `upgrade-test` skill's full run: the Pi downgraded two releases, updated hop by hop
+through the real mechanism, every hop checked for lost data.
 
 `install/install.sh` turns a plain Raspberry Pi OS Lite into the kiosk. It replaced both a
 two-phase setup script and a pi-gen image build; what those cost us is worth keeping in
@@ -357,12 +361,24 @@ mind before changing it:
   device). An update bundle with its images is bigger than that on a Pi 3 (`ls -l` the output of
   `build_update_bundle.sh`), so neither `build_update_bundle.sh` nor `update_watcher.py` may stage
   it there.
-- **Updates are signed, checked, and undoable** (`install/update_watcher.py`): the bundle's
+- **Updates are signed, checked, and only go forward** (`install/update_watcher.py`): the bundle's
   `manifest.json` is signed with the key from `scripts/update_signing_key.sh` (public half in
   `install/update-signing.pub`, installed to `/etc/coffeepy/`), names the platform, the space
   it needs and every file's checksum. Before an update the database goes to the SD card
   (`data/updates/pre-update/`, never the backup stick) and the running images are tagged
-  `:coffeepy-previous-*`; if `/health/` doesn't answer afterwards, all of it goes back. A new
+  `:coffeepy-previous-*`; if `/health/` doesn't answer afterwards, all of it goes back. Once it
+  does, those copies are deleted - there is deliberately no rollback by hand: a version that came
+  up is fixed by the next update. The one way back the version check lets through - not offered
+  anywhere, just not refused - is a pre-release (SemVer with a `-`) to a release of its major
+  version (`back_to_release`); migrations the release doesn't know are reversed by the running
+  image first (`migrate_back`, after the dump: one that can't be reversed costs a rollback, not
+  data). A power
+  cut mid-update is caught at the next boot: every step goes into `data/updates/journal.json`
+  before it changes anything, `coffeepy-update-recover.service` (before the stack) puts the old
+  version back and the bundle into `incoming/` again - at most three attempts. The dump is
+  gzipped plain SQL and checked for pg_dump's closing line before anything relies on it: psql
+  commits a dump cut off mid-data (measured), so `load_database` only sends `COMMIT` after the
+  whole of it. Files the next boot needs are replaced atomically (`write_file`, `replace_dir`). A new
   `.env` setting reaches existing devices through `env_defaults` in the manifest (taken from
   `.env.example`). The watcher runs `install.sh --only=hardware,services,kiosk` itself, with
   `COFFEEPY_FROM_WATCHER=1` - then it must not restart the watcher, not touch the
@@ -371,6 +387,15 @@ mind before changing it:
   no `pi` on a current image). Until `--only` took a list, those steps never ran at all. A device can
   trust its own key instead (`/etc/coffeepy/update-signing.own.pub`, from `provision.sh`; no
   update replaces it) or check nothing (`UPDATE_VERIFY_SIGNATURE=false`).
+- **The host's OS is updated by OS bundles** (`scripts/build_os_bundle.sh`, `"kind": "os"`): no
+  images, no rollback, the packages are whatever the operator lists (the update page offers the
+  device's `os-packages.txt`). The only code that installs them is `install/os_update.sh`, copied
+  *into* the bundle and signed with it - keep it the one way packages get onto a device from an
+  upload. Its forward check is against `os-installed.json`, not the app's `installed.json`; a power
+  cut in it is finished by `dpkg --configure -a` at boot (`recover_os`), never retried by itself.
+- **SSH is off after the installation** (`install.sh` step `ssh`, unless `--keep-ssh`); the
+  dashboard's System page switches it through the storage helper. Provision the test Pi with
+  `SSH_AFTER_INSTALL=on`, or the next deploy finds no way in.
 - **Which code runs is `coffeepy-version.json`** (`scripts/write_version.sh`: GitVersion's
   SemVer from `GitVersion.yml` - the release workflow hands it in as `COFFEEPY_VERSION`, a local
   `gitversion` is asked, else git describe - and the commit), git-ignored and written into the tree by everything that builds or ships it -
@@ -393,7 +418,7 @@ mind before changing it:
   (pi-device skill) measures per process group; mind the ranking screen's 30s idle return
   when measuring it. Every `docker compose build` leaves the replaced image dangling, a few
   hundred MB each - `install.sh`'s image step and the update watcher prune them (only
-  dangling ones: the rollback copies are tagged).
+  dangling ones: the old version's images stay tagged until its successor came up).
 - **`CmaFree` is not the GPU's free memory.** The kernel lends the 256MB CMA area to ordinary
   movable memory, and on a 1GB Pi under pressure it is always near zero. What the GPU holds is
   `/sys/kernel/debug/dri/0/bo_stats`: 12MB on the wait screen, about 19MB on the ranking.
@@ -417,6 +442,21 @@ mind before changing it:
   stays on `about:blank` - a white screen, the app answering. The root cause is inside
   Chromium; `install/kiosk/openbox-autostart` restarts a browser whose kiosk hasn't polled
   within `KIOSK_LOAD_SECONDS`. Reproduce with `sync; echo b > /proc/sysrq-trigger`.
+- **Chromium's renderer crashes in about one page load in ten** ("Aw, Snap!", error code 11 -
+  Chromium 156.0.8078.73-1~deb13u1+rpt1, measured 2026-10-31: 3 in 40 reloads, 4-5 in 30
+  maintenance cycles). Every crashpad dump (`~/.config/chromium/Crash Reports/pending/`) has the
+  same frame - a null pointer (fault address 0x8) in `blink::FragmentData::SetLayer`, called from
+  `LayoutBoxModelObject::WillBeDestroyed` < `Element::DetachLayoutTree` < `Document::Shutdown` <
+  `FrameLoader::DetachDocument` < `FrameLoader::CommitNavigation`: Blink falls over tearing down
+  the page it leaves. Chromium's own omnibox popup crashes the same way, so it isn't our page;
+  the kiosk's `location.reload()` after every update, restore or install is just where it shows.
+  Taking the layout down first (`display: none`, two frames, then reload) did not help.
+  `install/kiosk/openbox-autostart` therefore watches for new dumps every 2s and presses F5
+  (`xdotool`, in `install/packages.txt`) - or, on a device that has no xdotool yet (packages
+  only come with an OS bundle), restarts Chromium; the kiosk is back 10-25s later instead of
+  after the watchdog's ~4 minutes. Symbols: `apt-get download chromium-dbgsym` (same build id
+  as `/usr/lib/chromium/chromium`), unpack with `dpkg-deb -x`, `addr2line -f -C -e` the
+  `.debug` file with the offsets from the dump. Recheck with every new Chromium.
 
 ## Every PR is audited
 
@@ -424,9 +464,11 @@ CI's `audit` job fails on every known vulnerability that an upgrade fixes (Depen
 PRs keep it there, `.github/dependabot.yml`): `pip-audit` per
 requirements file (`scripts/audit_python.py` tells fixable from not-yet-fixed) and Grype on
 the two images this repo builds. Other people's images (postgres, mosquitto, caddy) are only
-reported - their packages are theirs to fix, and every build pulls their newest tag. What can't
-be fixed yet goes into `.grype.yaml` with its reason, never silently: the two CPython CVEs there
-are fixed only in 3.15, which Django 5.2 doesn't support. The images run Python 3.14 and
+reported - their packages are theirs to fix - and pinned to exact versions that Dependabot moves
+(not to digests: a `docker load`ed image has none, and the watcher's `:coffeepy-previous-*` tags
+are made from the tag). What can't be fixed yet goes into `.grype.yaml` with its reason - and
+whether the affected code is reachable from here at all - never silently: the CPython CVE there
+is fixed only in 3.15, which Django 5.2 doesn't support. The images run Python 3.14 and
 upgrade the base image's pip, because both lagged behind their fixes.
 
 ## The device is offline

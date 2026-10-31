@@ -5,6 +5,11 @@
 !.env.example
 __pycache__
 *.pyc
+# A checkout's own state - .device/ holds the signing key and the test Pi's credentials.
+.device/
+.venv/
+.coverage
+.ruff_cache/
 db.sqlite3
 staticfiles/
 data/

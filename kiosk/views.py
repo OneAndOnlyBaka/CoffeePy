@@ -83,8 +83,12 @@ MAINTENANCE_STEPS = {
     "services": gettext_lazy("Installing services"),
     "unpack": gettext_lazy("Unpacking the update"),
     "images": gettext_lazy("Preparing the new version"),
+    "save": gettext_lazy("Saving the current data"),
     "restart": gettext_lazy("Restarting"),
+    "rollback": gettext_lazy("Going back to the previous version"),
+    "recover": gettext_lazy("Repairing an interrupted update"),
     "ap": gettext_lazy("Setting up the WiFi"),
+    "ssh": gettext_lazy("Securing remote access"),
     "verify": gettext_lazy("Starting CoffeePy"),
     # dashboard/restore_jobs.py
     "restore_safety": gettext_lazy("Saving the current data"),
