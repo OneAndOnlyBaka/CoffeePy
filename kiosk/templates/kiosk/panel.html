@@ -31,7 +31,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                 <li>{% blocktranslate trimmed with seconds=logout_seconds %}You are logged out after {{ seconds }} seconds.{% endblocktranslate %}</li>
                 {% elif wait_mode == "purchase" %}
                 <li>{% translate "Pick what you bought for everyone - coffee, milk, cookies." %}</li>
-                <li>{% translate "Enter the quantity and the price you paid: it is credited to your balance." %}</li>
+                <li>{% translate "Enter the quantity and what you paid for all of it: that is credited to your balance." %}</li>
                 <li>{% blocktranslate trimmed with seconds=logout_seconds %}You are logged out after {{ seconds }} seconds.{% endblocktranslate %}</li>
                 {% elif wait_mode == "settings" %}
                 <li>{% translate "Change your name and your favourite coffee." %}</li>
@@ -312,7 +312,7 @@ what is saved.
                             </div>
                         </label>
                         <label class="field">
-                            {% translate "Price paid (€)" %}
+                            {% translate "Total price paid (€)" %}
                             <div class="field-with-osk">
                                 <input type="text" inputmode="decimal" name="price" value="" id="purchase-price-input">
                                 <button type="button" class="btn osk-open-btn" data-osk-for="purchase-price-input" data-osk-numeric>{% include "icons/keyboard.svg" %}</button>

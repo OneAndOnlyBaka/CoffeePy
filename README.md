@@ -27,6 +27,14 @@ works completely offline, and everyone checks their own balance on their phone.
     <td align="center"><em>A dashboard for whoever buys the beans</em></td>
     <td align="center"><em>Pay by cash, PayPal or a QR code with the amount filled in</em></td>
   </tr>
+  <tr>
+    <td><img src="docs/pictures/manual/en/kiosk-purchase.png" alt="Booking a purchase on the kiosk"></td>
+    <td><img src="docs/pictures/manual/en/dashboard-inventory-spending.png" alt="Spending per month and item"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Bought the beans? Book them and settle up in kind</em></td>
+    <td align="center"><em>What the coffee corner really costs, month by month</em></td>
+  </tr>
 </table>
 
 ## Why CoffeePy
@@ -44,6 +52,19 @@ works completely offline, and everyone checks their own balance on their phone.
   those who owe, and thank-you animations that notice when it's your fifth cup today. Both
   boards are off by default - a workplace decision, not a software one.
 
+### Beans, milk and what a cup really costs
+- **Settle up in kind.** Whoever buys beans, milk or cookies for everyone books it at the kiosk
+  or on their phone, and the price is credited to their balance - no cash changes hands, no
+  receipts to reimburse. Rather keep it with one person? Then purchases are entered in the
+  dashboard only, paid by a member or straight from the coffee box.
+- **Know what's on the shelf.** The stock is the last stock-take plus everything bought since;
+  the members you pick count the shelf right at the kiosk.
+- **A price that follows the real cost.** Spending per month and item, what a cup has really
+  cost - from purchases and stock-takes -, whether the coffee box pays for itself, and a price
+  suggestion per coffee sort. Bean prices go up, the suggestion follows; changing the price stays
+  a person's decision.
+- **Optional, like the boards.** Off on a new device, switched on in the dashboard.
+
 ### On your phone
 - **Scan a QR code on the kiosk once** and your phone stays linked for six months - balance,
   payments, your cards and how your coffee habits compare with everyone else's.
@@ -52,7 +73,8 @@ works completely offline, and everyone checks their own balance on their phone.
 
 ### For whoever runs it
 - **A dashboard for a phone or a PC:** members, corrections, coffee sorts and prices,
-  payment methods, statistics, a pillory that adds up what is open, CSV exports.
+  payment methods, statistics, a pillory that adds up what is open, CSV exports - and, if you
+  want it, the inventory with its spending and cost per cup.
 - **Everything is logged.** Every change - on the kiosk, the phone or the dashboard - writes an
   audit entry with who, what and from where.
 - **Two roles:** admins for everything, managers for the day-to-day bookkeeping. Login rules,

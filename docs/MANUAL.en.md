@@ -393,10 +393,11 @@ coffee beans, milk, cookies – books it here and is credited the price they pai
 
 ![Purchase – apply your card](pictures/manual/en/kiosk-wait-purchase.png)
 
-After holding up your card, tap what you bought, enter the **Quantity** and the **Price paid (€)**
-– directly or with the on-screen keyboard next to the field – and tap **Book purchase**. The kiosk
-confirms what was booked, with your new balance. The choice is what the admin has entered as
-bookable under **Inventory** → *Items*. A new card, or a name that doesn't fit the rules, is asked
+After holding up your card, tap what you bought, enter the **Quantity** and the
+**Total price paid (€)** – directly or with the on-screen keyboard next to the field – and tap
+**Book purchase**. The total is what you paid for all of it, not the price per unit: two packs of
+milk at €1.20 each are quantity 2 and €2.40. The kiosk confirms what was booked, with your new
+balance. The choice is what the admin has entered as bookable under **Inventory** → *Items*. A new card, or a name that doesn't fit the rules, is asked
 for a name first; after saving it goes straight on to the purchase.
 
 ![Purchase](pictures/manual/en/kiosk-purchase.png)
@@ -475,8 +476,8 @@ something about you, an admin say, appear by their role only) – and the device
 
 ![Portal stats](pictures/manual/en/portal-stats.png)
 
-**Purchase** – only when members book purchases themselves: enter the item, quantity and price
-paid, **Book purchase**, and the price is credited to you; below, your recent purchases. Members
+**Purchase** – only when members book purchases themselves: enter the item, quantity and total
+price paid, **Book purchase**, and the price is credited to you; below, your recent purchases. Members
 who may take stock also enter the counted quantities here, under **Stock-take**.
 
 ![Portal purchase](pictures/manual/en/portal-purchase.png)

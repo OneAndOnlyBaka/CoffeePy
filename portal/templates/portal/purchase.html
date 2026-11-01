@@ -13,7 +13,7 @@
 <div class="card">
     <h2>{% translate "Book a purchase" %}</h2>
     {% if items %}
-    <p class="muted">{% translate "Bought something for everyone? The price you paid is credited to your balance." %}</p>
+    <p class="muted">{% translate "Bought something for everyone? What you paid for all of it is credited to your balance." %}</p>
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="form" value="purchase">
@@ -31,9 +31,9 @@
             <input type="text" inputmode="decimal" name="quantity" value="1" required>
         </label>
         <label class="field">
-            {% translate "Price paid (€)" %}
+            {% translate "Total price paid (€)" %}
             {% comment %}Text, not type=number: that only takes a dot, and a German "4,99" would leave it empty.{% endcomment %}
-            <input type="text" inputmode="decimal" name="price" placeholder="0,00" required>
+            <input type="text" inputmode="decimal" name="price" required>
         </label>
         <div class="action-row">
             <button type="submit" class="success btn-block">{% translate "Book purchase" %}</button>

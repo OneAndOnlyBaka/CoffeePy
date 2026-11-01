@@ -33,7 +33,7 @@ oder scanne den QR-Code und zahl mit dem Handy. **Hier wird nie ein Kaffee gebuc
 ## Etwas für alle gekauft
 
 Steht links **Einkauf**, buchst du dort, was du für alle gekauft hast – Kaffee, Milch, Kekse:
-**Einkauf** antippen, Karte auflegen, Artikel antippen, Menge und bezahlten Preis eintragen,
+**Einkauf** antippen, Karte auflegen, Artikel antippen, Menge und bezahlten Gesamtpreis eintragen,
 **Einkauf buchen**. Der Preis wird dir gutgeschrieben, wie eine Zahlung. Im Portal geht das unter
 **Einkauf**.
 

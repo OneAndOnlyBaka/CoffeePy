@@ -33,7 +33,7 @@ and pay with your phone. **No coffee is ever booked here.**
 
 If there is a **Purchase** on the left, that is where you book what you bought for everyone –
 coffee, milk, cookies: tap **Purchase**, hold up your card, tap the item, enter the quantity and
-the price you paid, **Book purchase**. The price is credited to you, like a payment. In the portal
+what you paid for all of it, **Book purchase**. The price is credited to you, like a payment. In the portal
 it's under **Purchase**.
 
 ## Settings and your phone

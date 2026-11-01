@@ -475,7 +475,7 @@ class PurchaseForm(forms.ModelForm):
             "member": gettext_lazy("Paid by"),
             "item": gettext_lazy("Item"),
             "quantity": gettext_lazy("Quantity"),
-            "price": gettext_lazy("Price paid (€)"),
+            "price": gettext_lazy("Total price paid (€)"),
             "created_at": gettext_lazy("Date and time"),
             "info": gettext_lazy("Note"),
         }

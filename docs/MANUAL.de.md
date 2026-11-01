@@ -418,9 +418,11 @@ eine Zahlung.
 
 ![Einkauf – Karte auflegen](pictures/manual/de/kiosk-wait-purchase.png)
 
-Nach dem Auflegen tippst du an, was du gekauft hast, trägst **Menge** und **Bezahlter Preis (€)**
-ein – direkt oder über die Bildschirmtastatur neben dem Feld – und tippst **Einkauf buchen**. Der
-Kiosk bestätigt, was gebucht wurde, mit dem neuen Kontostand. Zur Auswahl steht, was der Admin
+Nach dem Auflegen tippst du an, was du gekauft hast, trägst **Menge** und
+**Bezahlter Gesamtpreis (€)** ein – direkt oder über die Bildschirmtastatur neben dem Feld – und
+tippst **Einkauf buchen**. Der Gesamtpreis ist, was du für alles zusammen bezahlt hast, nicht der
+Preis pro Einheit: zwei Packungen Milch zu je 1,20 € sind Menge 2 und 2,40 €. Der Kiosk bestätigt,
+was gebucht wurde, mit dem neuen Kontostand. Zur Auswahl steht, was der Admin
 unter **Inventar** → *Artikel* als buchbar eingetragen hat. Eine neue Karte oder ein Name, der
 nicht zu den Regeln passt, wird zuerst nach dem Namen gefragt; nach dem Speichern geht es direkt
 zum Einkauf.
@@ -507,8 +509,8 @@ die du schon gemacht hast.
 
 ![Portal Statistik](pictures/manual/de/portal-stats.png)
 
-**Einkauf** – nur, wenn Mitglieder Einkäufe selbst buchen: Artikel, Menge und bezahlten Preis
-eintragen, **Einkauf buchen**, und der Preis wird dir gutgeschrieben; darunter deine letzten
+**Einkauf** – nur, wenn Mitglieder Einkäufe selbst buchen: Artikel, Menge und bezahlten
+Gesamtpreis eintragen, **Einkauf buchen**, und der Preis wird dir gutgeschrieben; darunter deine letzten
 Einkäufe. Wer Inventur machen darf, trägt hier unter **Inventur** auch die gezählten Mengen ein.
 
 ![Portal Einkauf](pictures/manual/de/portal-purchase.png)
