@@ -68,8 +68,13 @@ html, body.kiosk { overflow: hidden; }
   justify-content: center;
 }
 
+/* Hidden with visibility, never display: none - closing it that way tore its layer down, and the
+   keyboard overlay opening right after crashed Chromium's renderer 7 times in 10 (measured on the
+   device, 2026-11-01; 0 in 10 like this). */
 .modal-overlay {
-  display: none;
+  display: flex;
+  visibility: hidden;
+  pointer-events: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
@@ -77,7 +82,7 @@ html, body.kiosk { overflow: hidden; }
   align-items: center;
   justify-content: center;
 }
-.modal-overlay.open { display: flex; }
+.modal-overlay.open { visibility: visible; pointer-events: auto; }
 
 /* The overlay centres #qr-modal-content, so that is what carries the size and the card
    just fills it. With the width on the card instead, it was 90% of a wrapper that had
