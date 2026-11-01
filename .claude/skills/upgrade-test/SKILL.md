@@ -152,6 +152,15 @@ cut, hardware not touched) as plainly as what passed. Numbers, not impressions.
   release 11 min incl. 11s of migrate_back), a recovery after a power cut 27s (at loaded) to
   72s (at switched+40), the kiosk polling 93-96s after a cold boot; formatting a 4GB stick ~20s,
   a restore of the seeded data 17-21s, also from a v2.0.0 backup onto the working tree.
+- **Three cuts in a row use up the three attempts**: after the third the watcher leaves the device
+  on the version before (`rolled_back`) and doesn't try again by itself - drop the bundle once
+  more (`apply.sh current`), that run has to reach "done" (2026-11-01: it did, 8 min).
+- **A settings row created on first use** (`MemberRetention`, `get_or_create`) shows as "0 -> 1
+  CHANGED" after a hop or a boot, and as gone after the way back to a release that doesn't know
+  its table - expected; an old row that changes is not.
+- Measured 2026-11-01, Pi 3, v2.0.4 -> v2.0.5 -> tree -> v2.0.5 -> tree: hops 8-9 min, the way
+  back 9 min (migrate_back 12s), recovery after each cut within the reboot, kiosk polling 97s
+  after a cold boot, kiosk panel 36-76 ms per poll with five years of history.
 - `install_version.sh` and `bundle.sh` overwrite `~/CoffeePy` and `~/coffeepy-src` on the Pi;
   pi-device's `sync.sh`/`deploy.sh` afterwards put the working tree back.
 
