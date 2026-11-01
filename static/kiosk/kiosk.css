@@ -239,6 +239,12 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 /* Settings: twelve sorts fit next to the name field without scrolling (measured at 1024x600). */
 .panel-body:has(.coffee-grid) { gap: 10px; }
 .coffee-option .price { margin-left: auto; font-weight: 600; }
+/* A payment method's name ("Überweisung · Bank transfer") stays inside its tile: the few methods
+   share the row (auto-fit) so a name breaks between words, at most two lines, then "…"; a word
+   too long even for that breaks inside it. */
+.coffee-grid:has(.method-name) { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.coffee-option .method-name { min-width: 0; line-height: 1.2; overflow: hidden; overflow-wrap: break-word;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
 .action-row {
   display: flex;

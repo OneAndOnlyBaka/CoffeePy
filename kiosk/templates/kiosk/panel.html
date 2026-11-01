@@ -220,7 +220,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                     {% for name in payment_method_names %}
                     <label class="coffee-option">
                         <input type="radio" name="method" value="{{ name }}" {% if forloop.first %}checked{% endif %}>
-                        <span>{{ name|method_label }}</span>
+                        <span class="method-name">{{ name|method_label }}</span>
                     </label>
                     {% endfor %}
                 </div>
