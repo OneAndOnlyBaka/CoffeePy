@@ -1,0 +1,10 @@
+{% load i18n %}
+{% with current=request.resolver_match.url_name %}
+<div class="segmented">
+    <a href="{% url 'dashboard:inventory' %}" class="{% if current == 'inventory' %}active{% endif %}">{% translate "Stock" %}</a>
+    <a href="{% url 'dashboard:inventory_purchases' %}" class="{% if 'purchase' in current %}active{% endif %}">{% translate "Purchases" %}</a>
+    <a href="{% url 'dashboard:inventory_spending' %}" class="{% if current == 'inventory_spending' %}active{% endif %}">{% translate "Spending" %}</a>
+    <a href="{% url 'dashboard:inventory_costs' %}" class="{% if current == 'inventory_costs' %}active{% endif %}">{% translate "Costs" %}</a>
+    <a href="{% url 'dashboard:inventory_items' %}" class="{% if 'item' in current %}active{% endif %}">{% translate "Items" %}</a>
+</div>
+{% endwith %}

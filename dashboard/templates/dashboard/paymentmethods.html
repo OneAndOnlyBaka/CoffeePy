@@ -8,7 +8,7 @@
         <a href="{% url 'dashboard:paymentmethod_add' %}" class="btn success">{% include "icons/plus.svg" %}{% translate "Add payment method" %}</a>
     </div>
 </div>
-<p class="muted">{% blocktranslate trimmed %}Cash is always available and isn't listed here. Pick a provider (PayPal, PayPal Pool or WERO) and fill in just the one identifier it needs so members can pay/scan-to-pay via the kiosk and their linked phone - or use "Custom link" for anything else.{% endblocktranslate %}</p>
+<p class="muted">{% blocktranslate trimmed %}Cash is always available and isn't listed here. Pick a provider - PayPal, a PayPal Pool or a GiroCode for a bank transfer - and fill in what it asks for, so members can pay or scan to pay at the kiosk and on their phone; or use "Custom link" for anything else.{% endblocktranslate %}</p>
 <div class="card">
     <div class="list">
         {% comment %}See coffeesorts.html for why the confirm() text is built this way.{% endcomment %}
@@ -19,7 +19,7 @@
                 <span class="list-row-title">{{ method.name }}
                     {% if not method.is_active %}<span class="badge off">{% translate "inactive" %}</span>{% endif %}
                 </span>
-                <span class="list-row-meta">{{ method.get_provider_display }} &middot; {% if method.provider == "custom" %}{{ method.link_template|default:"-" }}{% else %}{{ method.identifier|default:"-" }}{% endif %}</span>
+                <span class="list-row-meta">{{ method.get_provider_display }} &middot; {% if method.provider == "custom" %}{{ method.link_template|default:"-" }}{% elif method.provider == "girocode" %}{{ method.recipient }} &middot; {{ method.iban }}{% else %}{{ method.identifier|default:"-" }}{% endif %}</span>
             </div>
             <div class="list-row-actions">
                 <a href="{% url 'dashboard:paymentmethod_edit' method.pk %}" class="btn secondary btn-sm">{% translate "Edit" %}</a>

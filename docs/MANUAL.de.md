@@ -254,7 +254,7 @@ keine angelegt ist, zeigt er *Einrichtung nötig* mit QR-Codes zu WLAN und Dashb
 
 1. **Kaffeesorten** anlegen: Name, Preis und Bezüge (wie viele Tassen die Maschine dafür
    ausgibt – eine Kanne zählt zwei).
-2. Optional **Zahlungsmethoden** anlegen (PayPal, PayPal Pool, WERO oder ein eigener Link).
+2. Optional **Zahlungsmethoden** anlegen (PayPal, PayPal Pool, GiroCode oder ein eigener Link).
    Bar geht immer.
 3. **Mitglieder** musst du nicht anlegen: Eine unbekannte Karte führt am Kiosk automatisch
    zur Anmeldung mit Namen (siehe [Einstellungen](#einstellungen)).
@@ -299,7 +299,8 @@ nichts.
 > Für Mitglieder steht das Wichtigste auf einer Seite – zum Ausdrucken und Aufhängen neben der
 > Maschine: [Kaffee mit CoffeePy – für Mitglieder](MEMBERS.de.md).
 
-Der Touchscreen hat vier Bereiche, links in der Leiste. Oben rechts sitzen runde Knöpfe: Der
+Der Touchscreen hat vier Bereiche, links in der Leiste – fünf, wenn Mitglieder ihre
+[Einkäufe](#einkauf-und-inventur) selbst buchen. Oben rechts sitzen runde Knöpfe: Der
 **Schraubenschlüssel** ist der [Admin-Zugang](#admin-zugang) – für Mitglieder ist er nicht
 gedacht –, **DE/EN** schaltet die Sprache des Kiosks um, und ein **rot blinkender** Knopf
 erscheint, wenn am Gerät etwas zu tun ist – ein **bernsteinfarbener**, wenn ein Admin etwas
@@ -320,7 +321,7 @@ bis er fertig ist; nach **20 Sekunden ohne Eingabe** macht der Kiosk selbst weit
 **Bestellen** wird der vorausgewählte Kaffee **gebucht** (außer du tippst **Abbrechen**),
 überall sonst wirst du abgemeldet. Der
 rote Countdown neben den Knöpfen zeigt, wie lange noch. Ein Tipp auf einen Bereich in der Leiste meldet
-ebenfalls ab. **Bezahlen**, **Einstellungen** und
+ebenfalls ab. **Bezahlen**, **Einstellungen**, **Einkauf** und
 die **Rangliste** springen nach 30 Sekunden ohne Tipp von selbst zurück auf **Bestellen** – so
 findet der Nächste den Kiosk immer bestellbereit vor.
 
@@ -368,7 +369,8 @@ Animation.
 Hier zahlst du ein. Zur Information zeigt der Bildschirm dazu deine **Tassen insgesamt** und
 **diesen Monat** und deinen **Kontostand**. Ist er negativ, steht der offene Betrag schon im Feld – trag ein, was du
 bezahlt hast, wähle die Zahlungsart und tippe **Bezahlen**. Sind Zahlungsmethoden mit Link
-eingerichtet, kannst du den offenen Betrag auch direkt per QR-Code mit dem Handy bezahlen.
+oder ein GiroCode eingerichtet, kannst du den offenen Betrag auch direkt per QR-Code mit dem Handy
+bezahlen – den GiroCode scannst du mit deiner Banking-App.
 
 ![Bezahlen](pictures/manual/de/kiosk-pay.png)
 
@@ -407,6 +409,34 @@ einmal. Mit Access Point steht daneben der QR-Code zum WLAN – das Handy muss z
 verbunden sein.
 
 ![Handy verknüpfen](pictures/manual/de/kiosk-link-phone.png)
+
+### Einkauf und Inventur
+
+Nur da, wenn der Admin Einkäufe für Mitglieder eingeschaltet hat (Dashboard → **System** →
+*Einkäufe und Inventar*, siehe [Inventar](#inventar)). Wer für alle etwas kauft – Kaffeebohnen,
+Milch, Kekse –, bucht es hier und bekommt den bezahlten Preis seinem Guthaben gutgeschrieben, wie
+eine Zahlung.
+
+![Einkauf – Karte auflegen](pictures/manual/de/kiosk-wait-purchase.png)
+
+Nach dem Auflegen tippst du an, was du gekauft hast, trägst **Menge** und
+**Bezahlter Gesamtpreis (€)** ein – direkt oder über die Bildschirmtastatur neben dem Feld – und
+tippst **Einkauf buchen**. Der Gesamtpreis ist, was du für alles zusammen bezahlt hast, nicht der
+Preis pro Einheit: zwei Packungen Milch zu je 1,20 € sind Menge 2 und 2,40 €. Der Kiosk bestätigt,
+was gebucht wurde, mit dem neuen Kontostand. Zur Auswahl steht, was der Admin
+unter **Inventar** → *Artikel* als buchbar eingetragen hat. Eine neue Karte oder ein Name, der
+nicht zu den Regeln passt, wird zuerst nach dem Namen gefragt; nach dem Speichern geht es direkt
+zum Einkauf.
+
+![Einkauf](pictures/manual/de/kiosk-purchase.png)
+
+Wer im Dashboard *Darf Inventur machen* hat, sieht oben zusätzlich die Wahl zwischen **Einkauf**
+und **Inventur**. Unter **Inventur** steht bei jedem Artikel, was laut Buchungen da sein sollte:
+Artikel antippen, unter **Gezählt** eintragen, was wirklich da ist, **Zählung speichern**. Pro
+Tasse zieht CoffeePy nichts ab – der Bestand ist die letzte Zählung plus alles, was seitdem
+gekauft wurde.
+
+![Inventur](pictures/manual/de/kiosk-stock-take.png)
 
 ### Rangliste
 
@@ -471,7 +501,8 @@ das Gerätezertifikat.
 
 ![Portal Start](pictures/manual/de/portal-home.png)
 
-**Bezahlen** öffnet deine Bezahl-App mit dem offenen Betrag, oder du trägst eine Zahlung ein,
+**Bezahlen** öffnet deine Bezahl-App mit dem offenen Betrag – bei einem GiroCode stehen dort die
+Überweisungsdaten zum Abschreiben –, oder du trägst eine Zahlung ein,
 die du schon gemacht hast.
 
 ![Portal Bezahlen](pictures/manual/de/portal-pay.png)
@@ -479,6 +510,12 @@ die du schon gemacht hast.
 **Statistik** vergleicht dich mit den anderen: Tassen pro Monat, Uhrzeit, Wochentag und Sorte.
 
 ![Portal Statistik](pictures/manual/de/portal-stats.png)
+
+**Einkauf** – nur, wenn Mitglieder Einkäufe selbst buchen: Artikel, Menge und bezahlten
+Gesamtpreis eintragen, **Einkauf buchen**, und der Preis wird dir gutgeschrieben; darunter deine letzten
+Einkäufe. Wer Inventur machen darf, trägt hier unter **Inventur** auch die gezählten Mengen ein.
+
+![Portal Einkauf](pictures/manual/de/portal-purchase.png)
 
 **Karten** zeigt deine Karten; über *Neue Karte hinzufügen* verknüpfst du eine Ersatzkarte,
 indem du sie an den Kiosk hältst. **Geräte** listet deine verknüpften Handys – dort meldest du
@@ -544,7 +581,7 @@ unter **Mehr**.
 ![Dashboard auf dem Handy](pictures/manual/de/dashboard-phone.png)
 
 Es gibt zwei Rollen (siehe [Dashboard-Benutzer](#dashboard-benutzer)): **Betreuer** kümmern sich
-um Mitglieder, Buchungen, Kaffeesorten und Zahlungsmethoden; **Admins** dürfen zusätzlich alles
+um Mitglieder, Buchungen, Kaffeesorten, Zahlungsmethoden und das Inventar; **Admins** dürfen zusätzlich alles
 unter **System** – Benutzer, Anmelderegeln, Backups, Updates, Zertifikat, Protokoll und so
 weiter. Das Admin-Konto aus der Einrichtung ist ein Admin. Eine andere Verwaltungsoberfläche
 gibt es nicht.
@@ -561,7 +598,8 @@ ist, braucht Aufmerksamkeit – dasselbe blinkt auch am Kiosk rot.
 
 **Statistik**: Bestellungen und Zahlungen (in €) pro Monat der letzten 12 Monate, Verteilung
 der Sorten, Tassen nach Uhrzeit und Wochentag (die Titel nennen die meistbesuchte Zeit),
-Preisentwicklung und Zahlungen nach Methode. Gezählt werden Bezüge – eine Kanne zählt zwei
+Preisentwicklung und Zahlungen nach Methode. Sind Einkäufe gebucht, kommen sie als dritter Balken
+dazu – getrennt von den Zahlungen, die das Geld zeigen, das eingegangen ist. Gezählt werden Bezüge – eine Kanne zählt zwei
 Tassen; die Verteilung der Sorten zählt Bestellungen (eine Kanne einmal, siehe
 [die Berechnungen](CALCULATIONS.md)).
 
@@ -578,7 +616,8 @@ Die Liste aller Mitglieder mit ihren Karten und dem Tag ihres **letzten Kaffees*
 erkennst du auch bei einer Karte ohne Namen, ob noch jemand sie benutzt oder ob ihr Besitzer
 längst gegangen ist (dann *Als ausgeschieden markieren*). Pro Mitglied:
 
-- **Bearbeiten**: Name und Lieblingskaffee (die UID steht fest, sobald es das Mitglied gibt). Für den Namen gelten dieselben Regeln wie am Kiosk
+- **Bearbeiten**: Name und Lieblingskaffee (die UID steht fest, sobald es das Mitglied gibt), und
+  wenn Mitglieder Einkäufe selbst buchen *Darf Inventur machen* (siehe [Inventar](#inventar)). Für den Namen gelten dieselben Regeln wie am Kiosk
   (siehe [Einstellungen](#einstellungen)).
 - *Neuer Name beim nächsten Kaffee*: Dieser Name passt nicht zu den Regeln – der Kiosk fragt
   das Mitglied beim nächsten Kaffee nach einem neuen.
@@ -592,7 +631,7 @@ längst gegangen ist (dann *Als ausgeschieden markieren*). Pro Mitglied:
 - **Löschen**: entfernt das Mitglied samt Karten, Bestellungen und Zahlungen – endgültig, bis auf
   die Backups.
 - **Daten exportieren** (auch auf der Bearbeiten-Seite des Mitglieds): alles, was das Gerät über
-  dieses Mitglied speichert – Karten, verknüpfte Handys, jede Bestellung und Zahlung, seine
+  dieses Mitglied speichert – Karten, verknüpfte Handys, jede Bestellung, Zahlung und jeden Einkauf, seine
   Einträge im Protokoll – als eine Datei. Das ist die Antwort, wenn jemand wissen will, was
   über ihn gespeichert ist (Art. 15 DSGVO).
 
@@ -641,15 +680,80 @@ der Kasse. Jede Änderung landet im Protokoll.
 
 ![Kaffeesorten](pictures/manual/de/dashboard-coffee-sorts.png)
 
-**Zahlungsmethoden**: Für PayPal reicht der paypal.me-Name, für PayPal Pool die URL des
-Pools, für WERO die Telefonnummer; *Eigener Link* nimmt jede Adresse, optional mit `{amount}`
-für den offenen Betrag. Daraus entstehen die Bezahl-Links und QR-Codes an Kiosk und Handy – WERO hat keinen
-öffentlichen Link und zeigt deshalb die Telefonnummer als Anleitung statt eines QR-Codes.
-*Aktiv* blendet eine Methode aus, ohne sie zu löschen, *Reihenfolge* legt ihren Platz fest.
+**Zahlungsmethoden**: Das Formular zeigt nur, was der gewählte *Anbieter* braucht. Für PayPal
+reicht der paypal.me-Name, für PayPal Pool die URL des Pools. Ein **GiroCode** ist eine
+Überweisung per QR-Code: Mit *Empfänger* und *IBAN* (die *BIC* ist freiwillig) zeigt der Kiosk
+einen QR-Code mit dem offenen Betrag, den praktisch jede Banking-App scannt und als Überweisung
+ausfüllt – ohne Anbieterkonto. Im *Verwendungszweck* wird `{member}` durch den Namen dessen
+ersetzt, der zahlt (*Kaffee {member}* wird *Kaffee Anna B.*), so ist auf dem Kontoauszug zu
+sehen, wer überwiesen hat. *Eigener Link* nimmt jede Adresse, optional mit `{amount}` für den
+offenen Betrag. Daraus entstehen die Bezahl-Links und QR-Codes an Kiosk und Handy. *Aktiv*
+blendet eine Methode aus, ohne sie zu löschen, *Reihenfolge* legt ihren Platz fest.
 
 ![Zahlungsmethoden](pictures/manual/de/dashboard-payment-methods.png)
 
 ![Zahlungsmethode hinzufügen](pictures/manual/de/dashboard-payment-method-form.png)
+
+### Inventar
+
+Was für alle gekauft wird – Kaffeebohnen, Milch, Kekse –, mit Preis, dazu der Bestand und was eine
+Tasse wirklich kostet. Es gibt das Inventar nur, wenn ein Admin es unter **System** →
+*Einkäufe und Inventar* eingeschaltet hat, in einer von zwei Stufen:
+
+| Stufe | Was es gibt |
+|---|---|
+| *Aus* (Voreinstellung) | nichts davon |
+| *Nur im Dashboard* | Eine Person führt Einkäufe und Inventur hier im Dashboard. Mitglieder können nicht mit Einkäufen bezahlen; Kiosk und Portal zeigen nichts davon. |
+| *Auch für Mitglieder* | Dazu bucht jedes Mitglied seine Einkäufe am Kiosk und im Portal selbst und bekommt den Preis gutgeschrieben; wer *Darf Inventur machen* hat (siehe [Mitglieder](#mitglieder)), zählt dort auch den Bestand. |
+
+Ausgeschaltet bleiben schon gebuchte Einkäufe als Gutschrift im Kontostand. Das Inventar hat fünf
+Reiter:
+
+**Bestand**: was im Regal sein sollte – die letzte Inventur plus alles, was seitdem gekauft
+wurde; pro Tasse wird nichts abgezogen. Zum Zählen trägst du bei den Artikeln ein, was du gezählt
+hast, und tippst **Inventur speichern**; ein leeres Feld lässt den Artikel, wie er ist. Darunter
+die letzten Inventuren und wer gezählt hat.
+
+![Inventar – Bestand](pictures/manual/de/dashboard-inventory.png)
+
+**Einkäufe**: alles Gekaufte, die neuesten zuerst, filterbar nach Mitglied oder *Kaffeekasse*.
+**Einkauf erfassen** trägt einen Einkauf nach. Unter **Bezahlt von** wählst du das Mitglied, das
+ausgelegt hat – es bekommt den Preis gutgeschrieben –, oder *Der Kaffeekasse*: Dann bekommt
+niemand etwas gutgeschrieben, und der Einkauf zählt nur für Bestand, Ausgaben und Kosten.
+Korrigierst oder löschst du einen Einkauf, folgt die Gutschrift; auch unter **Buchungen** führt
+*Bearbeiten* bei einer Einkaufs-Zahlung hierher.
+
+![Inventar – Einkäufe](pictures/manual/de/dashboard-inventory-purchases.png)
+
+![Einkauf erfassen](pictures/manual/de/dashboard-inventory-purchase-form.png)
+
+**Ausgaben**: was die Einkäufe der letzten 12 Monate gekostet haben, je Monat und Artikel.
+
+![Inventar – Ausgaben](pictures/manual/de/dashboard-inventory-spending.png)
+
+**Kosten**: was eine Tasse gekostet hat und was die Kaffeesorten dafür kosten müssten, über 3, 6
+oder 12 Monate. Oben die **Kosten pro Tasse**, die **Tassen**, *Einnahmen - Einkäufe* – trägt sich
+die Kasse? – und was ausgeschiedene Mitglieder schuldig geblieben sind (**Abgeschrieben**). *Je
+Artikel* zeigt, woraus sich die Kosten zusammensetzen: Gibt es im Zeitraum zwei Inventuren eines
+Artikels, zählt, was zwischen ihnen **verbraucht** wurde – ein Großeinkauf, der noch im Schrank
+liegt, macht die Tasse nicht teurer –, sonst einfach, was gekauft wurde.
+
+Der **Preisvorschlag** ist Hübe × Kosten pro Tasse, angepasst um die *Preisanpassung in %*, auf
+5 Cent aufgerundet, neben dem jetzigen Preis. Die Anpassung geht in beide Richtungen, von −100 bis
++100 (Voreinstellung +10): ein Plus für Abschreibungen, Reinigungsmittel und Verschleiß, was kein
+Einkauf zeigt, ein Minus, wenn jemand anderes – etwa die Firma – einen Teil des Kaffees bezahlt. Er erscheint erst, wenn es in mindestens 3 Monaten des Zeitraums Einkäufe gab und
+100 Tassen getrunken wurden. Es bleibt ein Vorschlag, der Preis ändert sich nie von selbst: Du
+setzt ihn unter **Kaffeesorten** (der Name der Sorte führt dorthin), und schon gebuchte
+Bestellungen behalten ihren Preis. Die Rechnung im Einzelnen steht in
+[den Berechnungen](CALCULATIONS.md#purchases-stock-and-the-price-suggestion).
+
+![Inventar – Kosten](pictures/manual/de/dashboard-inventory-costs.png)
+
+**Artikel**: was gebucht werden kann – Name, *Einheit* (*kg*, *l* …), *Buchbar* und *Reihenfolge*.
+Ein Artikel, der schon gekauft wurde, lässt sich nicht löschen; nimm stattdessen den Haken bei
+*Buchbar* heraus.
+
+![Inventar – Artikel](pictures/manual/de/dashboard-inventory-items.png)
 
 ### Mein Konto
 
@@ -703,6 +807,10 @@ meisten trinkt, gesamt und im Monat) und den Pranger (wer Geld schuldet), je mit
 Der Kiosk folgt mit seiner nächsten Abfrage. Die Seite **Pranger** im Dashboard, für den, der
 das Geld einsammelt, bleibt davon unberührt. Siehe
 [Datenschutz und Arbeitsplatz](#datenschutz-und-arbeitsplatz).
+
+**Einkäufe und Inventar**: *Aus*, *Nur im Dashboard* oder *Auch für Mitglieder* – was die Stufen
+bedeuten, steht unter [Inventar](#inventar). Ein neues Gerät startet mit *Aus*; der Kiosk folgt mit
+seiner nächsten Abfrage.
 
 **SSH**: die Fernanmeldung am Betriebssystem des Geräts. Nach der Installation ist sie aus und
 nur nötig, um das [Provisioning-Tool](#das-provisioning-tool) noch einmal laufen zu lassen, oder

@@ -32,6 +32,8 @@ new Chart(document.getElementById('monthlyChart'), {
         datasets: [
             {label: "{% translate "Orders (€)" as x %}{{ x|escapejs }}", data: monthly.orders, backgroundColor: '#6b3b00'},
             {label: "{% translate "Payments (€)" as x %}{{ x|escapejs }}", data: monthly.payments, backgroundColor: '#c98a3d'},
+            // Only where purchases were booked - a device without the inventory shows two bars, as before.
+            ...(monthly.purchases.some(Boolean) ? [{label: "{% translate "Purchases (€)" as x %}{{ x|escapejs }}", data: monthly.purchases, backgroundColor: '#2f7a3d'}] : []),
         ]
     },
     options: {responsive: true, plugins: {title: {display: true, text: "{% translate "Last 12 months" as x %}{{ x|escapejs }}"}}}

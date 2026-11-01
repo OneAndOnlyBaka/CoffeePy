@@ -239,6 +239,12 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 /* Settings: twelve sorts fit next to the name field without scrolling (measured at 1024x600). */
 .panel-body:has(.coffee-grid) { gap: 10px; }
 .coffee-option .price { margin-left: auto; font-weight: 600; }
+/* A payment method's name ("Überweisung · Bank transfer") stays inside its tile: the few methods
+   share the row (auto-fit) so a name breaks between words, at most two lines, then "…"; a word
+   too long even for that breaks inside it. */
+.coffee-grid:has(.method-name) { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.coffee-option .method-name { min-width: 0; line-height: 1.2; overflow: hidden; overflow-wrap: break-word;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
 .action-row {
   display: flex;
@@ -282,6 +288,35 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 
 .msg { padding: 10px 14px; border-radius: var(--radius); }
 .msg.error { background: #fbe4e2; color: var(--danger); }
+.msg.success { background: #e2f3e4; color: var(--success); }
+
+/* Purchase and stock-take (panel.html): both sections laid out in one grid cell, the one not
+   picked in the header merely invisible - switching builds and tears down nothing (CLAUDE.md).
+   Without the right to count there is no switch, and the purchase section is all there is. */
+.purchase-header { display: flex; align-items: center; gap: 16px; }
+.purchase-header h1 { margin: 0; font-size: inherit; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.purchase-balance { flex: 0 0 auto; font-size: 1.2rem; font-weight: 400; color: var(--coffee-light); }
+.section-switch { flex: 0 0 auto; display: flex; gap: 8px; margin-left: auto; }
+.section-switch .coffee-option { min-height: 56px; padding: 6px 16px; gap: 8px; font-size: 1.1rem; }
+/* minmax(0, ...) and min-width: 0 all the way down: a grid or flex item is otherwise as wide as
+   its content, and the panel body scrolled sideways - a scrolled layer, the renderer crash again. */
+.purchase-sections, .purchase-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+.purchase-sections > *, .purchase-actions > * { grid-area: 1 / 1; }
+.purchase-section { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.purchase-fields { display: flex; gap: 16px; }
+.purchase-fields .field { flex: 1; min-width: 0; }
+.purchase-fields .field-with-osk input { min-width: 0; }
+/* Item names are long single words ("Kondensmilch") - a slimmer tile than the sorts' leaves them room. */
+.purchase-section .coffee-grid .coffee-option { padding: 6px 10px; gap: 8px; font-size: 1rem; min-width: 0; }
+.purchase-section .coffee-option input { width: 26px; height: 26px; }
+.purchase-section .sort-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The name gets two lines: a tile is a quarter of the screen, and "Kaffeebohnen" alone was cut. */
+.purchase-section .sort-text > span:first-child { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.purchase-header h1 { font-size: 2rem; }
+.purchase-actions { margin-left: auto; }
+.purchase-card .section-stock { visibility: hidden; }
+.purchase-card.can-count:has(#section-stock:checked) .section-stock { visibility: visible; }
+.purchase-card.can-count:has(#section-stock:checked) .section-purchase { visibility: hidden; }
 
 /* Compact and never-wrap by design: this has to fit two QR cards side by side within a
    single short kiosk screen (e.g. 800x480) without scrolling - a centered, overflowing

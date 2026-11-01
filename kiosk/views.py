@@ -1,3 +1,4 @@
+import json
 import time
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
@@ -12,7 +13,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone, translation
 from django.utils.formats import date_format
-from django.utils.translation import gettext as _, gettext_lazy, gettext_noop
+from django.utils.translation import gettext as _, gettext_lazy, gettext_noop, pgettext
 from django.views.decorators.http import require_GET, require_POST
 
 from coffee import backups, clock, names, rtc, services
@@ -20,6 +21,7 @@ from coffee.models import (
     AltUidCapture,
     CASH_METHOD_NAME,
     CoffeeSort,
+    InventoryItem,
     Member,
     MemberCard,
     MemberLinkToken,
@@ -31,13 +33,14 @@ from coffee.models import (
 )
 from coffee.network import public_base_url
 from dashboard import audit
-from dashboard.models import KioskBoards, MemberRetention
+from dashboard.models import InventoryPolicy, KioskBoards, MemberRetention
 
 MODE_ORDER = "order"
 MODE_INFO = "info"
 MODE_SETTINGS = "settings"
 MODE_RANKING = "ranking"
-VALID_MODES = (MODE_ORDER, MODE_INFO, MODE_SETTINGS, MODE_RANKING)
+MODE_PURCHASE = "purchase"
+VALID_MODES = (MODE_ORDER, MODE_INFO, MODE_SETTINGS, MODE_RANKING, MODE_PURCHASE)
 
 ORDER_AUTO_CHECKOUT_SECONDS = 20
 AUTO_LOGOUT_SECONDS = 20
@@ -107,8 +110,31 @@ def index(request):
     return render(request, "kiosk/index.html", {
         "mode": request.session["mode"],
         "ranking_on": bool(_ranking_views(request)),
-        "maintenance_steps": {key: str(label) for key, label in MAINTENANCE_STEPS.items()},
+        "inventory_on": _inventory_on(request),
+        "texts": _page_texts(),
     })
+
+
+def _page_texts():
+    """Every text index.html shows outside #panel, in the active language - the template takes
+    them from here, and the language button hands them to static/kiosk/language.js, which relabels
+    the page in place. Loading the page anew would be a navigation, and every navigation risks
+    Chromium's renderer crash (CLAUDE.md): a few taps on the button in a row crashed it (2026-11-01)."""
+    return {
+        "title": _("CoffeePy Kiosk"),
+        "order": _("Order"),
+        "pay": _("Pay"),
+        "settings": _("Settings"),
+        "purchase": pgettext("kiosk screen", "Purchase"),
+        "ranking": _("Ranking"),
+        "loading": _("Loading…"),
+        "space": _("Space"),
+        "cancel": _("Cancel"),
+        "done": _("Done"),
+        "back_title": _("We'll be right back"),
+        "back_text": _("CoffeePy is being updated - ordering is paused for a moment."),
+        "steps": {key: str(label) for key, label in MAINTENANCE_STEPS.items()},
+    }
 
 
 def _ranking_views(request):
@@ -120,14 +146,41 @@ def _ranking_views(request):
     return views
 
 
+def _inventory_on(request):
+    """Whether members book purchases and take stock here (dashboard → System: "for members too") -
+    asked once per request, like the ranking."""
+    on = getattr(request, "_inventory_on", None)
+    if on is None:
+        on = request._inventory_on = InventoryPolicy.current().members_book
+    return on
+
+
+def _mode_available(request, mode):
+    if mode == MODE_RANKING:
+        return bool(_ranking_views(request))
+    if mode == MODE_PURCHASE:
+        return _inventory_on(request)
+    return mode in VALID_MODES
+
+
 def language(request):
     """The kiosk's language button: the other of the two languages, from now on, for this
     kiosk. A plain link rather than django.views.i18n.set_language's POST form - a form's
     csrf token differs on every render, and the wait screen it sits on must not (panel.html).
-    Only reachable on the device itself, like the rest of /kiosk/."""
+    Through htmx it answers with the panel in the new language and, for the rest of the page,
+    its texts (_page_texts) - the page itself is never loaded again. Only reachable on the
+    device itself, like the rest of /kiosk/."""
     target = "en" if translation.get_language() == "de" else "de"
     _touched(request)
-    response = redirect("kiosk:index")
+    if request.headers.get("HX-Request"):
+        translation.activate(target)
+        request.LANGUAGE_CODE = target
+        response = _render_panel(request)
+        response["Content-Language"] = target
+        # ASCII-escaped JSON: a header can't carry "…" or umlauts as they are.
+        response["HX-Trigger"] = json.dumps({"kiosk-language": {"lang": target, "texts": _page_texts()}})
+    else:
+        response = redirect("kiosk:index")
     response.set_cookie(
         settings.LANGUAGE_COOKIE_NAME, target,
         max_age=settings.LANGUAGE_COOKIE_AGE, path=settings.LANGUAGE_COOKIE_PATH,
@@ -138,9 +191,9 @@ def language(request):
 
 
 def nav(request, mode):
-    # A ranking button the admin has just switched off can still be on a screen that hasn't
-    # polled since (nav_state.js hides it then) - its tap changes nothing.
-    if mode in VALID_MODES and (mode != MODE_RANKING or _ranking_views(request)):
+    # A ranking or purchase button the admin has just switched off can still be on a screen that
+    # hasn't polled since (nav_state.js hides it then) - its tap changes nothing.
+    if _mode_available(request, mode):
         request.session["mode"] = mode
         _reset_session_state(request)
         if mode == MODE_RANKING:  # always opens on its first tab, not on whichever was left open
@@ -254,11 +307,11 @@ def settings_save(request):
         )
         audit.log(request, "member.create" if created else "member.update", target=audit.member_actor(member),
                   actor=audit.member_actor(member), details="own settings at the kiosk")
-        then_order = request.session.get("then_order")
+        then_mode = request.session.get("then_mode")
         _reset_session_state(request)
-        if then_order:
-            # They came to order and were asked for their name first: on to the order.
-            _start_session(request, MODE_ORDER, member.uid)
+        if then_mode in (MODE_ORDER, MODE_PURCHASE):
+            # They came to order or to book a purchase and were asked for their name first: on to it.
+            _start_session(request, then_mode, member.uid)
     return _render_panel(request)
 
 
@@ -296,6 +349,66 @@ def pay(request):
     return _render_panel(request)
 
 
+def _purchase_notice(request, notice):
+    request.session["inventory_notice"] = notice
+    request.session.pop("inventory_error", None)
+
+
+@require_POST
+def purchase_book(request):
+    """A purchase from the kiosk: the member is credited what they paid (services.book_purchase)."""
+    if request.session.get("logged_in") and request.session.get("mode") == MODE_PURCHASE and _inventory_on(request):
+        member = Member.objects.filter(uid=request.session["uid"]).first()
+        item = InventoryItem.objects.filter(is_active=True, pk=_int(request.POST.get("item_id"))).first()
+        quantity = services.parse_quantity(request.POST.get("quantity", ""))
+        price = services.parse_quantity(request.POST.get("price", ""))
+        request.session["inventory_page"] = "purchase"
+        if member is None or item is None or not quantity or not price:
+            request.session["inventory_error"] = PURCHASE_ERROR
+        else:
+            purchase = services.book_purchase(member, item, quantity, price.quantize(Decimal("0.01")))
+            who = audit.member_actor(member)
+            audit.log(request, "purchase.create", target=who, actor=who, details=services.describe_purchase(purchase))
+            _purchase_notice(request, {"kind": "purchase", "item": item.name, "unit": item.unit,
+                                       "quantity": str(purchase.quantity), "price": str(purchase.price)})
+        request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
+        request.session.pop("shown_deadline", None)
+    return _render_panel(request)
+
+
+@require_POST
+def stock_count(request):
+    """A stock-take of one item, by one of the members the admin picked (Member.may_take_stock)."""
+    if request.session.get("logged_in") and request.session.get("mode") == MODE_PURCHASE and _inventory_on(request):
+        member = Member.objects.filter(uid=request.session["uid"], may_take_stock=True).first()
+        item = InventoryItem.objects.filter(is_active=True, pk=_int(request.POST.get("count_item_id"))).first()
+        quantity = services.parse_quantity(request.POST.get("count", ""))
+        request.session["inventory_page"] = "stock"
+        if member is None or item is None or quantity is None:
+            request.session["inventory_error"] = STOCK_ERROR
+        else:
+            who = audit.member_actor(member)
+            services.record_stock_count(item, quantity, member.display_name())
+            audit.log(request, "stock.count", target=item.name, actor=who, details=f"{item.name} {quantity.normalize():f}")
+            _purchase_notice(request, {"kind": "count", "item": item.name, "unit": item.unit,
+                                       "quantity": str(quantity)})
+        request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
+        request.session.pop("shown_deadline", None)
+    return _render_panel(request)
+
+
+def _int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+# Stored in the session as the English msgid, translated when the panel shows it.
+PURCHASE_ERROR = gettext_noop("Pick an item and enter a quantity and a price above 0.")
+STOCK_ERROR = gettext_noop("Pick an item and enter what you counted.")
+
+
 # --- internal helpers -------------------------------------------------
 
 
@@ -303,7 +416,8 @@ def _reset_session_state(request):
     request.session["logged_in"] = False
     for key in (
         "uid", "deadline", "shown_deadline", "shown_order", "sort_order", "order_coffee_id", "order_auto_checkout", "is_new_user",
-        "pending_nickname", "pending_favourite", "name_error", "then_order",
+        "pending_nickname", "pending_favourite", "name_error", "then_mode",
+        "inventory_page", "inventory_notice", "inventory_error",
     ):
         request.session.pop(key, None)
     _touched(request)
@@ -437,6 +551,9 @@ def _thank_you_context(request):
 
 def _render_panel(request):
     mode = request.session.get("mode", MODE_ORDER)
+    if not _mode_available(request, mode):  # switched off in the dashboard while on screen
+        mode = request.session["mode"] = MODE_ORDER
+        _reset_session_state(request)
     ctx = {"mode": mode}
 
     if not request.session.get("logged_in"):
@@ -453,10 +570,9 @@ def _render_panel(request):
     # redirects into the settings flow, or a timeout logs out) - re-read it before
     # rendering so the panel reflects the *new* state, not the one at request start.
     mode = request.session.get("mode", mode)
-    if mode == MODE_RANKING and not _ranking_views(request):  # switched off while on screen
-        mode = request.session["mode"] = MODE_ORDER
     ctx["mode"] = mode
     ctx["ranking_views"] = _ranking_views(request)
+    ctx["inventory_on"] = _inventory_on(request)
     if ctx.get("state") is None:
         ctx.update(_state_context(request, mode))
 
@@ -637,12 +753,19 @@ def _handle_new_scan(request, mode, scan, ctx):
             # A new card, or a member without a usable name (coffee/names.py): the name
             # first, then the order (settings_save).
             _start_session(request, MODE_SETTINGS, session_uid, is_new_user=member is None)
-            request.session["then_order"] = True
+            request.session["then_mode"] = MODE_ORDER
     elif mode == MODE_SETTINGS:
         _start_session(request, MODE_SETTINGS, session_uid, is_new_user=member is None)
+    elif mode == MODE_PURCHASE:
+        # A purchase is credited to a name everyone can recognise, like an order: the name first.
+        if member is not None and member.name_problem is None:
+            _start_session(request, MODE_PURCHASE, session_uid)
+        else:
+            _start_session(request, MODE_SETTINGS, session_uid, is_new_user=member is None)
+            request.session["then_mode"] = MODE_PURCHASE
     elif mode == MODE_INFO:
         if member is not None:
-            _start_session(request, MODE_INFO, session_uid)
+            _start_session(request, mode, session_uid)
         else:
             _start_session(request, MODE_SETTINGS, session_uid, is_new_user=True)
 
@@ -685,7 +808,7 @@ def _state_context(request, mode):
             "state": "wait_for_card",
             "reader_online": reader_online,
             # Each mode explains what a tap is about to do, with its own animation.
-            "wait_mode": mode if mode in (MODE_INFO, MODE_SETTINGS) else MODE_ORDER,
+            "wait_mode": mode if mode in (MODE_INFO, MODE_SETTINGS, MODE_PURCHASE) else MODE_ORDER,
             "checkout_seconds": ORDER_AUTO_CHECKOUT_SECONDS,
             "logout_seconds": AUTO_LOGOUT_SECONDS,
         }
@@ -700,6 +823,8 @@ def _state_context(request, mode):
         ctx = _settings_context(request, uid, seconds_left)
     elif mode == MODE_INFO:
         ctx = _info_pay_context(request, uid, seconds_left)
+    elif mode == MODE_PURCHASE:
+        ctx = _purchase_context(request, uid, seconds_left)
     else:
         return {"state": "wait_for_card"}
     # The countdown runs in the browser (static/kiosk/countdown.js) from this fixed moment: the
@@ -824,8 +949,9 @@ def _settings_context(request, uid, seconds_left):
         "state": "settings",
         "uid": uid,
         "is_new_user": request.session.get("is_new_user", False),
-        # Came to order, but the name has to be sorted out first.
-        "name_required": bool(request.session.get("then_order")) and member is not None,
+        # Came to order or to book a purchase, but the name has to be sorted out first.
+        "name_required": bool(request.session.get("then_mode")) and member is not None,
+        "then_mode": request.session.get("then_mode"),
         "name_error": names.message(request.session.get("name_error")),
         "nickname": nickname,
         "favourite_coffee_id": favourite,
@@ -835,32 +961,20 @@ def _settings_context(request, uid, seconds_left):
     }
 
 
-def _payment_method_qr_row(balance):
+def _payment_method_qr_row(balance, member=None):
     """QR codes so a member can scan-to-pay what they owe via an admin-configured
-    method (PayPal, a PayPal pool, ...) straight from the kiosk screen - only methods
-    with a link and only while something is actually owed (see PaymentMethod)."""
+    method (PayPal, a PayPal pool, a GiroCode for their banking app, ...) straight from the
+    kiosk screen - only methods with something to scan and only while something is actually
+    owed (see PaymentMethod.qr_payload)."""
     owed = -balance if balance < 0 else Decimal("0.00")
     if owed <= 0:
         return []
     entries = []
     for method in PaymentMethod.objects.filter(is_active=True):
-        link = method.build_link(owed)
-        if link:
-            entries.append({"name": method.name, "qr_svg": _qr_svg(link)})
+        payload = method.qr_payload(owed, member)
+        if payload:
+            entries.append({"name": method.name, "qr_svg": _qr_svg(payload)})
     return entries
-
-
-def _payment_method_instructions(balance):
-    """Plain-text payment instructions for methods with no scannable link (e.g. WERO,
-    which has no public deep-link scheme) - only while something is actually owed."""
-    owed = -balance if balance < 0 else Decimal("0.00")
-    if owed <= 0:
-        return []
-    return [
-        text
-        for method in PaymentMethod.objects.filter(is_active=True)
-        if not method.build_link(owed) and (text := method.instructions(owed))
-    ]
 
 
 def _info_pay_context(request, uid, seconds_left):
@@ -877,8 +991,43 @@ def _info_pay_context(request, uid, seconds_left):
         "payment_method_names": [CASH_METHOD_NAME] + list(
             PaymentMethod.objects.filter(is_active=True).values_list("name", flat=True)
         ),
-        "payment_method_qr_row": _payment_method_qr_row(balance),
-        "payment_method_instructions": _payment_method_instructions(balance),
+        "payment_method_qr_row": _payment_method_qr_row(balance, member),
+        "seconds_left": seconds_left,
+    }
+
+
+# Item tiles per page on the purchase screen - two rows of four at 1024x600, above the quantity
+# and price fields. More come in pages like the sorts, never a scrolling list.
+ITEMS_PER_PAGE = 8
+
+
+def _item_pages(entries):
+    """`entries` in pages of tiles for the purchase and stock-take screens - one page while they
+    fit, else pages with a back and a next tile (sort_pages.js turns them)."""
+    if len(entries) <= ITEMS_PER_PAGE:
+        return [{"index": 0, "entries": entries}]
+    per_page = ITEMS_PER_PAGE - 2
+    chunks = [entries[i:i + per_page] for i in range(0, len(entries), per_page)]
+    return [{"index": index, "entries": chunk, "back": index > 0, "next": index < len(chunks) - 1}
+            for index, chunk in enumerate(chunks)]
+
+
+def _purchase_context(request, uid, seconds_left):
+    member = Member.objects.filter(uid=uid).first()
+    items = list(InventoryItem.objects.filter(is_active=True))
+    may_count = bool(member and member.may_take_stock)
+    notice = request.session.get("inventory_notice")
+    return {
+        "state": "purchase",
+        "member": member,
+        "balance": services.account_balance(member) if member else Decimal("0.00"),
+        "item_pages": _item_pages(items),
+        "may_count": may_count,
+        "stock_pages": _item_pages(services.stock_levels(items)) if may_count else [],
+        "inventory_page": request.session.get("inventory_page", "purchase") if may_count else "purchase",
+        "notice": {**notice, "quantity": Decimal(notice["quantity"]),
+                   "price": Decimal(notice.get("price") or "0")} if notice else None,
+        "inventory_error": _translated(request.session.get("inventory_error")),
         "seconds_left": seconds_left,
     }
 

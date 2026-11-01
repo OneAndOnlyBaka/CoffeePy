@@ -26,10 +26,41 @@ class PaymentMethodCrudTestCase(TestCase):
     def test_add_creates_a_method(self):
         response = self.client.post(
             reverse("dashboard:paymentmethod_add"),
-            {"name": "WERO", "provider": "wero", "identifier": "+49 151 12345678", "link_template": "", "is_active": "on", "order": "0"},
+            {"name": "Link", "provider": "custom", "link_template": "https://example.com/pay", "is_active": "on", "order": "0"},
         )
         self.assertRedirects(response, reverse("dashboard:paymentmethods"))
-        self.assertTrue(PaymentMethod.objects.filter(name="WERO").exists())
+        self.assertTrue(PaymentMethod.objects.filter(name="Link").exists())
+
+    def test_wero_is_gone(self):
+        response = self.client.post(reverse("dashboard:paymentmethod_add"),
+                                    {"name": "WERO", "provider": "wero", "identifier": "+49 151 12345678", "order": "0"})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(PaymentMethod.objects.exists())
+
+    def test_girocode_needs_recipient_and_a_valid_iban(self):
+        url = reverse("dashboard:paymentmethod_add")
+        data = {"name": "Bank", "provider": "girocode", "recipient": "Kaffeekasse", "order": "0", "is_active": "on"}
+        response = self.client.post(url, {**data, "iban": "DE02 1203 0000 0000 2020 52"})
+        self.assertContains(response, "not a valid IBAN")
+        response = self.client.post(url, {**data, "recipient": "", "iban": "DE02120300000000202051"})
+        self.assertContains(response, "This provider needs it.")
+        response = self.client.post(url, {**data, "iban": "de02 1203 0000 0000 2020 51", "bic": "bylademm",
+                                          "identifier": "left over from PayPal", "link_template": "https://x"})
+        self.assertRedirects(response, reverse("dashboard:paymentmethods"))
+        method = PaymentMethod.objects.get(name="Bank")
+        self.assertEqual((method.iban, method.bic, method.identifier, method.link_template),
+                         ("DE02120300000000202051", "BYLADEMM", "", ""))
+
+    def test_paypal_needs_its_identifier(self):
+        response = self.client.post(reverse("dashboard:paymentmethod_add"),
+                                    {"name": "PayPal", "provider": "paypal_me", "identifier": "", "order": "0"})
+        self.assertContains(response, "This provider needs it.")
+
+    def test_the_form_marks_each_field_with_its_providers(self):
+        page = self.client.get(reverse("dashboard:paymentmethod_add")).content.decode()
+        self.assertIn('data-providers="paypal_me paypal_pool"', page)
+        self.assertIn('data-providers="girocode"', page)
+        self.assertIn('data-providers="custom"', page)
 
     def test_add_paypal_me_preset_only_needs_a_username(self):
         response = self.client.post(

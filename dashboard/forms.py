@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 from django.contrib.auth import get_user_model, password_validation
 from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
@@ -5,9 +7,29 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 from django.utils.translation import gettext_lazy, pgettext_lazy
 
-from .models import POLICY_LIMITS, KioskBoards, MemberRetention, NamePolicy, NightPolicy, PasswordPolicy
+from .models import (
+    POLICY_LIMITS,
+    InventoryPolicy,
+    KioskBoards,
+    MemberRetention,
+    NamePolicy,
+    NightPolicy,
+    PasswordPolicy,
+)
 from coffee import names
-from coffee.models import CASH_METHOD_NAME, BackupSettings, CoffeeSort, Member, Order, Payment, PaymentMethod, payment_method_label
+from coffee.models import (
+    CASH_METHOD_NAME,
+    PURCHASE_METHOD_NAME,
+    BackupSettings,
+    CoffeeSort,
+    InventoryItem,
+    Member,
+    Order,
+    Payment,
+    PaymentMethod,
+    Purchase,
+    payment_method_label,
+)
 
 
 class CoffeeSortForm(forms.ModelForm):
@@ -23,30 +45,48 @@ class CoffeeSortForm(forms.ModelForm):
         }
 
 
+def _iban_ok(iban):
+    """ISO 13616: country, check digits, then the account; mod 97 of the rearranged number is 1."""
+    if not re.fullmatch(r"[A-Z]{2}\d{2}[A-Z0-9]{11,30}", iban):
+        return False
+    digits = "".join(str(int(c, 36)) for c in iban[4:] + iban[:4])
+    return int(digits) % 97 == 1
+
+
 class PaymentMethodForm(forms.ModelForm):
+    """One form for every provider; paymentmethod_form.html shows only the fields of the one picked
+    (PaymentMethod.PROVIDER_FIELDS), and clean() asks for those and clears the rest."""
+
     class Meta:
         model = PaymentMethod
-        fields = ["name", "provider", "identifier", "link_template", "is_active", "order"]
+        fields = ["name", "provider", "identifier", "link_template", "recipient", "iban", "bic", "purpose",
+                  "is_active", "order"]
         labels = {
             "name": gettext_lazy("Name"),
             "provider": gettext_lazy("Provider"),
             "identifier": gettext_lazy("Identifier"),
             "link_template": gettext_lazy("Link template"),
+            "recipient": gettext_lazy("Recipient"),
+            "iban": "IBAN",
+            "bic": gettext_lazy("BIC (optional)"),
+            "purpose": gettext_lazy("Purpose"),
             "is_active": gettext_lazy("Is active"),
             # Context: the kiosk's "Order" (to order a coffee) is a different word in German.
             "order": pgettext_lazy("position in a list", "Order"),
         }
         help_texts = {
-            "identifier": gettext_lazy(
-                "PayPal: your paypal.me username (e.g. \"coffeefund\"). "
-                "PayPal Pool: the pool's URL, or just the ID at the end of it. "
-                "WERO: the phone number registered with WERO - WERO has no public link "
-                "format, so this is shown as a plain instruction instead of a QR link."
-            ),
+            # The identifier means something else for each PayPal variant - the template shows
+            # the help text that fits (IDENTIFIER_HELP).
+            "identifier": "",
             "link_template": gettext_lazy(
-                'Custom provider only. Optional "{amount}" placeholder for what is owed '
+                'Optional "{amount}" placeholder for what is owed '
                 '(e.g. https://example.com/pay/{amount}EUR); leave the placeholder out for '
                 "a static link, or the whole field blank for no link at all."
+            ),
+            "recipient": gettext_lazy("The account holder's name, as the bank knows it."),
+            "purpose": gettext_lazy(
+                'What the transfer says, e.g. "Coffee {member}" - {member} becomes the name of whoever '
+                "pays, so you can tell the transfers apart."
             ),
             "order": gettext_lazy(
                 "Display order among payment methods (lowest number first), e.g. in the "
@@ -56,20 +96,81 @@ class PaymentMethodForm(forms.ModelForm):
             ),
         }
 
+    IDENTIFIER_HELP = {
+        PaymentMethod.PROVIDER_PAYPAL_ME: gettext_lazy('Your paypal.me username, e.g. "coffeefund".'),
+        PaymentMethod.PROVIDER_PAYPAL_POOL: gettext_lazy("The pool's URL, or just the ID at the end of it."),
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Which providers each field belongs to, for the template's data-providers.
+        for name in self.fields:
+            providers = [p for p, names in PaymentMethod.PROVIDER_FIELDS.items() if name in names]
+            self.fields[name].providers = " ".join(providers)
+        self.fields["identifier"].provider_help = list(self.IDENTIFIER_HELP.items())
+
+    def clean_name(self):
+        # Both are stored as method names and mean something of their own - a method called
+        # "Purchase" would look like a credit from the inventory.
+        name = self.cleaned_data["name"].strip()
+        if name.casefold() in (CASH_METHOD_NAME.casefold(), PURCHASE_METHOD_NAME.casefold()):
+            raise forms.ValidationError(gettext_lazy("This name is reserved - choose another one."))
+        return name
+
+    def clean_iban(self):
+        return re.sub(r"\s+", "", self.cleaned_data["iban"]).upper()
+
+    def clean_bic(self):
+        return re.sub(r"\s+", "", self.cleaned_data["bic"]).upper()
+
+    def clean(self):
+        cleaned = super().clean()
+        provider = cleaned.get("provider")
+        wanted = PaymentMethod.PROVIDER_FIELDS.get(provider, ())
+        for field in ("identifier", "link_template", "recipient", "iban", "bic", "purpose"):
+            if field not in wanted:
+                cleaned[field] = ""  # a leftover of another provider, invisible in the form
+        required = gettext_lazy("This provider needs it.")
+        if provider in (PaymentMethod.PROVIDER_PAYPAL_ME, PaymentMethod.PROVIDER_PAYPAL_POOL):
+            if not cleaned.get("identifier", "").strip():
+                self.add_error("identifier", required)
+        if provider == PaymentMethod.PROVIDER_GIROCODE:
+            if not cleaned.get("recipient", "").strip():
+                self.add_error("recipient", required)
+            iban = cleaned.get("iban", "")
+            if not iban:
+                self.add_error("iban", required)
+            elif not _iban_ok(iban):
+                self.add_error("iban", gettext_lazy("This is not a valid IBAN - check it for a typo."))
+            bic = cleaned.get("bic", "")
+            if bic and not re.fullmatch(r"[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?", bic):
+                self.add_error("bic", gettext_lazy("A BIC has 8 or 11 letters and digits."))
+            # A member's name fills {member} - the kiosk takes up to 20 characters; without room for
+            # it the purpose gets cut, and the transfer no longer says who paid.
+            purpose = cleaned.get("purpose", "")
+            room = 140 - len(purpose.replace(PaymentMethod.MEMBER_PLACEHOLDER, ""))
+            if PaymentMethod.MEMBER_PLACEHOLDER in purpose and room < 20:
+                self.add_error("purpose", gettext_lazy("Too long to leave room for the member's name."))
+        return cleaned
+
 
 class MemberForm(forms.ModelForm):
     class Meta:
         model = Member
-        fields = ["uid", "nickname", "favourite_coffee"]
+        fields = ["uid", "nickname", "favourite_coffee", "may_take_stock"]
         labels = {
             "uid": gettext_lazy("Uid"),
             "nickname": gettext_lazy("Name"),
             "favourite_coffee": gettext_lazy("Favourite coffee"),
+            "may_take_stock": gettext_lazy("May take stock"),
         }
-        help_texts = {"nickname": names.MESSAGES["format"]}
+        help_texts = {"nickname": names.MESSAGES["format"],
+                      "may_take_stock": gettext_lazy("Corrects the stock at the kiosk and on the phone.")}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not InventoryPolicy.current().members_book:  # the stock-take at the kiosk and on the phone
+            del self.fields["may_take_stock"]
         if self.instance.pk:
             # uid is the primary key - editing it would mean creating a different row
             # (order/payment history is tied to the old one), so only allow setting it
@@ -399,3 +500,78 @@ class KioskBoardsForm(forms.ModelForm):
         fields = ["ranking", "pillory"]
         labels = {"ranking": gettext_lazy("Ranking at the kiosk (most cups, all time and this month)"),
                   "pillory": gettext_lazy("Pillory at the kiosk (who owes money)")}
+
+
+class InventoryPolicyForm(forms.ModelForm):
+    class Meta:
+        model = InventoryPolicy
+        fields = ["mode"]
+        widgets = {"mode": forms.RadioSelect}
+        labels = {"mode": gettext_lazy("Inventory")}
+
+
+class PriceAdjustmentForm(forms.ModelForm):
+    class Meta:
+        model = InventoryPolicy
+        fields = ["price_adjustment_percent"]
+        labels = {"price_adjustment_percent": gettext_lazy("Price adjustment in %")}
+        help_texts = {"price_adjustment_percent": gettext_lazy(
+            "Up or down from what a cup cost: plus for write-offs, cleaning agents and wear - what no purchase "
+            "shows -, minus if someone else pays part of the coffee.")}
+
+
+class InventoryItemForm(forms.ModelForm):
+    class Meta:
+        model = InventoryItem
+        fields = ["name", "unit", "is_active", "order"]
+        labels = {
+            "name": gettext_lazy("Name"),
+            "unit": gettext_lazy("Unit"),
+            "is_active": gettext_lazy("Can be booked"),
+            "order": pgettext_lazy("position in a list", "Order"),
+        }
+        help_texts = {"unit": gettext_lazy('What the quantity counts, e.g. "kg", "l" or "pack".')}
+
+
+class PurchaseForm(forms.ModelForm):
+    """A purchase entered or corrected by hand - its credit follows (services.update_purchase); no
+    member means it was paid from the coffee box."""
+
+    class Meta:
+        model = Purchase
+        fields = ["member", "item", "quantity", "price", "created_at", "info"]
+        labels = {
+            "member": gettext_lazy("Paid by"),
+            "item": gettext_lazy("Item"),
+            "quantity": gettext_lazy("Quantity"),
+            "price": gettext_lazy("Total price paid (€)"),
+            "created_at": gettext_lazy("Date and time"),
+            "info": gettext_lazy("Note"),
+        }
+        widgets = {"created_at": LocalDateTimeInput()}
+        field_classes = {"quantity": CommaDecimalField, "price": CommaDecimalField}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["member"].queryset = Member.objects.order_by("nickname", "uid")
+        self.fields["member"].empty_label = gettext_lazy("The coffee box (nobody is credited)")
+        self.fields["member"].help_text = gettext_lazy("A member gets the price credited to their balance.")
+        items = InventoryItem.objects.filter(is_active=True)
+        if self.instance.pk:
+            items = items | InventoryItem.objects.filter(pk=self.instance.item_id)
+        self.fields["item"].queryset = items.distinct()
+        self.fields["created_at"].input_formats = ["%Y-%m-%dT%H:%M"]
+        if not self.instance.pk:
+            self.fields["created_at"].initial = timezone.localtime().replace(second=0, microsecond=0)
+
+    def clean_quantity(self):
+        quantity = self.cleaned_data["quantity"]
+        if quantity <= 0:
+            raise forms.ValidationError(gettext_lazy("Enter a quantity above 0."))
+        return quantity
+
+    def clean_price(self):
+        price = self.cleaned_data["price"]
+        if price <= 0:
+            raise forms.ValidationError(gettext_lazy("Enter a price above 0."))
+        return price

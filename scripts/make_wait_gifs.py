@@ -20,6 +20,8 @@ COFFEE_DARK = (59, 35, 20)
 COFFEE_LIGHT = (169, 116, 79)
 ACCENT = (201, 138, 61)
 SUCCESS = (47, 122, 61)
+MILK = (255, 255, 255)
+MILK_BLUE = (52, 106, 180)
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "kiosk", "img", "wait")
 
 
@@ -178,7 +180,68 @@ def settings_frames(n=30):
     return frames
 
 
+def bean(d, cx, cy, rx, ry, angle):
+    """A coffee bean: a tilted oval with the S-shaped crease that tells it from any other dot."""
+    a = math.radians(angle)
+
+    def at(u, v):
+        return tuple(s(cx + u * math.cos(a) - v * math.sin(a), cy + u * math.sin(a) + v * math.cos(a)))
+    d.polygon([at(rx * math.cos(k / 20 * math.pi), ry * math.sin(k / 20 * math.pi)) for k in range(40)],
+              fill=COFFEE_DARK)
+    crease = [at(0.25 * rx * math.sin(math.pi * (k / 15 - 0.5) * 2), ry * 0.8 * (k / 15 * 2 - 1)) for k in range(16)]
+    d.line(crease, fill=ACCENT, width=2 * SS, joint="curve")
+
+
+def purchase_frames(n=36):
+    """A bag of coffee beans, a carton of milk and a cookie dropping into a shopping bag, which
+    then gets a tick - bought for everyone. Each sticks out far enough to be told apart: the
+    bean on the kraft bag, the gable and the blue band with a drop on the carton."""
+    frames = []
+    drops = ((0.0, 50), (0.2, 36), (0.4, 92))  # (start, top where it comes to rest)
+    for i in range(n):
+        img, d = canvas()
+        t = i / n
+        d.line(s(24, 190, 196, 190), fill=CREAM_DARK, width=4 * SS)
+        # what drops in, drawn behind the bag's front so it disappears into it
+        for j, (start, rest) in enumerate(drops):
+            if t < start:
+                continue
+            y = -90 + (rest + 90) * ease((t - start) / 0.22)
+            if j == 0:  # kraft bag of coffee: crimped top, a big bean on the front
+                d.rounded_rectangle(s(58, y + 8, 102, y + 100), radius=5 * SS, fill=ACCENT)
+                d.rectangle(s(58, y, 102, y + 10), fill=COFFEE_LIGHT)
+                for x in range(58, 98, 6):
+                    d.polygon([tuple(s(x, y)), tuple(s(x + 3, y - 4)), tuple(s(x + 6, y))], fill=COFFEE_LIGHT)
+                bean(d, 80, y + 38, 11, 15, 25)
+            elif j == 1:  # milk carton, a bit from the side: gable roof, ridge fin, blue band with a drop
+                line = {"fill": MILK, "outline": COFFEE_DARK, "width": 2 * SS}
+                d.polygon([tuple(s(130, y + 24)), tuple(s(142, y + 16)), tuple(s(142, y + 104)), tuple(s(130, y + 110))],
+                          **{**line, "fill": CREAM_DARK})
+                d.polygon([tuple(s(130, y + 24)), tuple(s(142, y + 16)), tuple(s(136, y + 6))], **{**line, "fill": CREAM_DARK})
+                d.polygon([tuple(s(104, y + 24)), tuple(s(130, y + 24)), tuple(s(136, y + 6)), tuple(s(110, y + 6))], **line)
+                d.rectangle(s(110, y, 136, y + 6), **line)
+                d.rectangle(s(104, y + 24, 130, y + 110), **line)
+                d.rectangle(s(106, y + 36, 128, y + 66), fill=MILK_BLUE)
+                d.polygon([tuple(s(117, y + 40)), tuple(s(111, y + 53)), tuple(s(123, y + 53))], fill=MILK)
+                d.ellipse(s(111, y + 47, 123, y + 59), fill=MILK)
+            else:  # a cookie, leaning on the carton
+                d.ellipse(s(140, y, 170, y + 30), fill=ACCENT, outline=COFFEE, width=2 * SS)
+                for cx, cy in ((149, 9), (159, 14), (151, 21), (161, 23)):
+                    d.ellipse(s(cx - 2.5, y + cy - 2.5, cx + 2.5, y + cy + 2.5), fill=COFFEE_DARK)
+        # the bag, in front of what dropped in
+        d.polygon([tuple(s(50, 122)), tuple(s(170, 122)), tuple(s(160, 188)), tuple(s(60, 188))], fill=COFFEE)
+        # the tick once everything is in
+        k = ease((t - 0.7) / 0.15)
+        if k > 0:
+            d.ellipse(s(86, 130, 134, 178), fill=SUCCESS)
+            d.line([tuple(s(99, 154)), tuple(s(108, 163)), tuple(s(99 + 24 * k, 163 - 20 * k))],
+                   fill=CREAM, width=6 * SS, joint="curve")
+        frames.append(finish(img))
+    return frames
+
+
 if __name__ == "__main__":
     save("wait_order.gif", order_frames(), 80)
     save("wait_info.gif", info_frames(), 80)
     save("wait_settings.gif", settings_frames(), 60)
+    save("wait_purchase.gif", purchase_frames(), 80)

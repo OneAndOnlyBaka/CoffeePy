@@ -14,11 +14,13 @@ the kiosk; use this form for pre-provisioning a card ahead of time instead.{% en
     <form method="post">
         {% csrf_token %}
         {% for field in form %}
+        {% if field.field.widget.input_type == "checkbox" %}{% include "dashboard/_field.html" %}{% else %}
         <label class="field">
             {{ field.label }}
             {{ field }}
             {% if field.errors %}<span class="msg error">{{ field.errors|join:", " }}</span>{% endif %}
         </label>
+        {% endif %}
         {% endfor %}
         <div class="action-row">
             {% if instance %}<a href="{% url 'dashboard:member_export' instance.uid %}" class="btn secondary"

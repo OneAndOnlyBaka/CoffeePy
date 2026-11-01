@@ -1,3 +1,5 @@
+import json
+import re
 from decimal import Decimal
 
 from django.conf import settings
@@ -5,6 +7,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from coffee.models import CoffeeSort, NfcReaderStatus
+from kiosk import views
 
 
 class DeviceLanguageTestCase(TestCase):
@@ -55,3 +58,30 @@ class DeviceLanguageTestCase(TestCase):
         # The reason the kiosk has its own GET button: a set_language form's csrf token
         # would differ per render and restart the wait screen's animation every poll.
         self.assertEqual(self.panel().content, self.panel().content)
+
+    @override_settings(LANGUAGE_CODE="en")
+    def test_the_button_swaps_the_panel_and_relabels_the_page_without_loading_it(self):
+        """A page load per tap was a navigation, and a few taps in a row crashed Chromium on the Pi
+        (2026-11-01): the button answers with the panel and the page's texts instead."""
+        response = self.client.get(reverse("kiosk:language"), HTTP_HX_REQUEST="true")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Language"], "de")
+        self.assertContains(response, "Karte auflegen")
+        self.assertEqual(self.client.cookies[settings.LANGUAGE_COOKIE_NAME].value, "de")
+        event = json.loads(response["HX-Trigger"])["kiosk-language"]
+        self.assertEqual(event["lang"], "de")
+        self.assertEqual(event["texts"]["order"], "Bestellen")
+        self.assertEqual(event["texts"]["steps"]["starting"], "Es geht los")
+        # The next poll finds what the button already put there - no second swap.
+        self.assertEqual(response.content, self.panel().content)
+
+    def test_every_text_outside_the_panel_comes_from_page_texts(self):
+        """index.html takes its texts from kiosk.views._page_texts, or the language button would
+        leave them in the old language."""
+        source = (settings.BASE_DIR / "kiosk" / "templates" / "kiosk" / "index.html").read_text()
+        source = re.sub(r"{% comment %}.*?{% endcomment %}|<!--.*?-->", "", source, flags=re.S)
+        self.assertNotIn("translate", source)
+        page = self.client.get(reverse("kiosk:index")).content.decode()
+        texts = views._page_texts()
+        for key in re.findall(r'data-i18n="([^"]+)"', page):
+            self.assertIn(key, texts)

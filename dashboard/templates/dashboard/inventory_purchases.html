@@ -1,0 +1,66 @@
+{% extends "dashboard/base.html" %}
+{% load i18n l10n coffee_tags %}
+{% block title %}{% translate "Purchases" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<div class="page-head">
+    <h1>{% translate "Purchases" %}</h1>
+    <div class="page-actions">
+        <a href="{% url 'dashboard:inventory_purchase_add' %}{% if member %}?member={{ member.uid|unlocalize }}{% endif %}" class="btn success">{% include "icons/plus.svg" %}{% translate "Enter purchase" %}</a>
+    </div>
+</div>
+{% include "dashboard/_inventory_tabs.html" %}
+<p class="muted">{% blocktranslate trimmed %}What was bought for everyone, newest first. A purchase a member paid for is
+credited to them at the price paid - corrected or deleted here, the credit follows. One from the coffee box credits
+nobody.{% endblocktranslate %}</p>
+
+{% if members or box_purchases %}
+<div class="card">
+    <form method="get" class="filter-row">
+        <label class="field">
+            {% translate "Member" %}
+            <select name="member" onchange="this.form.submit()">
+                <option value="">{% translate "All members" %}</option>
+                {% if box_purchases %}<option value="box"{% if box %} selected{% endif %}>{% translate "Coffee box" %}</option>{% endif %}
+                {% for m in members %}
+                <option value="{{ m.uid|unlocalize }}"{% if m.uid == member.uid %} selected{% endif %}>{{ m.display_name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <noscript><button type="submit" class="secondary">{% translate "Show" %}</button></noscript>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="list">
+        {% for row in page %}
+        {% if row.member %}{% autoescape off %}{% blocktranslate with name=row.member.display_name when=row.created_at|date:"d.m.Y H:i" asvar confirm_delete %}Delete {{ name }}'s purchase from {{ when }}? The credit goes with it.{% endblocktranslate %}{% endautoescape %}
+        {% else %}{% autoescape off %}{% blocktranslate with when=row.created_at|date:"d.m.Y H:i" asvar confirm_delete %}Delete the coffee box's purchase from {{ when }}?{% endblocktranslate %}{% endautoescape %}{% endif %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% if row.member %}{{ row.member.display_name }}{% else %}{% translate "Coffee box" %}{% endif %} &middot; {{ row.quantity|quantity }} {{ row.item.unit }} {{ row.item.name }}</span>
+                <span class="list-row-meta">{{ row.created_at|date:"d.m.Y H:i" }}{% if row.info %} &middot; {{ row.info }}{% endif %}</span>
+            </div>
+            <span class="list-row-value">{{ row.price }}€</span>
+            <div class="list-row-actions">
+                <a href="{% url 'dashboard:inventory_purchase_edit' row.pk %}" class="btn secondary btn-sm">{% translate "Edit" %}</a>
+                <form method="post" action="{% url 'dashboard:inventory_purchase_delete' row.pk %}" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
+                    {% csrf_token %}
+                    <button type="submit" class="danger btn-sm">{% translate "Delete" %}</button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <p class="muted list-empty">{% translate "No purchases yet." %}</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% if page.paginator.num_pages > 1 %}
+<div class="pagination">
+    {% if page.has_previous %}<a class="btn secondary btn-sm" href="?{% if member %}member={{ member.uid|unlocalize }}&amp;{% elif box %}member=box&amp;{% endif %}page={{ page.previous_page_number|unlocalize }}">&lsaquo; {% translate "Newer" %}</a>{% endif %}
+    <span class="muted">{% blocktranslate with number=page.number total=page.paginator.num_pages %}Page {{ number }} of {{ total }}{% endblocktranslate %}</span>
+    {% if page.has_next %}<a class="btn secondary btn-sm" href="?{% if member %}member={{ member.uid|unlocalize }}&amp;{% elif box %}member=box&amp;{% endif %}page={{ page.next_page_number|unlocalize }}">{% translate "Older" %} &rsaquo;</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -93,6 +93,13 @@ body.portal { user-select: auto; font-size: 16px; }
 
 .msg { padding: 10px 14px; border-radius: var(--radius); margin: 0 0 10px; background: var(--cream-dark); font-size: 0.95em; }
 .msg.error { background: #fbe4e2; color: var(--danger); }
+.msg.success { background: #e2f3e4; color: var(--success); }
+/* A GiroCode's transfer, to copy into the banking app (portal/pay.html). */
+.transfer { padding: 10px 14px; border-radius: var(--radius); margin: 0 0 10px; background: var(--cream-dark); }
+.transfer h3 { margin: 0 0 6px; font-size: 1em; }
+.transfer dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
+.transfer dt { color: var(--coffee-light); }
+.transfer dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; user-select: all; }
 
 /* Card/payment/device rows - a stacked list instead of a <table>, so nothing needs a
    fixed column width that can overflow a narrow screen. */

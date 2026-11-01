@@ -30,6 +30,13 @@ NFC-Chip geht, oft auch der Firmen- oder Fahrausweis.
 schon im Feld. Trag ein, was du bezahlt hast, wähle die Zahlungsart und tippe **Bezahlen** –
 oder scanne den QR-Code und zahl mit dem Handy. **Hier wird nie ein Kaffee gebucht.**
 
+## Etwas für alle gekauft
+
+Steht links **Einkauf**, buchst du dort, was du für alle gekauft hast – Kaffee, Milch, Kekse:
+**Einkauf** antippen, Karte auflegen, Artikel antippen, Menge und bezahlten Gesamtpreis eintragen,
+**Einkauf buchen**. Der Preis wird dir gutgeschrieben, wie eine Zahlung. Im Portal geht das unter
+**Einkauf**.
+
 ## Einstellungen und Handy
 
 **Einstellungen** antippen, Karte auflegen: Name oder Lieblingskaffee ändern, **Speichern**. Dort

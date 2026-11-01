@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 23:28+0100\n"
+"POT-Creation-Date: 2026-11-01 18:49+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -46,15 +46,27 @@ msgstr ""
 msgid "Cash"
 msgstr "Bar"
 
+msgctxt "payment method"
+msgid "Purchase"
+msgstr "Einkauf"
+
 msgid "PayPal (Friends & Family / paypal.me)"
 msgstr "PayPal (Freunde & Familie / paypal.me)"
+
+msgid "GiroCode (bank transfer by QR code)"
+msgstr "GiroCode (Überweisung per QR-Code)"
 
 msgid "Custom link"
 msgstr "Eigener Link"
 
-#, python-format
-msgid "Send %(amount)s€ via WERO to %(identifier)s"
-msgstr "Sende %(amount)s€ per WERO an %(identifier)s"
+msgid "Recipient"
+msgstr "Empfänger"
+
+msgid "Amount"
+msgstr "Betrag"
+
+msgid "Purpose"
+msgstr "Verwendungszweck"
 
 msgid "Please enter your name."
 msgstr "Bitte gib deinen Namen ein."
@@ -102,6 +114,9 @@ msgstr "Kennung"
 msgid "Link template"
 msgstr "Link-Vorlage"
 
+msgid "BIC (optional)"
+msgstr "BIC (freiwillig)"
+
 msgid "Is active"
 msgstr "Aktiv"
 
@@ -109,26 +124,27 @@ msgctxt "position in a list"
 msgid "Order"
 msgstr "Reihenfolge"
 
+#, python-brace-format
 msgid ""
-"PayPal: your paypal.me username (e.g. \"coffeefund\"). PayPal Pool: the "
-"pool's URL, or just the ID at the end of it. WERO: the phone number "
-"registered with WERO - WERO has no public link format, so this is shown as a "
-"plain instruction instead of a QR link."
+"Optional \"{amount}\" placeholder for what is owed (e.g. https://example.com/"
+"pay/{amount}EUR); leave the placeholder out for a static link, or the whole "
+"field blank for no link at all."
 msgstr ""
-"PayPal: dein paypal.me-Benutzername (z. B. \"kaffeekasse\"). PayPal Pool: "
-"die URL des Pools oder nur die ID an ihrem Ende. WERO: die bei WERO "
-"registrierte Telefonnummer - WERO hat kein öffentliches Linkformat, deshalb "
-"wird das als einfache Anleitung statt als QR-Link angezeigt."
+"Optionaler Platzhalter \"{amount}\" für den offenen Betrag (z. B. https://"
+"example.com/pay/{amount}EUR); ohne Platzhalter ist es ein fester Link, ein "
+"leeres Feld bedeutet gar keinen Link."
+
+msgid "The account holder's name, as the bank knows it."
+msgstr "Der Name des Kontoinhabers, wie ihn die Bank kennt."
 
 #, python-brace-format
 msgid ""
-"Custom provider only. Optional \"{amount}\" placeholder for what is owed "
-"(e.g. https://example.com/pay/{amount}EUR); leave the placeholder out for a "
-"static link, or the whole field blank for no link at all."
+"What the transfer says, e.g. \"Coffee {member}\" - {member} becomes the name "
+"of whoever pays, so you can tell the transfers apart."
 msgstr ""
-"Nur für eigene Anbieter. Optionaler Platzhalter \"{amount}\" für den offenen "
-"Betrag (z. B. https://example.com/pay/{amount}EUR); ohne Platzhalter ist es "
-"ein fester Link, ein leeres Feld bedeutet gar keinen Link."
+"Was in der Überweisung steht, z. B. \"Kaffee {member}\" - {member} wird "
+"durch den Namen dessen ersetzt, der zahlt, so kannst du die Überweisungen "
+"auseinanderhalten."
 
 msgid ""
 "Display order among payment methods (lowest number first), e.g. in the "
@@ -141,11 +157,38 @@ msgstr ""
 "Kiosk und Handy. Methoden mit gleicher Zahl werden stattdessen alphabetisch "
 "sortiert. Bei 0 lassen, wenn die Reihenfolge egal ist."
 
+msgid "Your paypal.me username, e.g. \"coffeefund\"."
+msgstr "Dein paypal.me-Name, z. B. \"coffeefund\"."
+
+msgid "The pool's URL, or just the ID at the end of it."
+msgstr "Die URL des Pools, oder nur die ID an ihrem Ende."
+
+msgid "This name is reserved - choose another one."
+msgstr "Dieser Name ist reserviert - wähle einen anderen."
+
+msgid "This provider needs it."
+msgstr "Dieser Anbieter braucht das."
+
+msgid "This is not a valid IBAN - check it for a typo."
+msgstr "Das ist keine gültige IBAN - prüf sie auf Tippfehler."
+
+msgid "A BIC has 8 or 11 letters and digits."
+msgstr "Eine BIC hat 8 oder 11 Buchstaben und Ziffern."
+
+msgid "Too long to leave room for the member's name."
+msgstr "Zu lang - es muss noch Platz für den Namen des Mitglieds bleiben."
+
 msgid "Uid"
 msgstr "UID"
 
 msgid "Favourite coffee"
 msgstr "Lieblingskaffee"
+
+msgid "May take stock"
+msgstr "Darf Inventur machen"
+
+msgid "Corrects the stock at the kiosk and on the phone."
+msgstr "Korrigiert den Bestand am Kiosk und auf dem Handy."
 
 msgid "Admin - everything, including system and users"
 msgstr "Admin – alles, auch System und Benutzer"
@@ -343,6 +386,54 @@ msgstr "Rangliste am Kiosk (meiste Tassen, gesamt und in diesem Monat)"
 msgid "Pillory at the kiosk (who owes money)"
 msgstr "Pranger am Kiosk (wer Geld schuldet)"
 
+msgid "Inventory"
+msgstr "Inventar"
+
+msgid "Price adjustment in %"
+msgstr "Preisanpassung in %"
+
+msgid ""
+"Up or down from what a cup cost: plus for write-offs, cleaning agents and "
+"wear - what no purchase shows -, minus if someone else pays part of the "
+"coffee."
+msgstr ""
+"Rauf oder runter von dem, was eine Tasse gekostet hat: plus für "
+"Abschreibungen, Reinigungsmittel und Verschleiß - was kein Einkauf zeigt -, "
+"minus, wenn jemand anderes einen Teil des Kaffees bezahlt."
+
+msgid "Unit"
+msgstr "Einheit"
+
+msgid "Can be booked"
+msgstr "Buchbar"
+
+msgid "What the quantity counts, e.g. \"kg\", \"l\" or \"pack\"."
+msgstr "Worin die Menge gezählt wird, z. B. „kg“, „l“ oder „Pck.“."
+
+msgid "Paid by"
+msgstr "Bezahlt von"
+
+msgid "Item"
+msgstr "Artikel"
+
+msgid "Quantity"
+msgstr "Menge"
+
+msgid "Total price paid (€)"
+msgstr "Bezahlter Gesamtpreis (€)"
+
+msgid "The coffee box (nobody is credited)"
+msgstr "Der Kaffeekasse (niemand bekommt eine Gutschrift)"
+
+msgid "A member gets the price credited to their balance."
+msgstr "Ein Mitglied bekommt den Preis seinem Guthaben gutgeschrieben."
+
+msgid "Enter a quantity above 0."
+msgstr "Gib eine Menge über 0 ein."
+
+msgid "Enter a price above 0."
+msgstr "Gib einen Preis über 0 ein."
+
 msgid "Starting"
 msgstr "Start"
 
@@ -382,6 +473,19 @@ msgstr "Den ganzen Tag aus"
 
 msgid "Times of its own"
 msgstr "Eigene Zeiten"
+
+msgid "Off"
+msgstr "Aus"
+
+msgid "Only in the dashboard: one person keeps purchases and stock"
+msgstr "Nur im Dashboard: Eine Person führt Einkäufe und Bestand"
+
+msgid ""
+"For members too: they pay in kind with purchases, at the kiosk and on their "
+"phone"
+msgstr ""
+"Auch für Mitglieder: Sie zahlen mit Einkäufen statt Geld, am Kiosk und auf "
+"dem Handy"
 
 msgid "Checking the backup"
 msgstr "Backup wird geprüft"
@@ -527,6 +631,21 @@ msgid ""
 msgstr ""
 "Die Uhr stand auf %(was)s, vor den neuesten Buchungen, und wurde auf %(now)s "
 "vorgestellt. Prüfe die Uhrzeit und stelle oder bestätige sie."
+
+msgid "Stock"
+msgstr "Bestand"
+
+msgid "Purchases"
+msgstr "Einkäufe"
+
+msgid "Spending"
+msgstr "Ausgaben"
+
+msgid "Costs"
+msgstr "Kosten"
+
+msgid "Items"
+msgstr "Artikel"
 
 #, python-format
 msgid "CoffeePy %(version)s"
@@ -1156,6 +1275,204 @@ msgstr "Alle Bestellungen (CSV)"
 msgid "All payments (CSV)"
 msgstr "Alle Zahlungen (CSV)"
 
+msgid ""
+"What should be on the shelf: the last stock-take plus what was bought since "
+"- nothing is taken off per cup. Enter what you count; an empty field leaves "
+"the item as it is."
+msgstr ""
+"Was im Regal sein sollte: die letzte Inventur plus alles, was seitdem "
+"gekauft wurde - pro Tasse wird nichts abgezogen. Trag ein, was du zählst; "
+"ein leeres Feld lässt den Artikel, wie er ist."
+
+#, python-format
+msgid "Counted %(quantity)s on %(when)s (%(who)s)"
+msgstr "%(quantity)s gezählt am %(when)s (%(who)s)"
+
+msgid "Never counted"
+msgstr "Noch nie gezählt"
+
+#, python-format
+msgid "%(quantity)s bought since"
+msgstr "%(quantity)s seitdem gekauft"
+
+#, python-format
+msgid "Counted %(item)s"
+msgstr "%(item)s gezählt"
+
+msgid "Counted"
+msgstr "Gezählt"
+
+msgid "Save stock-take"
+msgstr "Inventur speichern"
+
+#, python-format
+msgid ""
+"No items yet - add coffee, milk and the like under <a "
+"href=\"%(items_url)s\">Items</a>."
+msgstr ""
+"Noch keine Artikel - leg Kaffee, Milch und Co. unter <a "
+"href=\"%(items_url)s\">Artikel</a> an."
+
+msgid "Recent stock-takes"
+msgstr "Letzte Inventuren"
+
+msgid ""
+"What a cup cost, worked out from the purchases and stock-takes - and what "
+"the coffee sorts would have to cost for that. Only a suggestion: the price "
+"is still set under Coffee sorts."
+msgstr ""
+"Was eine Tasse gekostet hat, berechnet aus Einkäufen und Inventuren - und "
+"was die Kaffeesorten dafür kosten müssten. Nur ein Vorschlag: Den Preis "
+"setzt du weiterhin unter Kaffeesorten."
+
+#, python-format
+msgid "%(months)s months"
+msgstr "%(months)s Monate"
+
+msgid "Cost per cup"
+msgstr "Kosten pro Tasse"
+
+msgid "from stock-takes"
+msgstr "aus Inventuren"
+
+msgid "from purchases"
+msgstr "aus Einkäufen"
+
+msgid "Revenue - purchases"
+msgstr "Einnahmen - Einkäufe"
+
+msgid "Written off"
+msgstr "Abgeschrieben"
+
+#, python-format
+msgid "%(percent)s%% of revenue"
+msgstr "%(percent)s%% der Einnahmen"
+
+msgid "Per item"
+msgstr "Je Artikel"
+
+msgid "Bought"
+msgstr "Gekauft"
+
+msgid "Used"
+msgstr "Verbraucht"
+
+msgid "Per cup"
+msgstr "Pro Tasse"
+
+msgid "no two stock-takes"
+msgstr "keine zwei Inventuren"
+
+msgid "No purchases in this period."
+msgstr "Keine Einkäufe in diesem Zeitraum."
+
+msgid "Price suggestion"
+msgstr "Preisvorschlag"
+
+#, python-format
+msgid ""
+"Strokes × cost per cup, adjusted by %(adjustment)s%%, rounded up to 5 cents."
+msgstr ""
+"Hübe × Kosten pro Tasse, angepasst um %(adjustment)s%%, auf 5 Cent "
+"aufgerundet."
+
+msgid "Strokes"
+msgstr "Hübe"
+
+msgid "Price now"
+msgstr "Preis jetzt"
+
+msgid "Suggestion"
+msgstr "Vorschlag"
+
+#, python-format
+msgid ""
+"Not enough data yet: a suggestion needs purchases in at least %(months)s "
+"months of the period and %(cups)s cups."
+msgstr ""
+"Noch nicht genug Daten: Ein Vorschlag braucht Einkäufe in mindestens "
+"%(months)s Monaten des Zeitraums und %(cups)s Tassen."
+
+msgid "Save price adjustment"
+msgstr "Preisanpassung speichern"
+
+msgid "Edit item"
+msgstr "Artikel bearbeiten"
+
+msgid "Add item"
+msgstr "Artikel hinzufügen"
+
+msgid ""
+"What members can book as a purchase. An item that was bought can't be "
+"deleted - switch off \"Can be booked\" instead."
+msgstr ""
+"Was Mitglieder als Einkauf buchen können. Ein Artikel, der schon gekauft "
+"wurde, lässt sich nicht löschen - schalte stattdessen „Buchbar“ aus."
+
+msgid "not bookable"
+msgstr "nicht buchbar"
+
+msgid "No items yet."
+msgstr "Noch keine Artikel."
+
+msgid "Edit purchase"
+msgstr "Einkauf bearbeiten"
+
+msgid "Enter purchase"
+msgstr "Einkauf erfassen"
+
+#, python-format
+msgid "Purchase of %(name)s"
+msgstr "Einkauf von %(name)s"
+
+msgid "Purchase from the coffee box"
+msgstr "Einkauf aus der Kaffeekasse"
+
+msgid ""
+"A member who paid is credited the price, like a payment - from the coffee "
+"box, nobody is."
+msgstr ""
+"Hat ein Mitglied bezahlt, wird ihm der Preis gutgeschrieben, wie eine "
+"Zahlung - bei der Kaffeekasse niemandem."
+
+msgid ""
+"What was bought for everyone, newest first. A purchase a member paid for is "
+"credited to them at the price paid - corrected or deleted here, the credit "
+"follows. One from the coffee box credits nobody."
+msgstr ""
+"Was für alle gekauft wurde, neueste zuerst. Hat ein Mitglied bezahlt, wird "
+"ihm der Preis gutgeschrieben - wird der Einkauf hier korrigiert oder "
+"gelöscht, folgt die Gutschrift. Ein Einkauf aus der Kaffeekasse schreibt "
+"niemandem etwas gut."
+
+msgid "Coffee box"
+msgstr "Kaffeekasse"
+
+#, python-format
+msgid "Delete %(name)s's purchase from %(when)s? The credit goes with it."
+msgstr ""
+"Einkauf von %(name)s vom %(when)s löschen? Die Gutschrift wird mit gelöscht."
+
+#, python-format
+msgid "Delete the coffee box's purchase from %(when)s?"
+msgstr "Einkauf der Kaffeekasse vom %(when)s löschen?"
+
+msgid "No purchases yet."
+msgstr "Noch keine Einkäufe."
+
+msgid "What the purchases of the last 12 months cost, per month and item."
+msgstr ""
+"Was die Einkäufe der letzten 12 Monate gekostet haben, je Monat und Artikel."
+
+msgid "Month"
+msgstr "Monat"
+
+msgid "Total"
+msgstr "Summe"
+
+msgid "No purchases in the last 12 months."
+msgstr "Keine Einkäufe in den letzten 12 Monaten."
+
 msgid "CoffeePy Dashboard - Login"
 msgstr "CoffeePy-Dashboard - Anmeldung"
 
@@ -1482,16 +1799,16 @@ msgid "Payment methods"
 msgstr "Zahlungsmethoden"
 
 msgid ""
-"Cash is always available and isn't listed here. Pick a provider (PayPal, "
-"PayPal Pool or WERO) and fill in just the one identifier it needs so members "
-"can pay/scan-to-pay via the kiosk and their linked phone - or use \"Custom "
-"link\" for anything else."
+"Cash is always available and isn't listed here. Pick a provider - PayPal, a "
+"PayPal Pool or a GiroCode for a bank transfer - and fill in what it asks "
+"for, so members can pay or scan to pay at the kiosk and on their phone; or "
+"use \"Custom link\" for anything else."
 msgstr ""
 "Bar ist immer verfügbar und steht hier nicht in der Liste. Wähle einen "
-"Anbieter (PayPal, PayPal Pool oder WERO) und trage nur die eine Kennung ein, "
-"die er braucht, damit Mitglieder über den Kiosk und ihr verknüpftes Handy "
-"bezahlen bzw. per Scan bezahlen können - oder nimm \"Eigener Link\" für "
-"alles andere."
+"Anbieter - PayPal, einen PayPal Pool oder einen GiroCode für eine "
+"Überweisung - und trag ein, was er braucht, damit Mitglieder am Kiosk und "
+"auf ihrem Handy bezahlen oder per Scan bezahlen können; oder nimm \"Eigener "
+"Link\" für alles andere."
 
 msgid "inactive"
 msgstr "inaktiv"
@@ -1561,6 +1878,9 @@ msgstr "Bestellungen (€)"
 msgid "Payments (€)"
 msgstr "Zahlungen (€)"
 
+msgid "Purchases (€)"
+msgstr "Einkäufe (€)"
+
 msgid "Last 12 months"
 msgstr "Letzte 12 Monate"
 
@@ -1625,6 +1945,27 @@ msgstr ""
 "je nach Betrieb eine Frage für Datenschutz und Betriebsrat (siehe "
 "Anleitung). Der Pranger im Dashboard, für den, der das Geld einsammelt, "
 "bleibt so oder so."
+
+msgid "Purchases and inventory"
+msgstr "Einkäufe und Inventar"
+
+msgid ""
+"What is bought for everyone - coffee, milk, cookies - with its price, the "
+"stock and what a cup costs. Only in the dashboard, admins and managers enter "
+"purchases and stock-takes; a purchase is either credited to the member who "
+"paid or paid from the coffee box. For members too, everyone books their "
+"purchases at the kiosk or on their phone and is credited the price they paid "
+"- a payment in kind - and the members marked \"May take stock\" correct the "
+"stock there. Switched off, the purchases already booked stay credited."
+msgstr ""
+"Was für alle gekauft wird - Kaffee, Milch, Kekse - mit Preis, dazu der "
+"Bestand und was eine Tasse kostet. Nur im Dashboard tragen Admins und "
+"Manager Einkäufe und Inventuren ein; ein Einkauf wird entweder dem Mitglied "
+"gutgeschrieben, das bezahlt hat, oder aus der Kaffeekasse bezahlt. Auch für "
+"Mitglieder: Alle buchen ihre Einkäufe am Kiosk oder auf dem Handy und "
+"bekommen den bezahlten Preis gutgeschrieben - eine Zahlung mit Naturalien -, "
+"und die Mitglieder mit „Darf Inventur machen“ korrigieren dort den Bestand. "
+"Ausgeschaltet bleiben die schon gebuchten Einkäufe gutgeschrieben."
 
 msgid "Night rest"
 msgstr "Nachtruhe"
@@ -1996,6 +2337,9 @@ msgstr "Ein Import läuft - warte, bis er fertig ist."
 msgid "Database reset - deleted %(summary)s."
 msgstr "Datenbank zurückgesetzt - gelöscht: %(summary)s."
 
+msgid "Inventory items"
+msgstr "Inventar-Artikel"
+
 msgid "Audit log entries"
 msgstr "Protokolleinträge"
 
@@ -2066,6 +2410,29 @@ msgstr "Setz den Haken, um zu bestätigen, dass der Stick gelöscht werden darf.
 
 msgid "Please choose a backup file."
 msgstr "Bitte wähle eine Backup-Datei."
+
+#, python-format
+msgid "%(item)s: enter a number of at least 0."
+msgstr "%(item)s: gib eine Zahl ab 0 ein."
+
+msgid "Stock saved."
+msgstr "Bestand gespeichert."
+
+msgid "Purchase entered."
+msgstr "Einkauf erfasst."
+
+msgid "Purchase saved."
+msgstr "Einkauf gespeichert."
+
+msgid "Purchase deleted."
+msgstr "Einkauf gelöscht."
+
+msgid "Price adjustment saved."
+msgstr "Preisanpassung gespeichert."
+
+#, python-format
+msgid "%(item)s has purchases - switch off \"Can be booked\" instead."
+msgstr "%(item)s hat Einkäufe - schalte stattdessen „Buchbar“ aus."
 
 msgid "An update is already being applied."
 msgstr "Es wird schon ein Update eingespielt."
@@ -2144,33 +2511,6 @@ msgstr "Kaffeesorten, Mitglieder, Statistik und mehr verwalten"
 msgid "Version %(version)s"
 msgstr "Version %(version)s"
 
-msgid "CoffeePy Kiosk"
-msgstr "CoffeePy-Kiosk"
-
-msgid "Order"
-msgstr "Bestellen"
-
-msgid "Pay"
-msgstr "Bezahlen"
-
-msgid "Settings"
-msgstr "Einstellungen"
-
-msgid "Ranking"
-msgstr "Rangliste"
-
-msgid "Loading…"
-msgstr "Lädt…"
-
-msgid "Space"
-msgstr "Leertaste"
-
-msgid "We'll be right back"
-msgstr "Wir sind gleich wieder da"
-
-msgid "CoffeePy is being updated - ordering is paused for a moment."
-msgstr "CoffeePy wird gerade aktualisiert - Bestellen ist kurz pausiert."
-
 msgid "Card reader not available"
 msgstr "Kartenleser nicht verfügbar"
 
@@ -2185,6 +2525,9 @@ msgstr "um dein Konto zu sehen oder zu bezahlen"
 
 msgid "to change your settings"
 msgstr "um deine Einstellungen zu ändern"
+
+msgid "to book what you bought"
+msgstr "um deinen Einkauf zu buchen"
 
 msgid "to order a coffee"
 msgstr "um einen Kaffee zu bestellen"
@@ -2207,6 +2550,16 @@ msgstr ""
 #, python-format
 msgid "You are logged out after %(seconds)s seconds."
 msgstr "Nach %(seconds)s Sekunden wirst du abgemeldet."
+
+msgid "Pick what you bought for everyone - coffee, milk, cookies."
+msgstr "Wähle, was du für alle gekauft hast - Kaffee, Milch, Kekse."
+
+msgid ""
+"Enter the quantity and what you paid for all of it: that is credited to your "
+"balance."
+msgstr ""
+"Gib Menge und bezahlten Gesamtpreis ein: Er wird deinem Guthaben "
+"gutgeschrieben."
 
 msgid "Change your name and your favourite coffee."
 msgstr "Ändere deinen Namen und deinen Lieblingskaffee."
@@ -2312,6 +2665,16 @@ msgstr "Willkommen, neue Karte!"
 msgid "Who are you?"
 msgstr "Wer bist du?"
 
+msgid "This card is new here. Your name first - then on to your purchase."
+msgstr ""
+"Diese Karte ist neu hier. Erst dein Name - dann geht es weiter zum Einkauf."
+
+msgid ""
+"Before your purchase: it is credited to a name your colleagues recognise."
+msgstr ""
+"Vor dem Einkauf: Er wird einem Namen gutgeschrieben, an dem dich deine "
+"Kolleg:innen erkennen."
+
 msgid "Before your coffee: the ranking needs a name your colleagues recognise."
 msgstr ""
 "Vor dem Kaffee: Die Rangliste braucht einen Namen, an dem dich deine "
@@ -2345,6 +2708,46 @@ msgstr "Betrag"
 
 msgid "Or scan to pay what you owe directly:"
 msgstr "Oder scanne, um den offenen Betrag direkt zu bezahlen:"
+
+msgid "Pay"
+msgstr "Bezahlen"
+
+msgctxt "kiosk screen"
+msgid "Purchase"
+msgstr "Einkauf"
+
+msgid "Stock-take"
+msgstr "Inventur"
+
+#, python-format
+msgid ""
+"Thank you! %(quantity)s %(unit)s %(item)s booked - %(price)s€ credited to "
+"you."
+msgstr ""
+"Danke! %(quantity)s %(unit)s %(item)s gebucht - %(price)s€ werden dir "
+"gutgeschrieben."
+
+#, python-format
+msgid "Saved: %(item)s %(quantity)s %(unit)s."
+msgstr "Gespeichert: %(item)s %(quantity)s %(unit)s."
+
+msgid "What did you buy?"
+msgstr "Was hast du gekauft?"
+
+msgid ""
+"Nothing can be booked yet - an admin adds coffee, milk and the like in the "
+"dashboard."
+msgstr ""
+"Noch nichts buchbar - ein Admin legt Kaffee, Milch und Co. im Dashboard an."
+
+msgid "What did you count? Under each item: what should be there."
+msgstr "Was hast du gezählt? Unter jedem Artikel: was da sein sollte."
+
+msgid "Book purchase"
+msgstr "Einkauf buchen"
+
+msgid "Save count"
+msgstr "Zählung speichern"
 
 msgid "All time"
 msgstr "Gesamt"
@@ -2429,6 +2832,36 @@ msgstr "CoffeePy wird gestartet"
 
 msgid "Restoring a backup"
 msgstr "Ein Backup wird eingespielt"
+
+msgid "CoffeePy Kiosk"
+msgstr "CoffeePy-Kiosk"
+
+msgid "Order"
+msgstr "Bestellen"
+
+msgid "Settings"
+msgstr "Einstellungen"
+
+msgid "Ranking"
+msgstr "Rangliste"
+
+msgid "Loading…"
+msgstr "Lädt…"
+
+msgid "Space"
+msgstr "Leertaste"
+
+msgid "We'll be right back"
+msgstr "Wir sind gleich wieder da"
+
+msgid "CoffeePy is being updated - ordering is paused for a moment."
+msgstr "CoffeePy wird gerade aktualisiert - Bestellen ist kurz pausiert."
+
+msgid "Pick an item and enter a quantity and a price above 0."
+msgstr "Wähle einen Artikel und gib Menge und Preis über 0 ein."
+
+msgid "Pick an item and enter what you counted."
+msgstr "Wähle einen Artikel und gib ein, was du gezählt hast."
 
 msgid ""
 "That card is already linked to another account - please try a different card."
@@ -2603,8 +3036,29 @@ msgstr "Zahlung eintragen"
 msgid "Already paid? Log it here (cash or any method above)."
 msgstr "Schon bezahlt? Trag es hier ein (bar oder eine der Methoden oben)."
 
-msgid "Amount"
-msgstr "Betrag"
+msgid "Thank you! The purchase is booked and credited to you."
+msgstr "Danke! Der Einkauf ist gebucht und dir gutgeschrieben."
+
+msgid "Book a purchase"
+msgstr "Einkauf buchen"
+
+msgid ""
+"Bought something for everyone? What you paid for all of it is credited to "
+"your balance."
+msgstr ""
+"Etwas für alle gekauft? Was du insgesamt bezahlt hast, wird deinem Guthaben "
+"gutgeschrieben."
+
+msgid "Enter what you count; an empty field leaves the item as it is."
+msgstr ""
+"Trag ein, was du zählst; ein leeres Feld lässt den Artikel, wie er ist."
+
+#, python-format
+msgid "%(item)s (%(quantity)s %(unit)s expected)"
+msgstr "%(item)s (%(quantity)s %(unit)s erwartet)"
+
+msgid "Your purchases"
+msgstr "Deine Einkäufe"
 
 msgid "You vs the others"
 msgstr "Du im Vergleich"

@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views, views_backup, views_update
+from . import views, views_backup, views_inventory, views_update
 from .security import LockingAuthenticationForm
 
 app_name = "dashboard"
@@ -74,4 +74,15 @@ urlpatterns = [
     path("bookings/payments/add/", views.payment_add, name="payment_add"),
     path("bookings/payments/<int:pk>/edit/", views.payment_edit, name="payment_edit"),
     path("bookings/payments/<int:pk>/delete/", views.payment_delete, name="payment_delete"),
+    path("inventory/", views_inventory.inventory, name="inventory"),
+    path("inventory/purchases/", views_inventory.purchases, name="inventory_purchases"),
+    path("inventory/purchases/add/", views_inventory.purchase_add, name="inventory_purchase_add"),
+    path("inventory/purchases/<int:pk>/edit/", views_inventory.purchase_edit, name="inventory_purchase_edit"),
+    path("inventory/purchases/<int:pk>/delete/", views_inventory.purchase_delete, name="inventory_purchase_delete"),
+    path("inventory/spending/", views_inventory.spending, name="inventory_spending"),
+    path("inventory/costs/", views_inventory.costs, name="inventory_costs"),
+    path("inventory/items/", views_inventory.item_list, name="inventory_items"),
+    path("inventory/items/add/", views_inventory.item_add, name="inventory_item_add"),
+    path("inventory/items/<int:pk>/edit/", views_inventory.item_edit, name="inventory_item_edit"),
+    path("inventory/items/<int:pk>/delete/", views_inventory.item_delete, name="inventory_item_delete"),
 ]

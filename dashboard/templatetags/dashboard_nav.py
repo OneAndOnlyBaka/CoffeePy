@@ -3,6 +3,8 @@ the "More" sheet (phone) are all drawn from DASHBOARD_NAV, so a new page is adde
 from django import template
 from django.utils.translation import gettext_lazy as _
 
+from dashboard.models import InventoryPolicy
+
 register = template.Library()
 
 # (heading, superuser only, items); an item is (url name, label, icon, url names it is
@@ -18,6 +20,7 @@ DASHBOARD_NAV = (
         ("bookings", _("Bookings"), "list", ("booking", "order_", "payment_")),
         ("coffeesorts", _("Coffee sorts"), "cup", ("coffeesort_",)),
         ("paymentmethods", _("Payment methods"), "card", ("paymentmethod_",)),
+        ("inventory", _("Inventory"), "box", ("inventory_",)),
     )),
     (_("System"), True, (
         ("users", _("Dashboard users"), "user-shield", ("user_",)),
@@ -33,6 +36,9 @@ DASHBOARD_NAV = (
     )),
 )
 
+# Pages of an optional feature: shown only while it is switched on.
+OPTIONAL = {"inventory": lambda: InventoryPolicy.current().enabled}
+
 # The phone's bottom tabs: the everyday pages, everything else is under "More".
 TABS = ("index", "members", "bookings", "statistics")
 
@@ -43,6 +49,7 @@ def dashboard_nav(context):
     request = context["request"]
     current = request.resolver_match.url_name if request.resolver_match else ""
     groups = []
+    hidden = {name for name, enabled in OPTIONAL.items() if not enabled()}
     for heading, superuser_only, items in DASHBOARD_NAV:
         if superuser_only and not request.user.is_superuser:
             continue
@@ -51,7 +58,7 @@ def dashboard_nav(context):
             "items": [
                 {"url_name": name, "label": label, "icon": f"icons/{icon}.svg",
                  "active": current == name or any(current.startswith(p) for p in also)}
-                for name, label, icon, also in items
+                for name, label, icon, also in items if name not in hidden
             ],
         })
     return groups

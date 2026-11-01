@@ -1,0 +1,84 @@
+{% extends "portal/base.html" %}
+{% load i18n l10n coffee_tags %}
+{% block title %}{% translate "Purchase" context "kiosk screen" %} - CoffeePy{% endblock %}
+{% block portal_content %}
+<h1>{% translate "Purchase" context "kiosk screen" %}</h1>
+<div class="card">
+    <p>{% blocktranslate trimmed %}Current balance: <strong>{{ balance }}€</strong>{% endblocktranslate %}</p>
+</div>
+{% if error %}<p class="msg error">{{ error }}</p>{% endif %}
+{% if booked %}<p class="msg success">{% translate "Thank you! The purchase is booked and credited to you." %}</p>{% endif %}
+{% if counted %}<p class="msg success">{% translate "Stock saved." %}</p>{% endif %}
+
+<div class="card">
+    <h2>{% translate "Book a purchase" %}</h2>
+    {% if items %}
+    <p class="muted">{% translate "Bought something for everyone? What you paid for all of it is credited to your balance." %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="purchase">
+        <label class="field">
+            {% translate "Item" %}
+            <select name="item" required>
+                <option value="">-</option>
+                {% for item in items %}
+                <option value="{{ item.pk|unlocalize }}">{{ item.name }}{% if item.unit %} ({{ item.unit }}){% endif %}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="field">
+            {% translate "Quantity" %}
+            <input type="text" inputmode="decimal" name="quantity" value="1" required>
+        </label>
+        <label class="field">
+            {% translate "Total price paid (€)" %}
+            {% comment %}Text, not type=number: that only takes a dot, and a German "4,99" would leave it empty.{% endcomment %}
+            <input type="text" inputmode="decimal" name="price" required>
+        </label>
+        <div class="action-row">
+            <button type="submit" class="success btn-block">{% translate "Book purchase" %}</button>
+        </div>
+    </form>
+    {% else %}
+    <p class="muted">{% translate "Nothing can be booked yet - an admin adds coffee, milk and the like in the dashboard." %}</p>
+    {% endif %}
+</div>
+
+{% if levels %}
+<div class="card">
+    <h2>{% translate "Stock-take" %}</h2>
+    <p class="muted">{% translate "Enter what you count; an empty field leaves the item as it is." %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="stock">
+        {% for level in levels %}
+        <label class="field">
+            {% blocktranslate trimmed with item=level.item.name quantity=level.stock|quantity unit=level.item.unit %}
+                {{ item }} ({{ quantity }} {{ unit }} expected){% endblocktranslate %}
+            <input type="text" inputmode="decimal" name="count-{{ level.item.pk|unlocalize }}">
+        </label>
+        {% endfor %}
+        <div class="action-row">
+            <button type="submit" class="success btn-block">{% translate "Save stock-take" %}</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>{% translate "Your purchases" %}</h2>
+    <div class="list">
+        {% for purchase in purchases %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ purchase.quantity|quantity }} {{ purchase.item.unit }} {{ purchase.item.name }}</span>
+                <span class="list-row-meta">{{ purchase.created_at|date:"d.m. H:i" }}</span>
+            </div>
+            <span class="list-row-value">{{ purchase.price }}€</span>
+        </div>
+        {% empty %}
+        <p class="muted">{% translate "No purchases yet." %}</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

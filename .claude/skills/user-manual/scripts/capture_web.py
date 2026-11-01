@@ -164,6 +164,8 @@ def kiosk(b):
         kiosk_new_card(b)
     if wanted("kiosk-ranking-alltime", "kiosk-ranking-month", "kiosk-ranking-pillory"):
         kiosk_ranking(b)
+    if wanted("kiosk-wait-purchase", "kiosk-purchase", "kiosk-stock-take"):
+        kiosk_inventory(b)
     if wanted("kiosk-maintenance"):
         kiosk_maintenance(b)
 
@@ -235,6 +237,32 @@ def kiosk_ranking(b):
         b.shot(f"kiosk-ranking-{view}")
 
 
+def kiosk_inventory(b):
+    """The only kiosk shots with the inventory on (demo_data.py inventory on) - switched off
+    again right after, whatever happens, so every other shot shows the kiosk without it."""
+    django("inventory", "on")
+    try:
+        b.click("a.nav-btn[data-mode=order]")
+        b.wait("!document.querySelector('a.nav-btn[data-mode=purchase]').hidden")  # the next poll shows it
+        b.click("a.nav-btn[data-mode=purchase]")
+        b.wait_state("wait_for_card")
+        b.shot("kiosk-wait-purchase")
+        if not wanted("kiosk-purchase", "kiosk-stock-take"):
+            return
+        django("scan", "Anna")  # the one who may take stock: the screen has both halves
+        b.wait_state("purchase")
+        price = "16,99" if b.lang == "de" else "16.99"
+        b.js(f"document.querySelector('input[name=item_id]').checked = true;"
+             f"document.getElementById('purchase-price-input').value = {json.dumps(price)}")
+        b.shot("kiosk-purchase")
+        b.js("document.getElementById('section-stock').checked = true")
+        b.shot("kiosk-stock-take")
+        b.click("a.nav-btn[data-mode=order]")  # logs out
+        b.wait_state("wait_for_card")
+    finally:
+        django("inventory", "off")
+
+
 def kiosk_maintenance(b):
     b.click("a.nav-btn[data-mode=order]")
     b.wait_state("wait_for_card")
@@ -259,7 +287,14 @@ DASHBOARD_PAGES = [
     ("/dashboard/login-rules/", "dashboard-password-policy"), ("/dashboard/account/", "dashboard-account"),
     ("/dashboard/backup/restore/upload/", "dashboard-restore-upload"),
 ]
-FULL_PAGE = ("dashboard-update", "dashboard-backup", "dashboard-system")
+FULL_PAGE = ("dashboard-update", "dashboard-backup", "dashboard-system", "dashboard-inventory-costs")
+# Taken with the inventory on (demo_data.py inventory on), after the others.
+INVENTORY_PAGES = [
+    ("/dashboard/inventory/", "dashboard-inventory"), ("/dashboard/inventory/purchases/", "dashboard-inventory-purchases"),
+    ("/dashboard/inventory/purchases/add/", "dashboard-inventory-purchase-form"),
+    ("/dashboard/inventory/spending/", "dashboard-inventory-spending"),
+    ("/dashboard/inventory/costs/", "dashboard-inventory-costs"), ("/dashboard/inventory/items/", "dashboard-inventory-items"),
+]
 
 
 # Run before every dashboard shot: the device may hold real data next to the demo members
@@ -290,7 +325,8 @@ BLUR_JS = """
 def demo_uids():
     """The demo cards' uids as the pages print them (demo_data.uid(): little-endian C0FFEE01...)."""
     hexes = [f"C0FFEE{i + 1:02X}" for i in range(6)] + ["C0FFEEFF"]
-    return [str(int.from_bytes(bytes.fromhex(h), "little")) for h in hexes]
+    # ... and the demo GiroCode's example IBAN (demo_data.py), a public test account.
+    return [str(int.from_bytes(bytes.fromhex(h), "little")) for h in hexes] + ["02120300000000202051"]
 
 
 def blur_js():
@@ -312,7 +348,8 @@ def dashboard(b, password):
     b.viewport(1280, 800)
     b.go("/dashboard/login/")
     b.shot("dashboard-login")
-    if not wanted(*[name for _, name in DASHBOARD_PAGES], "dashboard-member-form", "dashboard-phone"):
+    inventory_names = [name for _, name in INVENTORY_PAGES]
+    if not wanted(*[name for _, name in DASHBOARD_PAGES], *inventory_names, "dashboard-member-form", "dashboard-phone"):
         return
     b.js(f"document.querySelector('input[name=username]').value='admin';"
          f"document.querySelector('input[name=password]').value={json.dumps(password)};"
@@ -324,6 +361,13 @@ def dashboard(b, password):
         if not wanted(name):
             continue
         b.go(path)
+        if name == "dashboard-payment-method-form":
+            # The form shows only the picked provider's fields - a GiroCode has the most of them.
+            b.js("document.getElementById('id_provider').value = 'girocode';"
+                 "document.getElementById('id_name').value = 'Überweisung';"
+                 "document.getElementById('id_recipient').value = 'Kaffeekasse';"
+                 "document.getElementById('id_iban').value = 'DE02 1203 0000 0000 2020 51';"
+                 "document.getElementById('id_purpose').value = 'Kaffee {member}'")
         b.js(blur)
         b.shot(name, settle=1.5 if "statistics" in path or "system" in path else 0.6, full=name in FULL_PAGE)
     if wanted("dashboard-phone"):
@@ -331,6 +375,18 @@ def dashboard(b, password):
         b.go("/dashboard/")
         b.js(blur)
         b.shot("dashboard-phone")
+        b.viewport(1280, 800)
+    if wanted(*inventory_names):
+        django("inventory", "on")
+        try:
+            blur = blur_js()
+            for path, name in INVENTORY_PAGES:
+                if wanted(name):
+                    b.go(path)
+                    b.js(blur)
+                    b.shot(name, settle=1.0, full=name in FULL_PAGE)
+        finally:
+            django("inventory", "off")
     b.viewport(1280, 800)
     b.js("fetch('/dashboard/logout/', {method: 'POST', headers: {'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)[1]}})")
     time.sleep(1)
@@ -340,6 +396,8 @@ def portal(b):
     b.viewport(390, 844, scale=2, mobile=True)
     b.go("/portal/link/expired-example/")
     b.shot("portal-link-invalid")
+    if wanted("portal-purchase"):
+        portal_purchase(b)
     if not wanted("portal-home", "portal-pay", "portal-stats", "portal-cards", "portal-devices"):
         return
     token = shell_django(
@@ -354,6 +412,22 @@ def portal(b):
         if wanted(name):
             b.go(path)
             b.shot(name, settle=1.5 if "stats" in path else 0.6)
+
+
+def portal_purchase(b):
+    """Anna's purchase page - she may take stock, so it has both parts - with the inventory on."""
+    django("inventory", "on")
+    try:
+        token = shell_django(
+            "from datetime import timedelta; from django.utils import timezone; "
+            "from coffee.models import Member, MemberLinkToken; "
+            "print(MemberLinkToken.objects.create(member=Member.objects.get(nickname='Anna B.'), "
+            "expires_at=timezone.now() + timedelta(minutes=5)).token)")
+        b.go(f"/portal/link/{token}/")
+        b.go("/portal/purchase/")
+        b.shot("portal-purchase")
+    finally:
+        django("inventory", "off")
 
 
 def main():

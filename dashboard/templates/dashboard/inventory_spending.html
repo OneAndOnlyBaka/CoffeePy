@@ -1,0 +1,35 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Spending" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "Spending" %}</h1>
+{% include "dashboard/_inventory_tabs.html" %}
+<p class="muted">{% translate "What the purchases of the last 12 months cost, per month and item." %}</p>
+<div class="card">
+    {% if totals.months %}
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>{% translate "Month" %}</th>
+                {% for item in totals.items %}<th>{{ item.name }}</th>{% endfor %}
+                <th>{% translate "Total" %}</th>
+            </tr>
+            {% for month in totals.months %}
+            <tr>
+                <th>{{ month.label }}</th>
+                {% for total in month.totals %}<td>{% if total %}{{ total }}€{% endif %}</td>{% endfor %}
+                <td><strong>{{ month.sum }}€</strong></td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <th>{% translate "Total" %}</th>
+                {% for item in totals.items %}<td><strong>{{ item.sum }}€</strong></td>{% endfor %}
+                <td><strong>{{ totals.sum }}€</strong></td>
+            </tr>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted list-empty">{% translate "No purchases in the last 12 months." %}</p>
+    {% endif %}
+</div>
+{% endblock %}

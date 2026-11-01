@@ -29,20 +29,32 @@ from coffee.models import (
     MemberCard,
     NfcReaderStatus,
     Order,
+    InventoryItem,
     Payment,
     PaymentMethod,
+    Purchase,
 )
 from coffee.network import public_host
 
 from . import audit, import_jobs, night, system_clock, system_stats, tls
 from .decorators import superuser_required
-from .models import AccountSecurity, DeletionHold, KioskBoards, MemberRetention, NamePolicy, NightPolicy, PasswordPolicy
+from .models import (
+    AccountSecurity,
+    DeletionHold,
+    InventoryPolicy,
+    KioskBoards,
+    MemberRetention,
+    NamePolicy,
+    NightPolicy,
+    PasswordPolicy,
+)
 from .forms import (
     ROLE_ADMIN,
     AdminSetPasswordForm,
     CoffeeSortForm,
     DashboardUserForm,
     MemberForm,
+    InventoryPolicyForm,
     MemberRetentionForm,
     OrderForm,
     OwnPasswordChangeForm,
@@ -417,6 +429,8 @@ def member_merge_confirm(request, keep_uid, remove_uid):
         with transaction.atomic():
             remove_orders = remove.orders.update(member=keep)
             remove_payments = remove.payments.update(member=keep)
+            # Purchase.member cascades like the cards below - their credits just moved over.
+            remove.purchases.update(member=keep)
             # remove's own alt cards (if it had any from an earlier merge/"Set alt
             # card") move over too - MemberCard.member has on_delete=CASCADE, so this
             # has to happen before remove.delete() or they'd be deleted along with it.
@@ -514,9 +528,10 @@ def _ssh_status():
 @login_required
 @superuser_required
 def system_dashboard(request):
-    policy, boards = NightPolicy.current(), KioskBoards.current()
+    policy, boards, inventory = NightPolicy.current(), KioskBoards.current(), InventoryPolicy.current()
     form = NightPolicyForm(instance=policy)
     boards_form = KioskBoardsForm(instance=boards)
+    inventory_form = InventoryPolicyForm(instance=inventory)
     if request.method == "POST" and request.POST.get("form") == "ssh":
         # The host's storage helper switches it (install/storage_helper.py), within seconds.
         enabled = request.POST.get("enabled") == "1"
@@ -533,6 +548,13 @@ def system_dashboard(request):
                 f"{name} {'on' if getattr(boards, name) else 'off'}" for name in ("ranking", "pillory")))
             messages.success(request, _("Saved - the kiosk follows with its next poll."))
             return redirect("dashboard:system_dashboard")
+    elif request.method == "POST" and request.POST.get("form") == "inventory":
+        inventory_form = InventoryPolicyForm(request.POST, instance=inventory)
+        if inventory_form.is_valid():
+            inventory = inventory_form.save()
+            audit.log(request, "inventory_policy.update", details=inventory.mode)
+            messages.success(request, _("Saved - the kiosk follows with its next poll."))
+            return redirect("dashboard:system_dashboard")
     elif request.method == "POST":
         form = NightPolicyForm(request.POST, instance=policy)
         if form.is_valid():
@@ -543,7 +565,7 @@ def system_dashboard(request):
             return redirect("dashboard:system_dashboard")
     return render(request, "dashboard/system_dashboard.html", {
         "stats": system_stats.gather(), "public_host": public_host(), "night_form": form,
-        "boards_form": boards_form, "ssh": _ssh_status(),
+        "boards_form": boards_form, "inventory_form": inventory_form, "ssh": _ssh_status(),
         # Without PUBLIC_HOST the address is detected inside the container - usually the
         # container's own, which no phone reaches (coffee/network.py).
         "public_host_guessed": not settings.PUBLIC_HOST,
@@ -687,6 +709,8 @@ def reset_database(request):
                 (_("Payments"), Payment.objects.count()),
                 (_("Coffee sorts"), CoffeeSort.objects.count()),
                 (_("Payment methods"), PaymentMethod.objects.count()),
+                (_("Purchases"), Purchase.objects.count()),
+                (_("Inventory items"), InventoryItem.objects.count()),
                 (_("Audit log entries"), AuditLogEntry.objects.count()),
             ],
         },
@@ -934,6 +958,9 @@ def payment_add(request):
 @login_required
 def payment_edit(request, pk):
     payment = get_object_or_404(Payment.objects.select_related("member"), pk=pk)
+    if hasattr(payment, "purchase"):
+        # Price, member and time belong to the purchase; edited here, the two would drift apart.
+        return redirect("dashboard:inventory_purchase_edit", payment.purchase.pk)
     form = PaymentForm(request.POST or None, instance=payment)
     if request.method == "POST" and form.is_valid():
         payment = form.save()
@@ -950,6 +977,8 @@ def payment_delete(request, pk):
     payment = get_object_or_404(Payment.objects.select_related("member"), pk=pk)
     member = payment.member
     details = f"#{payment.pk}: {payment.value} EUR ({payment.method_name}), {payment.created_at:%Y-%m-%d %H:%M}"
+    if hasattr(payment, "purchase"):
+        details += f", purchase {services.describe_purchase(payment.purchase)}"
     payment.delete()
     audit.log(request, "payment.delete", target=member.display_name(), details=details)
     messages.success(request, _("Payment deleted."))

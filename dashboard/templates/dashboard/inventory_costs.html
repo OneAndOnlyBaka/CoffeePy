@@ -1,0 +1,78 @@
+{% extends "dashboard/base.html" %}
+{% load i18n l10n coffee_tags %}
+{% block title %}{% translate "Costs" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "Costs" %}</h1>
+{% include "dashboard/_inventory_tabs.html" %}
+<p class="muted">{% blocktranslate trimmed %}What a cup cost, worked out from the purchases and stock-takes - and what the coffee
+sorts would have to cost for that. Only a suggestion: the price is still set under Coffee sorts.{% endblocktranslate %}</p>
+
+<div class="segmented">
+    {% for months in periods %}
+    <a href="?months={{ months|unlocalize }}" class="{% if months == data.months %}active{% endif %}">{% blocktranslate with months=months %}{{ months }} months{% endblocktranslate %}</a>
+    {% endfor %}
+</div>
+
+<div class="stats-row">
+    <div class="stat"><span class="label">{% translate "Cost per cup" %}</span><span class="value">{{ data.per_cup_cents }} ct</span>
+        <span class="sub">{% if data.counted %}{% translate "from stock-takes" %}{% else %}{% translate "from purchases" %}{% endif %}</span></div>
+    <div class="stat"><span class="label">{% translate "Cups" %}</span><span class="value">{{ data.cups }}</span></div>
+    <div class="stat"><span class="label">{% translate "Revenue - purchases" %}</span>
+        <span class="value {% if data.balance < 0 %}negative{% else %}ok{% endif %}">{{ data.balance }}€</span>
+        <span class="sub">{{ data.revenue }}€ - {{ data.spent }}€</span></div>
+    <div class="stat"><span class="label">{% translate "Written off" %}</span><span class="value">{{ data.written_off }}€</span>
+        {% if data.written_off_percent is not None %}<span class="sub">{% blocktranslate with percent=data.written_off_percent %}{{ percent }}% of revenue{% endblocktranslate %}</span>{% endif %}</div>
+</div>
+
+<div class="card">
+    <h2>{% translate "Per item" %}</h2>
+    {% if data.items %}
+    <div class="table-wrap">
+        <table>
+            <tr><th>{% translate "Item" %}</th><th>{% translate "Bought" %}</th><th>{% translate "Used" %}</th><th>{% translate "Cups" %}</th><th>{% translate "Per cup" %}</th></tr>
+            {% for row in data.items %}
+            <tr>
+                <th>{{ row.item.name }}</th>
+                <td>{{ row.spent }}€</td>
+                <td>{% if row.counted %}{{ row.used|quantity }} {{ row.item.unit }} = {{ row.cost }}€{% else %}<span class="muted">{% translate "no two stock-takes" %}</span>{% endif %}</td>
+                <td>{{ row.cups }}</td>
+                <td>{{ row.per_cup_cents }} ct</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+    <p class="muted list-empty">{% translate "No purchases in this period." %}</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>{% translate "Price suggestion" %}</h2>
+    {% if suggestions %}
+    <p class="muted">{% blocktranslate trimmed with adjustment=adjustment|stringformat:"+d" %}Strokes × cost per cup, adjusted by {{ adjustment }}%,
+    rounded up to 5 cents.{% endblocktranslate %}</p>
+    <div class="table-wrap">
+        <table>
+            <tr><th>{% translate "Coffee sort" %}</th><th>{% translate "Strokes" %}</th><th>{% translate "Price now" %}</th><th>{% translate "Suggestion" %}</th><th></th></tr>
+            {% for row in suggestions %}
+            <tr>
+                <th><a href="{% url 'dashboard:coffeesort_edit' row.sort.pk %}">{{ row.sort.name }}</a></th>
+                <td>{{ row.sort.machine_strokes }}</td>
+                <td>{{ row.sort.price }}€</td>
+                <td><strong>{{ row.suggestion }}€</strong></td>
+                <td>{% if row.difference_percent is not None %}<span class="{% if row.difference_percent > 0 %}negative{% else %}ok{% endif %}">{% if row.difference_percent > 0 %}+{% endif %}{{ row.difference_percent }}%</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+    <p class="muted list-empty">{% blocktranslate trimmed with months=min_months cups=min_cups %}Not enough data yet: a suggestion needs
+    purchases in at least {{ months }} months of the period and {{ cups }} cups.{% endblocktranslate %}</p>
+    {% endif %}
+    <form method="post" class="adjustment-form">
+        {% csrf_token %}
+        {% include "dashboard/_field.html" with field=form.price_adjustment_percent %}
+        <div class="action-row"><button type="submit" class="secondary">{% translate "Save price adjustment" %}</button></div>
+    </form>
+</div>
+{% endblock %}

@@ -32,6 +32,23 @@
 </div>
 
 <div class="card">
+    <h2>{% translate "Purchases and inventory" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}
+        What is bought for everyone - coffee, milk, cookies - with its price, the stock and what a cup costs.
+        Only in the dashboard, admins and managers enter purchases and stock-takes; a purchase is either credited to
+        the member who paid or paid from the coffee box. For members too, everyone books their purchases at the kiosk
+        or on their phone and is credited the price they paid - a payment in kind - and the members marked "May take
+        stock" correct the stock there. Switched off, the purchases already booked stay credited.
+    {% endblocktranslate %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="inventory">
+        {% include "dashboard/_field.html" with field=inventory_form.mode %}
+        <button type="submit" class="btn">{% translate "Save" %}</button>
+    </form>
+</div>
+
+<div class="card">
     <h2>{% translate "Night rest" %}</h2>
     <p class="muted">{% blocktranslate trimmed %}
         At night the kiosk's screen goes dark and taps at the machine are not booked. The phone portal and the

@@ -1,0 +1,16 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% if instance %}{% translate "Edit item" %}{% else %}{% translate "Add item" %}{% endif %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% if instance %}{% blocktranslate with name=instance.name %}Edit {{ name }}{% endblocktranslate %}{% else %}{% translate "Add item" %}{% endif %}</h1>
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}{% include "dashboard/_field.html" %}{% endfor %}
+        <div class="action-row">
+            <a href="{% url 'dashboard:inventory_items' %}" class="btn secondary">{% translate "Cancel" %}</a>
+            <button type="submit" class="success">{% translate "Save" %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

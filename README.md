@@ -13,7 +13,7 @@ works completely offline, and everyone checks their own balance on their phone.
 <table>
   <tr>
     <td><img src="docs/pictures/manual/en/kiosk-order.png" alt="Ordering on the kiosk"></td>
-    <td><img src="docs/pictures/manual/en/kiosk-ranking-alltime.png" alt="The all-time ranking"></td>
+    <td><img src="docs/pictures/readme/podium.gif" alt="The all-time podium, animated"></td>
   </tr>
   <tr>
     <td align="center"><em>Tap your card - your favourite is already selected</em></td>
@@ -25,9 +25,28 @@ works completely offline, and everyone checks their own balance on their phone.
   </tr>
   <tr>
     <td align="center"><em>A dashboard for whoever buys the beans</em></td>
-    <td align="center"><em>Pay by cash, PayPal or a QR code with the amount filled in</em></td>
+    <td align="center"><em>Pay by cash, PayPal or a bank transfer QR code with the amount filled in</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/pictures/manual/en/kiosk-purchase.png" alt="Booking a purchase on the kiosk"></td>
+    <td><img src="docs/pictures/manual/en/dashboard-inventory-spending.png" alt="Spending per month and item"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Bought the beans? Book them and settle up in kind</em></td>
+    <td align="center"><em>What the coffee corner really costs, month by month</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/pictures/readme/pillory.gif" alt="The pillory's walk of shame, animated"></td>
+    <td><img src="docs/pictures/readme/pillory_empty.gif" alt="NO SHAME - the executioner with nothing to do"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>The pillory: owing money has never looked this awkward</em></td>
+    <td align="center"><em>Everyone paid up - the executioner is out of work</em></td>
   </tr>
 </table>
+<!-- The GIFs are the kiosk's own ranking videos (static/kiosk/img/ranking/*.webm), which GitHub
+     doesn't play in a README: ffmpeg -i X.webm -vf "fps=10,scale=600:-1:flags=lanczos,split[a][b];
+     [a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=none" -loop 0 docs/pictures/readme/X.gif -->
 
 ## Why CoffeePy
 
@@ -37,12 +56,33 @@ works completely offline, and everyone checks their own balance on their phone.
   or tap Cancel. Only checking your balance? Tap Pay first: nothing is booked there.
 - **A jug counts as two cups.** Every coffee sort has its price and its number of machine
   strokes, so a double or a jug is counted - and charged - for what it is.
-- **Pay where you drink.** The kiosk shows what you owe and offers QR codes for PayPal or any
-  payment link, with the amount already filled in. A friendly reminder appears when last
+- **Pay where you drink.** The kiosk shows what you owe and offers QR codes for PayPal, any
+  payment link or a GiroCode your banking app turns into a transfer - with the amount, and who
+  is paying, already filled in. A friendly reminder appears when last
   month is still open.
-- **A little fun, if you want it.** An all-time and a monthly podium, a "walk of shame" for
-  those who owe, and thank-you animations that notice when it's your fifth cup today. Both
-  boards are off by default - a workplace decision, not a software one.
+- **A little fun, if you want it.** An all-time and a monthly podium, and thank-you animations
+  that notice when it's your fifth cup today.
+- **A pillory instead of reminder emails.** Nobody likes chasing colleagues for money, so the
+  kiosk does it with a wink: the seven who owe the most queue behind a velvet rope under a big
+  **SHAME** banner, and one after another is led down the line with a "-€" sign, a hooded figure
+  ringing a bell and crying "SHAME!" behind them while the rest of the queue shakes its fists.
+  Their names and debts scroll past underneath like the credits of a very bad film. Paying up is the only way out of the queue. And once everyone
+  has settled, the banner reads **NO SHAME** and the executioner stands on an empty scaffold with
+  nothing to do. Peer pressure, but the friendly kind - and like the podium, it is off by default:
+  a workplace decision, not a software one.
+
+### Beans, milk and what a cup really costs
+- **Settle up in kind.** Whoever buys beans, milk or cookies for everyone books it at the kiosk
+  or on their phone, and the price is credited to their balance - no cash changes hands, no
+  receipts to reimburse. Rather keep it with one person? Then purchases are entered in the
+  dashboard only, paid by a member or straight from the coffee box.
+- **Know what's on the shelf.** The stock is the last stock-take plus everything bought since;
+  the members you pick count the shelf right at the kiosk.
+- **A price that follows the real cost.** Spending per month and item, what a cup has really
+  cost - from purchases and stock-takes -, whether the coffee box pays for itself, and a price
+  suggestion per coffee sort. Bean prices go up, the suggestion follows; changing the price stays
+  a person's decision.
+- **Optional, like the boards.** Off on a new device, switched on in the dashboard.
 
 ### On your phone
 - **Scan a QR code on the kiosk once** and your phone stays linked for six months - balance,
@@ -52,7 +92,8 @@ works completely offline, and everyone checks their own balance on their phone.
 
 ### For whoever runs it
 - **A dashboard for a phone or a PC:** members, corrections, coffee sorts and prices,
-  payment methods, statistics, a pillory that adds up what is open, CSV exports.
+  payment methods, statistics, a pillory that adds up what is open, CSV exports - and, if you
+  want it, the inventory with its spending and cost per cup.
 - **Everything is logged.** Every change - on the kiosk, the phone or the dashboard - writes an
   audit entry with who, what and from where.
 - **Two roles:** admins for everything, managers for the day-to-day bookkeeping. Login rules,

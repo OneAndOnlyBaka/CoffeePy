@@ -13,6 +13,9 @@ import os
 CREAM = "#f7efe6"
 ACCENT = "#c98a3d"
 LIGHT = "#a9744f"
+CREAM_DARK = "#e6d4c1"
+DARK = "#3b2314"
+MILK_BLUE = "#346ab4"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "kiosk", "img", "nav")
 
 
@@ -100,9 +103,28 @@ def ranking():
     )
 
 
+def purchase():
+    # The purchase animation's shopping bag: a kraft bag of coffee with its bean and a milk
+    # carton seen a bit from the side - gable, ridge fin and the blue band with a drop.
+    crimp = " ".join("l3.67,-4 3.67,4" for _ in range(6))
+    return svg(
+        f'  <rect x="6" y="88" width="90" height="4" rx="2" fill="{LIGHT}"/>\n'
+        f'  <path d="M22,12 {crimp} V50 H22 Z" fill="{ACCENT}"/>\n'
+        f'  <ellipse cx="33" cy="30" rx="6" ry="8.5" transform="rotate(25 33 30)" fill="{DARK}"/>\n'
+        f'  <path d="M32,23.5 c4,3 -3,9 1.5,13" fill="none" stroke="{ACCENT}" stroke-width="1.8"/>\n'
+        f'  <path d="M72,26 L80,20 V50 H72 Z M72,26 L80,20 L76,12 Z" fill="{CREAM_DARK}"/>\n'
+        f'  <path d="M52,26 H72 L76,12 H56 Z M52,26 H72 V50 H52 Z" fill="{CREAM}"/>\n'
+        f'  <rect x="56" y="7" width="20" height="5" fill="{CREAM}"/>\n'
+        f'  <rect x="54" y="30" width="16" height="14" fill="{MILK_BLUE}"/>\n'
+        f'  <path d="M62,32 L58.5,38.5 a3.5,3.5 0 1 0 7,0 Z" fill="{CREAM}"/>\n'
+        f'  <path d="M16,44 H84 L77,84 H23 Z" fill="{LIGHT}" stroke="{CREAM}" stroke-width="2.5" stroke-linejoin="round"/>'
+    )
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    for name, make in (("order", order), ("info", info), ("settings", settings), ("ranking", ranking)):
+    for name, make in (("order", order), ("info", info), ("settings", settings), ("ranking", ranking),
+                       ("purchase", purchase)):
         path = os.path.join(OUT, f"{name}.svg")
         with open(path, "w") as f:
             f.write(make())

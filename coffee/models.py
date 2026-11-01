@@ -29,6 +29,9 @@ class Member(models.Model):
     # rankings from then on) and deactivates their card(s) rather than deleting their
     # history. Null means still an active member.
     departed_at = models.DateTimeField(null=True, blank=True)
+    # One of the "selected people" who may correct the stock at the kiosk and in the portal
+    # (dashboard → Members). Only matters while the inventory is switched on.
+    may_take_stock = models.BooleanField(default=False)
 
     def __str__(self):
         return self.nickname or str(self.uid)
@@ -145,51 +148,69 @@ class Order(models.Model):
 
 
 CASH_METHOD_NAME = "Cash"
+# The credit a Purchase books: paid in kind, not in money. Never offered as a way to pay -
+# only Purchase creates (and edits, and deletes) these.
+PURCHASE_METHOD_NAME = "Purchase"
 
 
 def payment_method_label(name: str) -> str:
     """How a payment method name reads on screen. Cash is stored as "Cash" whatever the
     language (Payment.method_name is data, and a German "Bar" would no longer match it),
     so only its label is translated; every other name is the admin's own and shown as is."""
-    from django.utils.translation import gettext
+    from django.utils.translation import gettext, pgettext
 
-    return gettext("Cash") if not name or name == CASH_METHOD_NAME else name
+    if not name or name == CASH_METHOD_NAME:
+        return gettext("Cash")
+    if name == PURCHASE_METHOD_NAME:
+        return pgettext("payment method", "Purchase")
+    return name
 
 
 class PaymentMethod(models.Model):
     """Admin-configured way a member can pay, in addition to the always-available cash
     option (CASH_METHOD_NAME, which isn't a row here - it can't be deleted or
-    misconfigured). The three built-in `provider` presets need only `identifier` filled
-    in (a paypal.me username, a pool URL/ID, or a WERO phone number) and build a correct
-    link/instruction on their own; PROVIDER_CUSTOM is the escape hatch for anything else,
-    using `link_template` with an optional literal "{amount}" placeholder."""
+    misconfigured). The PayPal presets need only `identifier` (a paypal.me username, a pool
+    URL/ID) and build a correct link on their own; a GiroCode needs recipient and IBAN and
+    becomes the EPC QR code banking apps turn into a prefilled transfer; PROVIDER_CUSTOM is the
+    escape hatch for anything else, using `link_template` with an optional "{amount}"."""
 
     PROVIDER_PAYPAL_ME = "paypal_me"
     PROVIDER_PAYPAL_POOL = "paypal_pool"
-    PROVIDER_WERO = "wero"
+    PROVIDER_GIROCODE = "girocode"
     PROVIDER_CUSTOM = "custom"
     PROVIDER_CHOICES = [
         (PROVIDER_PAYPAL_ME, gettext_lazy("PayPal (Friends & Family / paypal.me)")),
         (PROVIDER_PAYPAL_POOL, "PayPal Pool"),
-        (PROVIDER_WERO, "WERO"),
+        (PROVIDER_GIROCODE, gettext_lazy("GiroCode (bank transfer by QR code)")),
         (PROVIDER_CUSTOM, gettext_lazy("Custom link")),
     ]
+    # What each provider needs filled in - the form shows only these (dashboard/forms.py).
+    PROVIDER_FIELDS = {
+        PROVIDER_PAYPAL_ME: ("identifier",),
+        PROVIDER_PAYPAL_POOL: ("identifier",),
+        PROVIDER_GIROCODE: ("recipient", "iban", "bic", "purpose"),
+        PROVIDER_CUSTOM: ("link_template",),
+    }
+    # A GiroCode's purpose may name the member who pays, so the transfers can be told apart.
+    MEMBER_PLACEHOLDER = "{member}"
 
     name = models.CharField(max_length=100, unique=True)
     provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES, default=PROVIDER_CUSTOM)
     identifier = models.CharField(
         max_length=300,
         blank=True,
-        help_text=(
-            "paypal.me username for PayPal; pool URL (or just its ID) for a PayPal Pool; "
-            "phone number registered with WERO for WERO. Not used for a custom link."
-        ),
+        help_text="paypal.me username for PayPal; pool URL (or just its ID) for a PayPal Pool.",
     )
     link_template = models.CharField(
         max_length=500,
         blank=True,
         help_text='Custom provider only. May contain "{amount}", filled in with what is owed.',
     )
+    # GiroCode only - the limits are the EPC QR code's (EPC069-12).
+    recipient = models.CharField(max_length=70, blank=True)
+    iban = models.CharField(max_length=34, blank=True)
+    bic = models.CharField(max_length=11, blank=True)
+    purpose = models.CharField(max_length=140, blank=True)
     is_active = models.BooleanField(default=True)
     order = models.PositiveIntegerField(default=0)
 
@@ -200,8 +221,8 @@ class PaymentMethod(models.Model):
         return self.name
 
     def build_link(self, amount) -> str:
-        """A scannable/clickable link prefilled with `amount`, or "" if this method has
-        none (e.g. WERO, which has no public deep-link scheme - see instructions())."""
+        """A clickable link prefilled with `amount`, or "" if this method has none - a GiroCode
+        is a QR code for a banking app, not a link (qr_payload)."""
         if self.provider == self.PROVIDER_PAYPAL_ME:
             username = self.identifier.strip().lstrip("@")
             return f"https://paypal.me/{username}/{amount:.2f}EUR" if username else ""
@@ -210,22 +231,40 @@ class PaymentMethod(models.Model):
             if not pool:
                 return ""
             return pool if pool.startswith("http") else f"https://www.paypal.com/pools/c/{pool}"
-        if self.provider == self.PROVIDER_WERO:
+        if self.provider == self.PROVIDER_GIROCODE:
             return ""
         if "{amount}" in self.link_template:
             return self.link_template.format(amount=f"{amount:.2f}")
         return self.link_template
 
-    def instructions(self, amount) -> str:
-        """Human-readable fallback for methods with no scannable link (build_link() ==
-        "") - e.g. WERO's registered phone number - so there's still something to show
-        on the pay screens."""
-        if self.provider == self.PROVIDER_WERO and self.identifier:
-            return _("Send %(amount)s€ via WERO to %(identifier)s") % {
-                "amount": number_format(amount, 2),
-                "identifier": self.identifier,
-            }
-        return ""
+    def purpose_for(self, member=None) -> str:
+        name = member.display_name() if member is not None else ""
+        return self.purpose.replace(self.MEMBER_PLACEHOLDER, name).strip()[:140]
+
+    def qr_payload(self, amount, member=None) -> str:
+        """What the kiosk's QR code for this method carries: the link, or for a GiroCode the
+        EPC QR text (version 002, UTF-8, SEPA credit transfer) - recipient, IBAN, amount and
+        purpose, which a banking app fills into a transfer. "" when there is nothing to scan."""
+        if self.provider != self.PROVIDER_GIROCODE:
+            return self.build_link(amount)
+        if not (self.recipient and self.iban):
+            return ""
+        lines = ["BCD", "002", "1", "SCT", self.bic, self.recipient, self.iban, f"EUR{amount:.2f}",
+                 "", "", self.purpose_for(member)]
+        return "\n".join(lines).rstrip("\n")
+
+    def transfer_details(self, amount, member=None) -> list[tuple[str, str]]:
+        """A GiroCode's transfer to copy by hand - the phone can't scan itself (portal)."""
+        if self.provider != self.PROVIDER_GIROCODE or not (self.recipient and self.iban):
+            return []
+        details = [(_("Recipient"), self.recipient),
+                   ("IBAN", " ".join(self.iban[i:i + 4] for i in range(0, len(self.iban), 4)))]
+        if self.bic:
+            details.append(("BIC", self.bic))
+        details.append((_("Amount"), f"{number_format(amount, 2)}€"))
+        if purpose := self.purpose_for(member):
+            details.append((_("Purpose"), purpose))
+        return details
 
 
 class Payment(models.Model):
@@ -242,6 +281,58 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.member_id} - {self.value} ({self.created_at:%Y-%m-%d})"
+
+
+class InventoryItem(models.Model):
+    """Something the members buy for everyone - coffee beans, milk, cookies. The admins keep
+    the list (dashboard → Inventory); a member only picks from it."""
+
+    name = models.CharField(max_length=100, unique=True)
+    unit = models.CharField(max_length=20, blank=True)
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Purchase(models.Model):
+    """`quantity` of `item` bought for `price`. Paid by a member, who is credited that price in
+    full through `payment` (method PURCHASE_METHOD_NAME) - which is what puts it into every balance
+    without each of them having to know about purchases. Without a member it was paid from the
+    coffee box: no payment, only stock and spending (InventoryPolicy "dashboard")."""
+
+    member = models.ForeignKey(Member, null=True, blank=True, on_delete=models.CASCADE, related_name="purchases")
+    item = models.ForeignKey(InventoryItem, on_delete=models.PROTECT, related_name="purchases")
+    quantity = models.DecimalField(max_digits=10, decimal_places=3)
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+    payment = models.OneToOneField(Payment, null=True, blank=True, on_delete=models.CASCADE, related_name="purchase")
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    info = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.member_id or 'box'} - {self.quantity} {self.item} ({self.created_at:%Y-%m-%d})"
+
+
+class StockCount(models.Model):
+    """What a stock-take found on the shelf. The stock is the newest count plus the purchases
+    since (services.stock_levels) - nothing is taken off per cup."""
+
+    item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name="counts")
+    quantity = models.DecimalField(max_digits=10, decimal_places=3)
+    # Who counted, as the audit log names them ("Anna B." or a dashboard login) - a member or
+    # a dashboard user may be deleted later, the count stays.
+    counted_by = models.CharField(max_length=150, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
 
 
 class NfcScan(models.Model):
