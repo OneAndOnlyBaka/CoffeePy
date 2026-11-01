@@ -295,7 +295,7 @@ class StorageHelperTestCase(SimpleTestCase):
         env = self.project / ".env"
         env.write_text("# comment\nPUBLIC_HOST=192.168.4.1\nPOSTGRES_PASSWORD=keep\n")
         status = self.request("apply_settings", values={
-            "PUBLIC_HOST": "10.0.0.5", "DJANGO_LANGUAGE_CODE": "en", "POSTGRES_PASSWORD": "stolen", "TIME_ZONE": "a\nb"})
+            "PUBLIC_HOST": "10.0.0.5", "DJANGO_LANGUAGE_CODE": "en", "POSTGRES_PASSWORD": "stolen", "DJANGO_TIME_ZONE": "a\nb"})
         self.assertEqual(status["request"]["state"], "done")
         self.assertEqual(env.read_text(), "# comment\nPUBLIC_HOST=10.0.0.5\nPOSTGRES_PASSWORD=keep\nDJANGO_LANGUAGE_CODE=en\n")
         self.assertEqual(oct(env.stat().st_mode & 0o777), "0o600")
@@ -309,6 +309,11 @@ class StorageHelperTestCase(SimpleTestCase):
     def test_the_settings_lists_agree(self):
         from coffee import backups
         self.assertEqual(self.helper.SETTINGS_KEYS, backups.RESTORABLE_SETTINGS)
+        # ...and with .env: both once said TIME_ZONE where .env has DJANGO_TIME_ZONE, so no
+        # backup ever carried the time zone - two lists agreeing on a wrong name.
+        example = (settings.BASE_DIR / ".env.example").read_text()
+        for key in backups.RESTORABLE_SETTINGS:
+            self.assertRegex(example, rf"(?m)^#? ?{key}=", key)
 
     def test_requests_it_cant_read_or_doesnt_know(self):
         (self.helper.REQUESTS_DIR / "broken.json").write_text("{nope")

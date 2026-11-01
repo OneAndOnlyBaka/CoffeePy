@@ -29,7 +29,7 @@ verknüpfen und sehen dort ihre Statistik und zahlen.
 > bleibt unberührt, soweit das Gesetz sie nicht ausschließen lässt.
 
 Diese Anleitung erklärt alle Oberflächen. Technische Details stehen auf Englisch unter
-[docs](README.md): der [Aufbau](ARCHITECTURE.md), [wie die Zahlen berechnet werden](CALCULATIONS.md),
+[docs](INDEX.md): der [Aufbau](ARCHITECTURE.md), [wie die Zahlen berechnet werden](CALCULATIONS.md),
 die [Sicherheitsmechanismen](SECURITY.md), der [DSGVO-konforme Betrieb](PRIVACY.md) und der [Schnellstart](QUICKSTART.md).
 
 **Inhalt**
@@ -221,8 +221,9 @@ angegeben hast.
 
 CoffeePy ist nur über HTTPS erreichbar. Das Zertifikat signiert das Gerät selbst, deshalb
 warnt der Browser beim ersten Besuch. Damit die Warnung verschwindet, installierst du einmal
-pro Handy oder PC das **Gerätezertifikat**: Es ist auf der Anmeldeseite und im Portal unter
-*Zertifikat herunterladen* verlinkt (direkt: `https://192.168.4.1/certificate/`).
+pro Handy oder PC das **Gerätezertifikat**: Es ist auf der Anmeldeseite (*Lade das
+Gerätezertifikat herunter*) und im Portal (*Zertifikat herunterladen*) verlinkt – direkt:
+`https://192.168.4.1/certificate/`.
 
 - **iPhone/iPad:** Datei öffnen → *Einstellungen › Profil geladen* installieren → danach unter
   *Einstellungen › Allgemein › Info › Zertifikatsvertrauenseinstellungen* das CoffeePy-Zertifikat
@@ -295,6 +296,9 @@ nichts.
 
 ## 4. Der Kiosk
 
+> Für Mitglieder steht das Wichtigste auf einer Seite – zum Ausdrucken und Aufhängen neben der
+> Maschine: [Kaffee mit CoffeePy – für Mitglieder](MEMBERS.de.md).
+
 Der Touchscreen hat vier Bereiche, links in der Leiste. Oben rechts sitzen runde Knöpfe: Der
 **Schraubenschlüssel** ist der [Admin-Zugang](#admin-zugang) – für Mitglieder ist er nicht
 gedacht –, **DE/EN** schaltet die Sprache des Kiosks um, und ein **rot blinkender** Knopf
@@ -309,9 +313,12 @@ entscheiden muss:
 
 ![Warnzeichen am Kiosk](pictures/manual/de/kiosk-device-alarm.png)
 
-Außer der Rangliste brauchen alle Bereiche eine Karte. Wer eine Karte auflegt, ist angemeldet,
+Außer der Rangliste brauchen alle Bereiche eine Karte – eine auf der Rangliste aufgelegte startet eine Bestellung wie auf **Bestellen**. **Erst den Bereich antippen, dann die
+Karte auflegen** – es gilt der Bereich, den der Bildschirm zeigt; der Startbildschirm ist
+**Bestellen**. Wer eine Karte auflegt, ist angemeldet,
 bis er fertig ist; nach **20 Sekunden ohne Eingabe** macht der Kiosk selbst weiter – beim
-**Bestellen** wird der vorausgewählte Kaffee **gebucht**, überall sonst wirst du abgemeldet. Der
+**Bestellen** wird der vorausgewählte Kaffee **gebucht** (außer du tippst **Abbrechen**),
+überall sonst wirst du abgemeldet. Der
 rote Countdown neben den Knöpfen zeigt, wie lange noch. Ein Tipp auf einen Bereich in der Leiste meldet
 ebenfalls ab. **Bezahlen**, **Einstellungen** und
 die **Rangliste** springen nach 30 Sekunden ohne Tipp von selbst zurück auf **Bestellen** – so
@@ -324,10 +331,26 @@ Der Startbildschirm. Er erklärt, was nach dem Auflegen passiert, und zeigt die 
 ![Bestellen – Karte auflegen](pictures/manual/de/kiosk-wait-order.png)
 
 Nach dem Auflegen begrüßt dich der Kiosk mit Namen. Dein Lieblingskaffee ist vorausgewählt;
-tippe einen anderen an, um zu wechseln. **Jetzt bestellen** bucht sofort, **Abbrechen** bricht
-ab, und ohne Eingabe wird nach 20 Sekunden automatisch gebucht. **Wer seine Karte auflegt und
-weggeht, hat einen Kaffee bestellt** – tippe **Abbrechen**, wenn du das nicht wolltest. Wählst
-du eine andere Sorte, entfällt die automatische Buchung – dann bestätigst du selbst. Die Medaillen neben dem Namen
+tippe einen anderen an, um zu wechseln. **Jetzt bestellen** bucht sofort. **Abbrechen** bricht
+die Bestellung ab: Es wird nichts gebucht, und du bist abgemeldet. Tippst du gar nichts, bucht
+der Kiosk nach 20 Sekunden deinen Lieblingskaffee – der Kaffee mit einem Handgriff: Karte
+auflegen, Tasse nehmen, fertig. Wählst du eine andere Sorte, entfällt die automatische Buchung –
+dann bestätigst du selbst; der Countdown beginnt ab deiner Wahl neu und meldet dich ab, ohne
+etwas zu buchen.
+
+> **Nur nachsehen, nichts bestellen:** Kontostand und Tassen stehen unter **Bezahlen**, Name und
+> Lieblingskaffee unter **Einstellungen** – erst den Bereich antippen, dann die Karte auflegen.
+> Dort wird nie ein Kaffee gebucht. Von selbst gebucht wird nur auf **Bestellen**, und nur, wenn du
+> weder **Abbrechen** noch eine andere Sorte antippst. Ist trotzdem etwas falsch gebucht, sag
+> einem Admin Bescheid – er korrigiert es unter [Buchungen](#buchungen).
+
+Bei **mehr als 12 Sorten** passen nicht alle auf den Bildschirm, sie kommen in Seiten: zuerst
+**Für dich** – dein Lieblingskaffee, die Sorten, die du am häufigsten bestellst, dann die, die
+alle am häufigsten bestellen –, und **Weitere Sorten ›** blättert zu den übrigen, alphabetisch
+(**‹ Zurück** blättert zurück). Dein Lieblingskaffee steht immer auf der ersten Seite; wer
+blättert, wählt aus – dann wird nichts mehr von selbst gebucht.
+
+Die Medaillen neben dem Namen
 zeigen einen Platz unter den Top 3 – insgesamt und in diesem Monat. Wer aus dem Vormonat noch
 etwas schuldet, bekommt hier eine Erinnerung.
 
@@ -355,7 +378,8 @@ eingerichtet, kannst du den offenen Betrag auch direkt per QR-Code mit dem Handy
 
 Hier änderst du **Namen** und **Lieblingskaffee** und tippst **Speichern**. Getippt wird
 direkt oder über **Tastatur** mit der Bildschirmtastatur – sie hat auch Umlaute, ß, Bindestrich
-und Punkt.
+und Punkt. Der Lieblingskaffee ist eine Kachel pro Sorte – bei mehr als 12 Sorten so gruppiert wie
+beim **Bestellen**.
 
 Der Name ist **Vorname und erster Buchstabe des Nachnamens**, z. B. *Anna B.*, oder ein
 **Kürzel** aus zwei bis vier Großbuchstaben, z. B. *AB* – so wissen alle, wer in der Rangliste und
@@ -386,7 +410,7 @@ verbunden sein.
 
 ### Rangliste
 
-Braucht keine Karte. Oben drei Reiter, jeder mit eigener Retro-Animation; die Namen stehen im
+Braucht keine Karte. Oben bis zu drei Reiter (welche, entscheidet der Admin, siehe unten), jeder mit eigener Retro-Animation; die Namen stehen im
 Balken darunter. Gezählt werden Tassen – eine Kanne zählt zwei.
 
 - **Gesamt** – das Siegerpodest: die Top 3 seit Beginn, der Erste in der Mitte.
@@ -399,7 +423,7 @@ Balken darunter. Gezählt werden Tassen – eine Kanne zählt zwei.
 
   ![Rangliste dieser Monat](pictures/manual/de/kiosk-ranking-month.png)
 
-- **Pranger** – alle, die bis zum Vormonat noch etwas schulden, beim Gang der Schande; ihre
+- **Pranger** – die sieben, die bis zum Vormonat am meisten schulden, beim Gang der Schande; ihre
   Namen und Beträge laufen im Balken darunter durch. Haben alle bezahlt, steht **NO SHAME** im
   Banner, und der Henker steht ohne Arbeit auf dem leeren Schafott.
 
@@ -408,8 +432,9 @@ Balken darunter. Gezählt werden Tassen – eine Kanne zählt zwei.
 Die Rangliste öffnet immer mit ihrem ersten Reiter.
 
 **Ob es Rangliste und Pranger gibt, entscheidet der Admin** (Dashboard → **System** →
-*Rangliste und Pranger*): Ist eines aus, fehlt sein Reiter; ist beides aus, fehlt der Knopf
-**Rangliste** ganz – und die Medaille nach einer Bestellung auch. Ein neu eingerichtetes Gerät
+*Rangliste und Pranger*): Ist die Rangliste aus, fehlen die Reiter *Gesamt* und *Dieser Monat*
+und die Medaillen beim Bestellen; ist der Pranger aus, sein Reiter; ist beides aus, auch der Knopf
+**Rangliste**. Ein neu eingerichtetes Gerät
 startet mit beidem aus; siehe [Datenschutz und Arbeitsplatz](#datenschutz-und-arbeitsplatz).
 
 ### Admin-Zugang
@@ -436,7 +461,8 @@ erledigt, lädt er sich von selbst neu; dasselbe gilt für eine Fehlerseite.
 Jedes Mitglied kann sein Handy verknüpfen: am Kiosk unter **Einstellungen** die Karte
 auflegen, **Dieses Handy verknüpfen** tippen und den QR-Code mit der Kamera scannen. Das Handy
 bleibt danach sechs Monate angemeldet (bei jeder Nutzung verlängert). Die Sprache stellst du
-oben rechts um; sie gilt nur für dieses Handy.
+oben rechts um; sie gilt nur für dieses Handy. **Abmelden** daneben beendet die Verknüpfung
+auf diesem Handy.
 
 **Start** zeigt Tassen, Kontostand und die letzten Bestellungen und Zahlungen. Unten auf der
 Seite: **Meine Daten herunterladen** – alles, was das Gerät über dich speichert, als eine Datei
@@ -467,7 +493,7 @@ einen neuen erzeugen.
 Nach zehn ungültigen Links innerhalb von 15 Minuten nimmt ein Handy bis zu einer Viertelstunde lang
 keinen Link mehr an – so kann niemand Links auf gut Glück durchprobieren.
 
-![Link ungültig](pictures/manual/de/portal-link-invalid.png)
+![Link nicht mehr gültig](pictures/manual/de/portal-link-invalid.png)
 
 ### Wie das Verknüpfen funktioniert – und warum es unbedenklich ist
 
@@ -482,7 +508,7 @@ Das Portal kommt ohne Passwörter aus. Stattdessen übergibt der Kiosk dem Handy
    Zufallsgenerator (43 Zeichen). Er lässt sich nicht erraten oder ausrechnen, auch nicht mit
    beliebig vielen Versuchen in den fünf Minuten, die er gilt.
 3. **Fünf Minuten, einmal.** Der Link verfällt nach fünf Minuten und wird gelöscht, sobald er
-   geöffnet wird – ein zweiter Scan landet bei *Link ungültig*. Ein neuer Link ersetzt einen
+   geöffnet wird – ein zweiter Scan landet bei *Link nicht mehr gültig*. Ein neuer Link ersetzt einen
    älteren, den das Mitglied noch nicht benutzt hat.
 4. **Das Handy bekommt eine eigene Anmeldung.** Das Öffnen des Links startet auf diesem Handy
    eine neue Sitzung: ein Cookie, das nur über HTTPS übertragen wird (verschlüsselt, geprüft
@@ -504,7 +530,7 @@ und Kiosk sind mit einer Portal-Anmeldung nicht erreichbar.
 
 **Das Einzige, worauf man achten sollte:** Wer den QR-Code in diesen fünf Minuten abfotografiert
 und als Erster öffnet, bekommt statt des Mitglieds dessen Portal. Das Mitglied merkt es sofort
-(sein eigener Scan meldet *Link ungültig*), das Handy steht unter **Geräte**, und ein Tipp
+(sein eigener Scan meldet *Link nicht mehr gültig*), das Handy steht unter **Geräte**, und ein Tipp
 meldet es wieder ab. Also: selbst scannen, gleich, und das Fenster danach schließen.
 
 ---
@@ -525,21 +551,24 @@ gibt es nicht.
 
 Die **Übersicht** zeigt die wichtigsten Zahlen, Knöpfe zum Erfassen einer Zahlung oder eines
 Mitglieds und die Karte **Gerät**: Ist der Kartenleser online, laufen die Backups, ist das
-Uhrenmodul (RTC) in Ordnung, und unter welcher Adresse erreichen Handys das Gerät. Was hier rot
+Uhrenmodul (RTC) in Ordnung, und unter welcher Adresse erreichen Handys das Gerät. Unter
+**Exporte** gibt es *Alle Bestellungen (CSV)* und *Alle Zahlungen (CSV)* für eine Tabelle. Was hier rot
 ist, braucht Aufmerksamkeit – dasselbe blinkt auch am Kiosk rot.
 
 ![Übersicht](pictures/manual/de/dashboard-home.png)
 
 ### Statistik und Pranger
 
-**Statistik**: Tassen und Umsatz der letzten 12 Monate, Verteilung der Sorten, Tassen nach
-Uhrzeit und Wochentag (die Titel nennen die meistbesuchte Zeit), Preisentwicklung und
-Zahlungen nach Methode. Gezählt werden Bezüge – eine Kanne zählt zwei Tassen.
+**Statistik**: Bestellungen und Zahlungen (in €) pro Monat der letzten 12 Monate, Verteilung
+der Sorten, Tassen nach Uhrzeit und Wochentag (die Titel nennen die meistbesuchte Zeit),
+Preisentwicklung und Zahlungen nach Methode. Gezählt werden Bezüge – eine Kanne zählt zwei
+Tassen; die Verteilung der Sorten zählt Bestellungen (eine Kanne einmal, siehe
+[die Berechnungen](CALCULATIONS.md)).
 
 ![Statistik](pictures/manual/de/dashboard-statistics.png)
 
-**Pranger**: alle Mitglieder mit negativem Kontostand, gerechnet bis zum Vormonat – dieselbe
-Liste wie am Kiosk.
+**Pranger**: alle Mitglieder mit negativem Kontostand, gerechnet bis zum Vormonat – der Pranger
+am Kiosk zeigt die sieben größten davon.
 
 ![Pranger](pictures/manual/de/dashboard-pillory.png)
 
@@ -549,12 +578,14 @@ Die Liste aller Mitglieder mit ihren Karten und dem Tag ihres **letzten Kaffees*
 erkennst du auch bei einer Karte ohne Namen, ob noch jemand sie benutzt oder ob ihr Besitzer
 längst gegangen ist (dann *Als ausgeschieden markieren*). Pro Mitglied:
 
-- **Bearbeiten**: Name, UID, Lieblingskaffee. Für den Namen gelten dieselben Regeln wie am Kiosk
+- **Bearbeiten**: Name und Lieblingskaffee (die UID steht fest, sobald es das Mitglied gibt). Für den Namen gelten dieselben Regeln wie am Kiosk
   (siehe [Einstellungen](#einstellungen)).
 - *Neuer Name beim nächsten Kaffee*: Dieser Name passt nicht zu den Regeln – der Kiosk fragt
   das Mitglied beim nächsten Kaffee nach einem neuen.
-- **Karte hinzufügen**: Die nächste Karte, die am Kiosk aufgelegt wird, gehört danach zu diesem
-  Mitglied – so bekommt jemand eine Ersatzkarte, ohne dass ein zweites Konto entsteht.
+- **Buchungen**: die Bestellungen und Zahlungen dieses Mitglieds (siehe [Buchungen](#buchungen)).
+- **Karte hinzufügen**: Die nächste Karte, die innerhalb einer Minute am Kiosk aufgelegt wird,
+  gehört danach zu diesem Mitglied – so bekommt jemand eine Ersatzkarte, ohne dass ein zweites
+  Konto entsteht.
 - **Geräte abmelden**: meldet alle verknüpften Handys ab.
 - **Als ausgeschieden markieren**: bucht den Kontostand aus und sperrt die Karten; lässt sich
   mit *Reaktivieren* rückgängig machen.
@@ -570,7 +601,8 @@ längst gegangen ist (dann *Als ausgeschieden markieren*). Pro Mitglied:
 ![Mitglied bearbeiten](pictures/manual/de/dashboard-member-form.png)
 
 **Mitglieder zusammenführen** hilft, wenn doch zwei Konten entstanden sind: Alle Bestellungen,
-Zahlungen und Karten wandern auf das Konto, das du behältst, das andere wird gelöscht.
+Zahlungen und Karten wandern auf das Konto, das du behältst, das andere wird gelöscht – seine
+Karte wird eine weitere Karte des behaltenen, und das trägt den Namen des zuletzt benutzten Kontos.
 
 ![Mitglieder zusammenführen](pictures/manual/de/dashboard-merge.png)
 
@@ -594,8 +626,8 @@ ebenso. In den Backups bleibt ein gelöschtes Mitglied, bis diese aussortiert we
 
 ### Buchungen
 
-Jeder gebuchte Kaffee und jede Zahlung, die neuesten zuerst, filterbar nach Mitglied (mit
-dessen Kontostand). Hier korrigierst du eine falsche Buchung (**Bearbeiten**, **Löschen**) und
+Jeder gebuchte Kaffee und jede Zahlung – zwei Reiter, **Bestellungen** und **Zahlungen**, die
+neuesten zuerst, 50 pro Seite –, filterbar nach Mitglied (mit dessen Kontostand). Hier korrigierst du eine falsche Buchung (**Bearbeiten**, **Löschen**) und
 erfasst eine Zahlung, die nicht über den Kiosk lief – **Zahlung erfassen**, etwa Bargeld in
 der Kasse. Jede Änderung landet im Protokoll.
 
@@ -611,7 +643,9 @@ der Kasse. Jede Änderung landet im Protokoll.
 
 **Zahlungsmethoden**: Für PayPal reicht der paypal.me-Name, für PayPal Pool die URL des
 Pools, für WERO die Telefonnummer; *Eigener Link* nimmt jede Adresse, optional mit `{amount}`
-für den offenen Betrag. Daraus entstehen die Bezahl-Links und QR-Codes an Kiosk und Handy.
+für den offenen Betrag. Daraus entstehen die Bezahl-Links und QR-Codes an Kiosk und Handy – WERO hat keinen
+öffentlichen Link und zeigt deshalb die Telefonnummer als Anleitung statt eines QR-Codes.
+*Aktiv* blendet eine Methode aus, ohne sie zu löschen, *Reihenfolge* legt ihren Platz fest.
 
 ![Zahlungsmethoden](pictures/manual/de/dashboard-payment-methods.png)
 
@@ -629,8 +663,10 @@ eigenes Passwort änderst du nur hier, nie in der Benutzerliste.
 Wer sich am Dashboard anmelden darf – nur für Admins. **Benutzer anlegen** fragt nach
 Benutzername, Rolle (**Admin** oder **Betreuer**) und einem ersten Passwort; mit *Muss bei der
 ersten Anmeldung ein neues Passwort setzen* gibst du es als Einmal-Passwort weiter. Pro
-Benutzer: **Bearbeiten**, **Passwort setzen** (für ein vergessenes), **Löschen**. Wer nach zu
-vielen Fehlversuchen gesperrt ist, ist als *gesperrt* markiert.
+Benutzer: **Bearbeiten** (ohne Haken bei *Darf sich anmelden* ist das Konto gesperrt, ohne gelöscht
+zu sein), **Passwort setzen** (für ein vergessenes), **Löschen**. Niemand kann sich selbst
+sperren, löschen oder herabstufen. Wer nach zu vielen Fehlversuchen gesperrt ist, ist als
+*gesperrt* markiert.
 
 ![Dashboard-Benutzer](pictures/manual/de/dashboard-users.png)
 
@@ -645,7 +681,7 @@ in sinnvollen Grenzen einstellen:
 |---|---|---|
 | Mindestlänge | 12 Zeichen | 8–64 |
 | Zeichenarten (Klein-, Großbuchstaben, Ziffern, Sonderzeichen) | 3 | 1–4 |
-| … oder eine lange Passphrase ab | 20 Zeichen mit 2 Arten | aus, oder bis 128 |
+| … oder eine lange Passphrase ab | 20 Zeichen mit 2 Arten | aus, oder länger als die Mindestlänge bis 128; 1–4 Arten |
 | Sperre nach Fehlversuchen | 5 | 3–20 |
 | Gesperrt für | 15 Minuten | 1–1440 |
 | Abmelden bei Inaktivität nach | 30 Minuten | 5–480 |
@@ -726,7 +762,7 @@ Beim Wiederherstellen wählst du, **was**: die Daten (Mitglieder, Buchungen, Kaf
 Dashboard-Anmeldungen), die Zertifikate samt Geräte-CA (Handys vertrauen dem Gerät weiter), die
 Geräte-Identität (sein Backup-Stick wird der dieses Geräts) und die Einstellungen (Sprache,
 Adresse, Zeitzone, Aufbewahrung des Protokolls). Zur Bestätigung tippst du `DELETE`. Bevor sich
-etwas ändert, wird der aktuelle Stand auf den Stick gesichert; schlägt die Wiederherstellung
+etwas ändert, wird der aktuelle Stand gesichert – auf den Stick, ohne Stick auf die SD-Karte; schlägt die Wiederherstellung
 fehl, bleibt alles, wie es war. Ein verschlüsseltes Backup braucht die Passphrase.
 
 ![Aus einer Datei wiederherstellen](pictures/manual/de/dashboard-restore-upload.png)
@@ -752,7 +788,7 @@ Zeigt, welches Zertifikat gerade verwendet wird. Du kannst ein **eigenes Zertifi
 mit Kette, und den unverschlüsselten privaten Schlüssel) hochladen; es ist nach wenigen
 Sekunden aktiv. CoffeePy prüft, dass Schlüssel und Zertifikat zusammenpassen, und warnt, wenn
 es nicht für die Adressen des Geräts gilt. Ein Knopf führt zurück zum selbstsignierten
-Zertifikat. Der Kiosk auf dem Gerät nutzt immer das eigene Zertifikat – ein fehlerhafter
+Zertifikat. Der Kiosk auf dem Gerät nutzt immer das Zertifikat des Geräts – ein fehlerhafter
 Upload sperrt ihn also nie aus.
 
 ![Zertifikat](pictures/manual/de/dashboard-certificate.png)
@@ -826,7 +862,7 @@ Das Gerät braucht für Updates kein Internet. Auf einem PC mit Internet und Doc
 ./scripts/update_builder.sh
 ```
 
-Der **Update-Paket-Bauer** fragt, was ins Paket kommt – Plattform, die eigenen Dienste des
+Der **Update-Paket-Builder** fragt, was ins Paket kommt – Plattform, die eigenen Dienste des
 Geräts, Betriebssystem-Pakete für ein Gerät ohne Internet –, mit welchem Schlüssel signiert wird
 (beim ersten Mal legt er einen an) und wohin das Paket kommt. Er baut und signiert es und kann
 es auf Wunsch gleich ins Dashboard eines Geräts hochladen und verfolgen, wie es eingespielt wird.
@@ -882,7 +918,7 @@ Das Gerät prüft es wie ein Update – Signatur, Prüfsummen, Plattform, Platz,
 als das letzte OS-Paket und für das System gebaut wurde, das auf dem Gerät läuft. Es sichert die
 Datenbank auf die SD-Karte, spielt die Pakete ein und **startet neu**, wenn ein neuer Kernel oder
 neue Firmware dabei war; „Wir sind gleich wieder da“ bleibt so lange stehen. Aktualisiert wird
-nur, was installiert ist – ein Paket kann nichts Neues installieren.
+nur, was installiert ist – Neues kommt nur als Abhängigkeit davon dazu.
 
 - **Es gibt keinen Weg zurück** von einem OS-Update – die Kopie der Datenbank ist das Netz.
 - *Some packages were kept back*: Etwas Installiertes braucht genau die alte Version eines
@@ -929,7 +965,7 @@ eigenen:
    - oder aus deinem eigenen Checkout installieren, in dem dein `install/update-signing.pub`
      eingecheckt ist – dann ist er von Anfang an der Schlüssel des Geräts, und jedes Update aus
      diesem Checkout bringt denselben mit.
-3. Updates mit diesem Schlüssel bauen: Der Paket-Bauer fragt danach (*Signaturschlüssel*), das
+3. Updates mit diesem Schlüssel bauen: Der Update-Paket-Builder fragt danach (*Signaturschlüssel*), das
    Script nimmt `--key DATEI`.
 
 Den Fingerabdruck des verwendeten Schlüssels zeigt **Update › Versionen** (*Update-Signatur*).
@@ -1016,7 +1052,7 @@ der Kiosk mit dem **DE/EN**-Knopf, Handys und PCs oben rechts im Portal und im D
 | Problem | Lösung |
 |---|---|
 | Der Browser warnt vor der Seite. | Das Gerätezertifikat einmal installieren (siehe [oben](#das-zertifikat-installieren)). |
-| **Bad Request (400)** im Browser. | Das Gerät kennt die Adresse nicht, mit der du es aufrufst. Nimm die Adresse aus der Einrichtung (`192.168.4.1`, `coffeepy.local`) oder lass das Provisioning-Tool über die neue Adresse laufen – es trägt sie ein. |
+| **Bad Request (400)** im Browser. | Das Gerät kennt die Adresse nicht, mit der du es aufrufst. Nimm die Adresse aus der Einrichtung (`192.168.4.1`, `coffeepy.local`) oder lass das Provisioning-Tool über die neue Adresse laufen – es trägt sie ein (anstelle einer Adresse, über die es vorher lief). |
 | Der Bildschirm ist nach dem Einschalten eine Minute lang schwarz, dann weiß. | Normal: Erst startet der Pi, dann der Browser. Nach etwa anderthalb Minuten erscheint der Kiosk – nach einem Stromausfall kann es gut drei Minuten dauern: Dann scheitert der erste Start des Browsers manchmal, und das Gerät startet ihn von selbst noch einmal. |
 | Der Bildschirm ist dunkel, Tippen und Karten bewirken nichts, das Dashboard geht aber. | Die **Nachtruhe** läuft (Dashboard → **System**). Sie endet zur eingestellten Zeit von selbst; zum Ausschalten den Haken entfernen – der Kiosk kommt innerhalb einer Minute. |
 | Der Kiosk zeigte kurz „Aw, Snap!“ (oder wurde weiß) und kam dann von selbst wieder. | Der Browser des Kiosks ist beim Laden der Seite abgestürzt – der Browser von Raspberry Pi OS tut das ab und zu, meist direkt nach einem Update oder einer Wiederherstellung. Das Gerät merkt es innerhalb von Sekunden und lädt die Seite neu; dabei geht nichts verloren. |

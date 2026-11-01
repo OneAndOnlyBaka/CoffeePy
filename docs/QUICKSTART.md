@@ -79,8 +79,8 @@ sudo ./install/install.sh
 That is the whole thing. It installs Docker plus the Compose v2 plugin, the kiosk stack
 (X, Openbox, Chromium, autologin on tty1, the CoffeePy boot splash), the DS3231 RTC
 overlay and its write-back timer, the ACR122U udev rule and the modprobe blacklist that
-keeps the kernel's own NFC driver off the reader, the USB-backup-stick rule, the systemd
-units, and finally - after asking - the standalone WiFi access point. It copies the app to
+keeps the kernel's own NFC driver off the reader, the storage helper for the backup stick, the
+systemd units, and finally - after asking - the standalone WiFi access point. It copies the app to
 `/opt/coffeepy` and generates `/opt/coffeepy/.env` with per-device secrets. Reboot when it
 is done.
 
@@ -90,7 +90,8 @@ Worth knowing:
   `/var/lib/coffeepy/install-state`; a re-run skips what already succeeded (`--force`
   repeats them anyway). Interrupted downloads, a flaky mirror or a closed SSH session
   cost you nothing but the time.
-- **`--dry-run` prints the whole plan without touching anything**, from any machine.
+- **`--dry-run` prints the whole plan without touching anything** (as root - without root only
+  together with `--only`).
   Worth doing once before the real run.
 - **`--skip-ap` leaves networking alone** if the Pi should stay on your existing network
   instead of hosting its own.
@@ -128,8 +129,8 @@ prerequisite any ARM cross-build has.
 On the device:
 
 ```bash
-tar xf coffeepy-offline-<date>.tar -C /tmp
-sudo /tmp/coffeepy-offline/repo/install/install.sh --offline=/tmp/coffeepy-offline
+tar xf coffeepy-offline-<date>.tar -C ~
+sudo ~/coffeepy-offline/repo/install/install.sh --offline=$HOME/coffeepy-offline
 ```
 
 `--offline` swaps out exactly the three steps that would otherwise reach for the network:

@@ -10,6 +10,8 @@
 <script src="{% static 'kiosk/nav_state.js' %}" defer></script>
 <script src="{% static 'kiosk/clock.js' %}" defer></script>
 <script src="{% static 'kiosk/countdown.js' %}" defer></script>
+<script src="{% static 'kiosk/osk.js' %}" defer></script>
+<script src="{% static 'kiosk/sort_pages.js' %}" defer></script>
 <script src="{% static 'kiosk/maintenance.js' %}" defer></script>
 {% comment %}
 Inline on purpose: a page loaded while the stack restarts can get its HTML but lose the CSS
@@ -78,6 +80,23 @@ and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
 <div id="qr-modal" class="modal-overlay"
      hx-on:click="if (event.target === event.currentTarget) event.currentTarget.classList.remove('open')">
     <div id="qr-modal-content"></div>
+</div>
+<!-- The on-screen keyboard (static/kiosk/osk.js). Part of this page, never a page of its own:
+     every navigation away from the kiosk page risks Chromium's renderer crash (CLAUDE.md), and
+     the keyboard page crashed it on the way there and back. Always laid out, only made visible,
+     so opening it neither builds nor tears down any layout either. Outside #panel, like the QR
+     modal, so a poll never touches it. -->
+<div id="osk-modal" class="osk-modal" data-space-label="{% translate "Space" %}"
+     data-touch-url="{% url 'kiosk:settings_touch' %}">
+    <input type="text" id="osk-input" autocomplete="off">
+    <div class="osk-keys">
+        <div id="osk-text" class="osk"></div>
+        <div id="osk-numeric" class="osk off"></div>
+    </div>
+    <div class="action-row">
+        <button type="button" class="danger" id="osk-cancel">✕ {% translate "Cancel" %}</button>
+        <button type="button" class="success" id="osk-done">✓ {% translate "Done" %}</button>
+    </div>
 </div>
 <!-- Covers everything while an install or update runs, or the app stops answering
      (static/kiosk/maintenance.js) - so nobody orders into a half-restarted app. -->

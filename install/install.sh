@@ -9,7 +9,7 @@
 #   sudo ./install/install.sh
 #
 # Options:
-#   --dry-run     print every action instead of performing it (safe to run anywhere)
+#   --dry-run     print every action instead of performing it (needs root unless --only leaves out preflight)
 #   --yes         don't ask before the steps that change networking
 #   --force       re-run steps that are already recorded as done
 #   --skip-ap     leave networking alone (keep the Pi on your existing WiFi/ethernet)

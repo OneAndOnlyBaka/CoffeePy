@@ -208,9 +208,10 @@ def kiosk_settings(b):
     b.open_modal("button[hx-get*='link-phone']")
     b.shot("kiosk-link-phone")
     b.js("document.getElementById('qr-modal').classList.remove('open')")
-    b.go(b.js("document.querySelector('a.osk-open-btn').getAttribute('href')"))
+    # An overlay on the kiosk page (static/kiosk/osk.js) - opened by its button, never navigated to.
+    b.js("document.querySelector('.osk-open-btn').click()")
     b.shot("kiosk-keyboard")
-    b.go("/kiosk/")
+    b.js("document.getElementById('osk-cancel').click()")
 
 
 def kiosk_new_card(b):

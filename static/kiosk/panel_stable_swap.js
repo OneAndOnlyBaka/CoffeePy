@@ -18,6 +18,10 @@
 
   document.body.addEventListener("htmx:beforeSwap", (evt) => {
     if (evt.target.id !== "panel") return;
+    // A response that swaps nothing anyway - the 204 of a pick on Order, aimed at #panel through
+    // its form - is not what the panel shows. Taken as the last one, it made the next poll look
+    // new: the panel was swapped after every pick, and that teardown crashed Chromium (2026-10-31).
+    if (!evt.detail.shouldSwap) return;
     const response = evt.detail.serverResponse;
     if (response === lastResponse) {
       evt.detail.shouldSwap = false;

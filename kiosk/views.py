@@ -7,7 +7,7 @@ import qrcode.image.svg
 from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Q
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone, translation
@@ -195,11 +195,21 @@ def ranking_view(request, view):
 @require_POST
 def order_select(request):
     if request.session.get("logged_in") and request.session.get("mode") == MODE_ORDER:
+        # The panel goes on showing what it showed at the card: the pick is the browser's (a
+        # checked tile; countdown.js switches the countdown). Re-rendering it swapped the panel
+        # away under the finger, and that teardown crashed Chromium in 3 of 5 picks on the device
+        # (2026-10-31) - the swap a poll would do, if this changed the panel, as well.
+        request.session.setdefault("shown_order", [request.session.get("order_coffee_id"),
+                                                   request.session.get("order_auto_checkout", True)])
+        request.session.setdefault("shown_deadline", request.session.get("deadline"))
         coffee_id = request.POST.get("coffee_id")
         if coffee_id:
             request.session["order_coffee_id"] = int(coffee_id)
+        # Whoever picks a sort confirms it themselves - with time for that from the pick on, and a
+        # logout countdown in place of the checkout one.
         request.session["order_auto_checkout"] = False
-    return _render_panel(request)
+        request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
+    return HttpResponse(status=204)
 
 
 @require_POST
@@ -230,8 +240,10 @@ def settings_save(request):
         problem = names.problem(nickname, member=Member.objects.filter(uid=uid).first())
         if problem:
             request.session["pending_nickname"] = nickname
+            request.session["pending_favourite"] = favourite_id  # or the re-render undid the pick
             request.session["name_error"] = problem
             request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
+            request.session.pop("shown_deadline", None)
             return _render_panel(request)
         member, created = Member.objects.update_or_create(
             uid=uid,
@@ -256,6 +268,10 @@ def settings_touch(request):
     editing a field (mirrors the Tkinter app resetting its logout timer while a
     keyboard/selector dialog is open)."""
     if request.session.get("logged_in"):
+        # The panel keeps showing the deadline it already shows (countdown.js extends the visible
+        # countdown on the same tap): a new one would make the next poll differ, and that swap
+        # threw away what was being typed or picked and tore the layout down - Chromium's crash.
+        request.session.setdefault("shown_deadline", request.session.get("deadline"))
         request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
     return _render_panel(request)
 
@@ -275,38 +291,9 @@ def pay(request):
             payment = Payment.objects.create(member_id=request.session["uid"], value=amount, method_name=method_name)
             who = audit.member_actor(payment.member)
             audit.log(request, "payment.create", target=who, actor=who, details=f"#{payment.pk}: {amount} EUR ({method_name})")
-        request.session.pop("pending_amount", None)
         request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
+        request.session.pop("shown_deadline", None)
     return _render_panel(request)
-
-
-PENDING_SESSION_KEYS = {"nickname": "pending_nickname", "amount": "pending_amount"}
-
-
-def keyboard_edit(request):
-    """A separate, non-polling page for touchscreens with no physical keyboard: typing
-    here never fights the panel's own periodic refresh, since this page is never
-    re-rendered while the user is on it. Reachable from an optional link next to the
-    nickname/amount fields; those fields stay plain, directly-editable inputs so a
-    physical keyboard works on the main panel too, without ever visiting this page."""
-    if not request.session.get("logged_in"):
-        return redirect("kiosk:index")
-    field = request.POST.get("field") or request.GET.get("field")
-    session_key = PENDING_SESSION_KEYS.get(field)
-    if session_key is None:
-        return redirect("kiosk:index")
-
-    request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
-    if request.method == "POST":
-        request.session[session_key] = request.POST.get("value", "")
-        request.session.pop("name_error", None)  # a new try: judged when it is saved
-        return redirect("kiosk:index")
-
-    return render(
-        request,
-        "kiosk/keyboard.html",
-        {"field": field, "value": request.GET.get("value", ""), "numeric": field == "amount"},
-    )
 
 
 # --- internal helpers -------------------------------------------------
@@ -315,8 +302,8 @@ def keyboard_edit(request):
 def _reset_session_state(request):
     request.session["logged_in"] = False
     for key in (
-        "uid", "deadline", "order_coffee_id", "order_auto_checkout", "is_new_user",
-        "pending_nickname", "pending_amount", "name_error", "then_order",
+        "uid", "deadline", "shown_deadline", "shown_order", "sort_order", "order_coffee_id", "order_auto_checkout", "is_new_user",
+        "pending_nickname", "pending_favourite", "name_error", "then_order",
     ):
         request.session.pop(key, None)
     _touched(request)
@@ -346,6 +333,9 @@ def _start_session(request, mode, uid, is_new_user=False):
     request.session["deadline"] = time.time() + (
         ORDER_AUTO_CHECKOUT_SECONDS if mode == MODE_ORDER else AUTO_LOGOUT_SECONDS
     )
+    request.session.pop("shown_deadline", None)
+    request.session.pop("shown_order", None)
+    request.session.pop("sort_order", None)
     request.session["order_coffee_id"] = None
     request.session["order_auto_checkout"] = True
 
@@ -715,7 +705,9 @@ def _state_context(request, mode):
     # The countdown runs in the browser (static/kiosk/countdown.js) from this fixed moment: the
     # seconds themselves would make every poll's HTML differ, and each swap of a differing panel
     # risks Chromium's renderer crash (CLAUDE.md) - measured: two crashes in three orders.
-    ctx["deadline_ms"] = int(deadline * 1000) if deadline else None
+    shown = request.session.get("shown_deadline") or deadline
+    ctx["deadline_ms"] = int(shown * 1000) if shown else None
+    ctx["touch_seconds"] = AUTO_LOGOUT_SECONDS
     return ctx
 
 
@@ -729,14 +721,58 @@ def _rank_badge(uid, ranking_rows):
     return None
 
 
+# More sorts than this and they don't fit the screens (measured at 1024x600: three across on
+# Order, four on Settings). Then they come in pages, never a scrolling list: a swipe followed by
+# leaving the screen crashed Chromium's renderer 2 times in 8 on the device (2026-10-31) - the
+# teardown of a scrolled list. The first page is "For you": the favourite, the member's most
+# ordered, everyone's most ordered; then the rest, alphabetical, behind "More sorts".
+SORTS_WITHOUT_SCROLL = 12
+# (tiles per page, "For you" tiles) - a page is the grid's cells: back/next take one each.
+SORT_PAGES_ORDER = (9, 6)       # three by three
+SORT_PAGES_SETTINGS = (8, 6)    # four by two, next to the name field
+
+
+def _sort_pages(request, sorts, member, selected_id, layout):
+    """The pages of sort tiles for the order or settings screen, and which one shows first (the
+    one with the selected sort). The order is worked out once a session and kept in it: every
+    poll then renders the same bytes (and the Pi isn't counting orders twice a second)."""
+    if len(sorts) <= SORTS_WITHOUT_SCROLL:
+        return [{"index": 0, "heading": None, "sorts": sorts}], 0
+    cells, for_you = layout
+    preferred = request.session.get("sort_order")
+    if preferred is None:
+        preferred = request.session["sort_order"] = services.preferred_sorts(member, for_you)
+    by_id = {sort.pk: sort for sort in sorts}
+    first = [by_id[pk] for pk in preferred if pk in by_id][:for_you]
+    rest = [sort for sort in sorts if sort not in first]
+    # A new card on a new device has neither favourite nor history: no empty "For you" page then.
+    pages = [{"heading": _("For you"), "sorts": first, "next": _("More sorts")}] if first else []
+    per_page = cells - 2
+    chunks = [rest[i:i + per_page] for i in range(0, len(rest), per_page)]
+    for number, chunk in enumerate(chunks, 1):
+        pages.append({
+            "heading": _("More sorts") if len(chunks) == 1 else
+            _("More sorts (%(page)s of %(pages)s)") % {"page": number, "pages": len(chunks)},
+            "sorts": chunk, "next": _("More") if number < len(chunks) else None,
+        })
+    for index, page in enumerate(pages):
+        page["index"] = index
+        page["back"] = index > 0
+    current = next((page["index"] for page in pages if any(sort.pk == selected_id for sort in page["sorts"])), 0)
+    return pages, current
+
+
 def _order_context(request, uid, seconds_left):
     member = Member.objects.filter(uid=uid).first()
     coffee_sorts = list(CoffeeSort.objects.all())
+    shown_coffee, shown_auto = request.session.get("shown_order") or (
+        request.session.get("order_coffee_id"), request.session.get("order_auto_checkout", True))
     selected_id = (
-        request.session.get("order_coffee_id")
+        shown_coffee
         or (member.favourite_coffee_id if member else None)
         or (coffee_sorts[0].pk if coffee_sorts else None)
     )
+    sort_pages, sort_page = _sort_pages(request, coffee_sorts, member, selected_id, SORT_PAGES_ORDER)
     # Nudges members who still owe from before this month rolled over - same "ab dem
     # Vormonat" balance the dashboard pillory uses, so it can't say two different things.
     month_reminder_balance = None
@@ -754,9 +790,10 @@ def _order_context(request, uid, seconds_left):
     return {
         "state": "order",
         "member": member,
-        "coffee_sorts": coffee_sorts,
+        "sort_pages": sort_pages,
+        "sort_page": sort_page,
         "selected_coffee_id": selected_id,
-        "auto_checkout": request.session.get("order_auto_checkout", True),
+        "auto_checkout": shown_auto,
         "month_reminder_balance": month_reminder_balance,
         "alltime_badge": alltime_badge,
         "month_badge": month_badge,
@@ -766,6 +803,15 @@ def _order_context(request, uid, seconds_left):
 
 def _settings_context(request, uid, seconds_left):
     member = Member.objects.filter(uid=uid).first()
+    sorts = list(CoffeeSort.objects.all())
+    pending_favourite = request.session.get("pending_favourite")
+    if pending_favourite:
+        favourite = int(pending_favourite)
+    elif member is not None and member.favourite_coffee_id:
+        favourite = member.favourite_coffee_id
+    else:  # a new card starts on the first sort, as the old dropdown did
+        favourite = sorts[0].pk if sorts else None
+    sort_pages, sort_page = _sort_pages(request, sorts, member, favourite, SORT_PAGES_SETTINGS)
     pending = request.session.get("pending_nickname")
     if pending is not None:
         nickname = pending
@@ -782,8 +828,9 @@ def _settings_context(request, uid, seconds_left):
         "name_required": bool(request.session.get("then_order")) and member is not None,
         "name_error": names.message(request.session.get("name_error")),
         "nickname": nickname,
-        "favourite_coffee_id": member.favourite_coffee_id if member else None,
-        "coffee_sorts": list(CoffeeSort.objects.all()),
+        "favourite_coffee_id": favourite,
+        "sort_pages": sort_pages,
+        "sort_page": sort_page,
         "seconds_left": seconds_left,
     }
 
@@ -819,9 +866,7 @@ def _payment_method_instructions(balance):
 def _info_pay_context(request, uid, seconds_left):
     member = Member.objects.filter(uid=uid).first()
     balance = services.account_balance(member) if member else Decimal("0.00")
-    default_suggestion = -balance if balance < 0 else Decimal("0.00")
-    pending = request.session.get("pending_amount")
-    pay_default = pending if pending is not None else default_suggestion
+    pay_default = -balance if balance < 0 else Decimal("0.00")
     return {
         "state": "info_pay",
         "member": member,

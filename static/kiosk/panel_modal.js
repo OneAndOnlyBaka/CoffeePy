@@ -27,7 +27,10 @@
     const key = panelKey();
     // lastKey === null on the very first swap (the panel starts as a "Loading…"
     // placeholder with no marker) - that's not the panel moving on.
-    if (lastKey !== null && key !== lastKey) modal.classList.remove("open");
+    if (lastKey !== null && key !== lastKey) {
+      modal.classList.remove("open");
+      document.dispatchEvent(new Event("osk:close"));  // the keyboard overlay (osk.js) too
+    }
     lastKey = key;
   });
 })();

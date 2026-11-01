@@ -99,14 +99,14 @@ and a panel with no usable EDID simply stays black - hence `video=` on the kerne
 
 | Service        | What it does |
 |----------------|--------------|
-| `db`           | PostgreSQL 16 |
+| `db`           | PostgreSQL (the version pinned in `docker-compose.yml`) |
 | `mosquitto`    | MQTT broker |
 | `nfc-bridge`   | The ACR122U→MQTT bridge (see [nfc-cardreader/](../nfc-cardreader/)) - publishes every card on `nfc/acr122u`, the reader's state on `nfc/acr122u/status` |
 | `migrate`      | One-shot `manage.py prepare --tls` (migrate, initial admin, certificates) - the only container that migrates; gates startup of the services below |
 | `web`          | Django (gunicorn, `GUNICORN_WORKERS` workers): kiosk (`/kiosk/`), dashboard (`/dashboard/`), phone portal (`/portal/`) |
 | `caddy`        | The only way in: HTTPS on 443, and the kiosk on 127.0.0.1:8443 (see [Network and HTTPS](#network-and-https)) |
 | `mqtt-listener`| Subscribes to the bridge's topics, writes `NfcScan` rows and the reader status |
-| `backup`       | Every minute `manage.py tick`: corrects a clock that went back, and backs the device up to the stick when the interval set in the dashboard is over; hourly the audit housekeeping |
+| `backup`       | Every minute `manage.py tick`: corrects a clock that went back, and backs the device up to the stick when the interval set in the dashboard is over; hourly the audit housekeeping and `ensure_tls` (renews certificates before they expire) |
 
 `migrate`, `web`, `mqtt-listener` and `backup` share one image, `coffeepy-web`. Templates
 and static files are baked into it at build time (`collectstatic` runs in the Dockerfile).
@@ -176,7 +176,7 @@ How it holds together:
   certificates, the device id, which stick it backs up to) - what a replacement device needs.
   With a passphrase it is AES-256 (PBKDF2) through `openssl` and named `.backup.enc`. Every
   backup has a `.sha256` next to it.
-- **A restore saves the current state first** (`before-restore_*`, onto the stick), then
+- **A restore saves the current state first** (`before-restore_*`, onto the stick - or, with no stick in, the newest one only onto the SD card), then
   replaces the database in one transaction - a broken backup rolls back instead of leaving an
   empty database - and migrates it to the running version. That is how a backup of an older
   version comes back on a newer one.
@@ -205,8 +205,8 @@ The Pi is meant to run without internet, so updates are pushed manually instead 
 2. Carry it over (USB stick, or a laptop joined to the Pi's own WiFi AP) and upload it at
    `/dashboard/update/` (superuser only).
 3. A host-level systemd service (`coffeepy-update-watcher.service`,
-   `install/update_watcher.py`) checks the signature (against `install/update-signing.pub`,
-   or a device's own key - see the manual's "Your own signing key"), every file's checksum,
+   `install/update_watcher.py`) checks the signature (against `/etc/coffeepy/update-signing.pub`, installed from
+   `install/update-signing.pub` - or, where the device has its own key, against that one only - see the manual's "Your own signing key"), every file's checksum,
    platform, space and version; saves the database and the running images to the SD card;
    `docker load`s the images, drops in the new `docker-compose.yml` and runs
    `docker compose up -d --remove-orphans`. If `/health/` doesn't answer afterwards, it
@@ -249,8 +249,8 @@ which goes the same way as an app bundle: built on a machine with internet
 (`scripts/build_os_bundle.sh --packages LIST`), signed with `sign_update_bundle.sh`, uploaded
 on the update page. Its manifest says `"kind": "os"`; it holds the packages (`os.tar`, resolved
 against the Raspberry Pi OS archives with their whole dependency closure) and the one script
-that installs them, `install/os_update.sh`, signed along with them. That script only updates
-what is installed, keeps the device's configuration files and asks for a restart when kernel,
+that installs them, `install/os_update.sh`, signed along with them. That script upgrades
+what is installed (new packages only as dependencies they need), keeps the device's configuration files and asks for a restart when kernel,
 firmware, libc or systemd changed.
 
 The watcher checks it like an app bundle - plus that the device runs the bundle's OS release,
@@ -341,7 +341,7 @@ erDiagram
 | `PaymentMethod` | PayPal, a pool, WERO or a custom link with `{amount}` |
 | `NfcScan`, `NfcReaderStatus` | what the bridge reported, written by `mqtt-listener` |
 | `AuditLogEntry` | the audit log (below) |
-| `BackupSettings`, and in `dashboard`: `PasswordPolicy`, `NamePolicy`, `NightPolicy`, `KioskBoards`, `AccountSecurity` | settings that live in the database, so a backup carries them |
+| `BackupSettings`, and in `dashboard`: `PasswordPolicy`, `NamePolicy`, `NightPolicy`, `KioskBoards`, `MemberRetention`, `AccountSecurity` | settings that live in the database, so a backup carries them |
 
 Every ranking, statistic and comparison counts **cups as machine strokes**, not order rows -
 see [CALCULATIONS.md](CALCULATIONS.md).
@@ -376,8 +376,8 @@ never booked: every page load starts at the newest scan.
 ## Users and roles
 
 The dashboard uses Django's built-in auth with two roles - admins (superusers: everything,
-including the system pages and the dashboard's own user management) and managers (members,
-bookings, coffee sorts, payment methods). Single orders and payments are corrected under
+including the system pages and the dashboard's own user management) and managers (overview,
+statistics, pillory, CSV exports, members, bookings, coffee sorts, payment methods). Single orders and payments are corrected under
 "Bookings", each change with an audit-log entry. The login rules (length, lockout, idle
 logout) live in the database ("Login & passwords"); failed logins are counted in the audit
 log, so a lockout survives a restart.
@@ -406,7 +406,8 @@ translated where it is shown.
 
 - `coffee/` - models (`CoffeeSort`, `Member`, `Order`, `Payment`, `NfcScan`, ...), the ORM
   query layer (`services.py`), backups, clock and RTC, and management commands
-  (`mqtt_listener`, `import_sqlite`, `backup_db`, `tick`, `prepare`).
+  (`mqtt_listener`, `import_sqlite`, `backfill_order_sorts`, `backup_db`, `tick`, `prepare`,
+  `audit_housekeeping`, `ensure_tls`, `ensure_superuser`).
 - `kiosk/` - the touchscreen order/settings/pay/ranking UI.
 - `dashboard/` - admin auth, statistics, pillory, exports, backup/update/system-time,
   certificates, the audit log.
@@ -419,7 +420,7 @@ translated where it is shown.
   `update_builder.sh` (dev-machine side of the offline update pipeline),
   `build_offline_bundle.sh` (full no-internet install bundle), and the generators of the
   kiosk's icons and animations.
-- `nfc-cardreader/` - ACR122U→MQTT bridge, unchanged from V1.
+- `nfc-cardreader/` - ACR122U→MQTT bridge, carried over from V1 and extended with a reader-status topic and beep control.
 - `docs/` - this documentation, the manual in [English](MANUAL.en.md) and
   [German](MANUAL.de.md) with its screenshots under `pictures/manual/`, and `pictures/` the
   images the README shows.

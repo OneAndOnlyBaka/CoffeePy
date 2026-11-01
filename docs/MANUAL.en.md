@@ -25,7 +25,7 @@ and pay from there.
 > negligence and injury to life, body or health is not affected where the law does not allow
 > excluding it.
 
-This manual covers every screen. Technical details are in English under [docs](README.md): the
+This manual covers every screen. Technical details are in English under [docs](INDEX.md): the
 [architecture](ARCHITECTURE.md), [how the numbers are calculated](CALCULATIONS.md), the
 [security mechanisms](SECURITY.md), [GDPR-compliant operation](PRIVACY.md) and the [quickstart](QUICKSTART.md).
 
@@ -212,8 +212,8 @@ and the kiosk shows it as a QR code, see [Admin access](#admin-access)). Then op
 
 CoffeePy is only reachable over HTTPS. The device signs its certificate itself, so the
 browser warns on the first visit. To get rid of the warning, install the **device
-certificate** once per phone or PC: it's linked on the login page and in the portal as
-*Download certificate* (directly: `https://192.168.4.1/certificate/`).
+certificate** once per phone or PC: it's linked on the login page (*Download the device
+certificate*) and in the portal (*Download certificate*) – directly: `https://192.168.4.1/certificate/`.
 
 - **iPhone/iPad:** open the file → install it under *Settings › Profile Downloaded* → then
   enable the CoffeePy certificate under *Settings › General › About › Certificate Trust Settings*.
@@ -282,6 +282,9 @@ Keeping the old device's SD card until the first weeks have gone well costs noth
 
 ## 4. The kiosk
 
+> For members, the essentials are on one page – for printing and hanging next to the machine:
+> [Coffee with CoffeePy – for members](MEMBERS.en.md).
+
 The touchscreen has four sections, in the bar on the left. Round buttons sit top right:
 the **wrench** is the [admin access](#admin-access) – it isn't meant for members –, **DE/EN**
 switches the kiosk's language, and a **blinking red** button appears when something on the
@@ -295,9 +298,10 @@ device needs looking after – an **amber** one when an admin has something to d
 
 ![Warning sign on the kiosk](pictures/manual/en/kiosk-device-alarm.png)
 
-Apart from the ranking, every section needs a card. Holding up a card logs you in until you're
-done; after **20 seconds without input** the kiosk finishes for you – on **Order** it **books**
-the preselected coffee, everywhere else it logs you out. A red countdown next to the buttons
+Every section but the ranking needs a card – one held up on the ranking starts an order, as on **Order**. **Tap the section first, then hold up your
+card** – what counts is the section the screen shows; the start screen is **Order**. Holding up a card logs you in until you're done; after
+**20 seconds without input** the kiosk finishes for you – on **Order** it **books** the
+preselected coffee (unless you tap **Cancel**), everywhere else it logs you out. A red countdown next to the buttons
 shows how long is left. Tapping a section in the bar logs out too. **Pay**, **Settings** and the **Ranking** go back to **Order** by
 themselves after 30 seconds without a tap – so the next person always finds the kiosk ready to
 order.
@@ -309,10 +313,25 @@ The start screen. It explains what happens when you hold up your card and shows 
 ![Order – apply your card](pictures/manual/en/kiosk-wait-order.png)
 
 After the card, the kiosk greets you by name. Your favourite coffee is preselected; tap another
-one to switch. **Order now** books right away, **Cancel** backs out, and without any input it
-books automatically after 20 seconds. **Whoever holds up their card and walks away has
-ordered a coffee** – tap **Cancel** if you didn't mean to. Picking a different sort turns the
-automatic booking off – then you confirm yourself. The medals next to your name show a place in the top 3 – all time
+one to switch. **Order now** books right away. **Cancel** cancels the order: nothing is booked,
+and you are logged out. If you tap nothing at all, the kiosk books your favourite coffee after
+20 seconds – coffee in one move: card, cup, done. Picking a different sort turns the automatic
+booking off – then you confirm yourself; the countdown starts again from your pick and logs you
+out, booking nothing.
+
+> **Only looking, not ordering:** your balance and cups are under **Pay**, your name and
+> favourite coffee under **Settings** – tap the section first, then hold up your card. No
+> coffee is ever booked there. Booking by itself only happens on **Order**, and only if you tap neither
+> **Cancel** nor another sort. If something was booked wrongly anyway, tell an admin – they
+> correct it under [Bookings](#bookings).
+
+With **more than 12 sorts** they don't all fit on the screen and come in pages: **For you**
+first – your favourite, the sorts you order most, then the ones everyone orders most – and
+**More sorts ›** turns to the rest, alphabetically (**‹ Back** turns back). Your favourite is
+always on the page you see first; turning a page counts as choosing, so nothing is booked by
+itself any more.
+
+The medals next to your name show a place in the top 3 – all time
 and this month. Whoever still owes money from last month gets a reminder here.
 
 ![Order](pictures/manual/en/kiosk-order.png)
@@ -338,7 +357,8 @@ your phone via QR code.
 ![Settings – apply your card](pictures/manual/en/kiosk-wait-settings.png)
 
 Change your **name** and **favourite coffee** here and tap **Save**. Type directly, or use
-the on-screen keyboard via **Keyboard** – it has umlauts, ß, hyphen and full stop too.
+the on-screen keyboard via **Keyboard** – it has umlauts, ß, hyphen and full stop too. The
+favourite coffee is a tile per sort – with more than 12 sorts grouped like on **Order**.
 
 The name is **first name and the first letter of the last name**, like *Anna B.*, or a **short
 code** of two to four capitals, like *AB* – so everyone knows who is on the ranking and the
@@ -366,7 +386,7 @@ access point, the WiFi's QR code sits next to it – the phone has to join that 
 
 ### Ranking
 
-No card needed. Three tabs at the top, each with its own retro animation; the names are in the
+No card needed. Up to three tabs at the top (which ones is the admin's decision, see below), each with its own retro animation; the names are in the
 bar underneath. Counted are cups – a jug is two.
 
 - **All time** – the podium: the top 3 since the start, first in the middle.
@@ -378,7 +398,7 @@ bar underneath. Counted are cups – a jug is two.
 
   ![Ranking this month](pictures/manual/en/kiosk-ranking-month.png)
 
-- **Pillory** – everyone who still owes money up to last month, as a walk of shame; their
+- **Pillory** – the seven who owe the most up to last month, as a walk of shame; their
   names and amounts run through the bar underneath. When everyone has paid, the banner says
   **NO SHAME** and the executioner stands on an empty scaffold with nothing to do.
 
@@ -387,8 +407,9 @@ bar underneath. Counted are cups – a jug is two.
 Opening the ranking always starts on its first tab.
 
 **Whether there is a ranking and a pillory is the admin's decision** (dashboard → **System** →
-*Ranking and pillory*): with one off, its tab is gone; with both off, the **Ranking** button is
-gone altogether – and the medal after an order as well. A newly set-up device starts with both
+*Ranking and pillory*): with the ranking off, the *All time* and *This month* tabs and the
+medals on the order screen are gone; with the pillory off, its tab; with both off, the
+**Ranking** button too. A newly set-up device starts with both
 off; see [Privacy and the workplace](#privacy-and-the-workplace).
 
 ### Admin access
@@ -414,7 +435,7 @@ the same goes for an error page.
 Every member can link their phone: on the kiosk, hold your card up under **Settings**, tap
 **Link this phone** and scan the QR code with the camera. The phone then stays logged in for
 six months (extended every time it's used). Switch the language top right; it applies to this
-phone only.
+phone only. **Log out** next to it ends the link on this phone.
 
 **Home** shows cups, balance and the latest orders and payments. At the bottom of the page:
 **Download my data** – everything the device stores about you, as one file (people who changed
@@ -496,20 +517,22 @@ setup is an admin. There is no other administration interface.
 **Overview** shows the most important numbers, buttons to enter a payment or add a member, and
 the **Device** card: is the card reader online, are backups running, is the clock module (RTC)
 fine, and under which address phones reach the device. Something red here needs looking after –
-the same things blink red on the kiosk.
+the same things blink red on the kiosk. **Exports** downloads *All orders (CSV)* or *All
+payments (CSV)* for a spreadsheet.
 
 ![Overview](pictures/manual/en/dashboard-home.png)
 
 ### Statistics and pillory
 
-**Statistics**: cups and turnover over the last 12 months, sort distribution, cups by hour and
-weekday (the titles name the busiest slot), price trend and payments by method. Cups count
-machine strokes – a jug is two.
+**Statistics**: orders and payments (in €) per month over the last 12 months, sort
+distribution, cups by hour and weekday (the titles name the busiest slot), price trend and
+payments by method. Cups count machine strokes – a jug is two; the sort distribution counts
+orders (a jug once, see [the calculations](CALCULATIONS.md)).
 
 ![Statistics](pictures/manual/en/dashboard-statistics.png)
 
-**Pillory**: every member with a negative balance, counted up to last month – the same list
-as on the kiosk.
+**Pillory**: every member with a negative balance, counted up to last month – the kiosk's
+pillory shows the seven largest of them.
 
 ![Pillory](pictures/manual/en/dashboard-pillory.png)
 
@@ -519,12 +542,13 @@ The list of all members with their cards and the day of their **last coffee** �
 you, even for a card without a name, whether someone still uses it or its owner left long ago
 (then *Mark as departed*). Per member:
 
-- **Edit**: name, UID, favourite coffee. The name follows the same rules as at the kiosk
+- **Edit**: name and favourite coffee (the UID is fixed once the member exists). The name follows the same rules as at the kiosk
   (see [Settings](#settings)).
 - *New name at next coffee*: this name doesn't fit the rules – the kiosk asks the member for
   a new one at their next coffee.
-- **Add card**: the next card held to the kiosk becomes this member's – that's how someone gets
-  a replacement card without ending up with a second account.
+- **Bookings**: this member's orders and payments (see [Bookings](#bookings)).
+- **Add card**: the next card held to the kiosk within a minute becomes this member's – that's
+  how someone gets a replacement card without ending up with a second account.
 - **Revoke devices**: logs out all linked phones.
 - **Mark as departed**: writes off the balance and blocks the cards; *Reactivate* undoes it.
 - **Delete**: removes the member with their cards, orders and payments – for good, apart from
@@ -538,7 +562,8 @@ you, even for a card without a name, whether someone still uses it or its owner 
 ![Edit member](pictures/manual/en/dashboard-member-form.png)
 
 **Merge members** helps when two accounts did end up existing: all orders, payments and cards
-move to the account you keep, the other one is deleted.
+move to the account you keep, the other one is deleted – its card becomes an extra card of the
+kept one, which takes the name of whichever account was used last.
 
 ![Merge members](pictures/manual/en/dashboard-merge.png)
 
@@ -561,7 +586,8 @@ still hold a deleted member until they are thinned out.
 
 ### Bookings
 
-Every coffee booked and every payment, newest first, filterable by member (with their balance).
+Every coffee booked and every payment – two tabs, **Orders** and **Payments**, newest first, 50
+per page – filterable by member (with their balance).
 Here you correct a wrong booking (**Edit**, **Delete**) and record a payment that didn't go
 through the kiosk – **Enter payment**, e.g. cash put in the till. Every change is recorded in
 the audit log.
@@ -578,7 +604,9 @@ the audit log.
 
 **Payment methods**: PayPal needs the paypal.me name, PayPal Pool the pool's URL, WERO the
 phone number; *Custom link* takes any address, optionally with `{amount}` for the amount owed.
-These become the pay links and QR codes on kiosk and phone.
+These become the pay links and QR codes on kiosk and phone – WERO has no public link, so it
+shows the phone number as an instruction instead of a QR code. *Is active* hides a method
+without deleting it, *Order* sets its place in the list.
 
 ![Payment methods](pictures/manual/en/dashboard-payment-methods.png)
 
@@ -594,8 +622,9 @@ Your name at the top right: your role, your last login, and **Change password**.
 
 Who may log in to the dashboard – admins only. **Add user** asks for a user name, the role
 (**Admin** or **Manager**) and a first password; tick *Must set a new password at the first
-login* to hand it over as a one-off password. Per user: **Edit**, **Set password** (for a
-forgotten one), **Delete**. A user locked after too many failed logins is marked *locked*.
+login* to hand it over as a one-off password. Per user: **Edit** (unticking *May log in* locks the
+account without deleting it), **Set password** (for a forgotten one), **Delete**. Nobody can
+lock, delete or demote themselves. A user locked after too many failed logins is marked *locked*.
 
 ![Dashboard users](pictures/manual/en/dashboard-users.png)
 
@@ -610,7 +639,7 @@ within sensible limits:
 |---|---|---|
 | Minimum length | 12 characters | 8–64 |
 | Character kinds (lower case, upper case, digits, symbols) | 3 | 1–4 |
-| … or a long passphrase of at least | 20 characters with 2 kinds | off, or up to 128 |
+| … or a long passphrase of at least | 20 characters with 2 kinds | off, or longer than the minimum length up to 128; 1–4 kinds |
 | Lock after failed logins | 5 | 3–20 |
 | Locked for | 15 minutes | 1–1440 |
 | Logged out when idle for | 30 minutes | 5–480 |
@@ -686,7 +715,7 @@ When restoring you choose **what**: the data (members, bookings, coffee sorts, d
 the certificates and device CA (phones keep trusting the device), the device identity (its
 backup stick becomes this device's) and the settings (language, address, time zone, log
 retention). To confirm you type `DELETE`. Before anything changes, the current state is saved
-to the stick; if the restore fails, nothing is changed. An encrypted backup needs the passphrase.
+– to the stick, or to the SD card without one; if the restore fails, nothing is changed. An encrypted backup needs the passphrase.
 
 ![Restore from a file](pictures/manual/en/dashboard-restore-upload.png)
 
@@ -834,7 +863,7 @@ The device checks it like an update – signature, checksums, platform, space, t
 than the last OS bundle, and that it was built for the system the device runs. It saves the
 database to the SD card, installs the packages and, if a new kernel or firmware came with them,
 **restarts** by itself; "We'll be right back" stays up meanwhile. Only what is installed is
-updated – a bundle can't install anything new.
+updated – new packages come in only as dependencies those need.
 
 - **There is no way back** from an OS update – the database copy is the safety net.
 - *Some packages were kept back*: something installed needs exactly the old version of a package
@@ -964,7 +993,7 @@ with its **DE/EN** button, phones and PCs at the top right of the portal and of 
 | Problem | Solution |
 |---|---|
 | The browser warns about the site. | Install the device certificate once (see [above](#installing-the-certificate)). |
-| **Bad Request (400)** in the browser. | The device doesn't know the address you're using. Use the address from setup (`192.168.4.1`, `coffeepy.local`), or run the provisioning tool over the new address – it adds it. |
+| **Bad Request (400)** in the browser. | The device doesn't know the address you're using. Use the address from setup (`192.168.4.1`, `coffeepy.local`), or run the provisioning tool over the new address – it puts that one in (in place of an address it was run over before). |
 | After switching on, the screen is black, then white, for a minute. | Normal: the Pi starts first, then the browser. The kiosk appears after about a minute and a half – after a power cut it can take a good three minutes: the browser's first start then sometimes fails, and the device starts it again by itself. |
 | The screen is dark, taps and cards do nothing, but the dashboard works. | The **Night rest** is on (dashboard → **System**). It ends by itself at the set time; to stop it, untick it – the kiosk comes back within a minute. |
 | The kiosk briefly showed "Aw, Snap!" (or went white) and then came back by itself. | The kiosk's browser crashed while loading the page – the browser of Raspberry Pi OS does that now and then, mostly right after an update or a restore. The device notices within seconds and reloads the page; nothing is lost. |

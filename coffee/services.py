@@ -341,6 +341,29 @@ def payment_method_totals():
     }
 
 
+def preferred_sorts(member: Member | None, limit: int) -> list[int]:
+    """The sorts a member most likely wants, best first: their favourite, then what they order
+    most, then what everyone orders most - the kiosk's "For you" when there are more sorts than
+    fit on its screen (kiosk.views). Counts orders, not cups: how often a sort is chosen, like
+    the statistics page's sort distribution."""
+    ids = []
+
+    def add(pk):
+        if pk and pk not in ids:
+            ids.append(pk)
+
+    if member is not None:
+        add(member.favourite_coffee_id)
+        mine = Order.objects.filter(member=member, coffee_sort__isnull=False)
+        for row in mine.values("coffee_sort").annotate(n=Count("id")).order_by("-n", "coffee_sort__name")[:limit]:
+            add(row["coffee_sort"])
+    if len(ids) < limit:
+        everyone = Order.objects.filter(coffee_sort__isnull=False)
+        for row in everyone.values("coffee_sort").annotate(n=Count("id")).order_by("-n", "coffee_sort__name")[:limit * 2]:
+            add(row["coffee_sort"])
+    return ids[:limit]
+
+
 def coffee_distribution():
     """Number of orders per coffee sort, all time."""
     rows = (

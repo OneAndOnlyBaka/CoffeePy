@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 11:46+0100\n"
+"POT-Creation-Date: 2026-10-31 23:28+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -2162,17 +2162,14 @@ msgstr "Rangliste"
 msgid "Loading…"
 msgstr "Lädt…"
 
+msgid "Space"
+msgstr "Leertaste"
+
 msgid "We'll be right back"
 msgstr "Wir sind gleich wieder da"
 
 msgid "CoffeePy is being updated - ordering is paused for a moment."
 msgstr "CoffeePy wird gerade aktualisiert - Bestellen ist kurz pausiert."
-
-msgid "Keyboard"
-msgstr "Tastatur"
-
-msgid "Space"
-msgstr "Leertaste"
 
 msgid "Card reader not available"
 msgstr "Kartenleser nicht verfügbar"
@@ -2295,6 +2292,13 @@ msgstr ""
 "Erinnerung: Du schuldest noch %(amount)s€ aus dem letzten Monat - bitte "
 "begleiche das bald (siehe Bezahlen)."
 
+msgid "Back"
+msgstr "Zurück"
+
+#, python-format
+msgid "Automatic logout in %(seconds)ss"
+msgstr "Automatische Abmeldung in %(seconds)s s"
+
 #, python-format
 msgid "Automatic checkout in %(seconds)ss"
 msgstr "Automatische Buchung in %(seconds)s s"
@@ -2324,12 +2328,11 @@ msgstr ""
 "Vorname und erster Buchstabe des Nachnamens, z. B. „Anna B.“ – oder dein "
 "Kürzel, z. B. „AB“"
 
+msgid "Keyboard"
+msgstr "Tastatur"
+
 msgid "Link this phone"
 msgstr "Dieses Handy verknüpfen"
-
-#, python-format
-msgid "Automatic logout in %(seconds)ss"
-msgstr "Automatische Abmeldung in %(seconds)s s"
 
 msgid "Cups in total"
 msgstr "Tassen insgesamt"
@@ -2432,6 +2435,16 @@ msgid ""
 msgstr ""
 "Diese Karte ist schon mit einem anderen Konto verknüpft - bitte versuch es "
 "mit einer anderen Karte."
+
+msgid "For you"
+msgstr "Für dich"
+
+msgid "More sorts"
+msgstr "Weitere Sorten"
+
+#, python-format
+msgid "More sorts (%(page)s of %(pages)s)"
+msgstr "Weitere Sorten (%(page)s von %(pages)s)"
 
 msgid "My CoffeePy"
 msgstr "Mein CoffeePy"

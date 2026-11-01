@@ -79,7 +79,8 @@ reach the dashboard or the kiosk. The manual explains this to users in
   password - the first admin's password is generated per device at installation (or set in
   the provisioning tool).
 - **Two roles.** Admins (superusers) for everything including system pages, backups, updates,
-  certificates and users; managers for members, bookings, coffee sorts and payment methods.
+  certificates and users; managers for the overview, statistics, pillory, CSV exports, members, bookings, coffee sorts
+  and payment methods.
   The system's actions - backup and restore, update, reset, import, certificates, clock,
   dashboard users - are `@superuser_required`; a manager can't reach them.
 - **Password rules after the BSI's recommendation**, set in the dashboard ("Login &
@@ -130,8 +131,8 @@ How they are made and restored: [ARCHITECTURE.md](ARCHITECTURE.md#backups).
 How an update runs: [ARCHITECTURE.md](ARCHITECTURE.md#offline-updates).
 
 - **Signed bundles.** Each update bundle's manifest is signed with an Ed25519 key; the device
-  checks the signature against the project's key or the device's own
-  (`/etc/coffeepy/update-signing.own.pub`), then every file's checksum, the platform and the
+  checks the signature against the project's key - or, where the device has its own
+  (`/etc/coffeepy/update-signing.own.pub`), against that one only -, then every file's checksum, the platform and the
   free space. The release workflow never sees a private key - bundles from CI are signed by
   whoever installs them ([CI.md](CI.md#signed-bundles---the-path-for-a-device-in-use)).
   Switching the check off is possible for development and is shown as a warning on the
@@ -141,8 +142,9 @@ How an update runs: [ARCHITECTURE.md](ARCHITECTURE.md#offline-updates).
 - **Self-healing.** The database is saved before every update; if the new version doesn't
   answer, or the power fails mid-update, the device returns to the version before it by itself.
 - **The operating system** is updated the same way: an OS bundle, signed, carries the packages
-  and the one script that installs them - nothing else on the device installs packages from an
-  upload. Building one is the operator's job ([ARCHITECTURE.md](ARCHITECTURE.md#operating-system-updates)).
+  and the one script that installs them. The only other way packages arrive from an upload is
+  an app bundle built with `--with-os-packages`: signed too, it carries just the installer's own
+  set (`install/packages.txt`), installed by `install.sh`'s packages step. Building one is the operator's job ([ARCHITECTURE.md](ARCHITECTURE.md#operating-system-updates)).
 
 ## The device
 

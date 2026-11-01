@@ -62,11 +62,11 @@ not to rely on it alone. A coffee list is voluntary and not part of anyone's job
 | Members, orders, payments | until the member is deleted, or the database reset | an admin (Members → Delete; System → Reset) |
 | A departed member's data | kept for the history, hidden from rankings and pillory; with a period set under Members → Departed members, suggested for deletion once it is over and the balance is settled | an admin deleting the member - never automatically |
 | Audit log (with IP addresses) | `AUDIT_RETENTION_DAYS`, **90 days** by default | automatically, hourly |
-| Raw card taps (`NfcScan`) | about **one hour** | automatically |
+| Raw card taps (`NfcScan`) | at least **one hour** - deleted with the next card tap after that | automatically |
 | One-time phone links | **5 minutes**, or until used | automatically |
 | Phone sessions | **6 months** after the last use | automatically; at once by logging the phone out, revoking, or marking the member as departed |
 | Backups on the stick | by generations: the newest 48, one per day for 14 days, per week for 8 weeks, per month for 12 months (adjustable in the dashboard) | automatically; or by removing the stick |
-| Copies before a restore | the newest few, on the stick | automatically |
+| Copies before a restore | the newest 3 on the stick; without a stick only the newest one, on the SD card | automatically |
 | Database copies before an update | the last **3** updates, on the SD card | automatically |
 
 **Order and payment history is never deleted automatically.** CoffeePy can't know how long

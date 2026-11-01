@@ -50,7 +50,7 @@ PBKDF2_ITERATIONS = 600000
 # The settings a backup brings back onto a device (the rest of .env - database password,
 # secret key, admin password - belongs to the installation it runs on).
 RESTORABLE_SETTINGS = (
-    "DJANGO_LANGUAGE_CODE", "PUBLIC_HOST", "TLS_EXTRA_HOSTNAMES", "TIME_ZONE", "AUDIT_RETENTION_DAYS",
+    "DJANGO_LANGUAGE_CODE", "PUBLIC_HOST", "TLS_EXTRA_HOSTNAMES", "DJANGO_TIME_ZONE", "AUDIT_RETENTION_DAYS",
     "GUNICORN_WORKERS", "DJANGO_SECURE_COOKIES",
 )
 

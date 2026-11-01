@@ -4,7 +4,7 @@
 {% block dashboard_content %}
 <h1>{% if instance %}{% blocktranslate with name=instance.display_name %}Edit {{ name }}{% endblocktranslate %}{% else %}{% translate "Add member" %}{% endif %}</h1>
 {% if not instance %}
-{% url 'dashboard:pillory' as scan_url %}
+{% url 'dashboard:audit_log' as scan_url %}
 <p class="muted">{% blocktranslate trimmed %}The UID is the card's numeric identifier - easiest to get from an
 existing <a href="{{ scan_url }}">scan</a> rather than typing it from
 memory. Most members are created automatically the first time a new card is tapped in

@@ -462,10 +462,9 @@ class BackupCommandTestCase(FakeDevice, TransactionTestCase):
         self.assertEqual(backups.read_backup_status()["error"], "disk full")
         self.assertEqual(backups.health()["state"], "failing")
 
-    def test_settings_start_from_the_installation(self):
-        with mock.patch.dict(os.environ, {"BACKUP_INTERVAL_MINUTES": "30", "BACKUP_DEPTH": "notanumber"}):
-            settings = BackupSettings.current()
-        self.assertEqual((settings.interval_minutes, settings.keep_recent), (30, 48))
+    def test_settings_start_from_the_defaults(self):
+        settings = BackupSettings.current()
+        self.assertEqual((settings.interval_minutes, settings.keep_recent), (60, 48))
 
 
 class FakeProcess:

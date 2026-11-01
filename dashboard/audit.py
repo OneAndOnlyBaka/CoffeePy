@@ -7,7 +7,7 @@ devices). Logins, logouts, failed logins, lockouts and refused access are logged
 auth signals below and the dashboard's own decorators. Events on the host - a backup stick
 plugged in or formatted, an update applied - are written by those host processes to
 data/storage/events.jsonl and collected by ingest_host_events(). Rows older than
-AUDIT_RETENTION_DAYS are deleted (manage.py prune_audit_log, run by the backup service).
+AUDIT_RETENTION_DAYS are deleted (manage.py audit_housekeeping, run by the backup service).
 """
 import json
 import os
