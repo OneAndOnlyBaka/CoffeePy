@@ -4,15 +4,27 @@ import calendar
 import hashlib
 import json
 from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
+from django.db import transaction
 from django.db.models import Count, DecimalField, F, Max, OuterRef, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce, ExtractHour, ExtractIsoWeekDay, TruncMonth, TruncQuarter
 from django.http import HttpResponse
 from django.utils import timezone
 from django.utils.dates import WEEKDAYS_ABBR
 
-from .models import AuditLogEntry, CoffeeSort, Member, Order, Payment, payment_method_label
+from .models import (
+    PURCHASE_METHOD_NAME,
+    AuditLogEntry,
+    CoffeeSort,
+    InventoryItem,
+    Member,
+    Order,
+    Payment,
+    Purchase,
+    StockCount,
+    payment_method_label,
+)
 
 
 def current_month_start() -> datetime:
@@ -95,6 +107,13 @@ def months_ago(months: int) -> datetime:
     return now.replace(year=year, month=month + 1, day=min(now.day, calendar.monthrange(year, month + 1)[1]))
 
 
+def _member_total(model):
+    """A member's sum of `model.value` as an annotation, 0 without rows."""
+    return Coalesce(Subquery(model.objects.filter(member=OuterRef("pk")).values("member")
+                             .annotate(total=Sum("value")).values("total"), output_field=DecimalField()),
+                    Value(Decimal("0")), output_field=DecimalField())
+
+
 def departed_members_due(months: int) -> list[Member]:
     """Departed members whose departure is `months` months past and whose balance is settled -
     suggested for deletion on the Members page and as a task sign on the kiosk. Only suggested:
@@ -105,13 +124,8 @@ def departed_members_due(months: int) -> list[Member]:
     decimals as floats."""
     if not months:
         return []
-    def total(model):
-        return Coalesce(Subquery(model.objects.filter(member=OuterRef("pk")).values("member")
-                                 .annotate(total=Sum("value")).values("total"), output_field=DecimalField()),
-                        Value(Decimal("0")), output_field=DecimalField())
-
     candidates = (Member.objects.filter(departed_at__lt=months_ago(months), deletion_hold__isnull=True)
-                  .annotate(paid=total(Payment), drunk=total(Order)).order_by("departed_at"))
+                  .annotate(paid=_member_total(Payment), drunk=_member_total(Order)).order_by("departed_at"))
     return [member for member in candidates if round(Decimal(member.paid) - Decimal(member.drunk), 2) == 0]
 
 
@@ -156,6 +170,9 @@ def member_data(member: Member, own: bool = False) -> dict:
                    for order in member.orders.select_related("coffee_sort").order_by("created_at")],
         "payments": [{"at": when(payment.created_at), "value": str(payment.value), "method": payment.method_name,
                       "info": payment.info} for payment in member.payments.order_by("created_at")],
+        "purchases": [{"at": when(purchase.created_at), "item": purchase.item.name, "quantity": str(purchase.quantity),
+                       "price": str(purchase.price), "info": purchase.info}
+                      for purchase in member.purchases.select_related("item").order_by("created_at")],
         "audit_log": [{"at": when(entry.created_at), "action": entry.action,
                        "actor": entry.source if other(entry) else entry.actor,
                        "target": entry.target, "details": entry.details, "source": entry.source,
@@ -294,7 +311,9 @@ def _step_back_one_month(dt: datetime) -> datetime:
 
 
 def monthly_totals(months: int = 12):
-    """Total order value and total payment value per month, oldest first."""
+    """Total order value, money paid and purchases per month, oldest first. A purchase credited to
+    a member is a payment in kind (PURCHASE_METHOD_NAME) - left out of "payments", so that stays the
+    money that came in; "purchases" counts every purchase, the coffee box's too."""
     month_starts = []
     cursor = current_month_start()
     for _ in range(months):
@@ -310,19 +329,23 @@ def monthly_totals(months: int = 12):
         .values("month")
         .annotate(total=Sum("value"))
     }
-    payment_rows = {
-        row["month"].strftime("%Y-%m"): row["total"]
-        for row in Payment.objects.filter(created_at__gte=since)
-        .annotate(month=TruncMonth("created_at"))
-        .values("month")
-        .annotate(total=Sum("value"))
-    }
+    def per_month(rows, field):
+        return {
+            row["month"].strftime("%Y-%m"): row["total"]
+            for row in rows.filter(created_at__gte=since)
+            .annotate(month=TruncMonth("created_at"))
+            .values("month")
+            .annotate(total=Sum(field))
+        }
+    payment_rows = per_month(Payment.objects.exclude(method_name=PURCHASE_METHOD_NAME), "value")
+    purchase_rows = per_month(Purchase.objects.all(), "price")
 
     labels = [d.strftime("%Y-%m") for d in month_starts]
     return {
         "labels": labels,
         "orders": [float(order_rows.get(label, 0)) for label in labels],
         "payments": [float(payment_rows.get(label, 0)) for label in labels],
+        "purchases": [float(purchase_rows.get(label, 0)) for label in labels],
     }
 
 
@@ -340,6 +363,216 @@ def payment_method_totals():
         "counts": [r["count"] for r in rows],
     }
 
+
+@transaction.atomic
+def _credit(purchase: Purchase) -> Payment:
+    return Payment.objects.create(member=purchase.member, value=purchase.price, method_name=PURCHASE_METHOD_NAME,
+                                  created_at=purchase.created_at, info=purchase.item.name)
+
+
+@transaction.atomic
+def book_purchase(member: Member | None, item: InventoryItem, quantity: Decimal, price: Decimal, info: str = "",
+                  created_at: datetime | None = None) -> Purchase:
+    """A purchase and the credit for its full price, together or not at all. Without a member it
+    was paid from the coffee box, and nobody is credited."""
+    purchase = Purchase(member=member, item=item, quantity=quantity, price=price,
+                        created_at=created_at or timezone.now(), info=info)
+    if member is not None:
+        purchase.payment = _credit(purchase)
+    purchase.save()
+    return purchase
+
+
+@transaction.atomic
+def update_purchase(purchase: Purchase) -> Purchase:
+    """Saves an edited purchase and moves its credit along - member, price and time; from a member
+    to the coffee box the credit goes, the other way round one is made."""
+    old_payment = purchase.payment
+    if purchase.member is None:
+        purchase.payment = None
+    elif old_payment is None:
+        purchase.payment = _credit(purchase)
+    else:
+        Payment.objects.filter(pk=old_payment.pk).update(
+            member=purchase.member, value=purchase.price, created_at=purchase.created_at, info=purchase.item.name)
+    purchase.save()
+    if old_payment is not None and purchase.payment is None:
+        old_payment.delete()
+    return purchase
+
+
+def delete_purchase(purchase: Purchase) -> None:
+    """Deleting the credit takes the purchase with it (CASCADE)."""
+    if purchase.payment_id:
+        purchase.payment.delete()
+    else:
+        purchase.delete()
+
+
+def parse_quantity(value) -> Decimal | None:
+    """A counted or bought quantity typed either way, "1,5" or "1.5" (the German keyboard has
+    the comma); None for anything that isn't a finite number of at least 0."""
+    try:
+        quantity = Decimal(str(value).strip().replace(",", "."))
+    except (InvalidOperation, ValueError):
+        return None
+    if not quantity.is_finite() or quantity < 0 or quantity >= Decimal("10000000"):
+        return None
+    return quantity.quantize(Decimal("0.001"))
+
+
+def describe_purchase(purchase: Purchase) -> str:
+    """"#12: 1 kg Coffee beans, 14.99 EUR" - the audit log's details."""
+    quantity = " ".join(filter(None, (f"{purchase.quantity.normalize():f}", purchase.item.unit)))
+    paid = "" if purchase.member_id else " (coffee box)"
+    return f"#{purchase.pk}: {quantity} {purchase.item.name}, {purchase.price} EUR{paid}"
+
+
+def record_stock_count(item: InventoryItem, quantity: Decimal, counted_by: str) -> StockCount:
+    return StockCount.objects.create(item=item, quantity=quantity, counted_by=counted_by)
+
+
+def stock_levels(items=None) -> list[dict]:
+    """Per item: the newest count, what was bought since, and so what should be on the shelf.
+    Without a count the stock is everything ever bought. Two queries per item - the list is
+    a handful of things, not the order history."""
+    items = InventoryItem.objects.filter(is_active=True) if items is None else items
+    levels = []
+    for item in items:
+        count = item.counts.order_by("-created_at", "-id").first()
+        bought = item.purchases.all()
+        if count is not None:
+            bought = bought.filter(created_at__gt=count.created_at)
+        # Rounded back: SQLite sums decimals as floats.
+        bought_since = Decimal(bought.aggregate(total=Sum("quantity"))["total"] or 0).quantize(Decimal("0.001"))
+        levels.append({
+            "item": item,
+            "count": count,
+            "bought_since": bought_since,
+            "stock": (count.quantity if count else Decimal("0")) + bought_since,
+        })
+    return levels
+
+
+def purchase_totals(months: int = 12) -> dict:
+    """What was spent per month and item over the last `months` months - the dashboard's spending
+    overview: the months that had purchases, newest first, each with one total per item (in the
+    order of "items"), and each item's sum over all of them."""
+    since = current_month_start()
+    for _ in range(months - 1):
+        since = _step_back_one_month(since)
+    rows = (Purchase.objects.filter(created_at__gte=since)
+            .annotate(month=TruncMonth("created_at"))
+            .values("item__name", "month")
+            .annotate(total=Sum("price")))
+    names = sorted({row["item__name"] for row in rows})
+    by_month: dict[str, list] = {}
+    for row in rows:
+        totals = by_month.setdefault(row["month"].strftime("%Y-%m"), [Decimal("0")] * len(names))
+        # Rounded back: SQLite sums decimals as floats.
+        totals[names.index(row["item__name"])] += Decimal(row["total"]).quantize(Decimal("0.01"))
+    month_rows = [{"label": label, "totals": totals, "sum": sum(totals, Decimal("0"))}
+                  for label, totals in sorted(by_month.items(), reverse=True)]
+    items = [{"name": name, "sum": sum((row["totals"][i] for row in month_rows), Decimal("0"))}
+             for i, name in enumerate(names)]
+    return {"months": month_rows, "items": items, "sum": sum((item["sum"] for item in items), Decimal("0"))}
+
+
+COST_MIN_MONTHS = 3   # months with purchases before a price is suggested at all
+COST_MIN_CUPS = 100
+
+
+def _cups(start, end=None) -> int:
+    orders = Order.objects.filter(created_at__gte=start)
+    if end is not None:
+        orders = orders.filter(created_at__lte=end)
+    return orders.aggregate(cups=Sum("machine_strokes"))["cups"] or 0
+
+
+def _money(value) -> Decimal:
+    # Rounded back: SQLite sums decimals as floats.
+    return Decimal(value or 0).quantize(Decimal("0.01"))
+
+
+def _cents(euros: Decimal) -> Decimal:
+    return (euros * 100).quantize(Decimal("0.1"))
+
+
+def cost_per_cup(months: int = 12) -> dict:
+    """What a cup cost over the last `months` months (docs/CALCULATIONS.md, "Price suggestion").
+    Each item is reckoned over its own stretch and divided by the cups of that stretch: with two
+    stock-takes in the period, what was used between the first and the last (counted + bought
+    - counted again), valued at the period's average price per unit; otherwise simply what was
+    bought, over the whole period. Cups are strokes, as everywhere."""
+    start = months_ago(months)
+    now = timezone.now()
+    items, per_cup, all_counted = [], Decimal("0"), True
+    for item in InventoryItem.objects.all():
+        bought = item.purchases.filter(created_at__gte=start)
+        totals = bought.aggregate(quantity=Sum("quantity"), price=Sum("price"))
+        spent = _money(totals["price"])
+        counts = list(item.counts.filter(created_at__gte=start).order_by("created_at", "id"))
+        if len(counts) >= 2:
+            first, last = counts[0], counts[-1]
+            between = item.purchases.filter(created_at__gt=first.created_at, created_at__lte=last.created_at)
+            added = Decimal(between.aggregate(total=Sum("quantity"))["total"] or 0).quantize(Decimal("0.001"))
+            used = max(Decimal("0"), first.quantity + added - last.quantity)
+            if not totals["quantity"]:  # nothing bought in the period: the newest price there is
+                totals = item.purchases.aggregate(quantity=Sum("quantity"), price=Sum("price"))
+            unit_price = Decimal(totals["price"] or 0) / Decimal(totals["quantity"] or 1)
+            cost, cups, counted = _money(used * unit_price), _cups(first.created_at, last.created_at), True
+        else:
+            used, cost, cups, counted = None, spent, _cups(start), False
+        if not cost and not spent:
+            continue
+        all_counted &= counted
+        item_per_cup = cost / cups if cups else Decimal("0")
+        per_cup += item_per_cup
+        items.append({"item": item, "spent": spent, "used": used, "cost": cost, "cups": cups,
+                      "counted": counted, "per_cup": item_per_cup, "per_cup_cents": _cents(item_per_cup)})
+
+    revenue = _money(Order.objects.filter(created_at__gte=start).aggregate(total=Sum("value"))["total"])
+    spent = sum((row["spent"] for row in items), Decimal("0"))
+    # What members marked as departed in the period still owed - written off, paid by everyone else.
+    departed = Member.objects.filter(departed_at__gte=start).annotate(paid=_member_total(Payment),
+                                                                      drunk=_member_total(Order))
+    written_off = sum((max(Decimal("0"), _money(m.drunk) - _money(m.paid)) for m in departed), Decimal("0"))
+    purchase_months = (Purchase.objects.filter(created_at__gte=start).annotate(month=TruncMonth("created_at"))
+                       .values("month").distinct().count())
+    cups = _cups(start)
+    return {
+        "months": months,
+        "start": start,
+        "end": now,
+        "items": items,
+        "per_cup": per_cup,
+        "per_cup_cents": _cents(per_cup),
+        "counted": bool(items) and all_counted,
+        "cups": cups,
+        "revenue": revenue,
+        "spent": spent,
+        "balance": revenue - spent,
+        "written_off": written_off,
+        "written_off_percent": (written_off * 100 / revenue).quantize(Decimal("0.1")) if revenue else None,
+        "enough_data": purchase_months >= min(COST_MIN_MONTHS, months) and cups >= COST_MIN_CUPS and per_cup > 0,
+    }
+
+
+def price_suggestions(per_cup: Decimal, margin_percent: int) -> list[dict]:
+    """Per coffee sort: strokes x cost per cup x (1 + margin), rounded up to 5 cents - a
+    suggestion next to the current price; changing it stays the admin's decision."""
+    step = Decimal("0.05")
+    rows = []
+    for sort in CoffeeSort.objects.order_by("name"):
+        raw = sort.machine_strokes * per_cup * (100 + margin_percent) / 100
+        suggestion = (raw / step).to_integral_value(rounding="ROUND_CEILING") * step
+        rows.append({
+            "sort": sort,
+            "suggestion": suggestion,
+            "difference_percent": ((suggestion - sort.price) * 100 / sort.price).quantize(Decimal("1"))
+            if sort.price else None,
+        })
+    return rows
 
 def preferred_sorts(member: Member | None, limit: int) -> list[int]:
     """The sorts a member most likely wants, best first: their favourite, then what they order

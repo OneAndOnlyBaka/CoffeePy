@@ -1,0 +1,58 @@
+{% extends "dashboard/base.html" %}
+{% load i18n l10n coffee_tags %}
+{% block title %}{% translate "Inventory" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "Inventory" %}</h1>
+{% include "dashboard/_inventory_tabs.html" %}
+<p class="muted">{% blocktranslate trimmed %}What should be on the shelf: the last stock-take plus what was bought since - nothing
+is taken off per cup. Enter what you count; an empty field leaves the item as it is.{% endblocktranslate %}</p>
+
+<div class="card">
+    {% if levels %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="list">
+            {% for level in levels %}
+            <div class="list-row">
+                <div class="list-row-text">
+                    <span class="list-row-title">{{ level.item.name }}</span>
+                    <span class="list-row-meta">{% if level.count %}{% blocktranslate trimmed with quantity=level.count.quantity|quantity when=level.count.created_at|date:"d.m.Y H:i" who=level.count.counted_by %}
+                        Counted {{ quantity }} on {{ when }} ({{ who }}){% endblocktranslate %}{% else %}{% translate "Never counted" %}{% endif %}{% if level.bought_since %} &middot; {% blocktranslate with quantity=level.bought_since|quantity %}{{ quantity }} bought since{% endblocktranslate %}{% endif %}</span>
+                </div>
+                <span class="list-row-value">{{ level.stock|quantity }} {{ level.item.unit }}</span>
+                <div class="list-row-actions">
+                    <input type="text" inputmode="decimal" name="count-{{ level.item.pk|unlocalize }}" size="6"
+                           aria-label="{% blocktranslate with item=level.item.name %}Counted {{ item }}{% endblocktranslate %}"
+                           placeholder="{% translate "Counted" %}">
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="action-row">
+            <button type="submit" class="success">{% translate "Save stock-take" %}</button>
+        </div>
+    </form>
+    {% else %}
+    {% url 'dashboard:inventory_items' as items_url %}
+    <p class="muted list-empty">{% blocktranslate trimmed %}No items yet - add coffee, milk and the like under
+    <a href="{{ items_url }}">Items</a>.{% endblocktranslate %}</p>
+    {% endif %}
+</div>
+
+{% if counts %}
+<div class="card">
+    <h2>{% translate "Recent stock-takes" %}</h2>
+    <div class="list">
+        {% for count in counts %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ count.item.name }}</span>
+                <span class="list-row-meta">{{ count.created_at|date:"d.m.Y H:i" }}{% if count.counted_by %} &middot; {{ count.counted_by }}{% endif %}</span>
+            </div>
+            <span class="list-row-value">{{ count.quantity|quantity }} {{ count.item.unit }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static i18n %}
-{% block title %}{% translate "CoffeePy Kiosk" %}{% endblock %}
+{% block title %}{{ texts.title }}{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'kiosk/kiosk.css' %}">
 <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
@@ -13,6 +13,7 @@
 <script src="{% static 'kiosk/osk.js' %}" defer></script>
 <script src="{% static 'kiosk/sort_pages.js' %}" defer></script>
 <script src="{% static 'kiosk/maintenance.js' %}" defer></script>
+<script src="{% static 'kiosk/language.js' %}" defer></script>
 {% comment %}
 Inline on purpose: a page loaded while the stack restarts can get its HTML but lose the CSS
 and scripts above - and then nothing polls, nothing reloads, and the touchscreen shows bare
@@ -42,30 +43,35 @@ and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
     <nav class="kiosk-nav" hx-target="#panel" hx-swap="innerHTML" hx-sync="#panel:replace">
         <a class="nav-btn {% if mode == 'order' %}active{% endif %}" data-mode="order" href="{% url 'kiosk:nav' 'order' %}"
            hx-get="{% url 'kiosk:nav' 'order' %}">
-            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/order.svg' %}" alt="{% translate "Order" %}"></span>
-            <span class="nav-label">{% translate "Order" %}</span>
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/order.svg' %}" alt=""></span>
+            <span class="nav-label" data-i18n="order">{{ texts.order }}</span>
         </a>
         <a class="nav-btn {% if mode == 'info' %}active{% endif %}" data-mode="info" href="{% url 'kiosk:nav' 'info' %}"
            hx-get="{% url 'kiosk:nav' 'info' %}">
-            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/info.svg' %}" alt="{% translate "Pay" %}"></span>
-            <span class="nav-label">{% translate "Pay" %}</span>
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/info.svg' %}" alt=""></span>
+            <span class="nav-label" data-i18n="pay">{{ texts.pay }}</span>
         </a>
         <a class="nav-btn {% if mode == 'settings' %}active{% endif %}" data-mode="settings" href="{% url 'kiosk:nav' 'settings' %}"
            hx-get="{% url 'kiosk:nav' 'settings' %}">
-            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/settings.svg' %}" alt="{% translate "Settings" %}"></span>
-            <span class="nav-label">{% translate "Settings" %}</span>
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/settings.svg' %}" alt=""></span>
+            <span class="nav-label" data-i18n="settings">{{ texts.settings }}</span>
+        </a>
+        <a class="nav-btn {% if mode == 'purchase' %}active{% endif %}" data-mode="purchase" href="{% url 'kiosk:nav' 'purchase' %}"
+           hx-get="{% url 'kiosk:nav' 'purchase' %}"{% if not inventory_on %} hidden{% endif %}>
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/purchase.svg' %}" alt=""></span>
+            <span class="nav-label" data-i18n="purchase">{{ texts.purchase }}</span>
         </a>
         <a class="nav-btn {% if mode == 'ranking' %}active{% endif %}" data-mode="ranking" href="{% url 'kiosk:nav' 'ranking' %}"
            hx-get="{% url 'kiosk:nav' 'ranking' %}"{% if not ranking_on %} hidden{% endif %}>
-            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/ranking.svg' %}" alt="{% translate "Ranking" %}"></span>
-            <span class="nav-label">{% translate "Ranking" %}</span>
+            <span class="nav-icon"><img src="{% static 'kiosk/img/nav/ranking.svg' %}" alt=""></span>
+            <span class="nav-label" data-i18n="ranking">{{ texts.ranking }}</span>
         </a>
     </nav>
     <main id="panel" class="kiosk-panel"
           hx-get="{% url 'kiosk:panel' %}"
           hx-trigger="load, kiosk-poll"
           hx-swap="innerHTML">
-        <div class="wait-card"><p>{% translate "Loading…" %}</p></div>
+        <div class="wait-card"><p>{{ texts.loading }}</p></div>
     </main>
 </div>
 <!-- The ranking videos' posters, held by the page: an image already in the document is reused
@@ -86,7 +92,7 @@ and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
      the keyboard page crashed it on the way there and back. Always laid out, only made visible,
      so opening it neither builds nor tears down any layout either. Outside #panel, like the QR
      modal, so a poll never touches it. -->
-<div id="osk-modal" class="osk-modal" data-space-label="{% translate "Space" %}"
+<div id="osk-modal" class="osk-modal" data-space-label="{{ texts.space }}"
      data-touch-url="{% url 'kiosk:settings_touch' %}">
     <input type="text" id="osk-input" autocomplete="off">
     <div class="osk-keys">
@@ -94,8 +100,8 @@ and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
         <div id="osk-numeric" class="osk off"></div>
     </div>
     <div class="action-row">
-        <button type="button" class="danger" id="osk-cancel">✕ {% translate "Cancel" %}</button>
-        <button type="button" class="success" id="osk-done">✓ {% translate "Done" %}</button>
+        <button type="button" class="danger" id="osk-cancel">✕ <span data-i18n="cancel">{{ texts.cancel }}</span></button>
+        <button type="button" class="success" id="osk-done">✓ <span data-i18n="done">{{ texts.done }}</span></button>
     </div>
 </div>
 <!-- Covers everything while an install or update runs, or the app stops answering
@@ -104,11 +110,11 @@ and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
      data-status-url="/maintenance/status.json" data-health-url="{% url 'health' %}">
     <div class="maintenance-card">
         {% include "icons/cup.svg" %}
-        <h1>{% translate "We'll be right back" %}</h1>
-        <p>{% translate "CoffeePy is being updated - ordering is paused for a moment." %}</p>
+        <h1 data-i18n="back_title">{{ texts.back_title }}</h1>
+        <p data-i18n="back_text">{{ texts.back_text }}</p>
         <div class="maintenance-bar"><span></span></div>
         <p class="maintenance-step"></p>
     </div>
 </div>
-{{ maintenance_steps|json_script:"maintenance-steps" }}
+{{ texts.steps|json_script:"maintenance-steps" }}
 {% endblock %}

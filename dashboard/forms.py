@@ -5,9 +5,29 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 from django.utils.translation import gettext_lazy, pgettext_lazy
 
-from .models import POLICY_LIMITS, KioskBoards, MemberRetention, NamePolicy, NightPolicy, PasswordPolicy
+from .models import (
+    POLICY_LIMITS,
+    InventoryPolicy,
+    KioskBoards,
+    MemberRetention,
+    NamePolicy,
+    NightPolicy,
+    PasswordPolicy,
+)
 from coffee import names
-from coffee.models import CASH_METHOD_NAME, BackupSettings, CoffeeSort, Member, Order, Payment, PaymentMethod, payment_method_label
+from coffee.models import (
+    CASH_METHOD_NAME,
+    PURCHASE_METHOD_NAME,
+    BackupSettings,
+    CoffeeSort,
+    InventoryItem,
+    Member,
+    Order,
+    Payment,
+    PaymentMethod,
+    Purchase,
+    payment_method_label,
+)
 
 
 class CoffeeSortForm(forms.ModelForm):
@@ -56,20 +76,32 @@ class PaymentMethodForm(forms.ModelForm):
             ),
         }
 
+    def clean_name(self):
+        # Both are stored as method names and mean something of their own - a method called
+        # "Purchase" would look like a credit from the inventory.
+        name = self.cleaned_data["name"].strip()
+        if name.casefold() in (CASH_METHOD_NAME.casefold(), PURCHASE_METHOD_NAME.casefold()):
+            raise forms.ValidationError(gettext_lazy("This name is reserved - choose another one."))
+        return name
+
 
 class MemberForm(forms.ModelForm):
     class Meta:
         model = Member
-        fields = ["uid", "nickname", "favourite_coffee"]
+        fields = ["uid", "nickname", "favourite_coffee", "may_take_stock"]
         labels = {
             "uid": gettext_lazy("Uid"),
             "nickname": gettext_lazy("Name"),
             "favourite_coffee": gettext_lazy("Favourite coffee"),
+            "may_take_stock": gettext_lazy("May take stock"),
         }
-        help_texts = {"nickname": names.MESSAGES["format"]}
+        help_texts = {"nickname": names.MESSAGES["format"],
+                      "may_take_stock": gettext_lazy("Corrects the stock at the kiosk and on the phone.")}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not InventoryPolicy.current().members_book:  # the stock-take at the kiosk and on the phone
+            del self.fields["may_take_stock"]
         if self.instance.pk:
             # uid is the primary key - editing it would mean creating a different row
             # (order/payment history is tied to the old one), so only allow setting it
@@ -399,3 +431,77 @@ class KioskBoardsForm(forms.ModelForm):
         fields = ["ranking", "pillory"]
         labels = {"ranking": gettext_lazy("Ranking at the kiosk (most cups, all time and this month)"),
                   "pillory": gettext_lazy("Pillory at the kiosk (who owes money)")}
+
+
+class InventoryPolicyForm(forms.ModelForm):
+    class Meta:
+        model = InventoryPolicy
+        fields = ["mode"]
+        widgets = {"mode": forms.RadioSelect}
+        labels = {"mode": gettext_lazy("Inventory")}
+
+
+class PriceMarginForm(forms.ModelForm):
+    class Meta:
+        model = InventoryPolicy
+        fields = ["price_margin_percent"]
+        labels = {"price_margin_percent": gettext_lazy("Margin in %")}
+        help_texts = {"price_margin_percent": gettext_lazy(
+            "On top of what a cup cost: write-offs, cleaning agents, wear - what no purchase shows.")}
+
+
+class InventoryItemForm(forms.ModelForm):
+    class Meta:
+        model = InventoryItem
+        fields = ["name", "unit", "is_active", "order"]
+        labels = {
+            "name": gettext_lazy("Name"),
+            "unit": gettext_lazy("Unit"),
+            "is_active": gettext_lazy("Can be booked"),
+            "order": pgettext_lazy("position in a list", "Order"),
+        }
+        help_texts = {"unit": gettext_lazy('What the quantity counts, e.g. "kg", "l" or "pack".')}
+
+
+class PurchaseForm(forms.ModelForm):
+    """A purchase entered or corrected by hand - its credit follows (services.update_purchase); no
+    member means it was paid from the coffee box."""
+
+    class Meta:
+        model = Purchase
+        fields = ["member", "item", "quantity", "price", "created_at", "info"]
+        labels = {
+            "member": gettext_lazy("Paid by"),
+            "item": gettext_lazy("Item"),
+            "quantity": gettext_lazy("Quantity"),
+            "price": gettext_lazy("Price paid (€)"),
+            "created_at": gettext_lazy("Date and time"),
+            "info": gettext_lazy("Note"),
+        }
+        widgets = {"created_at": LocalDateTimeInput()}
+        field_classes = {"quantity": CommaDecimalField, "price": CommaDecimalField}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["member"].queryset = Member.objects.order_by("nickname", "uid")
+        self.fields["member"].empty_label = gettext_lazy("The coffee box (nobody is credited)")
+        self.fields["member"].help_text = gettext_lazy("A member gets the price credited to their balance.")
+        items = InventoryItem.objects.filter(is_active=True)
+        if self.instance.pk:
+            items = items | InventoryItem.objects.filter(pk=self.instance.item_id)
+        self.fields["item"].queryset = items.distinct()
+        self.fields["created_at"].input_formats = ["%Y-%m-%dT%H:%M"]
+        if not self.instance.pk:
+            self.fields["created_at"].initial = timezone.localtime().replace(second=0, microsecond=0)
+
+    def clean_quantity(self):
+        quantity = self.cleaned_data["quantity"]
+        if quantity <= 0:
+            raise forms.ValidationError(gettext_lazy("Enter a quantity above 0."))
+        return quantity
+
+    def clean_price(self):
+        price = self.cleaned_data["price"]
+        if price <= 0:
+            raise forms.ValidationError(gettext_lazy("Enter a price above 0."))
+        return price

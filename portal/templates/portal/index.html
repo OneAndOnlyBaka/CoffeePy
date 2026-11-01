@@ -39,7 +39,7 @@
         {% for payment in recent_payments %}
         <div class="list-row">
             <div class="list-row-text">
-                <span class="list-row-title">{{ payment.method_name|method_label }}</span>
+                <span class="list-row-title">{{ payment.method_name|method_label }}{% if payment.purchase %} &middot; {{ payment.purchase.item.name }}{% endif %}</span>
                 <span class="list-row-meta">{{ payment.created_at|date:"d.m. H:i" }}</span>
             </div>
             <span class="list-row-value">{{ payment.value }}€</span>

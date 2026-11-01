@@ -1,0 +1,17 @@
+{% extends "dashboard/base.html" %}
+{% load i18n l10n %}
+{% block title %}{% if instance %}{% translate "Edit purchase" %}{% else %}{% translate "Enter purchase" %}{% endif %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<h1>{% if instance.member %}{% blocktranslate with name=instance.member.display_name %}Purchase of {{ name }}{% endblocktranslate %}{% elif instance %}{% translate "Purchase from the coffee box" %}{% else %}{% translate "Enter purchase" %}{% endif %}</h1>
+<p class="muted">{% translate "A member who paid is credited the price, like a payment - from the coffee box, nobody is." %}</p>
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}{% include "dashboard/_field.html" %}{% endfor %}
+        <div class="action-row">
+            <a href="{% url 'dashboard:inventory_purchases' %}{% if instance.member_id %}?member={{ instance.member_id|unlocalize }}{% endif %}" class="btn secondary">{% translate "Cancel" %}</a>
+            <button type="submit" class="success">{% translate "Save" %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

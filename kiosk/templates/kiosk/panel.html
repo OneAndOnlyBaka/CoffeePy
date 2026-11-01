@@ -1,5 +1,5 @@
 {% load static i18n l10n coffee_tags %}
-<div id="panel-state" data-panel-key="{{ panel_key }}" data-mode="{{ mode }}" data-ranking="{{ ranking_views|yesno:'1,0' }}" hidden></div>
+<div id="panel-state" data-panel-key="{{ panel_key }}" data-mode="{{ mode }}" data-ranking="{{ ranking_views|yesno:'1,0' }}" data-inventory="{{ inventory_on|yesno:'1,0' }}" hidden></div>
 {% if state == "wait_for_card" %}
 {% include "kiosk/_corner_buttons.html" %}
 {% comment %}
@@ -17,7 +17,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
 <div class="wait-card wait-{{ wait_mode }}">
     <h1>{% translate "Apply your card" %}</h1>
     <p class="wait-purpose">
-        {% if wait_mode == "info" %}{% translate "to see your account or pay" %}{% elif wait_mode == "settings" %}{% translate "to change your settings" %}{% else %}{% translate "to order a coffee" %}{% endif %}
+        {% if wait_mode == "info" %}{% translate "to see your account or pay" %}{% elif wait_mode == "settings" %}{% translate "to change your settings" %}{% elif wait_mode == "purchase" %}{% translate "to book what you bought" %}{% else %}{% translate "to order a coffee" %}{% endif %}
         &middot; {% translate "the scanner is at the marked spot" %}
     </p>
     <div class="wait-body">
@@ -28,6 +28,10 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                 {% if wait_mode == "info" %}
                 <li>{% translate "You see your cups this month and in total, and your balance." %}</li>
                 <li>{% translate "Enter what you paid - or scan a payment QR code, if one is shown." %}</li>
+                <li>{% blocktranslate trimmed with seconds=logout_seconds %}You are logged out after {{ seconds }} seconds.{% endblocktranslate %}</li>
+                {% elif wait_mode == "purchase" %}
+                <li>{% translate "Pick what you bought for everyone - coffee, milk, cookies." %}</li>
+                <li>{% translate "Enter the quantity and the price you paid: it is credited to your balance." %}</li>
                 <li>{% blocktranslate trimmed with seconds=logout_seconds %}You are logged out after {{ seconds }} seconds.{% endblocktranslate %}</li>
                 {% elif wait_mode == "settings" %}
                 <li>{% translate "Change your name and your favourite coffee." %}</li>
@@ -138,7 +142,8 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
     <form hx-post="{% url 'kiosk:settings_save' %}" hx-target="#panel" hx-swap="innerHTML">
         <h1 class="panel-header">{% if is_new_user %}{% translate "Welcome, new card!" %}{% elif name_required %}{% translate "Who are you?" %}{% else %}{% blocktranslate trimmed with name=nickname|default:uid|unlocalize %}Hello {{ name }}!{% endblocktranslate %}{% endif %}</h1>
         <div class="panel-body">
-            {% if name_required %}<p>{% translate "Before your coffee: the ranking needs a name your colleagues recognise." %}</p>{% endif %}
+            {% if then_mode == "purchase" %}<p>{% if is_new_user %}{% translate "This card is new here. Your name first - then on to your purchase." %}{% else %}{% translate "Before your purchase: it is credited to a name your colleagues recognise." %}{% endif %}</p>
+            {% elif name_required %}<p>{% translate "Before your coffee: the ranking needs a name your colleagues recognise." %}</p>{% endif %}
             <p class="muted">{% blocktranslate trimmed with uid=uid|unlocalize %}Card UID: {{ uid }}{% endblocktranslate %}</p>
             <label class="field">
                 {% translate "Name" %}
@@ -239,6 +244,128 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
         <div class="action-row panel-footer">
             {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
             <button type="submit" class="success primary-action">{% translate "Pay" %}</button>
+        </div>
+    </form>
+</div>
+
+{% elif state == "purchase" %}
+{% comment %}
+Purchase and stock-take are both laid out from the start, stacked in one grid cell; the two
+radio tiles in the header switch between them through CSS (:has) alone - a re-render on a tap
+is the panel swap that crashes Chromium's renderer (CLAUDE.md). The pick of a section only
+tells the server that someone is busy (settings_touch); which button sends the form decides
+what is saved.
+{% endcomment %}
+<div class="panel-card purchase-card{% if may_count %} can-count{% endif %}">
+    <form hx-target="#panel" hx-swap="innerHTML">
+        <div class="panel-header purchase-header">
+            <h1>{% blocktranslate trimmed with name=member.display_name %}Hi {{ name }}!{% endblocktranslate %}</h1>
+            <span class="purchase-balance">{% translate "Balance" %} <b>{{ balance }}€</b></span>
+            {% if may_count %}
+            <div class="section-switch">
+                <label class="coffee-option"><input type="radio" name="section" value="purchase" id="section-purchase"
+                    {% if inventory_page == "purchase" %}checked{% endif %}
+                    hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="change" hx-swap="none"><span>{% translate "Purchase" context "kiosk screen" %}</span></label>
+                <label class="coffee-option"><input type="radio" name="section" value="stock" id="section-stock"
+                    {% if inventory_page == "stock" %}checked{% endif %}
+                    hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="change" hx-swap="none"><span>{% translate "Stock-take" %}</span></label>
+            </div>
+            {% endif %}
+        </div>
+        <div class="panel-body">
+            {% if inventory_error %}<p class="msg error">{{ inventory_error }}</p>
+            {% elif notice.kind == "purchase" %}<p class="msg success">{% blocktranslate trimmed with quantity=notice.quantity|quantity unit=notice.unit item=notice.item price=notice.price %}
+                Thank you! {{ quantity }} {{ unit }} {{ item }} booked - {{ price }}€ credited to you.{% endblocktranslate %}</p>
+            {% elif notice.kind == "count" %}<p class="msg success">{% blocktranslate trimmed with quantity=notice.quantity|quantity unit=notice.unit item=notice.item %}
+                Saved: {{ item }} {{ quantity }} {{ unit }}.{% endblocktranslate %}</p>{% endif %}
+            <div class="purchase-sections">
+                <div class="purchase-section section-purchase">
+                    {% if item_pages.0.entries %}
+                    <fieldset class="field">
+                        <legend>{% translate "What did you buy?" %}</legend>
+                        <div class="sort-pages{% if item_pages|length > 1 %} paged{% endif %}">
+                            {% for page in item_pages %}
+                            <div class="sort-page{% if forloop.first %} current{% endif %}" data-page="{{ page.index }}">
+                                <div class="coffee-grid">
+                                    {% if page.back %}<button type="button" class="coffee-option sort-nav" data-sort-page="{{ page.index|add:-1 }}"
+                                            hx-post="{% url 'kiosk:settings_touch' %}" hx-swap="none">‹ {% translate "Back" %}</button>{% endif %}
+                                    {% for item in page.entries %}
+                                    <label class="coffee-option">
+                                        <input type="radio" name="item_id" value="{{ item.pk|unlocalize }}"
+                                               hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="change" hx-swap="none">
+                                        <span class="sort-text"><span>{{ item.name }}</span>{% if item.unit %}<span class="price">{{ item.unit }}</span>{% endif %}</span>
+                                    </label>
+                                    {% endfor %}
+                                    {% if page.next %}<button type="button" class="coffee-option sort-nav" data-sort-page="{{ page.index|add:1 }}"
+                                            hx-post="{% url 'kiosk:settings_touch' %}" hx-swap="none">{% translate "More" %} ›</button>{% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                    <div class="purchase-fields">
+                        <label class="field">
+                            {% translate "Quantity" %}
+                            <div class="field-with-osk">
+                                <input type="text" inputmode="decimal" name="quantity" value="1" id="purchase-quantity-input">
+                                <button type="button" class="btn osk-open-btn" data-osk-for="purchase-quantity-input" data-osk-numeric>{% include "icons/keyboard.svg" %}</button>
+                            </div>
+                        </label>
+                        <label class="field">
+                            {% translate "Price paid (€)" %}
+                            <div class="field-with-osk">
+                                <input type="text" inputmode="decimal" name="price" value="" id="purchase-price-input">
+                                <button type="button" class="btn osk-open-btn" data-osk-for="purchase-price-input" data-osk-numeric>{% include "icons/keyboard.svg" %}</button>
+                            </div>
+                        </label>
+                    </div>
+                    {% else %}
+                    <p class="muted">{% translate "Nothing can be booked yet - an admin adds coffee, milk and the like in the dashboard." %}</p>
+                    {% endif %}
+                </div>
+                {% if may_count %}
+                <div class="purchase-section section-stock">
+                    <fieldset class="field">
+                        <legend>{% translate "What did you count? Under each item: what should be there." %}</legend>
+                        <div class="sort-pages{% if stock_pages|length > 1 %} paged{% endif %}">
+                            {% for page in stock_pages %}
+                            <div class="sort-page{% if forloop.first %} current{% endif %}" data-page="{{ page.index }}">
+                                <div class="coffee-grid">
+                                    {% if page.back %}<button type="button" class="coffee-option sort-nav" data-sort-page="{{ page.index|add:-1 }}"
+                                            hx-post="{% url 'kiosk:settings_touch' %}" hx-swap="none">‹ {% translate "Back" %}</button>{% endif %}
+                                    {% for level in page.entries %}
+                                    <label class="coffee-option">
+                                        <input type="radio" name="count_item_id" value="{{ level.item.pk|unlocalize }}"
+                                               hx-post="{% url 'kiosk:settings_touch' %}" hx-trigger="change" hx-swap="none">
+                                        <span class="sort-text"><span>{{ level.item.name }}</span><span class="price">{{ level.stock|quantity }} {{ level.item.unit }}</span></span>
+                                    </label>
+                                    {% endfor %}
+                                    {% if page.next %}<button type="button" class="coffee-option sort-nav" data-sort-page="{{ page.index|add:1 }}"
+                                            hx-post="{% url 'kiosk:settings_touch' %}" hx-swap="none">{% translate "More" %} ›</button>{% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                    <div class="purchase-fields">
+                        <label class="field">
+                            {% translate "Counted" %}
+                            <div class="field-with-osk">
+                                <input type="text" inputmode="decimal" name="count" value="" id="stock-count-input">
+                                <button type="button" class="btn osk-open-btn" data-osk-for="stock-count-input" data-osk-numeric>{% include "icons/keyboard.svg" %}</button>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="action-row panel-footer">
+            {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-touch-seconds="{{ touch_seconds|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
+            <div class="purchase-actions">
+                {% if item_pages.0.entries %}<button type="button" class="success primary-action section-purchase" hx-post="{% url 'kiosk:purchase_book' %}">✓ {% translate "Book purchase" %}</button>{% endif %}
+                {% if may_count %}<button type="button" class="success primary-action section-stock" hx-post="{% url 'kiosk:stock_count' %}">✓ {% translate "Save count" %}</button>{% endif %}
+            </div>
         </div>
     </form>
 </div>

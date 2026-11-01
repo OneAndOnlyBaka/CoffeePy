@@ -1,0 +1,36 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Items" %} - CoffeePy{% endblock %}
+{% block dashboard_content %}
+<div class="page-head">
+    <h1>{% translate "Items" %}</h1>
+    <div class="page-actions">
+        <a href="{% url 'dashboard:inventory_item_add' %}" class="btn success">{% include "icons/plus.svg" %}{% translate "Add item" %}</a>
+    </div>
+</div>
+{% include "dashboard/_inventory_tabs.html" %}
+<p class="muted">{% blocktranslate trimmed %}What members can book as a purchase. An item that was bought can't be deleted -
+switch off "Can be booked" instead.{% endblocktranslate %}</p>
+<div class="card">
+    <div class="list">
+        {% for item in items %}
+        {% autoescape off %}{% blocktranslate with name=item.name asvar confirm_delete %}Delete {{ name }}?{% endblocktranslate %}{% endautoescape %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ item.name }}{% if not item.is_active %} <span class="badge off">{% translate "not bookable" %}</span>{% endif %}</span>
+                {% if item.unit %}<span class="list-row-meta">{{ item.unit }}</span>{% endif %}
+            </div>
+            <div class="list-row-actions">
+                <a href="{% url 'dashboard:inventory_item_edit' item.pk %}" class="btn secondary btn-sm">{% translate "Edit" %}</a>
+                <form method="post" action="{% url 'dashboard:inventory_item_delete' item.pk %}" onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
+                    {% csrf_token %}
+                    <button type="submit" class="danger btn-sm">{% translate "Delete" %}</button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <p class="muted list-empty">{% translate "No items yet." %}</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

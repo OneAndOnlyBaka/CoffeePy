@@ -1,6 +1,7 @@
 import datetime
 
 from django.conf import settings
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy
 
@@ -111,6 +112,40 @@ class KioskBoards(models.Model):
     def kiosk_views(self) -> list[str]:
         """The ranking screen's tabs, in order - empty: no ranking button at all."""
         return (["alltime", "month"] if self.ranking else []) + (["pillory"] if self.pillory else [])
+
+
+class InventoryPolicy(models.Model):
+    """Whether the device keeps an inventory, and who books into it. "dashboard": one person keeps
+    purchases and stock in the dashboard, paid by a member (credited) or from the coffee box.
+    "members": everyone books purchases as a payment in kind at the kiosk and on the phone, and the
+    selected ones (Member.may_take_stock) correct the stock there. Off on a new device and on every
+    existing one. Switched off, the purchases already booked stay credited."""
+
+    MODE_OFF, MODE_DASHBOARD, MODE_MEMBERS = "off", "dashboard", "members"
+    MODES = [
+        (MODE_OFF, gettext_lazy("Off")),
+        (MODE_DASHBOARD, gettext_lazy("Only in the dashboard: one person keeps purchases and stock")),
+        (MODE_MEMBERS, gettext_lazy("For members too: they pay in kind with purchases, at the kiosk and on their phone")),
+    ]
+
+    mode = models.CharField(max_length=10, choices=MODES, default=MODE_OFF)
+    # Added on top of what a cup cost for the price suggestion (Inventory → Costs): write-offs,
+    # cleaning agents, wear - what no purchase shows.
+    price_margin_percent = models.PositiveSmallIntegerField(default=10, validators=[MaxValueValidator(100)])
+
+    @classmethod
+    def current(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+    @property
+    def enabled(self):
+        """The dashboard's inventory pages."""
+        return self.mode != self.MODE_OFF
+
+    @property
+    def members_book(self):
+        """The kiosk's purchase screen and the portal's tab."""
+        return self.mode == self.MODE_MEMBERS
 
 
 class MemberRetention(models.Model):

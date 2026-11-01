@@ -16,6 +16,8 @@ urlpatterns = [
     path("settings/save/", views.settings_save, name="settings_save"),
     path("settings/touch/", views.settings_touch, name="settings_touch"),
     path("pay/", views.pay, name="pay"),
+    path("purchase/", views.purchase_book, name="purchase_book"),
+    path("stock/", views.stock_count, name="stock_count"),
     path("qr-popup/", views.qr_popup, name="qr_popup"),
     path("link-phone-popup/", views.link_phone_popup, name="link_phone_popup"),
 ]

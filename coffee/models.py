@@ -29,6 +29,9 @@ class Member(models.Model):
     # rankings from then on) and deactivates their card(s) rather than deleting their
     # history. Null means still an active member.
     departed_at = models.DateTimeField(null=True, blank=True)
+    # One of the "selected people" who may correct the stock at the kiosk and in the portal
+    # (dashboard → Members). Only matters while the inventory is switched on.
+    may_take_stock = models.BooleanField(default=False)
 
     def __str__(self):
         return self.nickname or str(self.uid)
@@ -145,15 +148,22 @@ class Order(models.Model):
 
 
 CASH_METHOD_NAME = "Cash"
+# The credit a Purchase books: paid in kind, not in money. Never offered as a way to pay -
+# only Purchase creates (and edits, and deletes) these.
+PURCHASE_METHOD_NAME = "Purchase"
 
 
 def payment_method_label(name: str) -> str:
     """How a payment method name reads on screen. Cash is stored as "Cash" whatever the
     language (Payment.method_name is data, and a German "Bar" would no longer match it),
     so only its label is translated; every other name is the admin's own and shown as is."""
-    from django.utils.translation import gettext
+    from django.utils.translation import gettext, pgettext
 
-    return gettext("Cash") if not name or name == CASH_METHOD_NAME else name
+    if not name or name == CASH_METHOD_NAME:
+        return gettext("Cash")
+    if name == PURCHASE_METHOD_NAME:
+        return pgettext("payment method", "Purchase")
+    return name
 
 
 class PaymentMethod(models.Model):
@@ -242,6 +252,58 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.member_id} - {self.value} ({self.created_at:%Y-%m-%d})"
+
+
+class InventoryItem(models.Model):
+    """Something the members buy for everyone - coffee beans, milk, cookies. The admins keep
+    the list (dashboard → Inventory); a member only picks from it."""
+
+    name = models.CharField(max_length=100, unique=True)
+    unit = models.CharField(max_length=20, blank=True)
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Purchase(models.Model):
+    """`quantity` of `item` bought for `price`. Paid by a member, who is credited that price in
+    full through `payment` (method PURCHASE_METHOD_NAME) - which is what puts it into every balance
+    without each of them having to know about purchases. Without a member it was paid from the
+    coffee box: no payment, only stock and spending (InventoryPolicy "dashboard")."""
+
+    member = models.ForeignKey(Member, null=True, blank=True, on_delete=models.CASCADE, related_name="purchases")
+    item = models.ForeignKey(InventoryItem, on_delete=models.PROTECT, related_name="purchases")
+    quantity = models.DecimalField(max_digits=10, decimal_places=3)
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+    payment = models.OneToOneField(Payment, null=True, blank=True, on_delete=models.CASCADE, related_name="purchase")
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    info = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.member_id or 'box'} - {self.quantity} {self.item} ({self.created_at:%Y-%m-%d})"
+
+
+class StockCount(models.Model):
+    """What a stock-take found on the shelf. The stock is the newest count plus the purchases
+    since (services.stock_levels) - nothing is taken off per cup."""
+
+    item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name="counts")
+    quantity = models.DecimalField(max_digits=10, decimal_places=3)
+    # Who counted, as the audit log names them ("Anna B." or a dashboard login) - a member or
+    # a dashboard user may be deleted later, the count stays.
+    counted_by = models.CharField(max_length=150, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
 
 
 class NfcScan(models.Model):

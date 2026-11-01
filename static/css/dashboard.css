@@ -175,6 +175,8 @@ body.dashboard .topbar-btn, body.dashboard .language-switch button {
 .list-row-meta { color: var(--coffee-light); font-size: 0.88em; overflow-wrap: anywhere; }
 .list-row-value { font-weight: 700; white-space: nowrap; }
 .list-row-value.negative { color: var(--danger); }
+td .negative { color: var(--danger); font-weight: 600; }
+td .ok { color: var(--success); font-weight: 600; }
 .list-row-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .list-row-actions form { margin: 0; }
 .list-empty { padding: 12px 0; }

@@ -20,9 +20,13 @@ the ranking. Both are plain links/GETs - nothing here may differ from one poll t
           aria-label="{% translate "A task for the admin - see the dashboard" %}">{% include "icons/clipboard.svg" %}</span>{% endif %}
 </div>
 {% endif %}
+{% comment %}The language button swaps the panel like a nav button and relabels the rest of the page
+(static/kiosk/language.js) - it never loads the page again: each navigation risks Chromium's crash.{% endcomment %}
 {% get_current_language as current_language %}
 {% if current_language == "de" %}
-<a class="info-btn lang-btn" href="{% url 'kiosk:language' %}" title="Switch to English" lang="en">EN</a>
+<a class="info-btn lang-btn" href="{% url 'kiosk:language' %}" title="Switch to English" lang="en"
+   hx-get="{% url 'kiosk:language' %}" hx-target="#panel" hx-swap="innerHTML" hx-sync="#panel:replace">EN</a>
 {% else %}
-<a class="info-btn lang-btn" href="{% url 'kiosk:language' %}" title="Auf Deutsch umschalten" lang="de">DE</a>
+<a class="info-btn lang-btn" href="{% url 'kiosk:language' %}" title="Auf Deutsch umschalten" lang="de"
+   hx-get="{% url 'kiosk:language' %}" hx-target="#panel" hx-swap="innerHTML" hx-sync="#panel:replace">DE</a>
 {% endif %}

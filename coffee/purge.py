@@ -17,6 +17,7 @@ from coffee.models import (
     AltUidCapture,
     AuditLogEntry,
     CoffeeSort,
+    InventoryItem,
     Member,
     MemberCard,
     MemberDevice,
@@ -25,11 +26,15 @@ from coffee.models import (
     Order,
     Payment,
     PaymentMethod,
+    Purchase,
+    StockCount,
 )
 
 # Children before parents. The member-owned rows (cards, devices, tokens, captures) would
 # cascade with Member anyway; deleting them explicitly just keeps the order obvious.
 IMPORT_SCOPE = [
+    Purchase,
+    StockCount,
     Order,
     Payment,
     AltUidCapture,
@@ -42,7 +47,9 @@ IMPORT_SCOPE = [
 
 # Not NfcReaderStatus: it is the device's state, not data - deleted, the kiosk says "card reader
 # not available" with a working reader until the bridge reports a change.
-FULL_SCOPE = IMPORT_SCOPE + [NfcScan, PaymentMethod, AuditLogEntry]
+# Purchases and stock counts go with the members and payments an import replaces - without them the
+# stock would count purchases nobody made; the item list is the admin's and stays.
+FULL_SCOPE = IMPORT_SCOPE + [InventoryItem, NfcScan, PaymentMethod, AuditLogEntry]
 
 
 def purge(scope) -> dict:

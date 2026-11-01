@@ -93,6 +93,7 @@ body.portal { user-select: auto; font-size: 16px; }
 
 .msg { padding: 10px 14px; border-radius: var(--radius); margin: 0 0 10px; background: var(--cream-dark); font-size: 0.95em; }
 .msg.error { background: #fbe4e2; color: var(--danger); }
+.msg.success { background: #e2f3e4; color: var(--success); }
 
 /* Card/payment/device rows - a stacked list instead of a <table>, so nothing needs a
    fixed column width that can overflow a narrow screen. */

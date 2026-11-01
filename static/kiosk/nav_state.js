@@ -4,8 +4,8 @@
  * itself. The tapped button lights up right away - on a Pi 3 the panel takes a moment, and
  * a tap without feedback gets tapped again. After that the panel is the authority: it
  * reports its mode on #panel-state, which also catches the server switching modes on its
- * own (an unknown card is sent to the settings screen) - and whether there is a ranking
- * screen at all, which the admin can switch off from the dashboard while the kiosk runs. */
+ * own (an unknown card is sent to the settings screen) - and whether there is a ranking or a
+ * purchase screen at all, which the admin can switch off from the dashboard while the kiosk runs. */
 (function () {
   "use strict";
 
@@ -28,5 +28,7 @@
     highlight(marker.dataset.mode);
     const ranking = document.querySelector('.nav-btn[data-mode="ranking"]');
     if (ranking) ranking.hidden = marker.dataset.ranking !== "1";
+    const purchase = document.querySelector('.nav-btn[data-mode="purchase"]');
+    if (purchase) purchase.hidden = marker.dataset.inventory !== "1";
   });
 })();

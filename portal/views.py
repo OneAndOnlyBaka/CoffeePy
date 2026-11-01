@@ -3,7 +3,7 @@ from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.sessions.models import Session
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -13,10 +13,12 @@ from django.views.decorators.http import require_GET, require_POST
 
 from coffee import services
 from coffee.models import (
-    AltUidCapture, AuditLogEntry, CASH_METHOD_NAME, MemberDevice, MemberLinkToken, Payment, PaymentMethod,
+    AltUidCapture, AuditLogEntry, CASH_METHOD_NAME, InventoryItem, MemberDevice, MemberLinkToken, Payment,
+    PaymentMethod,
 )
 
 from dashboard import audit
+from dashboard.models import InventoryPolicy
 
 from .decorators import ROLLING_SESSION_SECONDS, portal_login_required
 
@@ -93,7 +95,7 @@ def index(request):
         "balance": balance,
         "owed": -balance if balance < 0 else Decimal("0.00"),
         "recent_orders": member.orders.select_related("coffee_sort")[:10],
-        "recent_payments": member.payments.all()[:10],
+        "recent_payments": member.payments.select_related("purchase__item")[:10],
     }
     return render(request, "portal/index.html", ctx)
 
@@ -148,6 +150,58 @@ def pay(request):
     ctx = {"member": member, "balance": balance, "pay_default": default_suggestion}
     ctx.update(_payment_methods_context(balance))
     return render(request, "portal/pay.html", ctx)
+
+
+@portal_login_required
+def purchase(request):
+    """Booking a purchase from the phone - and, for the members the admin picked
+    (Member.may_take_stock), the stock-take. A <select> is fine here: only the kiosk's
+    browser can't open one."""
+    if not InventoryPolicy.current().members_book:
+        raise Http404
+    member = request.member
+    items = InventoryItem.objects.filter(is_active=True)
+    error = None
+    if request.method == "POST" and request.POST.get("form") == "stock" and member.may_take_stock:
+        counted = []
+        for item in items:
+            raw = request.POST.get(f"count-{item.pk}", "").strip()
+            if not raw:
+                continue
+            quantity = services.parse_quantity(raw)
+            if quantity is None:
+                error = _("%(item)s: enter a number of at least 0.") % {"item": item.name}
+                break
+            counted.append((item, quantity))
+        if error is None and counted:
+            for item, quantity in counted:
+                services.record_stock_count(item, quantity, member.display_name())
+            who = audit.member_actor(member)
+            audit.log(request, "stock.count", actor=who, details=", ".join(
+                f"{item.name} {quantity.normalize():f}" for item, quantity in counted))
+            return redirect(reverse("portal:purchase") + "?counted=1")
+    elif request.method == "POST":
+        item_id = request.POST.get("item", "")
+        item = items.filter(pk=item_id).first() if item_id.isdigit() else None
+        quantity = services.parse_quantity(request.POST.get("quantity", ""))
+        price = services.parse_quantity(request.POST.get("price", ""))
+        if item is None or not quantity or not price:
+            error = _("Pick an item and enter a quantity and a price above 0.")
+        else:
+            booked = services.book_purchase(member, item, quantity, price.quantize(Decimal("0.01")))
+            who = audit.member_actor(member)
+            audit.log(request, "purchase.create", target=who, actor=who, details=services.describe_purchase(booked))
+            return redirect(reverse("portal:purchase") + "?booked=1")
+    return render(request, "portal/purchase.html", {
+        "member": member,
+        "balance": services.account_balance(member),
+        "items": items,
+        "error": error,
+        "booked": request.GET.get("booked") == "1",
+        "counted": request.GET.get("counted") == "1",
+        "purchases": member.purchases.select_related("item")[:10],
+        "levels": services.stock_levels(items) if member.may_take_stock else [],
+    })
 
 
 @portal_login_required

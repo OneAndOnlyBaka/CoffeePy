@@ -12,7 +12,8 @@
 
   const overlay = document.getElementById("maintenance");
   if (!overlay) return;
-  const steps = JSON.parse(document.getElementById("maintenance-steps").textContent);
+  // Read when shown, not once: the language button puts the other language's labels in (language.js).
+  const steps = () => JSON.parse(document.getElementById("maintenance-steps").textContent);
   const bar = overlay.querySelector(".maintenance-bar");
   const fill = bar.querySelector("span");
   const stepText = overlay.querySelector(".maintenance-step");
@@ -27,7 +28,7 @@
     overlay.hidden = false;
     bar.style.visibility = status ? "visible" : "hidden";
     if (status) fill.style.width = Math.max(0, Math.min(100, status.percent)) + "%";
-    stepText.textContent = (status && steps[status.step]) || "";
+    stepText.textContent = (status && steps()[status.step]) || "";
   }
 
   async function fetchStatus() {

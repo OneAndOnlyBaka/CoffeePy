@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n static %}
+{% load i18n static coffee_tags %}
 {% block viewport %}width=device-width, initial-scale=1{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/portal.css' %}">
@@ -29,6 +29,12 @@
         <a href="{% url 'portal:pay' %}" class="{% if request.resolver_match.url_name == 'pay' %}active{% endif %}">
             <span class="tab-icon">{% include "icons/card.svg" %}</span>{% translate "Pay" %}
         </a>
+        {% inventory_on as show_purchase %}
+        {% if show_purchase %}
+        <a href="{% url 'portal:purchase' %}" class="{% if request.resolver_match.url_name == 'purchase' %}active{% endif %}">
+            <span class="tab-icon">{% include "icons/box.svg" %}</span>{% translate "Purchase" context "kiosk screen" %}
+        </a>
+        {% endif %}
         <a href="{% url 'portal:stats' %}" class="{% if request.resolver_match.url_name == 'stats' %}active{% endif %}">
             <span class="tab-icon">{% include "icons/chart.svg" %}</span>{% translate "Stats" %}
         </a>
