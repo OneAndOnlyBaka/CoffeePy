@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 18:00+0100\n"
+"POT-Creation-Date: 2026-11-01 18:49+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -53,12 +53,20 @@ msgstr "Einkauf"
 msgid "PayPal (Friends & Family / paypal.me)"
 msgstr "PayPal (Freunde & Familie / paypal.me)"
 
+msgid "GiroCode (bank transfer by QR code)"
+msgstr "GiroCode (Überweisung per QR-Code)"
+
 msgid "Custom link"
 msgstr "Eigener Link"
 
-#, python-format
-msgid "Send %(amount)s€ via WERO to %(identifier)s"
-msgstr "Sende %(amount)s€ per WERO an %(identifier)s"
+msgid "Recipient"
+msgstr "Empfänger"
+
+msgid "Amount"
+msgstr "Betrag"
+
+msgid "Purpose"
+msgstr "Verwendungszweck"
 
 msgid "Please enter your name."
 msgstr "Bitte gib deinen Namen ein."
@@ -106,6 +114,9 @@ msgstr "Kennung"
 msgid "Link template"
 msgstr "Link-Vorlage"
 
+msgid "BIC (optional)"
+msgstr "BIC (freiwillig)"
+
 msgid "Is active"
 msgstr "Aktiv"
 
@@ -113,26 +124,27 @@ msgctxt "position in a list"
 msgid "Order"
 msgstr "Reihenfolge"
 
+#, python-brace-format
 msgid ""
-"PayPal: your paypal.me username (e.g. \"coffeefund\"). PayPal Pool: the "
-"pool's URL, or just the ID at the end of it. WERO: the phone number "
-"registered with WERO - WERO has no public link format, so this is shown as a "
-"plain instruction instead of a QR link."
+"Optional \"{amount}\" placeholder for what is owed (e.g. https://example.com/"
+"pay/{amount}EUR); leave the placeholder out for a static link, or the whole "
+"field blank for no link at all."
 msgstr ""
-"PayPal: dein paypal.me-Benutzername (z. B. \"kaffeekasse\"). PayPal Pool: "
-"die URL des Pools oder nur die ID an ihrem Ende. WERO: die bei WERO "
-"registrierte Telefonnummer - WERO hat kein öffentliches Linkformat, deshalb "
-"wird das als einfache Anleitung statt als QR-Link angezeigt."
+"Optionaler Platzhalter \"{amount}\" für den offenen Betrag (z. B. https://"
+"example.com/pay/{amount}EUR); ohne Platzhalter ist es ein fester Link, ein "
+"leeres Feld bedeutet gar keinen Link."
+
+msgid "The account holder's name, as the bank knows it."
+msgstr "Der Name des Kontoinhabers, wie ihn die Bank kennt."
 
 #, python-brace-format
 msgid ""
-"Custom provider only. Optional \"{amount}\" placeholder for what is owed "
-"(e.g. https://example.com/pay/{amount}EUR); leave the placeholder out for a "
-"static link, or the whole field blank for no link at all."
+"What the transfer says, e.g. \"Coffee {member}\" - {member} becomes the name "
+"of whoever pays, so you can tell the transfers apart."
 msgstr ""
-"Nur für eigene Anbieter. Optionaler Platzhalter \"{amount}\" für den offenen "
-"Betrag (z. B. https://example.com/pay/{amount}EUR); ohne Platzhalter ist es "
-"ein fester Link, ein leeres Feld bedeutet gar keinen Link."
+"Was in der Überweisung steht, z. B. \"Kaffee {member}\" - {member} wird "
+"durch den Namen dessen ersetzt, der zahlt, so kannst du die Überweisungen "
+"auseinanderhalten."
 
 msgid ""
 "Display order among payment methods (lowest number first), e.g. in the "
@@ -145,8 +157,26 @@ msgstr ""
 "Kiosk und Handy. Methoden mit gleicher Zahl werden stattdessen alphabetisch "
 "sortiert. Bei 0 lassen, wenn die Reihenfolge egal ist."
 
+msgid "Your paypal.me username, e.g. \"coffeefund\"."
+msgstr "Dein paypal.me-Name, z. B. \"coffeefund\"."
+
+msgid "The pool's URL, or just the ID at the end of it."
+msgstr "Die URL des Pools, oder nur die ID an ihrem Ende."
+
 msgid "This name is reserved - choose another one."
 msgstr "Dieser Name ist reserviert - wähle einen anderen."
+
+msgid "This provider needs it."
+msgstr "Dieser Anbieter braucht das."
+
+msgid "This is not a valid IBAN - check it for a typo."
+msgstr "Das ist keine gültige IBAN - prüf sie auf Tippfehler."
+
+msgid "A BIC has 8 or 11 letters and digits."
+msgstr "Eine BIC hat 8 oder 11 Buchstaben und Ziffern."
+
+msgid "Too long to leave room for the member's name."
+msgstr "Zu lang - es muss noch Platz für den Namen des Mitglieds bleiben."
 
 msgid "Uid"
 msgstr "UID"
@@ -1769,16 +1799,16 @@ msgid "Payment methods"
 msgstr "Zahlungsmethoden"
 
 msgid ""
-"Cash is always available and isn't listed here. Pick a provider (PayPal, "
-"PayPal Pool or WERO) and fill in just the one identifier it needs so members "
-"can pay/scan-to-pay via the kiosk and their linked phone - or use \"Custom "
-"link\" for anything else."
+"Cash is always available and isn't listed here. Pick a provider - PayPal, a "
+"PayPal Pool or a GiroCode for a bank transfer - and fill in what it asks "
+"for, so members can pay or scan to pay at the kiosk and on their phone; or "
+"use \"Custom link\" for anything else."
 msgstr ""
 "Bar ist immer verfügbar und steht hier nicht in der Liste. Wähle einen "
-"Anbieter (PayPal, PayPal Pool oder WERO) und trage nur die eine Kennung ein, "
-"die er braucht, damit Mitglieder über den Kiosk und ihr verknüpftes Handy "
-"bezahlen bzw. per Scan bezahlen können - oder nimm \"Eigener Link\" für "
-"alles andere."
+"Anbieter - PayPal, einen PayPal Pool oder einen GiroCode für eine "
+"Überweisung - und trag ein, was er braucht, damit Mitglieder am Kiosk und "
+"auf ihrem Handy bezahlen oder per Scan bezahlen können; oder nimm \"Eigener "
+"Link\" für alles andere."
 
 msgid "inactive"
 msgstr "inaktiv"
@@ -3005,9 +3035,6 @@ msgstr "Zahlung eintragen"
 
 msgid "Already paid? Log it here (cash or any method above)."
 msgstr "Schon bezahlt? Trag es hier ein (bar oder eine der Methoden oben)."
-
-msgid "Amount"
-msgstr "Betrag"
 
 msgid "Thank you! The purchase is booked and credited to you."
 msgstr "Danke! Der Einkauf ist gebucht und dir gutgeschrieben."

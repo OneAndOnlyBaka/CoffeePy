@@ -16,8 +16,11 @@
         <a href="{{ entry.link }}" class="btn success pay-method-btn" target="_blank" rel="noopener">
             {% blocktranslate trimmed with method=entry.method.name %}Pay {{ owed }}€ via {{ method }}{% endblocktranslate %}
         </a>
-        {% elif entry.instructions %}
-        <p class="msg">{{ entry.instructions }}</p>
+        {% elif entry.transfer %}
+        <div class="transfer">
+            <h3>{{ entry.method.name }}</h3>
+            <dl>{% for label, value in entry.transfer %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}</dl>
+        </div>
         {% else %}
         <p class="muted">{% blocktranslate trimmed with method=entry.method.name %}{{ method }}: no direct link configured, use "Record a payment" below once you've paid.{% endblocktranslate %}</p>
         {% endif %}

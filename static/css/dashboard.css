@@ -344,3 +344,10 @@ body.dashboard input[type="date"] { font: inherit; min-height: 44px; padding: 8p
   .version-list { grid-template-columns: 1fr; gap: 0; }
   .version-list dd { margin-bottom: 8px; }
 }
+
+/* The payment method form shows only the fields of the provider picked (paymentmethod_form.html,
+   PaymentMethod.PROVIDER_FIELDS). Without :has every field stays visible. */
+form:has(#id_provider option[value="paypal_me"]:checked) [data-providers]:not([data-providers~="paypal_me"]),
+form:has(#id_provider option[value="paypal_pool"]:checked) [data-providers]:not([data-providers~="paypal_pool"]),
+form:has(#id_provider option[value="girocode"]:checked) [data-providers]:not([data-providers~="girocode"]),
+form:has(#id_provider option[value="custom"]:checked) [data-providers]:not([data-providers~="custom"]) { display: none; }

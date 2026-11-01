@@ -961,32 +961,20 @@ def _settings_context(request, uid, seconds_left):
     }
 
 
-def _payment_method_qr_row(balance):
+def _payment_method_qr_row(balance, member=None):
     """QR codes so a member can scan-to-pay what they owe via an admin-configured
-    method (PayPal, a PayPal pool, ...) straight from the kiosk screen - only methods
-    with a link and only while something is actually owed (see PaymentMethod)."""
+    method (PayPal, a PayPal pool, a GiroCode for their banking app, ...) straight from the
+    kiosk screen - only methods with something to scan and only while something is actually
+    owed (see PaymentMethod.qr_payload)."""
     owed = -balance if balance < 0 else Decimal("0.00")
     if owed <= 0:
         return []
     entries = []
     for method in PaymentMethod.objects.filter(is_active=True):
-        link = method.build_link(owed)
-        if link:
-            entries.append({"name": method.name, "qr_svg": _qr_svg(link)})
+        payload = method.qr_payload(owed, member)
+        if payload:
+            entries.append({"name": method.name, "qr_svg": _qr_svg(payload)})
     return entries
-
-
-def _payment_method_instructions(balance):
-    """Plain-text payment instructions for methods with no scannable link (e.g. WERO,
-    which has no public deep-link scheme) - only while something is actually owed."""
-    owed = -balance if balance < 0 else Decimal("0.00")
-    if owed <= 0:
-        return []
-    return [
-        text
-        for method in PaymentMethod.objects.filter(is_active=True)
-        if not method.build_link(owed) and (text := method.instructions(owed))
-    ]
 
 
 def _info_pay_context(request, uid, seconds_left):
@@ -1003,8 +991,7 @@ def _info_pay_context(request, uid, seconds_left):
         "payment_method_names": [CASH_METHOD_NAME] + list(
             PaymentMethod.objects.filter(is_active=True).values_list("name", flat=True)
         ),
-        "payment_method_qr_row": _payment_method_qr_row(balance),
-        "payment_method_instructions": _payment_method_instructions(balance),
+        "payment_method_qr_row": _payment_method_qr_row(balance, member),
         "seconds_left": seconds_left,
     }
 

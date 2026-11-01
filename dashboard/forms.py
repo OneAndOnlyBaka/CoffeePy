@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 from django.contrib.auth import get_user_model, password_validation
 from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
@@ -43,30 +45,48 @@ class CoffeeSortForm(forms.ModelForm):
         }
 
 
+def _iban_ok(iban):
+    """ISO 13616: country, check digits, then the account; mod 97 of the rearranged number is 1."""
+    if not re.fullmatch(r"[A-Z]{2}\d{2}[A-Z0-9]{11,30}", iban):
+        return False
+    digits = "".join(str(int(c, 36)) for c in iban[4:] + iban[:4])
+    return int(digits) % 97 == 1
+
+
 class PaymentMethodForm(forms.ModelForm):
+    """One form for every provider; paymentmethod_form.html shows only the fields of the one picked
+    (PaymentMethod.PROVIDER_FIELDS), and clean() asks for those and clears the rest."""
+
     class Meta:
         model = PaymentMethod
-        fields = ["name", "provider", "identifier", "link_template", "is_active", "order"]
+        fields = ["name", "provider", "identifier", "link_template", "recipient", "iban", "bic", "purpose",
+                  "is_active", "order"]
         labels = {
             "name": gettext_lazy("Name"),
             "provider": gettext_lazy("Provider"),
             "identifier": gettext_lazy("Identifier"),
             "link_template": gettext_lazy("Link template"),
+            "recipient": gettext_lazy("Recipient"),
+            "iban": "IBAN",
+            "bic": gettext_lazy("BIC (optional)"),
+            "purpose": gettext_lazy("Purpose"),
             "is_active": gettext_lazy("Is active"),
             # Context: the kiosk's "Order" (to order a coffee) is a different word in German.
             "order": pgettext_lazy("position in a list", "Order"),
         }
         help_texts = {
-            "identifier": gettext_lazy(
-                "PayPal: your paypal.me username (e.g. \"coffeefund\"). "
-                "PayPal Pool: the pool's URL, or just the ID at the end of it. "
-                "WERO: the phone number registered with WERO - WERO has no public link "
-                "format, so this is shown as a plain instruction instead of a QR link."
-            ),
+            # The identifier means something else for each PayPal variant - the template shows
+            # the help text that fits (IDENTIFIER_HELP).
+            "identifier": "",
             "link_template": gettext_lazy(
-                'Custom provider only. Optional "{amount}" placeholder for what is owed '
+                'Optional "{amount}" placeholder for what is owed '
                 '(e.g. https://example.com/pay/{amount}EUR); leave the placeholder out for '
                 "a static link, or the whole field blank for no link at all."
+            ),
+            "recipient": gettext_lazy("The account holder's name, as the bank knows it."),
+            "purpose": gettext_lazy(
+                'What the transfer says, e.g. "Coffee {member}" - {member} becomes the name of whoever '
+                "pays, so you can tell the transfers apart."
             ),
             "order": gettext_lazy(
                 "Display order among payment methods (lowest number first), e.g. in the "
@@ -76,6 +96,19 @@ class PaymentMethodForm(forms.ModelForm):
             ),
         }
 
+    IDENTIFIER_HELP = {
+        PaymentMethod.PROVIDER_PAYPAL_ME: gettext_lazy('Your paypal.me username, e.g. "coffeefund".'),
+        PaymentMethod.PROVIDER_PAYPAL_POOL: gettext_lazy("The pool's URL, or just the ID at the end of it."),
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Which providers each field belongs to, for the template's data-providers.
+        for name in self.fields:
+            providers = [p for p, names in PaymentMethod.PROVIDER_FIELDS.items() if name in names]
+            self.fields[name].providers = " ".join(providers)
+        self.fields["identifier"].provider_help = list(self.IDENTIFIER_HELP.items())
+
     def clean_name(self):
         # Both are stored as method names and mean something of their own - a method called
         # "Purchase" would look like a credit from the inventory.
@@ -83,6 +116,42 @@ class PaymentMethodForm(forms.ModelForm):
         if name.casefold() in (CASH_METHOD_NAME.casefold(), PURCHASE_METHOD_NAME.casefold()):
             raise forms.ValidationError(gettext_lazy("This name is reserved - choose another one."))
         return name
+
+    def clean_iban(self):
+        return re.sub(r"\s+", "", self.cleaned_data["iban"]).upper()
+
+    def clean_bic(self):
+        return re.sub(r"\s+", "", self.cleaned_data["bic"]).upper()
+
+    def clean(self):
+        cleaned = super().clean()
+        provider = cleaned.get("provider")
+        wanted = PaymentMethod.PROVIDER_FIELDS.get(provider, ())
+        for field in ("identifier", "link_template", "recipient", "iban", "bic", "purpose"):
+            if field not in wanted:
+                cleaned[field] = ""  # a leftover of another provider, invisible in the form
+        required = gettext_lazy("This provider needs it.")
+        if provider in (PaymentMethod.PROVIDER_PAYPAL_ME, PaymentMethod.PROVIDER_PAYPAL_POOL):
+            if not cleaned.get("identifier", "").strip():
+                self.add_error("identifier", required)
+        if provider == PaymentMethod.PROVIDER_GIROCODE:
+            if not cleaned.get("recipient", "").strip():
+                self.add_error("recipient", required)
+            iban = cleaned.get("iban", "")
+            if not iban:
+                self.add_error("iban", required)
+            elif not _iban_ok(iban):
+                self.add_error("iban", gettext_lazy("This is not a valid IBAN - check it for a typo."))
+            bic = cleaned.get("bic", "")
+            if bic and not re.fullmatch(r"[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?", bic):
+                self.add_error("bic", gettext_lazy("A BIC has 8 or 11 letters and digits."))
+            # A member's name fills {member} - the kiosk takes up to 20 characters; without room for
+            # it the purpose gets cut, and the transfer no longer says who paid.
+            purpose = cleaned.get("purpose", "")
+            room = 140 - len(purpose.replace(PaymentMethod.MEMBER_PLACEHOLDER, ""))
+            if PaymentMethod.MEMBER_PLACEHOLDER in purpose and room < 20:
+                self.add_error("purpose", gettext_lazy("Too long to leave room for the member's name."))
+        return cleaned
 
 
 class MemberForm(forms.ModelForm):

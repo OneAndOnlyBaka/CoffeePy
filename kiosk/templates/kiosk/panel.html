@@ -237,9 +237,6 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                 {% endfor %}
             </div>
             {% endif %}
-            {% for instruction in payment_method_instructions %}
-            <p class="muted">{{ instruction }}</p>
-            {% endfor %}
         </div>
         <div class="action-row panel-footer">
             {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}

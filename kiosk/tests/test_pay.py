@@ -48,18 +48,17 @@ class KioskPayTestCase(TestCase):
         self.assertContains(response, "<h2>PayPal</h2>")
 
     def test_qr_row_omits_methods_with_no_link(self):
-        PaymentMethod.objects.create(name="WERO", link_template="")
+        PaymentMethod.objects.create(name="Invoice", link_template="")
         Order.objects.create(member=self.alice, value=Decimal("15.00"), machine_strokes=1)
         response = self.client.get(reverse("kiosk:panel"))
-        self.assertNotContains(response, "<h2>WERO</h2>")
+        self.assertNotContains(response, "<h2>Invoice</h2>")
         # still offered as a selectable method for the manual "paid via" record though
-        self.assertContains(response, "WERO")
+        self.assertContains(response, "Invoice")
 
-    def test_wero_preset_shows_instructions_instead_of_a_qr(self):
-        PaymentMethod.objects.create(
-            name="WERO", provider=PaymentMethod.PROVIDER_WERO, identifier="+49 151 12345678"
-        )
+    def test_girocode_is_a_qr_for_the_banking_app(self):
+        PaymentMethod.objects.create(name="Bank", provider=PaymentMethod.PROVIDER_GIROCODE, recipient="Kaffeekasse",
+                                     iban="DE02120300000000202051", purpose="Kaffee {member}")
         Order.objects.create(member=self.alice, value=Decimal("15.00"), machine_strokes=1)
         response = self.client.get(reverse("kiosk:panel"))
-        self.assertNotContains(response, "<h2>WERO</h2>")
-        self.assertContains(response, "Send 15.00€ via WERO to +49 151 12345678")
+        self.assertContains(response, "<h2>Bank</h2>")
+        self.assertEqual(response.content, self.client.get(reverse("kiosk:panel")).content)

@@ -113,8 +113,9 @@ matches wins:
   "1.50" are both accepted, and only amounts above zero are booked.
 - **Payment links and QR codes** appear only while something is owed, prefilled with exactly
   that amount: PayPal as `https://paypal.me/<user>/<amount>EUR`, a custom link by replacing
-  `{amount}` (two decimals, a dot). Methods without a link (WERO) show a text with the amount
-  instead.
+  `{amount}` (two decimals, a dot). A GiroCode is the EPC QR text (`BCD`, version 002, SEPA
+  credit transfer) with recipient, IBAN, optional BIC, `EUR<amount>` and the purpose, `{member}`
+  replaced by the member's name; the portal lists the same transfer to copy.
 
 ## Dashboard overview and statistics
 

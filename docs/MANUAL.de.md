@@ -254,7 +254,7 @@ keine angelegt ist, zeigt er *Einrichtung nötig* mit QR-Codes zu WLAN und Dashb
 
 1. **Kaffeesorten** anlegen: Name, Preis und Bezüge (wie viele Tassen die Maschine dafür
    ausgibt – eine Kanne zählt zwei).
-2. Optional **Zahlungsmethoden** anlegen (PayPal, PayPal Pool, WERO oder ein eigener Link).
+2. Optional **Zahlungsmethoden** anlegen (PayPal, PayPal Pool, GiroCode oder ein eigener Link).
    Bar geht immer.
 3. **Mitglieder** musst du nicht anlegen: Eine unbekannte Karte führt am Kiosk automatisch
    zur Anmeldung mit Namen (siehe [Einstellungen](#einstellungen)).
@@ -369,7 +369,8 @@ Animation.
 Hier zahlst du ein. Zur Information zeigt der Bildschirm dazu deine **Tassen insgesamt** und
 **diesen Monat** und deinen **Kontostand**. Ist er negativ, steht der offene Betrag schon im Feld – trag ein, was du
 bezahlt hast, wähle die Zahlungsart und tippe **Bezahlen**. Sind Zahlungsmethoden mit Link
-eingerichtet, kannst du den offenen Betrag auch direkt per QR-Code mit dem Handy bezahlen.
+oder ein GiroCode eingerichtet, kannst du den offenen Betrag auch direkt per QR-Code mit dem Handy
+bezahlen – den GiroCode scannst du mit deiner Banking-App.
 
 ![Bezahlen](pictures/manual/de/kiosk-pay.png)
 
@@ -500,7 +501,8 @@ das Gerätezertifikat.
 
 ![Portal Start](pictures/manual/de/portal-home.png)
 
-**Bezahlen** öffnet deine Bezahl-App mit dem offenen Betrag, oder du trägst eine Zahlung ein,
+**Bezahlen** öffnet deine Bezahl-App mit dem offenen Betrag – bei einem GiroCode stehen dort die
+Überweisungsdaten zum Abschreiben –, oder du trägst eine Zahlung ein,
 die du schon gemacht hast.
 
 ![Portal Bezahlen](pictures/manual/de/portal-pay.png)
@@ -678,11 +680,15 @@ der Kasse. Jede Änderung landet im Protokoll.
 
 ![Kaffeesorten](pictures/manual/de/dashboard-coffee-sorts.png)
 
-**Zahlungsmethoden**: Für PayPal reicht der paypal.me-Name, für PayPal Pool die URL des
-Pools, für WERO die Telefonnummer; *Eigener Link* nimmt jede Adresse, optional mit `{amount}`
-für den offenen Betrag. Daraus entstehen die Bezahl-Links und QR-Codes an Kiosk und Handy – WERO hat keinen
-öffentlichen Link und zeigt deshalb die Telefonnummer als Anleitung statt eines QR-Codes.
-*Aktiv* blendet eine Methode aus, ohne sie zu löschen, *Reihenfolge* legt ihren Platz fest.
+**Zahlungsmethoden**: Das Formular zeigt nur, was der gewählte *Anbieter* braucht. Für PayPal
+reicht der paypal.me-Name, für PayPal Pool die URL des Pools. Ein **GiroCode** ist eine
+Überweisung per QR-Code: Mit *Empfänger* und *IBAN* (die *BIC* ist freiwillig) zeigt der Kiosk
+einen QR-Code mit dem offenen Betrag, den praktisch jede Banking-App scannt und als Überweisung
+ausfüllt – ohne Anbieterkonto. Im *Verwendungszweck* wird `{member}` durch den Namen dessen
+ersetzt, der zahlt (*Kaffee {member}* wird *Kaffee Anna B.*), so ist auf dem Kontoauszug zu
+sehen, wer überwiesen hat. *Eigener Link* nimmt jede Adresse, optional mit `{amount}` für den
+offenen Betrag. Daraus entstehen die Bezahl-Links und QR-Codes an Kiosk und Handy. *Aktiv*
+blendet eine Methode aus, ohne sie zu löschen, *Reihenfolge* legt ihren Platz fest.
 
 ![Zahlungsmethoden](pictures/manual/de/dashboard-payment-methods.png)
 

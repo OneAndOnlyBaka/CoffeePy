@@ -6,11 +6,14 @@
 <div class="card">
     <form method="post">
         {% csrf_token %}
+        {% comment %}Only the fields of the picked provider are shown - dashboard.css hides the others
+        by their data-providers (CSS :has, no script; a browser without it shows them all).{% endcomment %}
         {% for field in form %}
-        <label class="field">
+        <label class="field"{% if field.field.providers %} data-providers="{{ field.field.providers }}"{% endif %}>
             {{ field.label }}
             {{ field }}
             {% if field.help_text %}<span class="muted">{{ field.help_text }}</span>{% endif %}
+            {% for provider, text in field.field.provider_help %}<span class="muted" data-providers="{{ provider }}">{{ text }}</span>{% endfor %}
             {% if field.errors %}<span class="msg error">{{ field.errors|join:", " }}</span>{% endif %}
         </label>
         {% endfor %}

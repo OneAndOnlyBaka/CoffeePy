@@ -342,7 +342,7 @@ erDiagram
 | `CoffeeSort` | name, price, machine strokes (a jug is two) |
 | `Order` | member, sort, `value` and `machine_strokes` copied from the sort at the time of the order, `created_at` |
 | `Payment` | member, value, method name ("Cash" or a `PaymentMethod`'s name - stored, so renaming a method doesn't rewrite history) |
-| `PaymentMethod` | PayPal, a pool, WERO or a custom link with `{amount}` |
+| `PaymentMethod` | PayPal, a pool, a GiroCode (EPC QR for a bank transfer: recipient, IBAN, purpose with `{member}`) or a custom link with `{amount}` |
 | `InventoryItem`, `Purchase`, `StockCount` | the optional inventory (`dashboard.models.InventoryPolicy`: off, dashboard only, or members too). A purchase a member paid for carries a `Payment` of its full price with the method "Purchase" - that is what puts it into every balance; one from the coffee box has no member and no payment. Stock = newest count + purchases since; nothing per cup (docs/CALCULATIONS.md) |
 | `NfcScan`, `NfcReaderStatus` | what the bridge reported, written by `mqtt-listener` |
 | `AuditLogEntry` | the audit log (below) |

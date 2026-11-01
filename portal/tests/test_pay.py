@@ -42,9 +42,9 @@ class PortalPayTestCase(TestCase):
         self.assertContains(response, "paypal.me/club/15.00EUR")
 
     def test_inactive_method_is_not_offered(self):
-        PaymentMethod.objects.create(name="WERO", link_template="", is_active=False)
+        PaymentMethod.objects.create(name="Invoice", link_template="", is_active=False)
         response = self.client.get(reverse("portal:pay"))
-        self.assertNotContains(response, "WERO")
+        self.assertNotContains(response, "Invoice")
 
     def test_zero_or_negative_amount_is_not_recorded(self):
         self.client.post(reverse("portal:pay"), {"amount": "0", "method": "Cash"})
@@ -56,11 +56,15 @@ class PortalPayTestCase(TestCase):
         response = self.client.get(reverse("portal:pay"))
         self.assertContains(response, "https://paypal.me/coffeeclub/15.00EUR")
 
-    def test_wero_preset_shows_instructions_instead_of_a_link(self):
-        PaymentMethod.objects.create(name="WERO", provider=PaymentMethod.PROVIDER_WERO, identifier="+49 151 12345678")
+    def test_girocode_shows_the_transfer_to_copy(self):
+        """The phone can't scan its own screen: a GiroCode becomes the transfer's details."""
+        PaymentMethod.objects.create(name="Bank", provider=PaymentMethod.PROVIDER_GIROCODE, recipient="Kaffeekasse",
+                                     iban="DE02120300000000202051", purpose="Kaffee {member}")
         Order.objects.create(member=self.alice, value=Decimal("15.00"), machine_strokes=1)
         response = self.client.get(reverse("portal:pay"))
-        self.assertContains(response, "Send 15.00€ via WERO to +49 151 12345678")
+        self.assertContains(response, "DE02 1203 0000 0000 2020 51")
+        self.assertContains(response, "15.00€")
+        self.assertContains(response, f"Kaffee {self.alice.display_name()}")
 
     def test_amount_input_keeps_a_dot_decimal_in_german(self):
         """German renders 15.00 as "15,00", which an <input type="number"> rejects - the

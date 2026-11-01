@@ -134,7 +134,26 @@ class PaymentMethodModelTestCase(TestCase):
         )
         self.assertEqual(method.build_link(Decimal("12.5")), "https://paypal.com/pools/c/xyz")
 
-    def test_wero_preset_has_no_link_but_gives_instructions(self):
-        method = PaymentMethod(name="WERO", provider=PaymentMethod.PROVIDER_WERO, identifier="+49 151 12345678")
+    def girocode(self, **fields):
+        return PaymentMethod(name="Bank", provider=PaymentMethod.PROVIDER_GIROCODE, recipient="Kaffeekasse",
+                             iban="DE02120300000000202051", **fields)
+
+    def test_girocode_is_the_epc_qr_text_not_a_link(self):
+        """EPC069-12, version 002: a banking app fills recipient, IBAN, amount and purpose in."""
+        member = Member(uid=1, nickname="Anna B.")
+        method = self.girocode(bic="BYLADEM1001", purpose="Kaffee {member}")
         self.assertEqual(method.build_link(Decimal("12.5")), "")
-        self.assertEqual(method.instructions(Decimal("12.5")), "Send 12.50€ via WERO to +49 151 12345678")
+        self.assertEqual(method.qr_payload(Decimal("12.5"), member),
+                         "BCD\n002\n1\nSCT\nBYLADEM1001\nKaffeekasse\nDE02120300000000202051\nEUR12.50\n\n\nKaffee Anna B.")
+
+    def test_girocode_without_bic_and_purpose(self):
+        self.assertEqual(self.girocode().qr_payload(Decimal("3")),
+                         "BCD\n002\n1\nSCT\n\nKaffeekasse\nDE02120300000000202051\nEUR3.00")
+        self.assertEqual(PaymentMethod(provider=PaymentMethod.PROVIDER_GIROCODE, recipient="X").qr_payload(Decimal("3")), "")
+
+    def test_girocode_transfer_to_copy_by_hand(self):
+        details = dict(self.girocode(purpose="Kaffee {member}").transfer_details(Decimal("12.5"), Member(nickname="Anna B.")))
+        self.assertEqual(details["IBAN"], "DE02 1203 0000 0000 2020 51")
+        self.assertEqual(details["Amount"], "12.50€")
+        self.assertEqual(details["Purpose"], "Kaffee Anna B.")
+        self.assertNotIn("BIC", details)

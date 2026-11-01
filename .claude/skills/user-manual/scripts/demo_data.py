@@ -43,6 +43,10 @@ CARD_PREFIX = "C0FFEE"
 NEW_CARD = "C0FFEEFF"
 SORTS = [("Espresso", "0.30", 1), ("Cappuccino", "0.50", 1), ("Kanne · Jug", "0.60", 2)]
 PAYPAL = "PayPal"
+# A GiroCode next to PayPal - the kiosk's second QR code, the portal's transfer to copy. The IBAN is
+# the well-known example one (Commerzbank's test account), so no real account ends up in a picture.
+GIROCODE = "Überweisung · Bank transfer"
+GIROCODE_IBAN = "DE02120300000000202051"
 # (name, unit, quantity, price at the start of the year and a year later, every n days)
 ITEMS = [("Kaffeebohnen · Coffee beans", "kg", "1", "14.49", "16.99", 30),
          ("Milch · Milk", "l", "6", "6.24", "7.14", 14),
@@ -94,6 +98,9 @@ def seed():
     Payment.objects.bulk_create(payments)
     PaymentMethod.objects.get_or_create(name=PAYPAL, defaults={"provider": PaymentMethod.PROVIDER_PAYPAL_ME,
                                                                "identifier": "coffeefund"})
+    PaymentMethod.objects.get_or_create(name=GIROCODE, defaults={
+        "provider": PaymentMethod.PROVIDER_GIROCODE, "recipient": "Kaffeekasse", "iban": GIROCODE_IBAN,
+        "purpose": "Kaffee {member}", "order": 1})
     print(f"seeded {len(members)} members, {len(orders)} orders, {len(payments)} payments")
     policy = InventoryPolicy.current()
     with open(MODE_FILE, "w") as f:
@@ -154,6 +161,7 @@ def cleanup():
     print("scans:", NfcScan.objects.filter(uid__startswith=CARD_PREFIX).delete()[0])
     print("sorts:", CoffeeSort.objects.filter(name__in=[n for n, _, _ in SORTS], order__isnull=True).delete()[0])
     print("payment method:", PaymentMethod.objects.filter(name=PAYPAL, identifier="coffeefund").delete()[0])
+    print("girocode:", PaymentMethod.objects.filter(name=GIROCODE, iban=GIROCODE_IBAN).delete()[0])
 
 
 args = os.environ.get("SCRIPT_ARGS", "").split()

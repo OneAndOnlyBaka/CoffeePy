@@ -116,17 +116,17 @@ def stats(request):
     return render(request, "portal/stats.html", ctx)
 
 
-def _payment_methods_context(balance: Decimal):
+def _payment_methods_context(balance: Decimal, member=None):
     """Cash is always offered and isn't a DB row; configured methods only show a link (or
-    for WERO, an instruction - it has no public deep-link scheme) once there's actually
-    something owed (a positive balance means the member is in credit, and pool/PayPal
+    for a GiroCode the transfer to copy - the phone can't scan its own screen) once there's
+    actually something owed (a positive balance means the member is in credit, and pool/PayPal
     links can't sensibly represent "pay me nothing")."""
     owed = -balance if balance < 0 else Decimal("0.00")
     methods = []
     for method in PaymentMethod.objects.filter(is_active=True):
         link = method.build_link(owed) if owed > 0 else ""
-        instructions = method.instructions(owed) if owed > 0 and not link else ""
-        methods.append({"method": method, "link": link, "instructions": instructions})
+        transfer = method.transfer_details(owed, member) if owed > 0 and not link else []
+        methods.append({"method": method, "link": link, "transfer": transfer})
     return {"payment_methods": methods, "owed": owed}
 
 
@@ -148,7 +148,7 @@ def pay(request):
             return redirect("portal:index")
     default_suggestion = -balance if balance < 0 else Decimal("0.00")
     ctx = {"member": member, "balance": balance, "pay_default": default_suggestion}
-    ctx.update(_payment_methods_context(balance))
+    ctx.update(_payment_methods_context(balance, member))
     return render(request, "portal/pay.html", ctx)
 
 

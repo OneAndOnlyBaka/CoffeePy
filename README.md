@@ -25,7 +25,7 @@ works completely offline, and everyone checks their own balance on their phone.
   </tr>
   <tr>
     <td align="center"><em>A dashboard for whoever buys the beans</em></td>
-    <td align="center"><em>Pay by cash, PayPal or a QR code with the amount filled in</em></td>
+    <td align="center"><em>Pay by cash, PayPal or a bank transfer QR code with the amount filled in</em></td>
   </tr>
   <tr>
     <td><img src="docs/pictures/manual/en/kiosk-purchase.png" alt="Booking a purchase on the kiosk"></td>
@@ -45,8 +45,9 @@ works completely offline, and everyone checks their own balance on their phone.
   or tap Cancel. Only checking your balance? Tap Pay first: nothing is booked there.
 - **A jug counts as two cups.** Every coffee sort has its price and its number of machine
   strokes, so a double or a jug is counted - and charged - for what it is.
-- **Pay where you drink.** The kiosk shows what you owe and offers QR codes for PayPal or any
-  payment link, with the amount already filled in. A friendly reminder appears when last
+- **Pay where you drink.** The kiosk shows what you owe and offers QR codes for PayPal, any
+  payment link or a GiroCode your banking app turns into a transfer - with the amount, and who
+  is paying, already filled in. A friendly reminder appears when last
   month is still open.
 - **A little fun, if you want it.** An all-time and a monthly podium, a "walk of shame" for
   those who owe, and thank-you animations that notice when it's your fifth cup today. Both

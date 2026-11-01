@@ -241,7 +241,7 @@ Before the kiosk takes orders it needs at least one **coffee sort** – until th
 
 1. Add **coffee sorts**: name, price and machine strokes (how many cups the machine pours for
    it – a jug counts two).
-2. Optionally add **payment methods** (PayPal, PayPal Pool, WERO or a custom link). Cash
+2. Optionally add **payment methods** (PayPal, PayPal Pool, GiroCode or a custom link). Cash
    always works.
 3. You don't need to add **members**: an unknown card on the kiosk leads straight to
    signing up with a name (see [Settings](#settings)).
@@ -348,8 +348,8 @@ Then a thank-you – with a different animation depending on how many cups it's 
 This is where you pay in. For information, the screen also shows your **cups in total**
 and **this month** and your **balance**. If it's
 negative, the amount owed is already in the field – enter what you paid, pick how, and tap
-**Pay**. With payment methods that have a link, you can also pay what you owe straight from
-your phone via QR code.
+**Pay**. With payment methods that have a link, or a GiroCode, you can also pay what you owe
+straight from your phone via QR code – the GiroCode you scan with your banking app.
 
 ![Pay](pictures/manual/en/kiosk-pay.png)
 
@@ -468,7 +468,8 @@ something about you, an admin say, appear by their role only) – and the device
 
 ![Portal home](pictures/manual/en/portal-home.png)
 
-**Pay** opens your payment app with the amount owed, or records a payment you've already made.
+**Pay** opens your payment app with the amount owed – for a GiroCode it lists the transfer's
+details to copy –, or records a payment you've already made.
 
 ![Portal pay](pictures/manual/en/portal-pay.png)
 
@@ -635,11 +636,14 @@ the audit log.
 
 ![Coffee sorts](pictures/manual/en/dashboard-coffee-sorts.png)
 
-**Payment methods**: PayPal needs the paypal.me name, PayPal Pool the pool's URL, WERO the
-phone number; *Custom link* takes any address, optionally with `{amount}` for the amount owed.
-These become the pay links and QR codes on kiosk and phone – WERO has no public link, so it
-shows the phone number as an instruction instead of a QR code. *Is active* hides a method
-without deleting it, *Order* sets its place in the list.
+**Payment methods**: the form shows only what the chosen *Provider* needs. PayPal needs the
+paypal.me name, PayPal Pool the pool's URL. A **GiroCode** is a bank transfer by QR code: with the
+*Recipient* and the *IBAN* (the *BIC* is optional), the kiosk shows a QR code with the amount owed
+that practically every banking app scans and turns into a transfer – no provider account needed.
+In the *Purpose*, `{member}` becomes the name of whoever pays (*Coffee {member}* becomes *Coffee
+Anna B.*), so the bank statement shows who paid. *Custom link* takes any address, optionally with
+`{amount}` for the amount owed. These become the pay links and QR codes on kiosk and phone. *Is
+active* hides a method without deleting it, *Order* sets its place in the list.
 
 ![Payment methods](pictures/manual/en/dashboard-payment-methods.png)
 

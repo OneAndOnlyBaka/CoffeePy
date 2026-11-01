@@ -325,7 +325,8 @@ BLUR_JS = """
 def demo_uids():
     """The demo cards' uids as the pages print them (demo_data.uid(): little-endian C0FFEE01...)."""
     hexes = [f"C0FFEE{i + 1:02X}" for i in range(6)] + ["C0FFEEFF"]
-    return [str(int.from_bytes(bytes.fromhex(h), "little")) for h in hexes]
+    # ... and the demo GiroCode's example IBAN (demo_data.py), a public test account.
+    return [str(int.from_bytes(bytes.fromhex(h), "little")) for h in hexes] + ["02120300000000202051"]
 
 
 def blur_js():
@@ -360,6 +361,13 @@ def dashboard(b, password):
         if not wanted(name):
             continue
         b.go(path)
+        if name == "dashboard-payment-method-form":
+            # The form shows only the picked provider's fields - a GiroCode has the most of them.
+            b.js("document.getElementById('id_provider').value = 'girocode';"
+                 "document.getElementById('id_name').value = 'Überweisung';"
+                 "document.getElementById('id_recipient').value = 'Kaffeekasse';"
+                 "document.getElementById('id_iban').value = 'DE02 1203 0000 0000 2020 51';"
+                 "document.getElementById('id_purpose').value = 'Kaffee {member}'")
         b.js(blur)
         b.shot(name, settle=1.5 if "statistics" in path or "system" in path else 0.6, full=name in FULL_PAGE)
     if wanted("dashboard-phone"):
