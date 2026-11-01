@@ -1,7 +1,7 @@
 import datetime
 
 from django.conf import settings
-from django.core.validators import MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy
 
@@ -129,9 +129,11 @@ class InventoryPolicy(models.Model):
     ]
 
     mode = models.CharField(max_length=10, choices=MODES, default=MODE_OFF)
-    # Added on top of what a cup cost for the price suggestion (Inventory → Costs): write-offs,
-    # cleaning agents, wear - what no purchase shows.
-    price_margin_percent = models.PositiveSmallIntegerField(default=10, validators=[MaxValueValidator(100)])
+    # Up or down from what a cup cost, for the price suggestion (Inventory → Costs): plus for
+    # write-offs, cleaning agents and wear - what no purchase shows -, minus where someone else
+    # pays part of the coffee.
+    price_adjustment_percent = models.SmallIntegerField(
+        default=10, validators=[MinValueValidator(-100), MaxValueValidator(100)])
 
     @classmethod
     def current(cls):

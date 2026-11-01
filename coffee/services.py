@@ -558,13 +558,14 @@ def cost_per_cup(months: int = 12) -> dict:
     }
 
 
-def price_suggestions(per_cup: Decimal, margin_percent: int) -> list[dict]:
-    """Per coffee sort: strokes x cost per cup x (1 + margin), rounded up to 5 cents - a
-    suggestion next to the current price; changing it stays the admin's decision."""
+def price_suggestions(per_cup: Decimal, adjustment_percent: int) -> list[dict]:
+    """Per coffee sort: strokes x cost per cup x (1 + adjustment), rounded up to 5 cents - a
+    suggestion next to the current price; changing it stays the admin's decision. The adjustment
+    may be negative (someone else pays part of the coffee)."""
     step = Decimal("0.05")
     rows = []
     for sort in CoffeeSort.objects.order_by("name"):
-        raw = sort.machine_strokes * per_cup * (100 + margin_percent) / 100
+        raw = max(Decimal("0"), sort.machine_strokes * per_cup * (100 + adjustment_percent) / 100)
         suggestion = (raw / step).to_integral_value(rounding="ROUND_CEILING") * step
         rows.append({
             "sort": sort,

@@ -71,7 +71,7 @@ Rules that hold across all four:
   lacks the form ("Anna B") is fixed silently at the next tap, and a bare first name is offered
   back as the start of the new one (`names.fixable`, `names.suggestion`). The
   kiosk won't take an order from a member whose name fails it - the card tap goes to the
-  name screen first (`then_order` in the session) - and the dashboard's member form applies
+  name screen first (`then_mode` in the session; the kiosk's purchase screen does the same) - and the dashboard's member form applies
   the same rules. So **test fixtures that order need a valid name** (`"Alice X."`), and so do
   the manual's demo members (`demo_data.py` NAMES).
 - Tests live in `<app>/tests/test_*.py`. UI text is bilingual - see "Two languages" below.
@@ -162,8 +162,13 @@ browser's language (`config/language.py`).
 - **Text that is stored is stored in English** and translated where it is shown: the thank-you
   message lives in the session, the alt-card error in the database (read by kiosk, dashboard
   and portal, each in its own language). "Cash" is data too - show it via `|method_label`.
-- The kiosk's language button is a GET link, not `set_language`'s form: a csrf token would
-  make the wait screen differ per poll (see above).
+- The kiosk's language button is a GET, not `set_language`'s form: a csrf token would make the
+  wait screen differ per poll (see above). Through htmx it swaps only `#panel` and relabels the rest
+  of the page in place (`kiosk.views._page_texts`, `static/kiosk/language.js`) - a page load per
+  tap was a navigation, and a few taps in a row crashed Chromium. So **index.html takes every text
+  from `_page_texts`** (`test_language` checks that). Relabelling changes text only: setting
+  `<html lang>` crashed the renderer 7 times in 8 switches on the Pi, the nav icons' `alt` 2 in 8,
+  text alone 0 (2026-11-01) - both rebuild layout.
 
 ## Maintenance screen
 

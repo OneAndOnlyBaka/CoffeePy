@@ -329,6 +329,10 @@ erDiagram
     Member }o--o| CoffeeSort : "favourite"
     Order }o--o| CoffeeSort : "of sort"
     Payment }o..o| PaymentMethod : "name copied"
+    Member |o--o{ Purchase : "paid for"
+    Purchase |o--o| Payment : "credit"
+    Purchase }o--|| InventoryItem : "of item"
+    InventoryItem ||--o{ StockCount : "counted"
 ```
 
 | Model | Notes |
@@ -339,9 +343,10 @@ erDiagram
 | `Order` | member, sort, `value` and `machine_strokes` copied from the sort at the time of the order, `created_at` |
 | `Payment` | member, value, method name ("Cash" or a `PaymentMethod`'s name - stored, so renaming a method doesn't rewrite history) |
 | `PaymentMethod` | PayPal, a pool, WERO or a custom link with `{amount}` |
+| `InventoryItem`, `Purchase`, `StockCount` | the optional inventory (`dashboard.models.InventoryPolicy`: off, dashboard only, or members too). A purchase a member paid for carries a `Payment` of its full price with the method "Purchase" - that is what puts it into every balance; one from the coffee box has no member and no payment. Stock = newest count + purchases since; nothing per cup (docs/CALCULATIONS.md) |
 | `NfcScan`, `NfcReaderStatus` | what the bridge reported, written by `mqtt-listener` |
 | `AuditLogEntry` | the audit log (below) |
-| `BackupSettings`, and in `dashboard`: `PasswordPolicy`, `NamePolicy`, `NightPolicy`, `KioskBoards`, `MemberRetention`, `AccountSecurity` | settings that live in the database, so a backup carries them |
+| `BackupSettings`, and in `dashboard`: `PasswordPolicy`, `NamePolicy`, `NightPolicy`, `KioskBoards`, `InventoryPolicy`, `MemberRetention`, `AccountSecurity` | settings that live in the database, so a backup carries them |
 
 Every ranking, statistic and comparison counts **cups as machine strokes**, not order rows -
 see [CALCULATIONS.md](CALCULATIONS.md).

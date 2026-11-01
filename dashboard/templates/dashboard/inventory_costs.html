@@ -49,8 +49,8 @@ sorts would have to cost for that. Only a suggestion: the price is still set und
 <div class="card">
     <h2>{% translate "Price suggestion" %}</h2>
     {% if suggestions %}
-    <p class="muted">{% blocktranslate trimmed with margin=margin %}Strokes × cost per cup + {{ margin }}% margin, rounded up
-    to 5 cents.{% endblocktranslate %}</p>
+    <p class="muted">{% blocktranslate trimmed with adjustment=adjustment|stringformat:"+d" %}Strokes × cost per cup, adjusted by {{ adjustment }}%,
+    rounded up to 5 cents.{% endblocktranslate %}</p>
     <div class="table-wrap">
         <table>
             <tr><th>{% translate "Coffee sort" %}</th><th>{% translate "Strokes" %}</th><th>{% translate "Price now" %}</th><th>{% translate "Suggestion" %}</th><th></th></tr>
@@ -69,10 +69,10 @@ sorts would have to cost for that. Only a suggestion: the price is still set und
     <p class="muted list-empty">{% blocktranslate trimmed with months=min_months cups=min_cups %}Not enough data yet: a suggestion needs
     purchases in at least {{ months }} months of the period and {{ cups }} cups.{% endblocktranslate %}</p>
     {% endif %}
-    <form method="post">
+    <form method="post" class="adjustment-form">
         {% csrf_token %}
-        {% include "dashboard/_field.html" with field=form.price_margin_percent %}
-        <div class="action-row"><button type="submit" class="secondary">{% translate "Save margin" %}</button></div>
+        {% include "dashboard/_field.html" with field=form.price_adjustment_percent %}
+        <div class="action-row"><button type="submit" class="secondary">{% translate "Save price adjustment" %}</button></div>
     </form>
 </div>
 {% endblock %}

@@ -177,6 +177,7 @@ body.dashboard .topbar-btn, body.dashboard .language-switch button {
 .list-row-value.negative { color: var(--danger); }
 td .negative { color: var(--danger); font-weight: 600; }
 td .ok { color: var(--success); font-weight: 600; }
+.adjustment-form { margin-top: 18px; max-width: 420px; }
 .list-row-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .list-row-actions form { margin: 0; }
 .list-empty { padding: 12px 0; }

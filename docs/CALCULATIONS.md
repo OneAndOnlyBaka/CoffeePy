@@ -184,7 +184,7 @@ shelf doesn't make the cups dearer. Without them, purchases stand in for use.
 |---|---|
 | Revenue − purchases | sum of order values minus sum of purchase prices in the period |
 | Written off | for every member marked as departed in the period: orders − payments, if positive; as a share of the period's revenue |
-| Suggestion per sort | strokes × cost per cup × (1 + margin), rounded **up** to 5 cents; margin set on the same page (default 10%) |
+| Suggestion per sort | strokes × cost per cup × (1 + adjustment), rounded **up** to 5 cents, never below 0; the adjustment is set on the same page, −100% to +100% (default +10%) - a plus for what no purchase shows, a minus where someone else pays part of the coffee |
 
 No suggestion is shown below purchases in 3 different months of the period (in all of them for
 a shorter period) or below 100 cups. It is only a suggestion: prices are still changed under

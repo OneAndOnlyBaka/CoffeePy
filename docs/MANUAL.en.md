@@ -285,7 +285,8 @@ Keeping the old device's SD card until the first weeks have gone well costs noth
 > For members, the essentials are on one page – for printing and hanging next to the machine:
 > [Coffee with CoffeePy – for members](MEMBERS.en.md).
 
-The touchscreen has four sections, in the bar on the left. Round buttons sit top right:
+The touchscreen has four sections, in the bar on the left – five when members book their
+[purchases](#purchase-and-stock-take) themselves. Round buttons sit top right:
 the **wrench** is the [admin access](#admin-access) – it isn't meant for members –, **DE/EN**
 switches the kiosk's language, and a **blinking red** button appears when something on the
 device needs looking after – an **amber** one when an admin has something to decide:
@@ -302,7 +303,7 @@ Every section but the ranking needs a card – one held up on the ranking starts
 card** – what counts is the section the screen shows; the start screen is **Order**. Holding up a card logs you in until you're done; after
 **20 seconds without input** the kiosk finishes for you – on **Order** it **books** the
 preselected coffee (unless you tap **Cancel**), everywhere else it logs you out. A red countdown next to the buttons
-shows how long is left. Tapping a section in the bar logs out too. **Pay**, **Settings** and the **Ranking** go back to **Order** by
+shows how long is left. Tapping a section in the bar logs out too. **Pay**, **Settings**, **Purchase** and the **Ranking** go back to **Order** by
 themselves after 30 seconds without a tap – so the next person always finds the kiosk ready to
 order.
 
@@ -384,6 +385,29 @@ access point, the WiFi's QR code sits next to it – the phone has to join that 
 
 ![Link your phone](pictures/manual/en/kiosk-link-phone.png)
 
+### Purchase and stock-take
+
+Only there when the admin has switched purchases on for members (dashboard → **System** →
+*Purchases and inventory*, see [Inventory](#inventory)). Whoever buys something for everyone –
+coffee beans, milk, cookies – books it here and is credited the price they paid, like a payment.
+
+![Purchase – apply your card](pictures/manual/en/kiosk-wait-purchase.png)
+
+After holding up your card, tap what you bought, enter the **Quantity** and the **Price paid (€)**
+– directly or with the on-screen keyboard next to the field – and tap **Book purchase**. The kiosk
+confirms what was booked, with your new balance. The choice is what the admin has entered as
+bookable under **Inventory** → *Items*. A new card, or a name that doesn't fit the rules, is asked
+for a name first; after saving it goes straight on to the purchase.
+
+![Purchase](pictures/manual/en/kiosk-purchase.png)
+
+Members marked *May take stock* in the dashboard also get the choice of **Purchase** and
+**Stock-take** at the top. Under **Stock-take** each item shows what should be there according to
+the bookings: tap the item, enter under **Counted** what is really there, **Save count**. CoffeePy
+takes nothing off per cup – the stock is the last count plus everything bought since.
+
+![Stock-take](pictures/manual/en/kiosk-stock-take.png)
+
 ### Ranking
 
 No card needed. Up to three tabs at the top (which ones is the admin's decision, see below), each with its own retro animation; the names are in the
@@ -451,6 +475,12 @@ something about you, an admin say, appear by their role only) – and the device
 
 ![Portal stats](pictures/manual/en/portal-stats.png)
 
+**Purchase** – only when members book purchases themselves: enter the item, quantity and price
+paid, **Book purchase**, and the price is credited to you; below, your recent purchases. Members
+who may take stock also enter the counted quantities here, under **Stock-take**.
+
+![Portal purchase](pictures/manual/en/portal-purchase.png)
+
 **Cards** lists your cards; *Add a new card* links a replacement by holding it to the kiosk.
 **Devices** lists your linked phones – log out a lost one there.
 
@@ -510,7 +540,7 @@ on the left; on a phone the everyday ones are tabs at the bottom and everything 
 ![Dashboard on a phone](pictures/manual/en/dashboard-phone.png)
 
 There are two roles (see [Dashboard users](#dashboard-users)): **Managers** look after members,
-bookings, coffee sorts and payment methods; **Admins** can also do everything under **System** –
+bookings, coffee sorts, payment methods and the inventory; **Admins** can also do everything under **System** –
 users, login rules, backups, updates, certificate, audit log and the like. The admin account from
 setup is an admin. There is no other administration interface.
 
@@ -526,7 +556,8 @@ payments (CSV)* for a spreadsheet.
 
 **Statistics**: orders and payments (in €) per month over the last 12 months, sort
 distribution, cups by hour and weekday (the titles name the busiest slot), price trend and
-payments by method. Cups count machine strokes – a jug is two; the sort distribution counts
+payments by method. Once purchases are booked, they come in as a third bar – kept apart from the
+payments, which show the money that came in. Cups count machine strokes – a jug is two; the sort distribution counts
 orders (a jug once, see [the calculations](CALCULATIONS.md)).
 
 ![Statistics](pictures/manual/en/dashboard-statistics.png)
@@ -542,7 +573,8 @@ The list of all members with their cards and the day of their **last coffee** �
 you, even for a card without a name, whether someone still uses it or its owner left long ago
 (then *Mark as departed*). Per member:
 
-- **Edit**: name and favourite coffee (the UID is fixed once the member exists). The name follows the same rules as at the kiosk
+- **Edit**: name and favourite coffee (the UID is fixed once the member exists), and when members
+  book purchases themselves *May take stock* (see [Inventory](#inventory)). The name follows the same rules as at the kiosk
   (see [Settings](#settings)).
 - *New name at next coffee*: this name doesn't fit the rules – the kiosk asks the member for
   a new one at their next coffee.
@@ -554,7 +586,7 @@ you, even for a card without a name, whether someone still uses it or its owner 
 - **Delete**: removes the member with their cards, orders and payments – for good, apart from
   the backups.
 - **Export data** (also on the member's edit page): everything the device stores about this
-  member – cards, linked phones, every order and payment, their audit log entries – as one
+  member – cards, linked phones, every order, payment and purchase, their audit log entries – as one
   file. That is the answer when someone asks what is stored about them (Art. 15 GDPR).
 
 ![Members](pictures/manual/en/dashboard-members.png)
@@ -612,6 +644,62 @@ without deleting it, *Order* sets its place in the list.
 
 ![Add payment method](pictures/manual/en/dashboard-payment-method-form.png)
 
+### Inventory
+
+What is bought for everyone – coffee beans, milk, cookies – with its price, the stock, and what a
+cup really costs. The inventory only exists once an admin has switched it on under **System** →
+*Purchases and inventory*, at one of two levels:
+
+| Level | What there is |
+|---|---|
+| *Off* (default) | none of it |
+| *Only in the dashboard* | One person keeps purchases and stock-takes here in the dashboard. Members can't pay with purchases; kiosk and portal show none of it. |
+| *For members too* | On top, every member books their purchases at the kiosk and in the portal and is credited the price; members marked *May take stock* (see [Members](#members)) count the stock there too. |
+
+Switched off, purchases already booked stay credited in the balance. The inventory has five tabs:
+
+**Stock**: what should be on the shelf – the last stock-take plus everything bought since; nothing
+is taken off per cup. To count, enter what you counted for the items and tap **Save stock-take**;
+an empty field leaves the item as it is. Below, the recent stock-takes and who counted.
+
+![Inventory – stock](pictures/manual/en/dashboard-inventory.png)
+
+**Purchases**: everything bought, newest first, filtered by member or *Coffee box*. **Enter
+purchase** adds one. Under **Paid by** you pick the member who paid – they are credited the price
+– or *The coffee box*: then nobody is credited, and the purchase only counts for the stock, the
+spending and the costs. Correct or delete a purchase and the credit follows; under **Bookings**,
+*Edit* on a purchase's payment leads here too.
+
+![Inventory – purchases](pictures/manual/en/dashboard-inventory-purchases.png)
+
+![Enter purchase](pictures/manual/en/dashboard-inventory-purchase-form.png)
+
+**Spending**: what the purchases of the last 12 months cost, per month and item.
+
+![Inventory – spending](pictures/manual/en/dashboard-inventory-spending.png)
+
+**Costs**: what a cup cost and what the coffee sorts would have to cost for that, over 3, 6 or 12
+months. At the top the **Cost per cup**, the **Cups**, *Revenue - purchases* – does the box pay
+for itself? – and what departed members left owing (**Written off**). *Per item* shows what the
+costs are made of: with two stock-takes of an item in the period, what was **used** between them
+counts – a bulk purchase still in the cupboard doesn't make the cup dearer –, otherwise simply
+what was bought.
+
+The **Price suggestion** is strokes × cost per cup, adjusted by the *Price adjustment in %*,
+rounded up to 5 cents, next to the current price. The adjustment goes both ways, from −100 to +100
+(default +10): a plus for write-offs, cleaning agents and wear, which no purchase shows, a minus
+when someone else – the company, say – pays part of the coffee. It only appears once there were purchases in at least 3 months of the period and 100 cups
+were drunk. It stays a suggestion, the price never changes by itself: you set it under **Coffee
+sorts** (the sort's name leads there), and orders already booked keep their price. The calculation
+in detail is in [the calculations](CALCULATIONS.md#purchases-stock-and-the-price-suggestion).
+
+![Inventory – costs](pictures/manual/en/dashboard-inventory-costs.png)
+
+**Items**: what can be booked – name, *Unit* (*kg*, *l* …), *Can be booked* and *Order*. An item
+that has been bought can't be deleted; untick *Can be booked* instead.
+
+![Inventory – items](pictures/manual/en/dashboard-inventory-items.png)
+
 ### My account
 
 Your name at the top right: your role, your last login, and **Change password**. Your own password is only changed here, never in the user list.
@@ -659,6 +747,10 @@ out: whoever's password no longer meets them is asked for a new one at their nex
 the most, all time and this month) and the pillory (who owes money), each with a tick. The
 kiosk follows with its next poll. The dashboard's **Pillory** page, for whoever collects the
 money, is not affected. See [Privacy and the workplace](#privacy-and-the-workplace).
+
+**Purchases and inventory**: *Off*, *Only in the dashboard* or *For members too* – what the levels
+mean is under [Inventory](#inventory). A new device starts with *Off*; the kiosk follows with its
+next poll.
 
 **SSH**: remote login to the device's operating system. It is off after the installation and
 only needed to run the [provisioning tool](#the-provisioning-tool) again or for maintenance:

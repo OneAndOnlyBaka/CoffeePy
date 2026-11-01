@@ -441,13 +441,14 @@ class InventoryPolicyForm(forms.ModelForm):
         labels = {"mode": gettext_lazy("Inventory")}
 
 
-class PriceMarginForm(forms.ModelForm):
+class PriceAdjustmentForm(forms.ModelForm):
     class Meta:
         model = InventoryPolicy
-        fields = ["price_margin_percent"]
-        labels = {"price_margin_percent": gettext_lazy("Margin in %")}
-        help_texts = {"price_margin_percent": gettext_lazy(
-            "On top of what a cup cost: write-offs, cleaning agents, wear - what no purchase shows.")}
+        fields = ["price_adjustment_percent"]
+        labels = {"price_adjustment_percent": gettext_lazy("Price adjustment in %")}
+        help_texts = {"price_adjustment_percent": gettext_lazy(
+            "Up or down from what a cup cost: plus for write-offs, cleaning agents and wear - what no purchase "
+            "shows -, minus if someone else pays part of the coffee.")}
 
 
 class InventoryItemForm(forms.ModelForm):

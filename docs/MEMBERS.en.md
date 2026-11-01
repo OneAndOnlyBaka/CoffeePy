@@ -29,6 +29,13 @@ Tap **Pay**, hold up your card. You see your cups and your balance; what you owe
 the field. Enter what you paid, pick the payment method and tap **Pay** – or scan the QR code
 and pay with your phone. **No coffee is ever booked here.**
 
+## Bought something for everyone
+
+If there is a **Purchase** on the left, that is where you book what you bought for everyone –
+coffee, milk, cookies: tap **Purchase**, hold up your card, tap the item, enter the quantity and
+the price you paid, **Book purchase**. The price is credited to you, like a payment. In the portal
+it's under **Purchase**.
+
 ## Settings and your phone
 
 Tap **Settings**, hold up your card: change your name or favourite coffee, **Save**. There,

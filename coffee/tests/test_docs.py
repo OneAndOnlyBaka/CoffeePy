@@ -142,6 +142,17 @@ class DocFactsTestCase(SimpleTestCase):
                          "the manual says 'the seven who owe the most'")
         self.assertInManuals("the seven who owe the most", "die sieben, die bis zum Vormonat am meisten schulden")
 
+    def test_price_suggestion(self):
+        from coffee import services
+        from dashboard.models import InventoryPolicy
+        field = InventoryPolicy._meta.get_field("price_adjustment_percent")
+        low, high = sorted(v.limit_value for v in field.validators)
+        self.assertInManuals(f"from −{-low} to +{high} (default +{field.default})",
+                             f"von −{-low} bis +{high} (Voreinstellung +{field.default})")
+        self.assertInManuals(f"at least {services.COST_MIN_MONTHS} months of the period and {services.COST_MIN_CUPS} cups",
+                             f"mindestens {services.COST_MIN_MONTHS} Monaten des Zeitraums Einkäufe gab und "
+                             f"{services.COST_MIN_CUPS} Tassen")
+
     def test_login_rules_table(self):
         from dashboard.models import POLICY_LIMITS, PasswordPolicy
         defaults = {f.name: f.default for f in PasswordPolicy._meta.fields if f.name in POLICY_LIMITS}

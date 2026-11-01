@@ -132,6 +132,13 @@ class CostPerCupTestCase(TestCase):
         self.assertEqual(rows["cup"], Decimal("0.45"))  # 0.44
         self.assertEqual(rows["jug"], Decimal("0.90"))  # 0.88
 
+    def test_the_adjustment_may_go_down(self):
+        rows = {row["sort"].name: row["suggestion"] for row in services.price_suggestions(Decimal("0.4"), -25)}
+        self.assertEqual(rows["cup"], Decimal("0.30"))
+        self.assertEqual(rows["jug"], Decimal("0.60"))
+        rows = {row["sort"].name: row["suggestion"] for row in services.price_suggestions(Decimal("0.4"), -100)}
+        self.assertEqual(rows["cup"], Decimal("0"))
+
     def test_two_stock_takes_count_what_was_used_not_what_was_bought(self):
         StockCount.objects.create(item=self.coffee, quantity=Decimal("2"), created_at=self.now - timedelta(days=90))
         self.buy(80)

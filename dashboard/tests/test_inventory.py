@@ -124,15 +124,15 @@ class DashboardInventoryTestCase(TestCase):
         self.assertEqual(Purchase.objects.get().member, self.member)
         self.assertEqual(services.account_balance(self.member), Decimal("14.99"))
 
-    def test_the_costs_page_suggests_nothing_without_data_and_saves_the_margin(self):
+    def test_the_costs_page_suggests_nothing_without_data_and_saves_the_adjustment(self):
         page = self.client.get(reverse("dashboard:inventory_costs"))
         self.assertContains(page, "Not enough data yet")
-        response = self.client.post(reverse("dashboard:inventory_costs") + "?months=6", {"price_margin_percent": "25"})
+        response = self.client.post(reverse("dashboard:inventory_costs") + "?months=6", {"price_adjustment_percent": "-25"})
         self.assertRedirects(response, reverse("dashboard:inventory_costs") + "?months=6")
-        self.assertEqual(InventoryPolicy.current().price_margin_percent, 25)
-        self.assertTrue(AuditLogEntry.objects.filter(action="inventory_policy.update", details="price margin 25%").exists())
-        self.assertEqual(self.client.post(reverse("dashboard:inventory_costs"), {"price_margin_percent": "101"}).status_code, 200)
-        self.assertEqual(InventoryPolicy.current().price_margin_percent, 25)
+        self.assertEqual(InventoryPolicy.current().price_adjustment_percent, -25)
+        self.assertTrue(AuditLogEntry.objects.filter(action="inventory_policy.update", details="price adjustment -25%").exists())
+        self.assertEqual(self.client.post(reverse("dashboard:inventory_costs"), {"price_adjustment_percent": "-101"}).status_code, 200)
+        self.assertEqual(InventoryPolicy.current().price_adjustment_percent, -25)
 
     def test_the_costs_page_shows_the_suggestion(self):
         sort = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)

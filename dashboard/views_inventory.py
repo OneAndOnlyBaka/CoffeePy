@@ -17,7 +17,7 @@ from coffee import services
 from coffee.models import InventoryItem, Member, Purchase, StockCount
 
 from . import audit
-from .forms import InventoryItemForm, PriceMarginForm, PurchaseForm
+from .forms import InventoryItemForm, PriceAdjustmentForm, PurchaseForm
 from .models import InventoryPolicy
 
 PURCHASES_PER_PAGE = 50
@@ -149,11 +149,11 @@ def costs(request):
     """What a cup cost and what the sorts would have to cost - a suggestion; the price itself is
     still set under Coffee sorts, by someone who can explain it to the members."""
     policy = InventoryPolicy.current()
-    form = PriceMarginForm(request.POST or None, instance=policy)
+    form = PriceAdjustmentForm(request.POST or None, instance=policy)
     if request.method == "POST" and form.is_valid():
         form.save()
-        audit.log(request, "inventory_policy.update", details=f"price margin {policy.price_margin_percent}%")
-        messages.success(request, _("Margin saved."))
+        audit.log(request, "inventory_policy.update", details=f"price adjustment {policy.price_adjustment_percent:+d}%")
+        messages.success(request, _("Price adjustment saved."))
         return redirect(f"{reverse('dashboard:inventory_costs')}?months={request.GET.get('months', '')}")
     months = int(request.GET["months"]) if request.GET.get("months") in {str(m) for m in COST_PERIODS} else 12
     data = services.cost_per_cup(months)
@@ -161,8 +161,8 @@ def costs(request):
         "data": data,
         "form": form,
         "periods": COST_PERIODS,
-        "margin": policy.price_margin_percent,
-        "suggestions": services.price_suggestions(data["per_cup"], policy.price_margin_percent)
+        "adjustment": policy.price_adjustment_percent,
+        "suggestions": services.price_suggestions(data["per_cup"], policy.price_adjustment_percent)
         if data["enough_data"] else [],
         "min_months": services.COST_MIN_MONTHS,
         "min_cups": services.COST_MIN_CUPS,
