@@ -13,7 +13,7 @@ works completely offline, and everyone checks their own balance on their phone.
 <table>
   <tr>
     <td><img src="docs/pictures/manual/en/kiosk-order.png" alt="Ordering on the kiosk"></td>
-    <td><img src="docs/pictures/manual/en/kiosk-ranking-alltime.png" alt="The all-time ranking"></td>
+    <td><img src="docs/pictures/readme/podium.gif" alt="The all-time podium, animated"></td>
   </tr>
   <tr>
     <td align="center"><em>Tap your card - your favourite is already selected</em></td>
@@ -35,7 +35,18 @@ works completely offline, and everyone checks their own balance on their phone.
     <td align="center"><em>Bought the beans? Book them and settle up in kind</em></td>
     <td align="center"><em>What the coffee corner really costs, month by month</em></td>
   </tr>
+  <tr>
+    <td><img src="docs/pictures/readme/pillory.gif" alt="The pillory's walk of shame, animated"></td>
+    <td><img src="docs/pictures/readme/pillory_empty.gif" alt="NO SHAME - the executioner with nothing to do"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>The pillory: owing money has never looked this awkward</em></td>
+    <td align="center"><em>Everyone paid up - the executioner is out of work</em></td>
+  </tr>
 </table>
+<!-- The GIFs are the kiosk's own ranking videos (static/kiosk/img/ranking/*.webm), which GitHub
+     doesn't play in a README: ffmpeg -i X.webm -vf "fps=10,scale=600:-1:flags=lanczos,split[a][b];
+     [a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=none" -loop 0 docs/pictures/readme/X.gif -->
 
 ## Why CoffeePy
 
@@ -49,9 +60,16 @@ works completely offline, and everyone checks their own balance on their phone.
   payment link or a GiroCode your banking app turns into a transfer - with the amount, and who
   is paying, already filled in. A friendly reminder appears when last
   month is still open.
-- **A little fun, if you want it.** An all-time and a monthly podium, a "walk of shame" for
-  those who owe, and thank-you animations that notice when it's your fifth cup today. Both
-  boards are off by default - a workplace decision, not a software one.
+- **A little fun, if you want it.** An all-time and a monthly podium, and thank-you animations
+  that notice when it's your fifth cup today.
+- **A pillory instead of reminder emails.** Nobody likes chasing colleagues for money, so the
+  kiosk does it with a wink: the seven who owe the most queue behind a velvet rope under a big
+  **SHAME** banner, and one after another is led down the line with a "-€" sign, a hooded figure
+  ringing a bell and crying "SHAME!" behind them while the rest of the queue shakes its fists.
+  Their names and debts scroll past underneath like the credits of a very bad film. Paying up is the only way out of the queue. And once everyone
+  has settled, the banner reads **NO SHAME** and the executioner stands on an empty scaffold with
+  nothing to do. Peer pressure, but the friendly kind - and like the podium, it is off by default:
+  a workplace decision, not a software one.
 
 ### Beans, milk and what a cup really costs
 - **Settle up in kind.** Whoever buys beans, milk or cookies for everyone books it at the kiosk
