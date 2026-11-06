@@ -206,6 +206,30 @@ The web container can't touch block devices, so `install/storage_helper.py` does
 - A restore replaces the dashboard logins and sessions too - the restoring admin may be
   logged out afterwards.
 
+## The coffee machine is optional
+
+`coffee-machine/` is a second bridge next to the card reader's: one machine over MQTT (`coffeemachine/#`,
+the contract in its README), a JURA over Bluetooth LE today. It runs on every device and idles until
+dashboard → Coffee machine names one (`dashboard.models.CoffeeMachine`, sent as the retained
+`config`); with "none" the kiosk books from the tally alone, as it always did. Nothing outside the
+bridge talks to the machine: `mqtt_listener` keeps `coffee.models.MachineStatus`, the web processes
+send commands with one publish each (`coffee/machine.py`), and every page reads the row.
+
+- **Bluetooth is the host's BlueZ, over `/run/dbus`** - the container needs no privileges. It is off on
+  a CoffeePy device: the storage helper's `bluetooth` request switches the service on and records it in
+  `data/storage/bluetooth.json`, which `install.sh` reads so the next update doesn't switch it off
+  again. The Pi's own radio is also off in the firmware (`dtoverlay=disable-bt`); using it takes that
+  line out and a restart (`reboot` request). A USB stick needs neither - and had the range the Pi 3's
+  antenna didn't (-95 dBm at the test site, the laptop -82).
+- **What the JURA does was measured, not read** (an E6 with a Smart Connect, 2026-11-06; frames in
+  `coffee/tests/test_machine_bridge.py`): the key in the advertisement changes, py-jura 0.2.1 waits for
+  the wrong statistics "ready" byte, there is **no working cancel** - the keys are locked instead, and
+  the lock drops by itself within ~40 s of a lost connection. Never write to the UART tunnel
+  (5a401625) unframed: it made the dongle change its key. A brew or a lock needs someone with a cup at
+  the machine - ask first.
+- The bridge's logic that decides anything (`codec.py`, `policy.py`, `ha.py`) imports neither bleak nor
+  py-jura, so the app's tests import it from `coffee-machine/` directly.
+
 ## Django traps that already cost time here
 
 - **`{# … #}` is only a comment within one line.** Django's lexer runs without `DOTALL`, so a

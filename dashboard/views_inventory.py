@@ -14,7 +14,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from coffee import services
-from coffee.models import InventoryItem, Member, Purchase, StockCount
+from coffee.models import InventoryConsumption, InventoryItem, MachineProduct, Member, Purchase, StockCount
 
 from . import audit
 from .forms import InventoryItemForm, PriceAdjustmentForm, PurchaseForm
@@ -191,11 +191,33 @@ def item_add(request):
 def item_edit(request, pk):
     instance = get_object_or_404(InventoryItem, pk=pk)
     form = InventoryItemForm(request.POST or None, instance=instance)
+    products = list(MachineProduct.objects.filter(present=True))
+    current = {c.product_id: c.amount for c in instance.consumption.all()}
     if request.method == "POST" and form.is_valid():
         item = form.save()
-        audit.log(request, "inventory_item.update", target=item.name)
+        changed = _save_consumption(request, item, products, current)
+        audit.log(request, "inventory_item.update", target=item.name, details="; ".join(changed)[:500])
         return redirect("dashboard:inventory_items")
-    return render(request, "dashboard/inventory_item_form.html", {"form": form, "instance": instance})
+    return render(request, "dashboard/inventory_item_form.html", {
+        "form": form, "instance": instance,
+        "consumption": [{"product": p, "amount": current.get(p.pk)} for p in products],
+    })
+
+
+def _save_consumption(request, item, products, current) -> list[str]:
+    """What one product of the coffee machine takes of this item - blank is nothing."""
+    changed = []
+    for product in products:
+        raw = request.POST.get(f"use-{product.code}", "").strip()
+        amount = services.parse_quantity(raw) if raw else None
+        if amount == current.get(product.pk) or (amount is None and product.pk not in current):
+            continue
+        if amount:
+            InventoryConsumption.objects.update_or_create(item=item, product=product, defaults={"amount": amount})
+        else:
+            InventoryConsumption.objects.filter(item=item, product=product).delete()
+        changed.append(f"{product.name}: {amount if amount else '-'}")
+    return changed
 
 
 @login_required

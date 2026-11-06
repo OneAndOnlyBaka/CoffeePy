@@ -83,6 +83,19 @@ class InstallerTestCase(SimpleTestCase):
         self.sourced(f'TARGET_DIR="{self.root}"; start_maintenance')
         self.assertFalse(status.exists())
 
+    def test_bluetooth_stays_for_the_coffee_machine(self):
+        """The hardware step switches Bluetooth off - unless the dashboard switched it on for the coffee
+        machine (data/storage/bluetooth.json, written by the storage helper); every update runs it."""
+        storage = self.root / "data" / "storage"
+        storage.mkdir(parents=True)
+        check = f'TARGET_DIR="{self.root}"; bluetooth_wanted enabled && echo on; bluetooth_wanted onboard && echo pi; true'
+        self.assertEqual(self.sourced(check), "")
+        (storage / "bluetooth.json").write_text('{"enabled": true, "onboard": false}')
+        self.assertEqual(self.sourced(check), "on")
+        (storage / "bluetooth.json").write_text('{"enabled": true, "onboard": true}')
+        self.assertEqual(self.sourced(check).split(), ["on", "pi"])
+        self.assertNotIn("kept on for the coffee machine", self.dry_run("--only=hardware").stdout)  # /opt/coffeepy: none
+
     def test_ssh_is_switched_off_unless_kept(self):
         result = self.dry_run("--only=ssh")
         self.assertIn("[dry-run] systemctl disable --now ssh.service", result.stdout)

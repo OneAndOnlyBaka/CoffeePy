@@ -131,6 +131,16 @@ disable_units() {
 	done
 }
 
+# Whether the coffee machine needs the host's Bluetooth - "enabled" or "onboard" (the Pi's own
+# radio), as the storage helper recorded it when the dashboard switched it on
+# (data/storage/bluetooth.json, install/storage_helper.py). Every run of the hardware step - the
+# update watcher's too - would otherwise switch it off again.
+bluetooth_wanted() {
+	local file="${TARGET_DIR}/data/storage/bluetooth.json"
+	[ -f "${file}" ] || return 1
+	grep -Eq "\"$1\": *true" "${file}"
+}
+
 step_done()   { [ -f "${STATE_FILE}" ] && grep -qxF "$1" "${STATE_FILE}"; }
 mark_done()   { [ "${DRY_RUN}" = "1" ] && return 0; install -d "$(dirname "${STATE_FILE}")"; grep -qxF "$1" "${STATE_FILE}" 2>/dev/null || printf '%s\n' "$1" >> "${STATE_FILE}"; }
 
@@ -422,8 +432,14 @@ step_hardware() {
 
 	log "Trimming what a kiosk does not need"
 	# No Bluetooth peripherals, no physical hotkeys, no modem on this device - and on a
-	# 1GB board the RAM matters more than the convenience.
-	disable_units bluetooth.service hciuart.service triggerhappy.service ModemManager.service
+	# 1GB board the RAM matters more than the convenience. Bluetooth stays if a coffee machine
+	# talks over it (dashboard -> Coffee machine).
+	if bluetooth_wanted enabled; then
+		info "Bluetooth: kept on for the coffee machine"
+		disable_units hciuart.service triggerhappy.service ModemManager.service
+	else
+		disable_units bluetooth.service hciuart.service triggerhappy.service ModemManager.service
+	fi
 	# What the Desktop image adds on top (none of it exists on Lite): printing, NFS, VNC, the
 	# Pi 5's GPU/RP1 self-tests, desktop accounts. NetworkManager's dispatcher has no scripts
 	# here to run. Each of these starts at boot, next to the stack, on four slow cores.
@@ -438,7 +454,10 @@ step_hardware() {
 	if systemctl cat udisks2.service >/dev/null 2>&1; then
 		run systemctl mask --now udisks2.service
 	fi
-	ensure_line "${boot}/config.txt" "dtoverlay=disable-bt"
+	# The Pi's own radio off, unless the coffee machine uses it (a USB stick needs no change here).
+	if ! bluetooth_wanted onboard; then
+		ensure_line "${boot}/config.txt" "dtoverlay=disable-bt"
+	fi
 	# The Imager's cloud-init has done its job (user, hostname, SSH) by the time this runs,
 	# but would still go through all its stages on every boot, one of them waiting for
 	# network-online.target. Edits to user-data on the boot partition no longer apply after this.

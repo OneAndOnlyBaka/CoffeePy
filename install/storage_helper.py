@@ -9,10 +9,12 @@ through files in data/storage/, which both see:
                      them is this device's backup stick, free space, the last request
   requests/*.json    written by the dashboard: format a disk as this device's stick,
                      adopt another device's stick, eject, apply restored settings, switch
-                     SSH on or off - processed here, then deleted
+                     SSH or Bluetooth on or off, restart - processed here, then deleted
   device-id          this device's identity, created here once; the stick carries it
   stick.json         the one stick this device backs up to - set when a stick is set up
                      (formatted or adopted); setting up another one forgets the old one
+  bluetooth.json     whether the coffee machine needs the host's Bluetooth, and from which
+                     radio - read by the installer too, which would switch it off again
 
 A backup stick is an ext4 file system labelled COFFEEBAK with .coffeepy-backup.json at its
 root naming the device it belongs to and its own stick id. Only the stick in stick.json is
@@ -57,6 +59,17 @@ ejected = set()
 SSH_UNITS = ("ssh.service", "ssh.socket")
 SSH_SECONDS = 30  # how often the SSH state is asked for: every cycle would be a systemctl every 2s
 ssh = {}
+
+# Bluetooth, for the coffee machine bridge (coffee-machine/): off on a CoffeePy device until the
+# dashboard asks for it. The Pi's own radio is also switched off in the firmware (install.sh,
+# dtoverlay=disable-bt) - using it means taking that line out and a restart; a USB stick works
+# without either.
+BT_UNIT = "bluetooth.service"
+BT_FILE = STORAGE_DIR / "bluetooth.json"
+BT_OVERLAY = "dtoverlay=disable-bt"
+BOOT_CONFIG = Path(os.environ.get("COFFEEPY_BOOT_CONFIG", "/boot/firmware/config.txt"))
+SYS_BLUETOOTH = Path(os.environ.get("COFFEEPY_SYS_BLUETOOTH", "/sys/class/bluetooth"))
+bluetooth = {}
 
 
 def log(message):
@@ -328,6 +341,87 @@ def handle_ssh(request):
     ssh.update(ssh_state(), error=error)
 
 
+def bluetooth_wanted():
+    try:
+        wanted = json.loads(BT_FILE.read_text())
+    except (OSError, ValueError):
+        return {"enabled": False, "onboard": False}
+    return {"enabled": bool(wanted.get("enabled")), "onboard": bool(wanted.get("onboard"))}
+
+
+def overlay_set():
+    try:
+        return BT_OVERLAY in BOOT_CONFIG.read_text().splitlines()
+    except OSError:
+        return False
+
+
+def set_overlay(present):
+    """The firmware line that switches the Pi's own radio off - in, or out. Takes effect at the next
+    boot; a missing config.txt (not a Pi) is left alone."""
+    try:
+        lines = BOOT_CONFIG.read_text().splitlines()
+    except OSError:
+        return False
+    if (BT_OVERLAY in lines) == present:
+        return False
+    lines = lines + [BT_OVERLAY] if present else [line for line in lines if line != BT_OVERLAY]
+    tmp = BOOT_CONFIG.with_name(BOOT_CONFIG.name + ".coffeepy-tmp")
+    tmp.write_text("\n".join(lines) + "\n")
+    os.replace(tmp, BOOT_CONFIG)
+    return True
+
+
+def bluetooth_state():
+    wanted = bluetooth_wanted()
+    result = subprocess.run(("systemctl", "is-active", BT_UNIT), capture_output=True, text=True)
+    adapters = sorted(p.name for p in SYS_BLUETOOTH.iterdir()) if SYS_BLUETOOTH.is_dir() else []
+    return {
+        **wanted,
+        "active": result.stdout.strip() == "active",
+        "adapters": adapters,
+        # The Pi's radio asked for, the firmware line gone, and still no adapter: the restart is due.
+        "restart_needed": wanted["enabled"] and wanted["onboard"] and not overlay_set() and not adapters,
+        "checked": time.time(),
+    }
+
+
+def do_bluetooth(request):
+    enabled, onboard = bool(request.get("enabled")), bool(request.get("onboard"))
+    write_json(BT_FILE, {"enabled": enabled, "onboard": onboard and enabled})
+    set_overlay(not (enabled and onboard))
+    if enabled:
+        run("systemctl", "enable", "--now", BT_UNIT)
+        # A radio nobody used comes up soft-blocked on Raspberry Pi OS; rfkill keeps the state.
+        subprocess.run(("rfkill", "unblock", "bluetooth"), capture_output=True)
+        return "on"
+    run("systemctl", "disable", "--now", BT_UNIT)
+    return "off"
+
+
+def handle_bluetooth(request):
+    """Like handle_ssh: its outcome goes into status.json's "bluetooth"."""
+    action = "bluetooth.enable" if request.get("enabled") else "bluetooth.disable"
+    actor = request.get("requested_by", "system")
+    try:
+        details = do_bluetooth(request)
+        error = ""
+        event(action, actor=actor, details="onboard" if request.get("onboard") and request.get("enabled") else "")
+    except Exception as exc:  # noqa: BLE001 - reported to the dashboard
+        log(f"request {action} failed: {exc}")
+        error, details = str(exc), ""
+        event(action, actor=actor, details=error, outcome="failure")
+    bluetooth.clear()
+    bluetooth.update(bluetooth_state(), error=error)
+    return details
+
+
+def handle_reboot(request):
+    """A restart from the dashboard - what the Pi's own Bluetooth needs to come up."""
+    event("system.reboot", actor=request.get("requested_by", "system"))
+    run("systemctl", "reboot")
+
+
 # --- requests from the dashboard ----------------------------------------------------------
 
 def find_disk(disks, path, serial):
@@ -432,6 +526,12 @@ def handle_requests(disks, mount_table, our_id, last):
         if action == "ssh":
             handle_ssh(request)
             continue
+        if action == "bluetooth":
+            handle_bluetooth(request)
+            continue
+        if action == "reboot":
+            handle_reboot(request)
+            continue
         result = {"id": request.get("id", path.stem), "action": action, "state": "running", "started": now_iso()}
         last.clear()
         last.update(result)
@@ -476,6 +576,7 @@ def write_status(disks, mount_table, our_id, last):
         "available": [d for d in disks if d["path"] not in in_use],
         "request": dict(last),
         "ssh": dict(ssh),
+        "bluetooth": dict(bluetooth),
     })
 
 
@@ -491,6 +592,8 @@ def cycle(last):
     mount_table = mounts()
     if time.time() - ssh.get("checked", 0) >= SSH_SECONDS:
         ssh.update(ssh_state())
+    if time.time() - bluetooth.get("checked", 0) >= SSH_SECONDS:
+        bluetooth.update(bluetooth_state())
     handle_requests(disks, mount_table, our_id, last)
     if last.get("state") == "done":
         devices = lsblk()

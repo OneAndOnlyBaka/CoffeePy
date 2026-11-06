@@ -45,6 +45,16 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
             </ul>
         </div>
     </div>
+    {% if free_products %}
+    {% comment %}No card needed: what the machine makes for free (hot water) - with its keys locked
+    the only way to get it at all (coffee/machine.py). Changes only with the machine's state.{% endcomment %}
+    <div class="free-products">
+        {% for product in free_products %}
+        <button type="button" class="secondary" hx-post="{% url 'kiosk:machine_free' %}" hx-vals='{"code": "{{ product.code|unlocalize }}"}'
+                hx-target="#panel" hx-swap="innerHTML">{{ product.name|product_label }} · {% translate "free" %}</button>
+        {% endfor %}
+    </div>
+    {% endif %}
     <div class="clock" data-kiosk-clock></div>
 </div>
 {% endif %}
@@ -84,7 +94,64 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
     gif through instead of restarting at frame 0 twice a second.
     {% endcomment %}
     <img class="thank-you-gif" src="{% static 'kiosk/img/thankyou/'|add:gif %}" alt="">
+    {% if tasks %}
+    <p class="msg error">{% translate "The machine needs you once more - please do this now:" %}</p>
+    <ul class="brew-tasks">{% for task in tasks %}<li>{{ task }}</li>{% endfor %}</ul>
+    {% elif tasks_done %}
+    <p class="msg success">{% translate "Done - thanks, hero!" %}</p>
+    {% else %}
     <p>{{ message }}</p>
+    {% endif %}
+</div>
+
+{% elif state == "brew" %}
+{% comment %}
+The coffee machine's brew (views._checkout, coffee/machine.py). Each stage renders the same bytes
+on every poll until the stage (or, while brewing, heating vs. making) changes - no percentages,
+no seconds: the cup's animation runs in CSS, the countdown in countdown.js from a fixed deadline.
+{% endcomment %}
+<div class="panel-card brew-card stage-{{ stage }}">
+    <h1 class="panel-header">{% if member %}{% blocktranslate trimmed with name=member.display_name %}Hi {{ name }}!{% endblocktranslate %}{% else %}{{ product_name }}{% endif %}</h1>
+    <div class="panel-body brew-body">
+        {% comment %}The wait screen's cup (scripts/make_wait_gifs.py): standing empty under the spout, then
+        filling. The GIF starts with the one swap from heating to pouring, as it should.{% endcomment %}
+        <img class="brew-cup" alt=""
+             src="{% if stage == 'brewing' and phase != 'heating' %}{% static 'kiosk/img/wait/wait_order.gif' %}{% else %}{% static 'kiosk/img/wait/brew_cup.png' %}{% endif %}">
+        <div class="brew-text">
+            {% if stage == "cup" %}
+            <h2>{% translate "Put your cup under the outlet" %}</h2>
+            <p>{% if free %}{% translate "Free - nothing is booked." %}{% else %}{% blocktranslate trimmed with sort=product_name %}{{ sort }} - booked once the machine has made it.{% endblocktranslate %}{% endif %}</p>
+            {% if blocking %}
+            <p class="msg error">{% translate "The machine needs this first:" %}</p>
+            <ul class="brew-tasks">{% for task in blocking %}<li>{{ task }}</li>{% endfor %}</ul>
+            {% elif tasks %}
+            <p class="msg warning">{% translate "Better do this first, before you start:" %}</p>
+            <ul class="brew-tasks">{% for task in tasks %}<li>{{ task }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% elif stage == "brewing" %}
+            <h2>{% if phase == "heating" %}{% translate "The machine is getting ready ..." %}{% else %}{% blocktranslate trimmed with sort=product_name %}Your {{ sort }} is on its way{% endblocktranslate %}{% endif %}</h2>
+            <p>{% translate "Leave the cup where it is until the machine is done." %}</p>
+            {% if tasks %}
+            {% comment %}Not now: pulling the tank or the grounds container stops the machine.{% endcomment %}
+            <p class="msg warning">{% translate "Right after, please:" %}</p>
+            <ul class="brew-tasks">{% for task in tasks %}<li>{{ task }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% elif stage == "failed" %}
+            <h2>{% translate "Nothing was booked" %}</h2>
+            <p class="msg error">{{ reason }}</p>
+            {% if blocking %}<ul class="brew-tasks">{% for task in blocking %}<li>{{ task }}</li>{% endfor %}</ul>{% endif %}
+            {% elif stage == "done_free" %}
+            <h2>{% translate "Enjoy!" %}</h2>
+            {% endif %}
+        </div>
+    </div>
+    {% if stage == "cup" %}
+    <div class="action-row panel-footer">
+        <button type="button" class="danger" hx-post="{% url 'kiosk:machine_cancel' %}" hx-target="#panel" hx-swap="innerHTML">✕ {% translate "Cancel" %}</button>
+        {% if brew_deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar cup_text %}Cancelled in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ brew_deadline_ms|unlocalize }}" data-text="{{ cup_text|force_escape }}"></span>{% endif %}
+        <button type="button" class="success primary-action" hx-post="{% url 'kiosk:machine_start' %}" hx-target="#panel" hx-swap="innerHTML"{% if blocking %} disabled{% endif %}>▶ {% translate "Start" %}</button>
+    </div>
+    {% endif %}
 </div>
 
 {% elif state == "order" %}
@@ -387,6 +454,10 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
         <a class="{% if ranking_view == 'pillory' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'pillory' %}"
            hx-get="{% url 'kiosk:ranking_view' 'pillory' %}">{% translate "Pillory" %}</a>
         {% endif %}
+        {% if "runaways" in ranking_views %}
+        <a class="{% if ranking_view == 'runaways' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'runaways' %}"
+           hx-get="{% url 'kiosk:ranking_view' 'runaways' %}">{% translate "Ran off" %}</a>
+        {% endif %}
     </nav>
     {% endif %}
     {% comment %}
@@ -399,7 +470,27 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
     {% endcomment %}
     <div class="podium-stage">
         <div class="podium-banner">{{ banner }}</div>
-        {% if ranking_view == "pillory" %}
+        {% if ranking_view == "runaways" %}
+        {% comment %}Who left the water, the grounds or the beans for the next one this month, and who stepped in (coffee.machine.runaway_board) - the pillory's ticker, the same rules for the poll.{% endcomment %}
+        {% if rows %}
+        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.webm' %}" poster="{% static 'kiosk/img/ranking/pillory.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <div class="podium-names ticker">
+            <div class="ticker-track" style="animation-duration: {{ ticker_seconds|unlocalize }}s">
+                {% for copy in "12" %}
+                <span class="ticker-copy"{% if forloop.last %} aria-hidden="true"{% endif %}>
+                    {% for row in rows %}
+                    <span class="ticker-item"><b>{{ row.name }}</b>{% if row.left %} <span class="ticker-debt">{% blocktranslate trimmed with n=row.left %}ran off {{ n }}×{% endblocktranslate %}</span>{% endif %}{% if row.heroic %} <span class="ticker-hero">{% blocktranslate trimmed with n=row.heroic %}hero {{ n }}×{% endblocktranslate %}</span>{% endif %}</span>
+                    {% endfor %}
+                    <span class="ticker-item ticker-hint">{% translate "Water, grounds, beans: whoever gets the message sees to it" %}</span>
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.webm' %}" poster="{% static 'kiosk/img/ranking/pillory_empty.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <div class="podium-names ticker"><b class="ticker-clear">{% translate "Nobody ran off this month!" %}</b></div>
+        {% endif %}
+        {% elif ranking_view == "pillory" %}
         {% if rows %}
         <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.webm' %}" poster="{% static 'kiosk/img/ranking/pillory.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
         {% comment %}

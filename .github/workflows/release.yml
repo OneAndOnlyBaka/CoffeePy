@@ -109,7 +109,7 @@ jobs:
       - name: "Prepare .env (docker-compose.yml's env_file directive needs it to exist)"
         run: cp .env.example .env
 
-      # Builds coffeepy-web + nfc-bridge and pulls the rest, all for PLATFORM - the images
+      # Builds coffeepy-web and the bridges and pulls the rest, all for PLATFORM - the images
       # pushed below are the very ones inside the bundle.
       - name: Build the update bundle (unsigned)
         run: scripts/build_update_bundle.sh --platform "$PLATFORM" --unsigned --output "$BUNDLE"
@@ -142,8 +142,9 @@ jobs:
             done
           }
           push coffeepy-web:latest coffeepy-web
-          # nfc-bridge has no `image:` in docker-compose.yml, so compose names it itself.
+          # The bridges have no `image:` in docker-compose.yml, so compose names them itself.
           push "$(docker compose config --images | grep nfc-bridge)" coffeepy-nfc-bridge
+          push "$(docker compose config --images | grep machine-bridge)" coffeepy-machine-bridge
 
       # The tree as committed plus the version file: provision.sh packs and ships it to the Pi,
       # and outside a git checkout it takes the folder as it is (pack_source), whose version
@@ -186,7 +187,7 @@ jobs:
           - \`sign_update_bundle.sh\`: checks every file in the bundle against its manifest and signs it with your own key
           - \`$SBOM\`: a CycloneDX SBOM of every image in it
           - \`$PROVISION\`: the provisioning tool - unpack, then \`scripts/provision.sh\` sets up a Pi
-          - Images: \`$REGISTRY/$OWNER/coffeepy-web:$image_tag\`, \`$REGISTRY/$OWNER/coffeepy-nfc-bridge:$image_tag\`"
+          - Images: \`$REGISTRY/$OWNER/coffeepy-web:$image_tag\`, \`$REGISTRY/$OWNER/coffeepy-nfc-bridge:$image_tag\`, \`$REGISTRY/$OWNER/coffeepy-machine-bridge:$image_tag\`"
           release() { # tag - an existing one (a re-run, the other platform) only gets the files
             if gh release view "$1" >/dev/null 2>&1; then
               gh release upload "$1" "${files[@]}" --clobber

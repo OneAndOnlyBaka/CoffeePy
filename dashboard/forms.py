@@ -9,6 +9,7 @@ from django.utils.translation import gettext_lazy, pgettext_lazy
 
 from .models import (
     POLICY_LIMITS,
+    CoffeeMachine,
     InventoryPolicy,
     KioskBoards,
     MemberRetention,
@@ -35,13 +36,14 @@ from coffee.models import (
 class CoffeeSortForm(forms.ModelForm):
     class Meta:
         model = CoffeeSort
-        fields = ["name", "price", "machine_strokes"]
+        fields = ["name", "price", "machine_strokes", "without_machine"]
         # Spelled out (as Django would derive them from the field names) so they can be
         # translated without touching the models.
         labels = {
             "name": gettext_lazy("Name"),
             "price": gettext_lazy("Price"),
             "machine_strokes": gettext_lazy("Machine strokes"),
+            "without_machine": gettext_lazy("Offered without the coffee machine (tea, a biscuit) - never obsolete"),
         }
 
 
@@ -497,9 +499,11 @@ class NightPolicyForm(forms.ModelForm):
 class KioskBoardsForm(forms.ModelForm):
     class Meta:
         model = KioskBoards
-        fields = ["ranking", "pillory"]
+        fields = ["ranking", "pillory", "runaways"]
         labels = {"ranking": gettext_lazy("Ranking at the kiosk (most cups, all time and this month)"),
-                  "pillory": gettext_lazy("Pillory at the kiosk (who owes money)")}
+                  "pillory": gettext_lazy("Pillory at the kiosk (who owes money)"),
+                  "runaways": gettext_lazy("\"Ran off\" at the kiosk (who left water, grounds or beans for the next "
+                                           "one, and who stepped in) - only with a coffee machine")}
 
 
 class InventoryPolicyForm(forms.ModelForm):
@@ -575,3 +579,15 @@ class PurchaseForm(forms.ModelForm):
         if price <= 0:
             raise forms.ValidationError(gettext_lazy("Enter a price above 0."))
         return price
+
+
+class CoffeeMachineForm(forms.ModelForm):
+    class Meta:
+        model = CoffeeMachine
+        fields = ["driver", "adapter", "block_manual"]
+        widgets = {"driver": forms.RadioSelect, "adapter": forms.RadioSelect}
+        labels = {"driver": gettext_lazy("Coffee machine"), "adapter": gettext_lazy("Bluetooth"),
+                  "block_manual": gettext_lazy("Lock the machine's own keys")}
+        help_texts = {"block_manual": gettext_lazy(
+            "Nothing can be brewed past the tally while CoffeePy is connected. If the connection is lost, "
+            "the machine unlocks itself within a minute.")}

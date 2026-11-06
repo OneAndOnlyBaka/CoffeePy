@@ -17,7 +17,8 @@ is taken off per cup. Enter what you count; an empty field leaves the item as it
                 <div class="list-row-text">
                     <span class="list-row-title">{{ level.item.name }}</span>
                     <span class="list-row-meta">{% if level.count %}{% blocktranslate trimmed with quantity=level.count.quantity|quantity when=level.count.created_at|date:"d.m.Y H:i" who=level.count.counted_by %}
-                        Counted {{ quantity }} on {{ when }} ({{ who }}){% endblocktranslate %}{% else %}{% translate "Never counted" %}{% endif %}{% if level.bought_since %} &middot; {% blocktranslate with quantity=level.bought_since|quantity %}{{ quantity }} bought since{% endblocktranslate %}{% endif %}</span>
+                        Counted {{ quantity }} on {{ when }} ({{ who }}){% endblocktranslate %}{% else %}{% translate "Never counted" %}{% endif %}{% if level.bought_since %} &middot; {% blocktranslate with quantity=level.bought_since|quantity %}{{ quantity }} bought since{% endblocktranslate %}{% endif %}{% if level.expected is not None %} &middot; {% blocktranslate trimmed with used=level.machine_used|quantity expected=level.expected|quantity unit=level.item.unit %}
+                        the machine used {{ used }} since - about {{ expected }} {{ unit }} should be left{% endblocktranslate %}{% endif %}</span>
                 </div>
                 <span class="list-row-value">{{ level.stock|quantity }} {{ level.item.unit }}</span>
                 <div class="list-row-actions">

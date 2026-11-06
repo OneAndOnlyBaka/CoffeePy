@@ -104,6 +104,9 @@ class KioskBoards(models.Model):
 
     ranking = models.BooleanField(default=False)
     pillory = models.BooleanField(default=False)
+    # Who left the water, the grounds or the beans for the next one (MachineIncident) - and who
+    # stepped in. Only with a coffee machine; just as personal, so off unless switched on.
+    runaways = models.BooleanField(default=False)
 
     @classmethod
     def current(cls):
@@ -111,7 +114,8 @@ class KioskBoards(models.Model):
 
     def kiosk_views(self) -> list[str]:
         """The ranking screen's tabs, in order - empty: no ranking button at all."""
-        return (["alltime", "month"] if self.ranking else []) + (["pillory"] if self.pillory else [])
+        return ((["alltime", "month"] if self.ranking else []) + (["pillory"] if self.pillory else [])
+                + (["runaways"] if self.runaways and CoffeeMachine.current().configured else []))
 
 
 class InventoryPolicy(models.Model):
@@ -173,3 +177,42 @@ class DeletionHold(models.Model):
     reason = models.CharField(max_length=200)
     held_by = models.CharField(max_length=150, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class CoffeeMachine(models.Model):
+    """The coffee machine this device talks to, if any (dashboard → Coffee machine). Optional: with
+    "none", the default, the bridge container idles and the kiosk books from the tally alone, as it
+    always did. Sent to the bridge as its retained config (coffee.machine.config_payload)."""
+
+    DRIVER_NONE, DRIVER_JURA_BLE = "none", "jura_ble"
+    DRIVERS = [
+        (DRIVER_NONE, gettext_lazy("None - the tally only")),
+        (DRIVER_JURA_BLE, gettext_lazy("JURA over Bluetooth (Smart Connect or built-in)")),
+    ]
+    # Where the host's Bluetooth comes from: a USB stick needs nothing but the Bluetooth service, the
+    # Pi's own radio is switched off by the installer (dtoverlay=disable-bt) and needs a restart.
+    ADAPTER_USB, ADAPTER_ONBOARD = "usb", "onboard"
+    ADAPTERS = [
+        (ADAPTER_USB, gettext_lazy("USB Bluetooth stick")),
+        (ADAPTER_ONBOARD, gettext_lazy("The Raspberry Pi's own Bluetooth (needs a restart)")),
+    ]
+
+    driver = models.CharField(max_length=20, choices=DRIVERS, default=DRIVER_NONE)
+    adapter = models.CharField(max_length=10, choices=ADAPTERS, default=ADAPTER_USB)
+    address = models.CharField(max_length=40, blank=True)
+    name = models.CharField(max_length=100, blank=True)  # the model, as found when it was connected
+    # The machine's own keys locked while CoffeePy is connected, so nothing is brewed past the tally.
+    # The lock drops by itself shortly after the connection is lost - never a machine nobody can use.
+    block_manual = models.BooleanField(default=True)
+
+    @classmethod
+    def current(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+    @property
+    def enabled(self) -> bool:
+        return self.driver != self.DRIVER_NONE
+
+    @property
+    def configured(self) -> bool:
+        return self.enabled and bool(self.address)

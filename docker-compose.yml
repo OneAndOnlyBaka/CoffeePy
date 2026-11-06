@@ -44,6 +44,25 @@ services:
       MQTT_TOPIC: ${MQTT_TOPIC:-nfc/acr122u}
       LOG_LEVEL: INFO
 
+  # The coffee machine (coffee-machine/README.md). Always there, idle until the dashboard names a
+  # machine - a device without one costs this container's few MB and nothing else. Bluetooth goes
+  # through the host's BlueZ over D-Bus, so it needs no device and no privileges; the host's
+  # Bluetooth itself is off until the dashboard switches it on (install/storage_helper.py).
+  machine-bridge:
+    build: ./coffee-machine
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    volumes:
+      - /run/dbus:/run/dbus:ro
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      MACHINE_TOPIC: ${MACHINE_TOPIC:-coffeemachine}
+      # A pretend machine for trying the kiosk without one (coffee-machine/drivers/simulator.py).
+      MACHINE_SIMULATE: ${MACHINE_SIMULATE:-false}
+      LOG_LEVEL: INFO
+
   migrate:
     build: .
     image: coffeepy-web:latest

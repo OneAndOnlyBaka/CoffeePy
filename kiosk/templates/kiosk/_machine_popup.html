@@ -1,0 +1,41 @@
+{% load i18n l10n %}
+<div class="modal-card machine-card">
+    <button type="button" class="modal-close" hx-on:click="document.getElementById('qr-modal').classList.remove('open')">✕</button>
+    <h1>{{ name|default:_("Coffee machine") }}</h1>
+    <p class="machine-state machine-{{ level }}">
+        {% if level == "off" %}{% translate "Not connected - the machine works as usual, the tally books as before." %}
+        {% elif level == "blocked" %}{% translate "The machine needs attention before it can make anything." %}
+        {% elif level == "warn" %}{% translate "Ready - and something wants doing soon." %}
+        {% else %}{% translate "Ready." %}{% endif %}
+    </p>
+    {% if messages %}
+    <ul class="machine-messages">{% for message in messages %}<li>{{ message }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if supplies %}
+    <h2>{% translate "Supplies" %}</h2>
+    <div class="machine-bars">
+        {% for supply in supplies %}
+        <div class="machine-bar">
+            <span>{{ supply.label }}</span>
+            <span class="bar-track"><span class="bar-fill{% if supply.used >= 80 %} warn{% endif %}" style="width: {{ supply.left|unlocalize }}%"></span></span>
+            <span>{% blocktranslate trimmed with left=supply.left %}{{ left }}% left{% endblocktranslate %}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="action-row">
+        <button type="button" class="secondary" hx-post="{% url 'kiosk:machine_refill' %}" hx-target="#qr-modal-content" hx-swap="innerHTML">{% translate "Beans refilled" %}</button>
+    </div>
+    {% endif %}
+    {% if maintenance %}
+    <h2>{% translate "Maintenance" %}</h2>
+    <div class="machine-bars">
+        {% for item in maintenance %}
+        <div class="machine-bar">
+            <span>{{ item.label }}</span>
+            <span class="bar-track"><span class="bar-fill{% if item.percent >= 90 %} warn{% endif %}" style="width: {{ item.percent|unlocalize }}%"></span></span>
+            <span>{% blocktranslate trimmed with percent=item.percent %}{{ percent }}% due{% endblocktranslate %}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

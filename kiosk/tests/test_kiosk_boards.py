@@ -79,7 +79,7 @@ class KioskBoardsSettingTestCase(TestCase):
         self.assertRedirects(response, reverse("dashboard:system_dashboard"))
         self.assertEqual(KioskBoards.current().kiosk_views(), ["pillory"])
         self.assertTrue(AuditLogEntry.objects.filter(action="kiosk_boards.update",
-                                                     details="ranking off, pillory on").exists())
+                                                     details="ranking off, pillory on, runaways off").exists())
 
 
 class KioskBoardsMigrationTestCase(TestCase):

@@ -20,7 +20,7 @@ from django.utils.html import escape
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import backups, clock, names, purge, rtc, services
+from coffee import backups, clock, machine, names, purge, rtc, services
 from coffee.models import (
     AltUidCapture,
     AuditLogEntry,
@@ -40,6 +40,7 @@ from . import audit, import_jobs, night, system_clock, system_stats, tls
 from .decorators import superuser_required
 from .models import (
     AccountSecurity,
+    CoffeeMachine,
     DeletionHold,
     InventoryPolicy,
     KioskBoards,
@@ -75,7 +76,8 @@ def index(request):
         "dashboard/index.html",
         {"reader_status": reader_status, "public_host": public_host(), "overview": services.dashboard_overview(),
          "backup_health": backups.health(), "rtc_health": rtc.health(), "clock_corrected": clock.corrected(),
-         "due_members": services.departed_members_due(MemberRetention.current().departed_months)},
+         "due_members": services.departed_members_due(MemberRetention.current().departed_months),
+         "machine": machine.status() if CoffeeMachine.current().enabled else None},
     )
 
 
@@ -99,7 +101,7 @@ def pillory(request):
 
 @login_required
 def coffeesort_list(request):
-    return render(request, "dashboard/coffeesorts.html", {"sorts": CoffeeSort.objects.all()})
+    return render(request, "dashboard/coffeesorts.html", {"sorts": CoffeeSort.objects.order_by("is_obsolete", "name")})
 
 
 @login_required
@@ -122,6 +124,9 @@ def coffeesort_edit(request, pk):
         form = CoffeeSortForm(request.POST, instance=instance)
         if form.is_valid():
             sort = form.save()
+            if sort.without_machine and sort.is_obsolete:
+                sort.is_obsolete = False
+                sort.save(update_fields=["is_obsolete"])
             audit.log(request, "coffee_sort.update", target=sort.name)
             return redirect("dashboard:coffeesorts")
     else:
@@ -431,6 +436,10 @@ def member_merge_confirm(request, keep_uid, remove_uid):
             remove_payments = remove.payments.update(member=keep)
             # Purchase.member cascades like the cards below - their credits just moved over.
             remove.purchases.update(member=keep)
+            # The coffee machine's history follows the member like the orders it booked.
+            remove.dispenses.update(member=keep)
+            remove.machine_incidents.update(member=keep)
+            remove.machine_heroics.update(hero=keep)
             # remove's own alt cards (if it had any from an earlier merge/"Set alt
             # card") move over too - MemberCard.member has on_delete=CASCADE, so this
             # has to happen before remove.delete() or they'd be deleted along with it.
@@ -545,7 +554,7 @@ def system_dashboard(request):
         if boards_form.is_valid():
             boards = boards_form.save()
             audit.log(request, "kiosk_boards.update", details=", ".join(
-                f"{name} {'on' if getattr(boards, name) else 'off'}" for name in ("ranking", "pillory")))
+                f"{name} {'on' if getattr(boards, name) else 'off'}" for name in ("ranking", "pillory", "runaways")))
             messages.success(request, _("Saved - the kiosk follows with its next poll."))
             return redirect("dashboard:system_dashboard")
     elif request.method == "POST" and request.POST.get("form") == "inventory":

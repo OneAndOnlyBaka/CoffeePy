@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 18:49+0100\n"
+"POT-Creation-Date: 2026-11-06 21:01+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -43,6 +43,115 @@ msgstr ""
 "Dieses Backup stammt aus einer neueren CoffeePy-Version – aktualisiere "
 "zuerst dieses Gerät und stelle es dann wieder her."
 
+msgid "Fill the water tank"
+msgstr "Wassertank füllen"
+
+msgid "Empty the grounds container"
+msgstr "Trester leeren"
+
+msgid "Empty the drip tray"
+msgstr "Schale leeren"
+
+msgid "Put the drip tray in"
+msgstr "Schale einsetzen"
+
+msgid "Put the grounds container in"
+msgstr "Tresterbehälter einsetzen"
+
+msgid "Fill in coffee beans"
+msgstr "Bohnen nachfüllen"
+
+msgid "Fill the system"
+msgstr "System füllen"
+
+msgid "Heating up"
+msgstr "Heizt auf"
+
+msgid "Please wait"
+msgstr "Bitte warten"
+
+msgid "Close the cover"
+msgstr "Deckel schließen"
+
+msgid "Water tank removed"
+msgstr "Wassertank entnommen"
+
+msgid "Milk system"
+msgstr "Milchsystem"
+
+msgid "Machine error"
+msgstr "Fehler an der Maschine"
+
+msgid "In programming mode"
+msgstr "Im Programmiermodus"
+
+msgid "Switching off"
+msgstr "Schaltet aus"
+
+msgid "Change the filter"
+msgstr "Filter wechseln"
+
+msgid "Descale"
+msgstr "Entkalken"
+
+msgid "Clean"
+msgstr "Reinigen"
+
+msgid "Rinse the milk system"
+msgstr "Milchsystem spülen"
+
+msgid "Clean the milk system"
+msgstr "Milchsystem reinigen"
+
+msgid "Keys locked"
+msgstr "Tasten gesperrt"
+
+msgid "Cleaning"
+msgstr "Reinigung"
+
+msgctxt "water filter"
+msgid "Filter"
+msgstr "Filter"
+
+msgid "Descaling"
+msgstr "Entkalkung"
+
+msgid "Milk system rinses"
+msgstr "Milchsystem-Spülungen"
+
+msgid "Coffee rinses"
+msgstr "Kaffee-Spülungen"
+
+msgid "Milk system cleanings"
+msgstr "Milchsystem-Reinigungen"
+
+msgid "Hot water"
+msgstr "Heißes Wasser"
+
+msgid "Milk foam"
+msgstr "Milchschaum"
+
+msgid "Coffee"
+msgstr "Kaffee"
+
+msgid "2 coffees"
+msgstr "2 Kaffee"
+
+msgid "Milk coffee"
+msgstr "Milchkaffee"
+
+msgid "Hot water for green tea"
+msgstr "Heißes Wasser für grünen Tee"
+
+msgid "Water"
+msgstr "Wasser"
+
+msgid "Grounds container"
+msgstr "Tresterbehälter"
+
+msgid "Beans"
+msgstr "Bohnen"
+
 msgid "Cash"
 msgstr "Bar"
 
@@ -67,6 +176,39 @@ msgstr "Betrag"
 
 msgid "Purpose"
 msgstr "Verwendungszweck"
+
+msgid "Kiosk"
+msgstr "Kiosk"
+
+msgid "Free at the kiosk"
+msgstr "Frei am Kiosk"
+
+msgid "Home Assistant"
+msgstr "Home Assistant"
+
+msgid "At the machine"
+msgstr "An der Maschine"
+
+msgid "asked for"
+msgstr "angefordert"
+
+msgid "running"
+msgstr "läuft"
+
+msgid "done"
+msgstr "fertig"
+
+msgid "failed"
+msgstr "fehlgeschlagen"
+
+msgid "Grounds"
+msgstr "Trester"
+
+msgid "open"
+msgstr "offen"
+
+msgid "ran off"
+msgstr "weggelaufen"
 
 msgid "Please enter your name."
 msgstr "Bitte gib deinen Namen ein."
@@ -104,6 +246,9 @@ msgstr "Preis"
 
 msgid "Machine strokes"
 msgstr "Bezüge (Maschine)"
+
+msgid "Offered without the coffee machine (tea, a biscuit) - never obsolete"
+msgstr "Auch ohne Kaffeemaschine angeboten (Tee, ein Keks) - nie obsolet"
 
 msgid "Provider"
 msgstr "Anbieter"
@@ -386,6 +531,11 @@ msgstr "Rangliste am Kiosk (meiste Tassen, gesamt und in diesem Monat)"
 msgid "Pillory at the kiosk (who owes money)"
 msgstr "Pranger am Kiosk (wer Geld schuldet)"
 
+msgid ""
+"\"Ran off\" at the kiosk (who left water, grounds or beans for the next one, "
+"and who stepped in) - only with a coffee machine"
+msgstr "„Weggelaufen“ am Kiosk (wer Wasser, Trester oder Bohnen dem Nächsten überlassen hat, und wer eingesprungen ist) - nur mit Kaffeemaschine"
+
 msgid "Inventory"
 msgstr "Inventar"
 
@@ -433,6 +583,23 @@ msgstr "Gib eine Menge über 0 ein."
 
 msgid "Enter a price above 0."
 msgstr "Gib einen Preis über 0 ein."
+
+msgid "Coffee machine"
+msgstr "Kaffeemaschine"
+
+msgid "Bluetooth"
+msgstr "Bluetooth"
+
+msgid "Lock the machine's own keys"
+msgstr "Tasten der Maschine sperren"
+
+msgid ""
+"Nothing can be brewed past the tally while CoffeePy is connected. If the "
+"connection is lost, the machine unlocks itself within a minute."
+msgstr ""
+"Solange CoffeePy verbunden ist, lässt sich nichts an der Strichliste vorbei "
+"beziehen. Geht die Verbindung verloren, entsperrt sich die Maschine "
+"innerhalb einer Minute von selbst."
 
 msgid "Starting"
 msgstr "Start"
@@ -486,6 +653,18 @@ msgid ""
 msgstr ""
 "Auch für Mitglieder: Sie zahlen mit Einkäufen statt Geld, am Kiosk und auf "
 "dem Handy"
+
+msgid "None - the tally only"
+msgstr "Keine - nur die Strichliste"
+
+msgid "JURA over Bluetooth (Smart Connect or built-in)"
+msgstr "JURA über Bluetooth (Smart Connect oder eingebaut)"
+
+msgid "USB Bluetooth stick"
+msgstr "USB-Bluetooth-Stick"
+
+msgid "The Raspberry Pi's own Bluetooth (needs a restart)"
+msgstr "Das Bluetooth des Raspberry Pi selbst (braucht einen Neustart)"
 
 msgid "Checking the backup"
 msgstr "Backup wird geprüft"
@@ -711,9 +890,6 @@ msgstr "Bis"
 
 msgid "Filter"
 msgstr "Filtern"
-
-msgid "failed"
-msgstr "fehlgeschlagen"
 
 msgid "No entries match."
 msgstr "Keine passenden Einträge."
@@ -1087,8 +1263,211 @@ msgstr "%(name)s bearbeiten"
 msgid "Delete %(name)s?"
 msgstr "%(name)s löschen?"
 
+msgid "The coffee machine doesn't make it - not offered at the kiosk"
+msgstr "Die Kaffeemaschine macht sie nicht - am Kiosk nicht angeboten"
+
+msgid "obsolete"
+msgstr "obsolet"
+
 msgid "No coffee sorts yet."
 msgstr "Noch keine Kaffeesorten."
+
+msgid "Connection"
+msgstr "Verbindung"
+
+msgid ""
+"Optional: connected, the kiosk guides through the brew and books it once the "
+"machine has made it, and the machine's counters and messages show here. "
+"Without a machine everything works from the tally alone."
+msgstr ""
+"Optional: Verbunden führt der Kiosk durch den Bezug und bucht ihn, sobald "
+"die Maschine ihn gemacht hat, und hier erscheinen die Zähler und Meldungen "
+"der Maschine. Ohne Maschine läuft alles allein über die Strichliste."
+
+msgid "Unknown - the device's storage service is not running."
+msgstr "Unbekannt - der Speicherdienst des Geräts läuft nicht."
+
+msgid "The Raspberry Pi's own Bluetooth only comes up after a restart."
+msgstr "Das Bluetooth des Raspberry Pi kommt erst nach einem Neustart."
+
+msgid "Restart the device"
+msgstr "Gerät neu starten"
+
+msgid "Bluetooth is being switched on - reload in a few seconds."
+msgstr ""
+"Bluetooth wird eingeschaltet - lade die Seite in ein paar Sekunden neu."
+
+msgid "Bluetooth is on, but there is no adapter - is the USB stick plugged in?"
+msgstr "Bluetooth ist an, aber es gibt keinen Adapter - steckt der USB-Stick?"
+
+msgid "on"
+msgstr "an"
+
+msgid "Machine"
+msgstr "Maschine"
+
+msgid ""
+"The machine connection service has not reported yet - is the device's stack "
+"up to date?"
+msgstr ""
+"Der Dienst für die Maschinenverbindung hat sich noch nicht gemeldet - ist "
+"das Gerät auf dem neuesten Stand?"
+
+msgid "connected"
+msgstr "verbunden"
+
+msgid "not connected"
+msgstr "nicht verbunden"
+
+msgid "Messages"
+msgstr "Meldungen"
+
+msgid "none - ready"
+msgstr "keine - bereit"
+
+msgid "blocked"
+msgstr "blockiert"
+
+msgid "Disconnect"
+msgstr "Trennen"
+
+msgid ""
+"No machine connected yet. Switch the machine on, close the JURA app on any "
+"phone (a connected machine can't be found), then search."
+msgstr ""
+"Noch keine Maschine verbunden. Schalte die Maschine ein, schließe die JURA-"
+"App auf allen Handys (eine verbundene Maschine lässt sich nicht finden) und "
+"suche dann."
+
+msgid "Search for machines"
+msgstr "Nach Maschinen suchen"
+
+msgid "Searching - about 15 seconds ..."
+msgstr "Suche läuft - etwa 15 Sekunden ..."
+
+msgid "Counters"
+msgstr "Zähler"
+
+#, python-format
+msgid "Made by the machine so far: %(total)s, of these:"
+msgstr "Bisher von der Maschine gemacht: %(total)s, davon:"
+
+msgid "Maintenance"
+msgstr "Pflege"
+
+#, python-format
+msgid "%(percent)s%% due"
+msgstr "%(percent)s%% fällig"
+
+msgid "Products and coffee sorts"
+msgstr "Produkte und Kaffeesorten"
+
+msgid ""
+"What the machine makes, and the coffee sort each is sold as at the kiosk. A "
+"sort no product of the machine is sold as is obsolete - not offered any more "
+"- unless it is marked \"without the machine\" (Coffee sorts). Free products "
+"are offered at the kiosk without a card and booked nowhere."
+msgstr "Was die Maschine macht, und als welche Kaffeesorte es am Kiosk verkauft wird. Eine Sorte, die kein Produkt der Maschine ist, wird obsolet - nicht mehr angeboten -, außer sie ist als „ohne Maschine“ markiert (Kaffeesorten). Freie Produkte gibt es am Kiosk ohne Karte, gebucht wird nichts."
+
+msgid "Product"
+msgstr "Produkt"
+
+msgid "Free"
+msgstr "Frei"
+
+msgid "Water (ml)"
+msgstr "Wasser (ml)"
+
+msgid "not on the machine"
+msgstr "nicht an der Maschine"
+
+msgid "As a new sort"
+msgstr "Als neue Sorte"
+
+msgid "needed to brew it"
+msgstr "nötig zum Beziehen"
+
+msgid "Supplies"
+msgstr "Füllstände"
+
+msgid ""
+"Predicted, not measured: each product takes its water (as the machine "
+"reports it), a portion of grounds and its beans. The machine's message going "
+"away - the tank put back, the container emptied - fills it up again, and so "
+"does \"Refilled\" here or at the kiosk."
+msgstr "Vorhergesagt, nicht gemessen: Jedes Produkt nimmt sein Wasser (wie die Maschine es meldet), eine Portion Trester und seine Bohnen. Verschwindet die Meldung der Maschine - Tank wieder eingesetzt, Behälter geleert -, ist es wieder voll, ebenso nach „Nachgefüllt“ hier oder am Kiosk."
+
+#, python-format
+msgid "%(left)s%% left"
+msgstr "noch %(left)s%%"
+
+msgid "Tank (ml)"
+msgstr "Tank (ml)"
+
+msgid "Portions"
+msgstr "Portionen"
+
+msgid "Container (g)"
+msgstr "Behälter (g)"
+
+msgid "g per portion"
+msgstr "g pro Portion"
+
+msgid "Refilled"
+msgstr "Nachgefüllt"
+
+msgid "Products made"
+msgstr "Gemachte Produkte"
+
+msgid "Made"
+msgstr "Gemacht"
+
+msgid "Booked"
+msgstr "Gebucht"
+
+msgid "Not made"
+msgstr "Nicht gemacht"
+
+msgid "Products"
+msgstr "Produkte"
+
+#, python-format
+msgid "order #%(id)s"
+msgstr "Bestellung #%(id)s"
+
+msgid "Left for the next one"
+msgstr "Dem Nächsten überlassen"
+
+msgid ""
+"Messages of the machine that came during or right after someone's brew - and "
+"whether they saw to it."
+msgstr "Meldungen der Maschine während oder direkt nach dem Bezug von jemandem - und ob er sich darum gekümmert hat."
+
+#, python-format
+msgid "stepped in: %(name)s"
+msgstr "eingesprungen: %(name)s"
+
+msgid "Connect"
+msgstr "Verbinden"
+
+msgid "Products made per day, last 30 days"
+msgstr "Gemachte Produkte pro Tag, letzte 30 Tage"
+
+msgid ""
+"No machine found. Is it switched on and close enough - and no phone "
+"connected to it?"
+msgstr ""
+"Keine Maschine gefunden. Ist sie eingeschaltet und nah genug - und kein "
+"Handy mit ihr verbunden?"
+
+msgid "The search did not work:"
+msgstr "Die Suche hat nicht geklappt:"
+
+msgid "No answer from the machine connection service."
+msgstr "Keine Antwort vom Dienst für die Maschinenverbindung."
+
+msgid "signal"
+msgstr "Signal"
 
 msgid "Import legacy database"
 msgstr "Alte Datenbank importieren"
@@ -1182,6 +1561,15 @@ msgstr "online"
 
 msgid "offline"
 msgstr "offline"
+
+msgid "ready"
+msgstr "bereit"
+
+msgid "not set up yet"
+msgstr "noch nicht eingerichtet"
+
+msgid "Open"
+msgstr "Öffnen"
 
 msgid "Backup stick"
 msgstr "Backup-Stick"
@@ -1296,6 +1684,11 @@ msgid "%(quantity)s bought since"
 msgstr "%(quantity)s seitdem gekauft"
 
 #, python-format
+msgid ""
+"the machine used %(used)s since - about %(expected)s %(unit)s should be left"
+msgstr "die Maschine hat seitdem %(used)s verbraucht - etwa %(expected)s %(unit)s sollten noch da sein"
+
+#, python-format
 msgid "Counted %(item)s"
 msgstr "%(item)s gezählt"
 
@@ -1401,6 +1794,15 @@ msgstr "Artikel bearbeiten"
 
 msgid "Add item"
 msgstr "Artikel hinzufügen"
+
+msgid "Used by the coffee machine"
+msgstr "Verbrauch der Kaffeemaschine"
+
+msgid ""
+"How much of it one product takes, in the item's unit (e.g. 0.008 for 8 g of "
+"beans counted in kg). With the machine's counters, the stock shows what "
+"should be left since the last stock-take - cups past the tally included."
+msgstr "Wie viel davon ein Produkt verbraucht, in der Einheit des Artikels (z. B. 0,008 für 8 g Bohnen, wenn in kg gezählt wird). Mit den Zählern der Maschine zeigt der Bestand, was seit der letzten Inventur noch da sein sollte - Tassen an der Strichliste vorbei eingeschlossen."
 
 msgid ""
 "What members can book as a purchase. An item that was bought can't be "
@@ -1991,9 +2393,6 @@ msgstr ""
 "Tool und die Wartung. Nach der Installation ist sie aus; hier eingeschaltet, "
 "bleibt sie an, auch über Neustarts hinweg, bis sie wieder ausgeschaltet wird."
 
-msgid "Unknown - the device's storage service is not running."
-msgstr "Unbekannt - der Speicherdienst des Geräts läuft nicht."
-
 msgid ""
 "SSH is on: anyone on the network who knows the password of the Pi's user can "
 "log in to the device. Switch it off once you no longer need it."
@@ -2411,6 +2810,26 @@ msgstr "Setz den Haken, um zu bestätigen, dass der Stick gelöscht werden darf.
 msgid "Please choose a backup file."
 msgstr "Bitte wähle eine Backup-Datei."
 
+msgid "Saved - the machine connection takes it over within a minute."
+msgstr ""
+"Gespeichert - die Maschinenverbindung übernimmt es innerhalb einer Minute."
+
+msgid "That is not a machine that can be connected."
+msgstr "Das ist keine Maschine, die sich verbinden lässt."
+
+msgid "Connecting - this takes up to a minute."
+msgstr "Wird verbunden - das dauert bis zu einer Minute."
+
+msgid "The machine is disconnected."
+msgstr "Die Maschine ist getrennt."
+
+msgid "Created - check its price."
+msgstr "Angelegt - prüfe den Preis."
+
+msgid "The device restarts - the dashboard is back in about two minutes."
+msgstr ""
+"Das Gerät startet neu - das Dashboard ist in etwa zwei Minuten wieder da."
+
 #, python-format
 msgid "%(item)s: enter a number of at least 0."
 msgstr "%(item)s: gib eine Zahl ab 0 ein."
@@ -2493,6 +2912,21 @@ msgstr "Handy verknüpfen"
 #, python-format
 msgid "Expires in %(minutes)s minutes and works once"
 msgstr "Läuft in %(minutes)s Minuten ab und funktioniert einmal"
+
+msgid "Not connected - the machine works as usual, the tally books as before."
+msgstr "Nicht verbunden - die Maschine arbeitet wie gewohnt, die Strichliste bucht wie bisher."
+
+msgid "The machine needs attention before it can make anything."
+msgstr "Die Maschine braucht Aufmerksamkeit, bevor sie etwas machen kann."
+
+msgid "Ready - and something wants doing soon."
+msgstr "Bereit - und bald ist etwas zu tun."
+
+msgid "Ready."
+msgstr "Bereit."
+
+msgid "Beans refilled"
+msgstr "Bohnen nachgefüllt"
 
 msgid ""
 "Only for whoever looks after this coffee machine - you don't need any of "
@@ -2590,6 +3024,9 @@ msgstr ""
 "Bei einer neuen Karte oder einem Namen, der noch nicht passt, fragt der "
 "Kiosk zuerst nach deinem Namen."
 
+msgid "free"
+msgstr "frei"
+
 #, python-format
 msgid "Assigning card to account %(name)s"
 msgstr "Karte wird dem Konto %(name)s zugeordnet"
@@ -2627,9 +3064,57 @@ msgstr ""
 msgid "Thank you, %(name)s!"
 msgstr "Danke, %(name)s!"
 
+msgid "The machine needs you once more - please do this now:"
+msgstr "Die Maschine braucht dich noch einmal - bitte mach das jetzt:"
+
+msgid "Done - thanks, hero!"
+msgstr "Erledigt - danke, Held!"
+
 #, python-format
 msgid "Hi %(name)s!"
 msgstr "Hallo %(name)s!"
+
+msgid "Put your cup under the outlet"
+msgstr "Stell deine Tasse unter den Auslauf"
+
+msgid "Free - nothing is booked."
+msgstr "Frei - es wird nichts gebucht."
+
+#, python-format
+msgid "%(sort)s - booked once the machine has made it."
+msgstr "%(sort)s - gebucht, sobald die Maschine fertig ist."
+
+msgid "The machine needs this first:"
+msgstr "Die Maschine braucht zuerst:"
+
+msgid "Better do this first, before you start:"
+msgstr "Mach das besser zuerst, bevor du startest:"
+
+msgid "The machine is getting ready ..."
+msgstr "Die Maschine bereitet sich vor ..."
+
+#, python-format
+msgid "Your %(sort)s is on its way"
+msgstr "Dein %(sort)s kommt"
+
+msgid "Leave the cup where it is until the machine is done."
+msgstr "Lass die Tasse stehen, bis die Maschine fertig ist."
+
+msgid "Right after, please:"
+msgstr "Gleich danach bitte:"
+
+msgid "Nothing was booked"
+msgstr "Es wurde nichts gebucht"
+
+msgid "Enjoy!"
+msgstr "Lass es dir schmecken!"
+
+#, python-format
+msgid "Cancelled in %(seconds)ss"
+msgstr "Abbruch in %(seconds)ss"
+
+msgid "Start"
+msgstr "Start"
 
 msgid "Top 3 all-time"
 msgstr "Top 3 insgesamt"
@@ -2755,6 +3240,23 @@ msgstr "Gesamt"
 msgid "This month"
 msgstr "Dieser Monat"
 
+msgid "Ran off"
+msgstr "Weggelaufen"
+
+#, python-format
+msgid "ran off %(n)s×"
+msgstr "%(n)s× weggelaufen"
+
+#, python-format
+msgid "hero %(n)s×"
+msgstr "%(n)s× Held"
+
+msgid "Water, grounds, beans: whoever gets the message sees to it"
+msgstr "Wasser, Trester, Bohnen: Wer die Meldung bekommt, kümmert sich"
+
+msgid "Nobody ran off this month!"
+msgstr "Diesen Monat ist niemand weggelaufen!"
+
 msgid "Settle up under “Pay”"
 msgstr "Begleiche deine Schulden unter „Bezahlen“"
 
@@ -2763,6 +3265,21 @@ msgstr "Alle haben bezahlt!"
 
 msgid "cups"
 msgstr "Tassen"
+
+msgid "The machine needs attention first."
+msgstr "Die Maschine braucht zuerst Aufmerksamkeit."
+
+msgid "The machine is busy with another product."
+msgstr "Die Maschine ist mit einem anderen Produkt beschäftigt."
+
+msgid "The connection to the machine was lost."
+msgstr "Die Verbindung zur Maschine ist abgebrochen."
+
+msgid "The machine can't be reached right now."
+msgstr "Die Maschine ist gerade nicht erreichbar."
+
+msgid "The machine didn't make it."
+msgstr "Die Maschine hat es nicht gemacht."
 
 msgid "Enjoy your coffee!"
 msgstr "Lass ihn dir schmecken!"
@@ -2943,9 +3460,6 @@ msgstr "Du schuldest %(owed)s€."
 
 msgid "Recent orders"
 msgstr "Letzte Bestellungen"
-
-msgid "Coffee"
-msgstr "Kaffee"
 
 msgid "Recent payments"
 msgstr "Letzte Zahlungen"

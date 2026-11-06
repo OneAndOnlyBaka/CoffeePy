@@ -1,0 +1,6 @@
+# py-jura: the JURA cipher, UUIDs, command builders and machine definitions (Apache-2.0); the
+# connection itself is drivers/jura_ble.py's (see there for why).
+py-jura==0.2.1
+bleak==3.0.2
+bleak-retry-connector==4.7.1
+paho-mqtt==2.1.0

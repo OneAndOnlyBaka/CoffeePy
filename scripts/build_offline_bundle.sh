@@ -16,7 +16,7 @@
 #                  so apt on the device does the dependency ordering rather than dpkg
 #                  being fed a directory in the hope that the order works out.
 #   docker-compose Docker's own plugin build; Raspberry Pi OS has no package for it.
-#   images.tar     coffeepy-web and nfc-bridge built for the target platform, plus the
+#   images.tar     coffeepy-web and the bridges built for the target platform, plus the
 #                  postgres/mosquitto images - built here because building them on a Pi 3
 #                  means compiling psutil and pyscard on a 1.2GHz board.
 #   repo/          this checkout, filtered the same way install.sh filters it.

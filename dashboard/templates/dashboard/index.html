@@ -1,5 +1,5 @@
 {% extends "dashboard/base.html" %}
-{% load i18n %}
+{% load coffee_tags i18n %}
 {% block title %}{% translate "CoffeePy Dashboard" %}{% endblock %}
 {% block dashboard_content %}
 <h1>{% blocktranslate with name=user.get_username %}Hello {{ name }}!{% endblocktranslate %}</h1>
@@ -34,6 +34,18 @@
             </div>
             {% if reader_status.is_online %}<span class="badge ok-badge">● {% translate "online" %}</span>{% else %}<span class="badge off">● {% translate "offline" %}</span>{% endif %}
         </div>
+        {% if machine %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "Coffee machine" %}</span>
+                <span class="list-row-meta">{% if machine.connected %}{% for key in machine.alerts %}{{ key|alert_label }}{% if not forloop.last %} · {% endif %}{% empty %}{% translate "ready" %}{% endfor %}{% elif machine.machine.address %}{{ machine.machine.name|default:machine.machine.address }}{% else %}{% translate "not set up yet" %}{% endif %}</span>
+            </div>
+            {% if machine.connected and machine.blocking %}<span class="badge off">● {% translate "blocked" %}</span>
+            {% elif machine.connected %}<span class="badge ok-badge">● {% translate "connected" %}</span>
+            {% else %}<span class="badge off">● {% translate "not connected" %}</span>{% endif %}
+            {% if user.is_superuser %}<a href="{% url 'dashboard:device' %}" class="btn secondary btn-sm">{% translate "Open" %}</a>{% endif %}
+        </div>
+        {% endif %}
         <div class="list-row">
             <div class="list-row-text">
                 <span class="list-row-title">{% translate "Backup stick" %}</span>

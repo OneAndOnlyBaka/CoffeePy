@@ -19,10 +19,15 @@ updates:
     schedule: {interval: weekly}
     groups:
       nfc-bridge: {patterns: ["*"]}
+  - package-ecosystem: pip
+    directory: /coffee-machine
+    schedule: {interval: weekly}
+    groups:
+      machine-bridge: {patterns: ["*"]}
 
-  # The python base image of the app, the test image and the bridge.
+  # The python base image of the app, the test image and the bridges.
   - package-ecosystem: docker
-    directories: ["/", "/nfc-cardreader"]
+    directories: ["/", "/nfc-cardreader", "/coffee-machine"]
     schedule: {interval: weekly}
     ignore:
       # A Python minor version is a decision (Django has to support it), not a weekly update.

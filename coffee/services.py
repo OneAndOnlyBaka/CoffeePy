@@ -18,6 +18,8 @@ from .models import (
     AuditLogEntry,
     CoffeeSort,
     InventoryItem,
+    MachineCounter,
+    MachineProduct,
     Member,
     Order,
     Payment,
@@ -432,6 +434,49 @@ def record_stock_count(item: InventoryItem, quantity: Decimal, counted_by: str) 
     return StockCount.objects.create(item=item, quantity=quantity, counted_by=counted_by)
 
 
+# --- the coffee machine's counters ------------------------------------------------------------
+
+# A reading this close to a moment counts as taken at it: the bridge reads every 15 minutes.
+COUNTER_SLACK = timedelta(hours=1)
+
+
+def _counters_at(moment):
+    """The machine's counter reading at `moment` - the last one taken before it, or None."""
+    return MachineCounter.objects.filter(taken_at__lte=moment).order_by("-taken_at").first()
+
+
+def machine_counted(start, end=None) -> dict | None:
+    """{code: products made} between two moments, from the machine's own counters - also what went
+    past the tally. None when the readings don't cover the stretch (no machine, or none before it)."""
+    end = end or timezone.now()
+    first = _counters_at(start + COUNTER_SLACK)
+    last = _counters_at(end)
+    if first is None or last is None or first.taken_at > start + COUNTER_SLACK:
+        return None
+    return {code: max(0, n - first.products.get(code, 0)) for code, n in last.products.items()}
+
+
+def machine_cups(start, end=None) -> int | None:
+    """Cups (strokes) the machine made in a stretch: each product counted times its strokes."""
+    counted = machine_counted(start, end)
+    if counted is None:
+        return None
+    strokes = dict(MachineProduct.objects.values_list("code", "strokes"))
+    return sum(n * strokes.get(int(code), 1) for code, n in counted.items())
+
+
+def machine_used(item: InventoryItem, start, end=None) -> Decimal | None:
+    """What the machine used of an item in a stretch, from its counters and the item's consumption
+    per product - None without consumption set up or without counters covering the stretch."""
+    per_product = {str(c.product.code): c.amount for c in item.consumption.select_related("product")}
+    if not per_product:
+        return None
+    counted = machine_counted(start, end)
+    if counted is None:
+        return None
+    return sum((Decimal(counted.get(code, 0)) * amount for code, amount in per_product.items()), Decimal("0"))
+
+
 def stock_levels(items=None) -> list[dict]:
     """Per item: the newest count, what was bought since, and so what should be on the shelf.
     Without a count the stock is everything ever bought. Two queries per item - the list is
@@ -445,11 +490,16 @@ def stock_levels(items=None) -> list[dict]:
             bought = bought.filter(created_at__gt=count.created_at)
         # Rounded back: SQLite sums decimals as floats.
         bought_since = Decimal(bought.aggregate(total=Sum("quantity"))["total"] or 0).quantize(Decimal("0.001"))
+        stock = (count.quantity if count else Decimal("0")) + bought_since
+        # With the coffee machine's counters: what it used since the count, and so what should be left.
+        used = machine_used(item, count.created_at) if count is not None else None
         levels.append({
             "item": item,
             "count": count,
             "bought_since": bought_since,
-            "stock": (count.quantity if count else Decimal("0")) + bought_since,
+            "stock": stock,
+            "machine_used": used,
+            "expected": max(Decimal("0"), stock - used) if used is not None else None,
         })
     return levels
 
@@ -483,6 +533,15 @@ COST_MIN_CUPS = 100
 
 
 def _cups(start, end=None) -> int:
+    """Cups in a stretch: the coffee machine's own count where its readings cover it - that has the
+    cups past the tally too, which used beans and milk all the same - else the orders' strokes."""
+    made = machine_cups(start, end)
+    if made:
+        return made
+    return _booked_cups(start, end)
+
+
+def _booked_cups(start, end=None) -> int:
     orders = Order.objects.filter(created_at__gte=start)
     if end is not None:
         orders = orders.filter(created_at__lte=end)
@@ -541,6 +600,8 @@ def cost_per_cup(months: int = 12) -> dict:
                        .values("month").distinct().count())
     cups = _cups(start)
     return {
+        "cups_from_machine": machine_cups(start) is not None,
+        "booked_cups": _booked_cups(start),
         "months": months,
         "start": start,
         "end": now,

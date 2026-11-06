@@ -3,12 +3,20 @@ from decimal import Decimal
 from django import template
 from django.utils.formats import number_format
 
+from coffee import machine
 from coffee.models import payment_method_label
 
 register = template.Library()
 
 # {{ payment.method_name|method_label }}: what a payment method is called on screen.
 register.filter("method_label", payment_method_label)
+register.filter("alert_label", machine.alert_label)
+register.filter("product_label", machine.product_label)
+
+
+@register.filter
+def maintenance_label(key):
+    return str(machine.MAINTENANCE_LABELS.get(key, key))
 
 
 @register.filter

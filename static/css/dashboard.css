@@ -351,3 +351,7 @@ form:has(#id_provider option[value="paypal_me"]:checked) [data-providers]:not([d
 form:has(#id_provider option[value="paypal_pool"]:checked) [data-providers]:not([data-providers~="paypal_pool"]),
 form:has(#id_provider option[value="girocode"]:checked) [data-providers]:not([data-providers~="girocode"]),
 form:has(#id_provider option[value="custom"]:checked) [data-providers]:not([data-providers~="custom"]) { display: none; }
+
+/* The coffee machine page (device.html): small number fields in a table or a row. */
+.input-sm { width: 6.5em; min-width: 0; }
+.field-inline { display: inline-flex; align-items: center; gap: 6px; margin: 4px 12px 4px 0; }

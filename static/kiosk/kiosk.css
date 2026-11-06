@@ -517,3 +517,44 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 @keyframes device-alarm { 50% { opacity: 0.35; } }
 /* Not a fault but a task for the admin (departed members to review): amber, and steady. */
 .device-alarm.admin-task { background: var(--accent); animation: none; }
+.msg.warning { background: #fbefdc; color: #8a5a12; }
+
+/* --- the coffee machine (views._checkout, panel.html "brew") ------------------------------------ */
+/* The wait screen's cup (scripts/make_wait_gifs.py): still while the cup goes under the outlet,
+   the filling GIF while the machine pours. The panel stays byte-identical while the machine works,
+   so the GIF is never restarted by a poll - only by the one change from heating to pouring. */
+.brew-body { flex-direction: row; align-items: center; justify-content: center; gap: 40px; }
+.brew-text { flex: 0 1 520px; }
+.brew-text h2 { margin: 0 0 10px; font-size: 2rem; color: var(--coffee); }
+.brew-text p { font-size: 1.25rem; margin: 6px 0; }
+.brew-tasks { margin: 6px 0 0; padding-left: 26px; font-size: 1.3rem; font-weight: 600; }
+/* A plain image and nothing else: no position, no opacity, no animation. Each of those gives the
+   element a layer of its own, and tearing such layers down is where Chromium's renderer crashes
+   (CLAUDE.md) - the first cup, drawn in CSS with an animated stream, crashed it about four times a
+   round on the Pi (2026-11-06). The stage is "stage-<name>", not "brew-<name>": "brew-cup" is the
+   cup itself, and the card that once carried it too shrank to the cup's size. */
+.brew-cup { flex: 0 0 auto; width: 220px; height: 220px; }
+
+/* No card needed: the machine's free products on the waiting screen. */
+.free-products { display: flex; justify-content: center; gap: 14px; margin-top: 16px; }
+.free-products button { min-height: 60px; font-size: 1.15rem; padding: 8px 22px; }
+
+/* The machine's ring next to the language button (coffee.machine.kiosk_level). */
+.machine-btn { position: static; background: var(--cream); color: var(--coffee); box-sizing: border-box; border: 5px solid var(--coffee-light); }
+.machine-btn .icon { width: 28px; height: 28px; }
+.machine-btn.machine-ok { border-color: var(--success); }
+.machine-btn.machine-warn { border-color: var(--accent); }
+.machine-btn.machine-blocked { border-color: var(--danger); animation: device-alarm 1.2s ease-in-out infinite; }
+.machine-btn.machine-off { border-color: #9a9a9a; color: #9a9a9a; }
+.machine-card { text-align: left; }
+.machine-card h1 { margin-top: 0; }
+.machine-card h2 { font-size: 1.1rem; margin: 18px 0 8px; color: var(--coffee); text-transform: uppercase; letter-spacing: 0.04em; }
+.machine-state { font-size: 1.25rem; font-weight: 600; }
+.machine-state.machine-blocked { color: var(--danger); }
+.machine-messages { font-size: 1.2rem; margin: 6px 0; }
+.machine-bar { display: grid; grid-template-columns: 11em 1fr 7em; align-items: center; gap: 12px; margin: 8px 0; font-size: 1.1rem; }
+.machine-bar .bar-track { height: 16px; border-radius: 8px; background: var(--cream-dark); overflow: hidden; }
+.machine-bar .bar-fill { display: block; height: 100%; background: var(--success); }
+.machine-bar .bar-fill.warn { background: var(--accent); }
+.machine-card .action-row { margin-top: 16px; }
+.ticker-hero { color: #9be3a6; font-weight: 700; }

@@ -1,0 +1,328 @@
+{% extends "dashboard/base.html" %}
+{% load static i18n l10n coffee_tags %}
+{% block title %}{% translate "Coffee machine" %} - CoffeePy{% endblock %}
+{% block dashboard_head %}<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>{% endblock %}
+{% block dashboard_content %}
+<h1>{% translate "Coffee machine" %}</h1>
+
+<div class="card">
+    <h2>{% translate "Connection" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}
+        Optional: connected, the kiosk guides through the brew and books it once the machine has made it, and the
+        machine's counters and messages show here. Without a machine everything works from the tally alone.
+    {% endblocktranslate %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="settings">
+        {% include "dashboard/_field.html" with field=form.driver %}
+        {% include "dashboard/_field.html" with field=form.adapter %}
+        {% include "dashboard/_field.html" with field=form.block_manual %}
+        <button type="submit" class="btn">{% translate "Save" %}</button>
+    </form>
+</div>
+
+{% if settings.enabled %}
+<div class="card">
+    <h2>{% translate "Bluetooth" %}</h2>
+    {% if bluetooth is None %}
+    <p class="muted">{% translate "Unknown - the device's storage service is not running." %}</p>
+    {% elif bluetooth.restart_needed %}
+    <p class="msg warning">{% translate "The Raspberry Pi's own Bluetooth only comes up after a restart." %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="reboot">
+        <button type="submit" class="btn">{% translate "Restart the device" %}</button>
+    </form>
+    {% elif not bluetooth.active %}
+    <p class="muted">{% translate "Bluetooth is being switched on - reload in a few seconds." %}</p>
+    {% elif not bluetooth.adapters %}
+    <p class="msg warning">{% translate "Bluetooth is on, but there is no adapter - is the USB stick plugged in?" %}</p>
+    {% else %}
+    <p><span class="badge ok-badge">● {% translate "on" %}</span> {{ bluetooth.adapters|join:", " }}</p>
+    {% endif %}
+    {% if bluetooth.error %}<p class="msg error">{{ bluetooth.error }}</p>{% endif %}
+</div>
+
+<div class="card">
+    <h2>{% translate "Machine" %}</h2>
+    {% if status.bridge == "" %}
+    <p class="msg warning">{% translate "The machine connection service has not reported yet - is the device's stack up to date?" %}</p>
+    {% endif %}
+    {% if settings.address %}
+    <div class="list">
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ machine_name }}</span>
+                <span class="list-row-meta">{{ settings.address }}{% if firmware %} · {{ firmware }}{% endif %}</span>
+            </div>
+            {% if status.connected %}<span class="badge ok-badge">● {% translate "connected" %}</span>
+            {% else %}<span class="badge off">● {% translate "not connected" %}</span>{% endif %}
+        </div>
+        {% if status.connected %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{% translate "Messages" %}</span>
+                <span class="list-row-meta">{% for key in status.alerts %}{{ key|alert_label }}{% if not forloop.last %} · {% endif %}{% empty %}{% translate "none - ready" %}{% endfor %}</span>
+            </div>
+            {% if status.blocking %}<span class="badge off">● {% translate "blocked" %}</span>{% endif %}
+        </div>
+        {% endif %}
+        {% if not status.connected and machine_error %}
+        <div class="list-row"><div class="list-row-text"><span class="list-row-meta">{{ machine_error }}</span></div></div>
+        {% endif %}
+    </div>
+    <form method="post" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="forget">
+        <button type="submit" class="secondary">{% translate "Disconnect" %}</button>
+    </form>
+    {% else %}
+    <p class="muted">{% blocktranslate trimmed %}
+        No machine connected yet. Switch the machine on, close the JURA app on any phone (a connected machine can't
+        be found), then search.
+    {% endblocktranslate %}</p>
+    <button type="button" class="btn" id="machine-search">{% translate "Search for machines" %}</button>
+    <p class="muted" id="machine-searching" hidden>{% translate "Searching - about 15 seconds ..." %}</p>
+    <p class="msg error" id="machine-search-error" hidden></p>
+    <div class="list" id="machine-found"></div>
+    {% endif %}
+</div>
+
+{% if counter_rows %}
+<div class="card">
+    <h2>{% translate "Counters" %}</h2>
+    <p class="muted">{% blocktranslate trimmed with total=status.counters.total %}
+        Made by the machine so far: {{ total }}, of these:
+    {% endblocktranslate %}</p>
+    <div class="list">
+        {% for row in counter_rows %}
+        <div class="list-row">
+            <div class="list-row-text"><span class="list-row-title">{{ row.name }}</span></div>
+            <span class="list-row-value">{{ row.count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% if maintenance.counters %}
+    <h3>{% translate "Maintenance" %}</h3>
+    <div class="list">
+        {% for key, count in maintenance.counters.items %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ key|maintenance_label }}</span>
+                {% for pkey, percent in maintenance.percent.items %}{% if pkey == key %}
+                <span class="list-row-meta">{% blocktranslate trimmed %}{{ percent }}% due{% endblocktranslate %}</span>
+                {% endif %}{% endfor %}
+            </div>
+            <span class="list-row-value">{{ count }}×</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if products %}
+<div class="card">
+    <h2>{% translate "Products and coffee sorts" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}
+        What the machine makes, and the coffee sort each is sold as at the kiosk. A sort no product of the machine
+        is sold as is obsolete - not offered any more - unless it is marked "without the machine" (Coffee sorts).
+        Free products are offered at the kiosk without a card and booked nowhere.
+    {% endblocktranslate %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="products">
+        <div class="table-wrap">
+        <table class="table">
+            <thead><tr><th>{% translate "Product" %}</th><th>{% translate "Coffee sort" %}</th><th>{% translate "Free" %}</th>
+                <th>{% translate "Cups" %}</th><th>{% translate "Water (ml)" %}</th></tr></thead>
+            <tbody>
+            {% for product in products %}
+            <tr{% if not product.present %} class="muted"{% endif %}>
+                <td>{{ product.name|product_label }}{% if not product.present %} <span class="badge off">{% translate "not on the machine" %}</span>{% endif %}
+                    <input type="hidden" name="p{{ product.code|unlocalize }}-present" value="1"></td>
+                <td><select name="p{{ product.code|unlocalize }}-sort">
+                        <option value="">-</option>
+                        {% for sort in sorts %}<option value="{{ sort.pk|unlocalize }}"{% if product.coffee_sort_id == sort.pk %} selected{% endif %}>{{ sort.name }}</option>{% endfor %}
+                    </select>
+                    {% if not product.coffee_sort and not product.free and product.present %}
+                    <button type="submit" form="adopt-{{ product.code|unlocalize }}" class="secondary btn-sm">{% translate "As a new sort" %}</button>
+                    {% endif %}</td>
+                <td><input type="checkbox" name="p{{ product.code|unlocalize }}-free"{% if product.free %} checked{% endif %}></td>
+                <td><input type="number" name="p{{ product.code|unlocalize }}-strokes" value="{{ product.strokes|unlocalize }}" min="1" max="9" class="input-sm"></td>
+                <td>{% if product.brewable %}{{ product.water_ml|default:"-" }}{% else %}<input type="number" name="p{{ product.code|unlocalize }}-water" value="{{ product.water_ml|default_if_none:''|unlocalize }}" min="5" max="500" class="input-sm" placeholder="{% translate 'needed to brew it' %}">{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <button type="submit" class="btn">{% translate "Save" %}</button>
+    </form>
+    {% for product in products %}{% if not product.coffee_sort and not product.free and product.present %}
+    <form method="post" id="adopt-{{ product.code|unlocalize }}" hidden>{% csrf_token %}<input type="hidden" name="form" value="adopt"><input type="hidden" name="code" value="{{ product.code|unlocalize }}"></form>
+    {% endif %}{% endfor %}
+</div>
+{% endif %}
+
+{% if supplies %}
+<div class="card">
+    <h2>{% translate "Supplies" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}
+        Predicted, not measured: each product takes its water (as the machine reports it), a portion of grounds and its
+        beans. The machine's message going away - the tank put back, the container emptied - fills it up again, and so
+        does "Refilled" here or at the kiosk.
+    {% endblocktranslate %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="supplies">
+        <div class="list">
+            {% for supply in supplies %}
+            <div class="list-row">
+                <div class="list-row-text">
+                    <span class="list-row-title">{{ supply.get_kind_display }}</span>
+                    <span class="list-row-meta">{% blocktranslate trimmed with left=supply.left_percent %}{{ left }}% left{% endblocktranslate %}</span>
+                </div>
+                <label class="field-inline">{% if supply.kind == "water" %}{% translate "Tank (ml)" %}{% elif supply.kind == "grounds" %}{% translate "Portions" %}{% else %}{% translate "Container (g)" %}{% endif %}
+                    <input type="number" name="{{ supply.kind }}-capacity" value="{{ supply.capacity|unlocalize }}" min="1" class="input-sm"></label>
+                {% if supply.kind == "beans" %}<label class="field-inline">{% translate "g per portion" %}
+                    <input type="number" name="beans-per_portion" value="{{ supply.per_portion|floatformat:0|unlocalize }}" min="0" max="100" class="input-sm"></label>{% endif %}
+                <button type="submit" form="refill-{{ supply.kind }}" class="secondary btn-sm">{% translate "Refilled" %}</button>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn">{% translate "Save" %}</button>
+    </form>
+    {% for supply in supplies %}
+    <form method="post" id="refill-{{ supply.kind }}" hidden>{% csrf_token %}<input type="hidden" name="form" value="refill"><input type="hidden" name="kind" value="{{ supply.kind }}"></form>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if totals.done or totals.failed %}
+<div class="card">
+    <h2>{% translate "Products made" %}</h2>
+    <div class="stats-row">
+        <div class="stat"><span class="label">{% translate "Made" %}</span><span class="value">{{ totals.done }}</span></div>
+        <div class="stat"><span class="label">{% translate "Booked" %}</span><span class="value">{{ totals.booked }}</span></div>
+        <div class="stat"><span class="label">{% translate "Free" %}</span><span class="value">{{ totals.free }}</span></div>
+        <div class="stat"><span class="label">{% translate "At the machine" %}</span><span class="value">{{ totals.manual }}</span></div>
+        <div class="stat"><span class="label">{% translate "Not made" %}</span><span class="value">{{ totals.failed }}</span></div>
+    </div>
+    <canvas id="machine-days"></canvas>
+</div>
+
+<div class="card">
+    <h2>{% translate "Products" %}</h2>
+    <div class="list">
+        {% for dispense in dispenses %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ dispense.product_name|product_label }}{% if dispense.member %} · {{ dispense.member.display_name }}{% endif %}</span>
+                <span class="list-row-meta">{{ dispense.created_at|date:"d.m.Y H:i" }} · {{ dispense.get_source_display }}{% if dispense.water_ml %} · {{ dispense.water_ml }} ml{% endif %}{% if dispense.order_id %} · {% blocktranslate with id=dispense.order_id %}order #{{ id }}{% endblocktranslate %}{% endif %}{% if dispense.reason %} · {{ dispense.reason }}{% endif %}</span>
+            </div>
+            {% if dispense.state == "done" %}<span class="badge ok-badge">● {{ dispense.get_state_display }}</span>
+            {% else %}<span class="badge off">● {{ dispense.get_state_display }}</span>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% if dispenses.has_other_pages %}
+    <div class="action-row">
+        {% if dispenses.has_previous %}<a class="btn secondary btn-sm" href="?page={{ dispenses.previous_page_number|unlocalize }}">‹</a>{% endif %}
+        <span class="muted">{{ dispenses.number }} / {{ dispenses.paginator.num_pages }}</span>
+        {% if dispenses.has_next %}<a class="btn secondary btn-sm" href="?page={{ dispenses.next_page_number|unlocalize }}">›</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if incidents %}
+<div class="card">
+    <h2>{% translate "Left for the next one" %}</h2>
+    <p class="muted">{% translate "Messages of the machine that came during or right after someone's brew - and whether they saw to it." %}</p>
+    <div class="list">
+        {% for incident in incidents %}
+        <div class="list-row">
+            <div class="list-row-text">
+                <span class="list-row-title">{{ incident.alert|alert_label }} · {{ incident.member.display_name|default:"-" }}</span>
+                <span class="list-row-meta">{{ incident.raised_at|date:"d.m.Y H:i" }}{% if incident.hero %} · {% blocktranslate with name=incident.hero.display_name %}stepped in: {{ name }}{% endblocktranslate %}{% endif %}</span>
+            </div>
+            {% if incident.outcome == "fixed" %}<span class="badge ok-badge">● {{ incident.get_outcome_display }}</span>
+            {% else %}<span class="badge off">● {{ incident.get_outcome_display }}</span>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<template id="machine-row">
+    <form method="post" class="list-row">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="connect">
+        <input type="hidden" name="address">
+        <input type="hidden" name="name">
+        <div class="list-row-text">
+            <span class="list-row-title"></span>
+            <span class="list-row-meta"></span>
+        </div>
+        <button type="submit" class="btn btn-sm">{% translate "Connect" %}</button>
+    </form>
+</template>
+<script>
+(function () {
+    // JSON, not localized numbers (statistics.html does the same).
+    const data = {{ chart|safe }};
+    const canvas = document.getElementById("machine-days");
+    const colors = {app: "#6b3b00", free: "#c98a3d", ha: "#a9744f", manual: "#b3261e"};
+    if (canvas && window.Chart && data.labels.length) {
+        new Chart(canvas, {type: "bar", data: {labels: data.labels, datasets: Object.entries(data.series).map(
+            ([source, values]) => ({label: data.names[source], data: values, backgroundColor: colors[source]}))},
+            options: {responsive: true, scales: {x: {stacked: true}, y: {stacked: true, ticks: {precision: 0}}},
+                      plugins: {title: {display: true, text: "{% translate 'Products made per day, last 30 days' as x %}{{ x|escapejs }}"}}}});
+    }
+})();
+(function () {
+    const button = document.getElementById("machine-search");
+    if (!button) return;
+    const searching = document.getElementById("machine-searching");
+    const error = document.getElementById("machine-search-error");
+    const found = document.getElementById("machine-found");
+    const texts = {
+        none: "{% translate 'No machine found. Is it switched on and close enough - and no phone connected to it?' as x %}{{ x|escapejs }}",
+        failed: "{% translate 'The search did not work:' as x %}{{ x|escapejs }}",
+        timeout: "{% translate 'No answer from the machine connection service.' as x %}{{ x|escapejs }}",
+        signal: "{% translate 'signal' as x %}{{ x|escapejs }}",
+    };
+    const csrf = document.querySelector("input[name=csrfmiddlewaretoken]").value;
+    button.addEventListener("click", async () => {
+        button.disabled = true; searching.hidden = false; error.hidden = true; found.replaceChildren();
+        let id;
+        try {
+            const res = await fetch("{% url 'dashboard:device_scan' %}", {method: "POST", headers: {"X-CSRFToken": csrf}});
+            id = (await res.json()).id;
+        } catch (e) { id = null; }
+        const done = (message) => { button.disabled = false; searching.hidden = true; if (message) { error.textContent = message; error.hidden = false; } };
+        if (!id) { done(texts.timeout); return; }
+        const poll = async () => {
+            let data;
+            try { data = await (await fetch("{% url 'dashboard:device_scan_status' %}?id=" + id)).json(); }
+            catch (e) { setTimeout(poll, 1500); return; }
+            if (!data.done) { setTimeout(poll, 1500); return; }
+            if (data.error === "timeout" || data.error === "unreachable") { done(texts.timeout); return; }
+            if (data.error) { done(texts.failed + " " + data.error); return; }
+            if (!data.devices.length) { done(texts.none); return; }
+            for (const d of data.devices) {
+                const row = document.getElementById("machine-row").content.cloneNode(true);
+                row.querySelector("[name=address]").value = d.address;
+                row.querySelector("[name=name]").value = d.model ? "JURA " + d.model : d.name;
+                row.querySelector(".list-row-title").textContent = d.model ? "JURA " + d.model : (d.name || d.address);
+                row.querySelector(".list-row-meta").textContent = d.address + (d.rssi != null ? " · " + texts.signal + " " + d.rssi + " dBm" : "");
+                found.appendChild(row);
+            }
+            done(null);
+        };
+        setTimeout(poll, 3000);
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

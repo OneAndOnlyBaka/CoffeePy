@@ -74,12 +74,12 @@ jobs:
         with:
           python-version: "3.14"
 
-      # One requirements file at a time: the bridge pins paho-mqtt 1.x, the app wants 2.x.
+      # One requirements file at a time: each bridge pins its own versions.
       - name: Python dependencies (pip-audit)
         run: |
           pip install --quiet pip-audit
           status=0
-          for requirements in requirements.txt nfc-cardreader/requirements.txt; do
+          for requirements in requirements.txt nfc-cardreader/requirements.txt coffee-machine/requirements.txt; do
             echo "== $requirements"
             pip-audit -r "$requirements" --format json --output audit.json --progress-spinner off || true
             scripts/audit_python.py audit.json || status=1

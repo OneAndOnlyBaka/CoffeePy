@@ -26,6 +26,7 @@ DASHBOARD_NAV = (
         ("users", _("Dashboard users"), "user-shield", ("user_",)),
         ("password_policy", _("Login & passwords"), "key", ()),
         ("system_dashboard", _("System"), "server", ()),
+        ("device", _("Coffee machine"), "machine", ("device_",)),
         ("backup", _("Backup"), "database", ("backup_",)),
         ("update", _("Update"), "upload", ("update_",)),
         ("import_legacy_db", _("Import legacy DB"), "download", ("import_",)),
