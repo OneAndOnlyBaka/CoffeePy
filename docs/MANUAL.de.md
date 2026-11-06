@@ -755,6 +755,81 @@ Ein Artikel, der schon gekauft wurde, lässt sich nicht löschen; nimm stattdess
 
 ![Inventar – Artikel](pictures/manual/de/dashboard-inventory-items.png)
 
+#### So rechnet das Inventar
+
+**Der Bestand** ist, was laut Buchungen im Regal sein sollte: die letzte Inventur eines Artikels
+plus alles, was seitdem gekauft wurde. Pro Tasse zieht CoffeePy nichts ab – es weiß ja nicht, wie
+viel Bohnen eine Tasse braucht oder wer Milch nimmt. Ohne Inventur ist der Bestand alles, was je
+gekauft wurde. Eine **Inventur** hält fest, was wirklich da ist, und ist ab dann der neue
+Ausgangspunkt; eine Zahl, die sich vertippt hat, korrigiert die nächste Inventur. Was verbraucht
+wurde, ergibt sich aus zwei Inventuren:
+
+```
+verbraucht = erste Inventur + dazwischen gekauft − zweite Inventur
+```
+
+Am genauesten wird es, wenn regelmäßig alles auf einmal gezählt wird, etwa am Monatsanfang.
+
+**Was eine Tasse kostet**, rechnet der Reiter **Kosten** für jeden Artikel einzeln aus und zählt die
+Beträge dann zusammen:
+
+1. **Die Kosten des Artikels.** Gab es im gewählten Zeitraum mindestens zwei Inventuren, zählt der
+   Verbrauch zwischen der ersten und der letzten, bewertet mit dem Durchschnittspreis pro Einheit
+   aus den Einkäufen des Zeitraums (gab es keine, aus allen Einkäufen des Artikels). Ein
+   Großeinkauf, der noch im Schrank liegt, macht die Tasse so nicht teurer. Ohne zwei Inventuren
+   zählt einfach, was im Zeitraum für den Artikel ausgegeben wurde.
+2. **Geteilt durch die Tassen derselben Zeit** – zwischen den beiden Inventuren bzw. im ganzen
+   Zeitraum. Gezählt werden Bezüge: Eine Kanne zählt zwei Tassen.
+3. **Die Kosten pro Tasse** sind die Summe dieser Beträge über alle Artikel.
+
+**Milch, Kekse und alles andere werden gleichmäßig auf jede Tasse umgelegt**, ganz gleich, wer
+Milch nimmt oder einen Keks isst: Auch auf einen Espresso entfallen ein paar Cent Milch und Kekse.
+CoffeePy kennt nur Tassen, keine Rezepte. Was gebucht wird, bezahlen also alle über den
+Kaffeepreis. Soll etwas nicht in den Kaffeepreis eingehen – etwa Kekse, die jemand privat
+mitbringt –, wird es nicht als Einkauf gebucht.
+
+**Der Preisvorschlag** für eine Sorte ist dann
+
+```
+Hübe der Sorte × Kosten pro Tasse × (1 + Preisanpassung), auf 5 Cent aufgerundet
+```
+
+Ein Beispiel über 12 Monate mit 2.000 Tassen und einer Preisanpassung von +10 %:
+
+| Artikel | Rechnung | Pro Tasse |
+|---|---|---|
+| Kaffeebohnen | im Zeitraum 12 kg für 186,00 € gekauft, also 15,50 €/kg. Inventur im Mai 1,5 kg, im Oktober 0,8 kg, dazwischen 5 kg gekauft: 5,7 kg verbraucht = 88,35 €, in dieser Zeit 800 Tassen | 11,0 ct |
+| Milch | nie gezählt: 172,00 € gekauft, 2.000 Tassen | 8,6 ct |
+| Kekse | nie gezählt: 60,00 € gekauft, 2.000 Tassen | 3,0 ct |
+| **Kosten pro Tasse** | | **22,6 ct** |
+
+Ein Espresso (1 Hub): 22,6 ct × 1,10 = 24,9 ct, aufgerundet **0,25 €**. Eine Kanne (2 Hübe):
+49,8 ct, aufgerundet **0,50 €**. Die Preisanpassung deckt, was kein Einkauf zeigt – Reinigungsmittel,
+Verschleiß und Schulden, die nie bezahlt werden. Wie viel das bei euch ist, zeigt **Abgeschrieben**
+oben auf derselben Seite; in den Vorschlag selbst geht es nicht ein.
+
+Einnahmen und Ausgaben müssen dafür nicht im selben Zeitraum liegen: Der Vorschlag fragt nur, was
+eine Tasse gekostet hat. Ob die Kasse sich insgesamt trägt, zeigt *Einnahmen - Einkäufe* daneben.
+
+**Weitere Rechenbeispiele**
+
+- **Bestand:** Am 1. werden 2 kg Bohnen gezählt, danach 3 kg gekauft – der Bestand zeigt 5 kg. Die
+  nächste Inventur findet 1,2 kg: Ab jetzt ist der Bestand 1,2 kg, und verbraucht wurden
+  2 + 3 − 1,2 = 3,8 kg.
+- **Gutschrift:** Anna steht bei −10,00 € und kauft 6 l Milch für 7,14 €. Sie bucht den Einkauf
+  und steht bei −2,86 €, ganz ohne Bargeld. Bezahlt jemand dieselbe Milch aus der Kaffeekasse
+  (*Bezahlt von: Der Kaffeekasse*), ändert sich kein Kontostand; die Milch zählt trotzdem für
+  Bestand, Ausgaben und Kosten.
+- **Großeinkauf:** Im Beispiel oben kauft jemand in der letzten Woche noch 10 kg Bohnen im Angebot
+  für 140,00 €, nach der letzten Inventur – sie liegen also noch im Schrank. Mit den beiden
+  Inventuren ändert sich wenig: Nur der Durchschnittspreis sinkt auf 326,00 € ÷ 22 kg = 14,82 €/kg,
+  die Bohnen kosten 10,6 statt 11,0 ct pro Tasse. Ohne Inventuren zählte der ganze Einkauf:
+  (186,00 € + 140,00 €) ÷ 2.000 Tassen = 16,3 ct pro Tasse, obwohl die Bohnen noch nicht getrunken
+  sind.
+- **Wenn jemand mitzahlt:** Übernimmt die Firma die Hälfte, ist die Preisanpassung −50 %:
+  22,6 ct × 0,5 = 11,3 ct, für einen Espresso aufgerundet **0,15 €**, für eine Kanne 22,6 ct,
+  aufgerundet **0,25 €**.
+
 ### Mein Konto
 
 Dein Name oben rechts: deine Rolle, deine letzte Anmeldung und **Passwort ändern**. Dein

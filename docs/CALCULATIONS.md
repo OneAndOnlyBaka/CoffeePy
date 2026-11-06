@@ -168,7 +168,8 @@ reckoned over its own stretch:
 ```
 with two stock-takes in the period:
   used     = first count + bought between the counts − last count     (never below 0)
-  cost     = used × (sum of prices ÷ sum of quantities bought in the period)
+  cost     = used × (sum of prices ÷ sum of quantities bought in the period - or, with none
+                     bought in the period, of all the item's purchases)
   stretch  = first count → last count
 otherwise:
   cost     = sum of the item's purchase prices in the period
@@ -179,7 +180,10 @@ cost per cup    = sum over all items
 ```
 
 Stock-takes value what was used - a large purchase at the end of the period that is still on the
-shelf doesn't make the cups dearer. Without them, purchases stand in for use.
+shelf doesn't make the cups dearer. Without them, purchases stand in for use. Every item - milk and
+cookies too - is spread evenly over every stroke: CoffeePy knows cups, not recipes, so an espresso
+carries its share of the milk. The manuals ("How the inventory reckons") work an example through;
+`coffee/tests/test_inventory.py` `ManualExampleTestCase` checks its numbers.
 
 | Figure | Calculation |
 |---|---|

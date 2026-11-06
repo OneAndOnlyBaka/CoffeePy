@@ -517,7 +517,7 @@ def cost_per_cup(months: int = 12) -> dict:
             between = item.purchases.filter(created_at__gt=first.created_at, created_at__lte=last.created_at)
             added = Decimal(between.aggregate(total=Sum("quantity"))["total"] or 0).quantize(Decimal("0.001"))
             used = max(Decimal("0"), first.quantity + added - last.quantity)
-            if not totals["quantity"]:  # nothing bought in the period: the newest price there is
+            if not totals["quantity"]:  # nothing bought in the period: the average of all its purchases
                 totals = item.purchases.aggregate(quantity=Sum("quantity"), price=Sum("price"))
             unit_price = Decimal(totals["price"] or 0) / Decimal(totals["quantity"] or 1)
             cost, cups, counted = _money(used * unit_price), _cups(first.created_at, last.created_at), True
