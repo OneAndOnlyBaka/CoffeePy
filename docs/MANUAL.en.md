@@ -705,6 +705,78 @@ that has been bought can't be deleted; untick *Can be booked* instead.
 
 ![Inventory – items](pictures/manual/en/dashboard-inventory-items.png)
 
+#### How the inventory reckons
+
+**The stock** is what should be on the shelf according to the bookings: an item's last stock-take
+plus everything bought since. CoffeePy takes nothing off per cup – it doesn't know how many beans
+a cup takes or who has milk. Without a stock-take, the stock is everything ever bought. A
+**stock-take** records what is really there and is the new starting point from then on; a number
+that was mistyped is put right by the next stock-take. What was used follows from two stock-takes:
+
+```
+used = first stock-take + bought in between − second stock-take
+```
+
+It is most accurate when everything is counted at once, regularly – at the start of each month,
+say.
+
+**What a cup costs** is worked out by the **Costs** tab for each item on its own, and the amounts
+are then added up:
+
+1. **The item's cost.** With at least two stock-takes in the chosen period, what was used between
+   the first and the last counts, valued at the average price per unit of the period's purchases
+   (or, with none in the period, of all the item's purchases). A bulk purchase still in the
+   cupboard doesn't make the cup dearer that way. Without two stock-takes, simply what was spent
+   on the item in the period counts.
+2. **Divided by the cups of the same time** – between the two stock-takes, or over the whole
+   period. Machine strokes are counted: a jug is two cups.
+3. **The cost per cup** is the sum of these amounts over all items.
+
+**Milk, cookies and everything else are spread evenly over every cup**, whoever has milk or eats a
+cookie: an espresso, too, carries a few cents of milk and cookies. CoffeePy knows cups, not
+recipes. Whatever is booked, everyone pays for through the coffee price. If something should stay
+out of it – cookies someone brings privately, say – it isn't booked as a purchase.
+
+**The price suggestion** for a sort is then
+
+```
+the sort's strokes × cost per cup × (1 + price adjustment), rounded up to 5 cents
+```
+
+An example over 12 months with 2,000 cups and a price adjustment of +10%:
+
+| Item | Calculation | Per cup |
+|---|---|---|
+| Coffee beans | 12 kg bought in the period for €186.00, so €15.50/kg. Stock-take in May 1.5 kg, in October 0.8 kg, 5 kg bought in between: 5.7 kg used = €88.35, 800 cups in that time | 11.0 ct |
+| Milk | never counted: €172.00 bought, 2,000 cups | 8.6 ct |
+| Cookies | never counted: €60.00 bought, 2,000 cups | 3.0 ct |
+| **Cost per cup** | | **22.6 ct** |
+
+An espresso (1 stroke): 22.6 ct × 1.10 = 24.9 ct, rounded up **€0.25**. A jug (2 strokes): 49.8 ct,
+rounded up **€0.50**. The price adjustment covers what no purchase shows – cleaning agents, wear,
+and debts that are never paid. How much that is for you, **Written off** at the top of the same
+page shows; it doesn't go into the suggestion itself.
+
+Income and spending don't have to fall in the same stretch for this: the suggestion only asks what
+a cup cost. Whether the box pays for itself overall, *Revenue - purchases* next to it shows.
+
+**More worked examples**
+
+- **Stock:** on the 1st, 2 kg of beans are counted, then 3 kg are bought – the stock shows 5 kg. The
+  next stock-take finds 1.2 kg: from now on the stock is 1.2 kg, and 2 + 3 − 1.2 = 3.8 kg were used.
+- **Credit:** Anna stands at −€10.00 and buys 6 l of milk for €7.14. She books the purchase and
+  stands at −€2.86, without any cash. If someone pays for the same milk from the coffee box
+  (*Paid by: The coffee box*), no balance changes; the milk still counts for the stock, the spending
+  and the costs.
+- **A bulk purchase:** in the example above, someone buys another 10 kg of beans on offer in the last
+  week for €140.00, after the last stock-take – so they are still in the cupboard. With the two
+  stock-takes little changes: only the average price drops to €326.00 ÷ 22 kg = €14.82/kg, and the
+  beans cost 10.6 instead of 11.0 ct a cup. Without stock-takes the whole purchase would count:
+  (€186.00 + €140.00) ÷ 2,000 cups = 16.3 ct a cup, although the beans haven't been drunk yet.
+- **When someone else pays a share:** if the company pays half, the price adjustment is −50%:
+  22.6 ct × 0.5 = 11.3 ct, rounded up **€0.15** for an espresso, and 22.6 ct, rounded up **€0.25**,
+  for a jug.
+
 ### My account
 
 Your name at the top right: your role, your last login, and **Change password**. Your own password is only changed here, never in the user list.
