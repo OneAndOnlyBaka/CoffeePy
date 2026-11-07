@@ -37,7 +37,7 @@ class KioskBoardsTestCase(TestCase):
         boards(False, True)
         panel = self.nav("ranking")
         self.assertContains(panel, 'data-ranking="1"')
-        self.assertContains(panel, "pillory_empty.webm")  # straight to the pillory, the only tab
+        self.assertContains(panel, "pillory_empty.gif")  # straight to the pillory, the only tab
         self.assertNotContains(panel, "ranking-tabs")
         self.client.get(reverse("kiosk:ranking_view", args=["alltime"]))
         self.assertEqual(self.client.session["ranking_view"], "pillory")
@@ -47,8 +47,9 @@ class KioskBoardsTestCase(TestCase):
         panel = self.nav("ranking")
         self.assertContains(panel, "ranking-tabs")
         self.assertNotContains(panel, reverse("kiosk:ranking_view", args=["pillory"]))
-        self.assertContains(panel, "disableremoteplayback")  # or Chromium lays its cast button over it
-        self.assertContains(panel, 'poster="/static/kiosk/img/ranking/podium.png"')  # seen before the video starts
+        # A GIF, not a video: cog drew the videos squeezed, with a green bar (make_podium_gif.save)
+        self.assertContains(panel, 'src="/static/kiosk/img/ranking/podium.gif"')
+        self.assertNotContains(panel, "<video")
 
     def test_switched_off_while_on_screen(self):
         boards(True, True)

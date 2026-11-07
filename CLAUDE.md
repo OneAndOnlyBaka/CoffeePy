@@ -465,12 +465,13 @@ mind before changing it:
 - **`CmaFree` is not the GPU's free memory.** The kernel lends the 256MB CMA area to ordinary
   movable memory, and on a 1GB Pi under pressure it is always near zero. What the GPU holds is
   `/sys/kernel/debug/dri/0/bo_stats`: 12MB on the wait screen, about 19MB on the ranking.
-  The ranking's animations are lossless VP9 4:4:4 videos (`scripts/make_podium_gif.py`
-  `save()`), not GIFs: measured A/B on the Pi, about 14% less browser CPU for the same picture
-  and the same RAM - not the GPU memory that was the reason to try. A video needs up to a
-  second to start, so each has its first frame as `poster`, which `kiosk/index.html` keeps
-  loaded: the static files' 60s max-age would otherwise leave the stage empty while the poster
-  is revalidated.
+- **The ranking's animations are GIFs, not videos** (`scripts/make_podium_gif.py` `save()`). They
+  were lossless VP9 for a while - about 14% less CPU in Chromium - but cog (WPE WebKit, through
+  GStreamer) drew every video on the Pi 3 squeezed, with a green bar beside it: 4:4:4 and 4:2:0
+  alike, padded to multiples of 16 or not (KMS screenshot - WebDriver's own screenshot showed it
+  right, so check the display itself). It also cost 1.5 cores against a GIF's 0.55 on top of the
+  wait screen, and the first video of a page waited ~4s for GStreamer to start. So no `<video>`
+  on the kiosk. `kiosk/index.html` holds the four GIFs, so the stage never waits for one.
 - **The kiosk's browser is cog (WPE WebKit), straight on the display through DRM/KMS** - no X, no
   window manager (`install/kiosk/cog-session`, started by the autologin shell on tty1 through
   `kiosk/bash_profile_kiosk`). It replaced Chromium on 2026-11-07, after the same UI tests with the
@@ -478,14 +479,15 @@ mind before changing it:
   crashes in 9 rounds, cog none in 13; CPU 24% of a core against 44%, memory about the same, the
   kiosk polling ~13s after a session start instead of ~45s. What it took:
   `-O renderer=gles` (cog picked the plain modeset renderer and crashed at its first start); the
-  CA in the system store (above); GStreamer's plugins named in `packages.txt` (only Recommends of
-  WebKit, which `--no-install-recommends` leaves out - without them the ranking's videos stay
-  posters). cog does **not** reload after its web process dies: it prints "Crash!: The renderer
+  CA in the system store (above); GIFs instead of videos (below). cog does **not** reload after its web process dies: it prints "Crash!: The renderer
   process crashed" and shows its own error page - the session reads its log every 2s and starts
   cog afresh (seconds, not Chromium's minute). It does the same for a cog that never polls
-  (`KIOSK_LOAD_SECONDS`), and the loop restarts one that exits: twice in plain runs it ended with
-  SIGABRT ~45s after a start, after WebKit's "internallyFailedLoadTimerFired" (cause not found yet -
-  look in `$XDG_RUNTIME_DIR/kiosk.log` for "cog ended"). A device updated by app bundles has no cog
+  (`KIOSK_LOAD_SECONDS`), and the loop restarts one that exits; its events also go to the journal
+  (`journalctl -t coffeepy-kiosk`). **A cog started outside the tty1 session needs a runtime
+  directory of its own**: systemd removes `/run/user/<uid>` ~10s after that user's last session
+  ends - an SSH command, say - and cog, whose sockets live there, then ends with SIGABRT
+  ("eglReleaseThread" on the way out). That looked like a cog crash for a day (2026-11-07);
+  `kiosk-browser.sh on` gives WPEWebDriver `/run/coffeepy-wd`. A device updated by app bundles has no cog
   until an OS bundle (or an app bundle built `--with-os-packages`) brings it: `bash_profile_kiosk`
   keeps such a device on the Chromium session, and the installer replaces the old `.profile` block
   (`kiosk_profile`). Testing: `kill -SEGV` does nothing to a WPEWebProcess - JavaScriptCore handles

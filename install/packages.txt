@@ -10,12 +10,6 @@
 # Chromium under X/Openbox, whose renderer crashed on page changes (install/kiosk/cog-session).
 # A device installed before keeps its X and Chromium packages until an OS bundle removes them.
 cog
-# Video in WebKit is GStreamer, and its plugins are only Recommends - which install.sh leaves out:
-# the ranking's podium videos are VP9 in WebM (matroskademux and vp9dec are in -good), WebKit's
-# video sink needs the GL elements, decodebin and the converters are in -base.
-gstreamer1.0-plugins-base
-gstreamer1.0-plugins-good
-gstreamer1.0-gl
 # The UI's own icons are SVG (templates/icons/), but nicknames entered on a phone or PC
 # can carry emoji - without a colour emoji font those are empty boxes on the kiosk.
 fonts-noto-color-emoji

@@ -461,19 +461,18 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
     </nav>
     {% endif %}
     {% comment %}
-    The animations are lossless videos, not GIFs: measured on the Pi, the browser needs about 14%
-    less CPU for the same picture (scripts/make_podium_gif.py). Like a GIF a video restarts when
-    it is swapped in again, so the panel stays byte-identical from poll to poll here as well.
-    disableremoteplayback hides the grey cast button Chromium otherwise lays over every video. The
-    poster is the first frame: starting a video takes the Pi up to a second, and without it the
-    stage stays empty until then.
+    The animations are GIFs (scripts/make_podium_gif.py). They were lossless videos for a while -
+    about 14% less CPU in Chromium - but the kiosk's cog (WPE WebKit) drew every video on the Pi 3
+    squeezed, with a green bar beside it, at 1.5 cores, and only after GStreamer took ~4s to start;
+    a GIF it draws right at half that (2026-11-07). A GIF restarts when it is swapped in again, so
+    the panel stays byte-identical from poll to poll here as well.
     {% endcomment %}
     <div class="podium-stage">
         <div class="podium-banner">{{ banner }}</div>
         {% if ranking_view == "runaways" %}
         {% comment %}Who left the water, the grounds or the beans for the next one this month, and who stepped in (coffee.machine.runaway_board) - the pillory's ticker, the same rules for the poll.{% endcomment %}
         {% if rows %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.webm' %}" poster="{% static 'kiosk/img/ranking/pillory.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.gif' %}" alt="" aria-hidden="true">
         <div class="podium-names ticker">
             <div class="ticker-track" style="animation-duration: {{ ticker_seconds|unlocalize }}s">
                 {% for copy in "12" %}
@@ -487,15 +486,15 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
             </div>
         </div>
         {% else %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.webm' %}" poster="{% static 'kiosk/img/ranking/pillory_empty.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.gif' %}" alt="" aria-hidden="true">
         <div class="podium-names ticker"><b class="ticker-clear">{% translate "Nobody ran off this month!" %}</b></div>
         {% endif %}
         {% elif ranking_view == "pillory" %}
         {% if rows %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.webm' %}" poster="{% static 'kiosk/img/ranking/pillory.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.gif' %}" alt="" aria-hidden="true">
         {% comment %}
         The list twice in a row, moved left by exactly one copy's width per animation round
-        (kiosk.css) - so the band never runs out. A CSS animation, like the video, survives the
+        (kiosk.css) - so the band never runs out. A CSS animation, like the GIF, survives the
         poll because an unchanged panel is never swapped in again.
         {% endcomment %}
         <div class="podium-names ticker">
@@ -511,14 +510,14 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
             </div>
         </div>
         {% else %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.webm' %}" poster="{% static 'kiosk/img/ranking/pillory_empty.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.gif' %}" alt="" aria-hidden="true">
         <div class="podium-names ticker"><b class="ticker-clear">{% translate "Everyone has paid up!" %}</b></div>
         {% endif %}
         {% else %}
         {% if ranking_view == "month" %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/vault.webm' %}" poster="{% static 'kiosk/img/ranking/vault.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/vault.gif' %}" alt="" aria-hidden="true">
         {% else %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/podium.webm' %}" poster="{% static 'kiosk/img/ranking/podium.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/podium.gif' %}" alt="" aria-hidden="true">
         {% endif %}
         <div class="podium-names{% if ranking_view == 'month' %} standings{% endif %}">
             {% for place, row in podium %}

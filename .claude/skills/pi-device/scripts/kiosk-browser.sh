@@ -29,8 +29,12 @@ if "$PI" 'command -v cog >/dev/null'; then
 			scp -q "$DIR/wd.py" "$PI_USER@$PI_HOST:/tmp/wd.py"
 			"$PI" 'sudo systemctl stop coffeepy-watchdog.timer getty@tty1; sudo rm -f /run/coffeepy-wd-session
 				sudo systemctl stop wpedriver 2>/dev/null; sudo systemctl reset-failed wpedriver 2>/dev/null || true
-				sudo systemd-run --quiet --unit=wpedriver --uid="$(id -u)" --gid="$(id -g)" \
-					-p SupplementaryGroups="video render input" -E XDG_RUNTIME_DIR="/run/user/$(id -u)" -E HOME="$HOME" \
+				# A runtime directory of its own, not /run/user/<uid>: with the kiosk session stopped,
+				# systemd removes that one ~10s after the last SSH command of this user ends - and cog,
+				# whose sockets live there, ends with it (it looked like a crash: 2026-11-07).
+				sudo systemd-run --quiet --unit=wpedriver -p RuntimeDirectory=coffeepy-wd -p RuntimeDirectoryMode=0700 \
+					--uid="$(id -u)" --gid="$(id -g)" \
+					-p SupplementaryGroups="video render input" -E XDG_RUNTIME_DIR=/run/coffeepy-wd -E HOME="$HOME" \
 					WPEWebDriver --port=4444 --replace-on-new-session
 				sleep 2; sudo python3 -I /tmp/wd.py navigator.userAgent'
 			;;

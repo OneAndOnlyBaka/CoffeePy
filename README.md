@@ -44,8 +44,8 @@ works completely offline, and everyone checks their own balance on their phone.
     <td align="center"><em>Everyone paid up - the executioner is out of work</em></td>
   </tr>
 </table>
-<!-- The GIFs are the kiosk's own ranking videos (static/kiosk/img/ranking/*.webm), which GitHub
-     doesn't play in a README: ffmpeg -i X.webm -vf "fps=10,scale=600:-1:flags=lanczos,split[a][b];
+<!-- The GIFs are the kiosk's own ranking animations (static/kiosk/img/ranking/*.gif), made smaller:
+     ffmpeg -i X.gif -vf "fps=10,scale=600:-1:flags=lanczos,split[a][b];
      [a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=none" -loop 0 docs/pictures/readme/X.gif -->
 
 ## Why CoffeePy

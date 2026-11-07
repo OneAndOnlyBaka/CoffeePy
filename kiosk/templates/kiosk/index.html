@@ -74,13 +74,13 @@ and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
         <div class="wait-card"><p>{{ texts.loading }}</p></div>
     </main>
 </div>
-<!-- The ranking videos' posters, held by the page: an image already in the document is reused
-     without asking the server again, so the stage is never empty while a video starts. -->
+<!-- The ranking's GIFs, held by the page: an image already in the document is reused without
+     asking the server again and is decoded already, so the stage never waits for one. -->
 <div hidden>
-    <img src="{% static 'kiosk/img/ranking/podium.png' %}" alt="">
-    <img src="{% static 'kiosk/img/ranking/vault.png' %}" alt="">
-    <img src="{% static 'kiosk/img/ranking/pillory.png' %}" alt="">
-    <img src="{% static 'kiosk/img/ranking/pillory_empty.png' %}" alt="">
+    <img src="{% static 'kiosk/img/ranking/podium.gif' %}" alt="">
+    <img src="{% static 'kiosk/img/ranking/vault.gif' %}" alt="">
+    <img src="{% static 'kiosk/img/ranking/pillory.gif' %}" alt="">
+    <img src="{% static 'kiosk/img/ranking/pillory_empty.gif' %}" alt="">
 </div>
 <!-- Lives outside #panel so the 500ms poll never touches it while it's open. -->
 <div id="qr-modal" class="modal-overlay"

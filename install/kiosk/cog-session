@@ -14,8 +14,13 @@
 CA=/opt/coffeepy/data/tls/ca.crt
 KIOSK_URL=https://localhost:8443
 HEARTBEAT=/opt/coffeepy/data/storage/kiosk-heartbeat
-# In RAM, readable until the next boot, never on the card.
+# cog's own output, in RAM and gone with the session (systemd removes the runtime directory);
+# the session's events (crashes, restarts, the night) also go to the journal, which keeps them.
 LOG="${XDG_RUNTIME_DIR:-/tmp}/kiosk.log"
+note() {
+    echo "$(date -Is) $*" >> "$LOG"
+    logger -t coffeepy-kiosk "$*" 2>/dev/null
+}
 
 # No text console between two browsers: no cursor, nothing on the screen.
 setterm --cursor off 2>/dev/null
@@ -48,14 +53,14 @@ KIOSK_LOAD_SECONDS=90
 # at its first start (SIGSEGV, 2026-11-07).
 while true; do
     if night; then
-        echo "$(date -Is) night - kiosk off until the morning" >> "$LOG"
+        note "night - kiosk off until the morning"
         while night; do
             setterm --blank force 2>/dev/null
             sleep "$NIGHT_CHECK_SECONDS"
         done
         setterm --blank poke 2>/dev/null
         clear
-        echo "$(date -Is) morning - kiosk on" >> "$LOG"
+        note "morning - kiosk on"
     fi
     started=$(date +%s)
     from=$(($(stat -c %s "$LOG" 2>/dev/null || echo 0) + 1))
@@ -66,12 +71,12 @@ while true; do
         while sleep "$CRASH_CHECK_SECONDS"; do
             checked=$((checked + CRASH_CHECK_SECONDS))
             if tail -c +"$from" "$LOG" 2>/dev/null | grep -q "renderer process crashed"; then
-                echo "$(date -Is) renderer crashed - restarting cog" >> "$LOG"
+                note "renderer crashed - restarting cog"
                 break
             fi
             if [ "$checked" -ge "$KIOSK_LOAD_SECONDS" ] && [ "$checked" -lt $((KIOSK_LOAD_SECONDS + CRASH_CHECK_SECONDS)) ] &&
                [ "$(stat -c %Y "$HEARTBEAT" 2>/dev/null || echo 0)" -lt "$started" ]; then
-                echo "$(date -Is) kiosk never polled - restarting cog" >> "$LOG"
+                note "kiosk never polled - restarting cog"
                 break
             fi
             if [ $((checked % NIGHT_CHECK_SECONDS)) -eq 0 ] && night; then
@@ -82,7 +87,7 @@ while true; do
     ) &
     check=$!
     wait "$browser"
-    echo "$(date -Is) cog ended ($?)" >> "$LOG"
+    note "cog ended ($?)"
     kill "$check" 2>/dev/null
     clear
     sleep 1

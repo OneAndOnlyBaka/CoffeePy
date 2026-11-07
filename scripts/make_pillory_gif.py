@@ -1,4 +1,4 @@
-"""Draws the kiosk ranking's pillory view into static/kiosk/img/ranking/pillory.webm.
+"""Draws the kiosk ranking's pillory view into static/kiosk/img/ranking/pillory.gif.
 
     /tmp/gif/bin/python scripts/make_pillory_gif.py      # venv with pillow, see make_wait_gifs.py
 
