@@ -179,6 +179,10 @@ browser's language (`config/language.py`).
 (`install/maintenance.sh`); Caddy serves it itself, so the kiosk's `maintenance.js` can read it
 while the app is down, and covers the screen with "We'll be right back" until it is over. Caddy
 answers 502s with `data/tls/maintenance.html` (both languages, rendered by `dashboard/tls.py`).
+The overlay also comes up when six panel polls in a row get no answer - counted from htmx's
+`sendError`/`responseError` only: a nav tap aborts the running poll (`hx-sync`), htmx reports that
+as unsuccessful too, and a few quick taps once put the overlay up, which swallowed the next taps
+and reloaded the page ("only every second tap works").
 A new installer step or watcher phase needs a label in `kiosk.views.MAINTENANCE_STEPS`; the
 installer's rsync keeps `data/maintenance/` (`src-filter.txt`) or it would delete the status
 mid-run.
