@@ -61,6 +61,8 @@ class Bridge:
                       "progress": {"phase": "idle", "product": 0}, "error": ""}
         self.products = []
         self.counted = set()
+        self.chain = None  # policy.BrewChain while n cups of one recipe run
+        self.alerts_at = 0.0
         self.status = None
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=MQTT_CLIENT_ID, clean_session=True)
         if MQTT_USER:
@@ -101,6 +103,9 @@ class Bridge:
                                    "updated": time.time()}, retain=True)
 
     def event(self, event):
+        cup = self.chain.cup(event.get("request_id")) if self.chain is not None else None
+        if cup is not None:
+            event = {**event, "cup": cup[0], "of": cup[1]}
         log.info("event %s", event)
         self.publish("event", {**event, "time": time.time()})
 
@@ -147,24 +152,57 @@ class Bridge:
             self.publish("scan", {"id": request_id, "devices": [], "error": str(exc)})
 
     async def brew(self, machine, request_id, cmd):
+        """One product, or - with `request_ids` - that many cups of it in a row (policy.BrewChain)."""
         source = cmd.get("source") or policy.SOURCE_APP
         product = int(cmd.get("product") or 0)
-        failed = {"type": "brew_failed", "request_id": request_id, "source": source, "product": product}
+        ids = [str(i) for i in cmd.get("request_ids") or []] or [request_id]
+
+        def fail(reason, **extra):
+            for rid in ids:
+                self.event({"type": "brew_failed", "request_id": rid, "source": source, "product": product,
+                            "reason": reason, **extra})
+
         if source == "ha" and not HA_BREW:
-            self.event({**failed, "reason": "brewing from Home Assistant is off"})
+            fail("brewing from Home Assistant is off")
         elif machine is None or not machine.connected:
-            self.event({**failed, "reason": "disconnected"})
-        elif self.tracker.busy():
-            self.event({**failed, "reason": "busy"})
+            fail("disconnected")
+        elif self.tracker.busy() or (self.chain is not None and not self.chain.over):
+            fail("busy")
         elif self.state["blocking"]:
-            self.event({**failed, "reason": "blocked", "alerts": self.state["blocking"]})
+            fail("blocked", alerts=self.state["blocking"])
         else:
-            try:
-                await machine.brew(product, cmd.get("options"))
-            except Exception as exc:  # noqa: BLE001 - reported to whoever asked
-                self.event({**failed, "reason": str(exc)})
-                return
-            self.tracker.expect(request_id, product, time.monotonic(), source=source)
+            chain = policy.BrewChain(ids, product, cmd.get("options"), source) if len(ids) > 1 else None
+            if chain is not None:
+                self.chain = chain  # before the first event, so it carries its cup number
+            if not await self.start(machine, ids[0], product, cmd.get("options"), source):
+                if chain is not None:
+                    for action in chain.lost():
+                        self.event({"type": "brew_failed", "request_id": action[1], "source": source,
+                                    "product": product, "reason": "previous cup failed"})
+
+    async def start(self, machine, request_id, product, options, source) -> bool:
+        try:
+            await machine.brew(product, options)
+        except Exception as exc:  # noqa: BLE001 - reported to whoever asked
+            self.event({"type": "brew_failed", "request_id": request_id, "source": source, "product": product,
+                        "reason": str(exc)})
+            return False
+        self.tracker.expect(request_id, product, time.monotonic(), source=source)
+        return True
+
+    async def advance_chain(self, machine, events, prog, now):
+        """The next cup of a chain, once the machine is ready again - or the rest given up."""
+        chain = self.chain
+        if chain is None or chain.over:
+            return
+        ready = "coffee_ready" in self.state["alerts"] and self.alerts_at > (chain.done_at or now) + policy.READY_PAUSE
+        for action in chain.step(events, self.tracker.busy(), prog.get("phase") == "idle", ready,
+                                 bool(self.state["blocking"]), now):
+            if action[0] == "start":
+                await self.start(machine, action[1], chain.product, chain.options, chain.source)
+            else:
+                self.event({"type": "brew_failed", "request_id": action[1], "source": chain.source,
+                            "product": chain.product, "reason": action[2]})
 
     # --- the machine ------------------------------------------------------------------------------
     async def read_counters(self, machine):
@@ -213,10 +251,12 @@ class Bridge:
                 await self.handle(machine)
                 now = loop.time()
                 prog = await machine.progress()
-                for event in self.tracker.update(prog, time.monotonic()):
+                events = self.tracker.update(prog, time.monotonic())
+                for event in events:
                     self.event(event)
                     if event["type"] == "brew_done":
                         counters_due = now + COUNTERS_AFTER_BREW
+                await self.advance_chain(machine, events, prog, time.monotonic())
                 public = {k: v for k, v in prog.items() if k != "state"}
                 if now >= next_alerts:
                     alerts = await machine.alerts()
@@ -227,6 +267,7 @@ class Bridge:
                         lock_sent = now
                     self.publish_state(progress=public, alerts=keys, locked="lockedkeys" in keys,
                                        blocking=[a["key"] for a in alerts if a["blocking"]])
+                    self.alerts_at = time.monotonic()
                     next_alerts = now + ALERT_SECONDS
                 else:
                     self.publish_state(progress=public)
@@ -237,6 +278,10 @@ class Bridge:
         finally:
             for event in self.tracker.lost():
                 self.event(event)
+            if self.chain is not None:
+                for _start, request_id, reason in self.chain.lost():
+                    self.event({"type": "brew_failed", "request_id": request_id, "source": self.chain.source,
+                                "product": self.chain.product, "reason": reason})
             # A lock the machine no longer needs goes with the session; one that is still wanted
             # stays - the machine drops it by itself shortly after the connection (~40 s).
             if machine.connected and self.state.get("locked") and not self.config["block_manual"]:

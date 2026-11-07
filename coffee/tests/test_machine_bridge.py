@@ -142,6 +142,50 @@ class BrewTrackerTestCase(SimpleTestCase):
         self.assertFalse(tracker.busy())
 
 
+class BrewChainTestCase(SimpleTestCase):
+    """n cups of one recipe in a row (policy.BrewChain): the next once the machine is ready again,
+    the rest given up when one fails or the machine stays blocked."""
+
+    def chain(self, n=3):
+        return policy.BrewChain([f"r{i}" for i in range(1, n + 1)], 3, {"strength": 7}, "app")
+
+    def done(self, rid):
+        return [{"type": "brew_done", "request_id": rid}]
+
+    def test_the_cups_follow_each_other_once_ready(self):
+        chain = self.chain()
+        self.assertEqual(chain.cup("r2"), (2, 3))
+        self.assertEqual(chain.step([], True, False, False, False, 0), [])  # the first one runs
+        self.assertEqual(chain.step(self.done("r1"), False, True, False, False, 10), [])
+        self.assertEqual(chain.step([], False, True, False, False, 12), [])  # idle, not ready yet
+        self.assertEqual(chain.step([], False, True, True, False, 16), [("start", "r2")])
+        self.assertEqual(chain.step([], True, False, False, False, 17), [])
+        chain.step(self.done("r2"), False, True, False, False, 40)
+        self.assertEqual(chain.step([], False, True, False, False, 40 + policy.READY_FALLBACK), [("start", "r3")])
+        chain.step(self.done("r3"), False, True, True, False, 80)
+        self.assertEqual(chain.step([], False, True, True, False, 90), [])
+        self.assertTrue(chain.over)
+
+    def test_a_failed_cup_ends_the_chain(self):
+        chain = self.chain()
+        chain.step(self.done("r1"), False, True, True, False, 10)
+        chain.step([], False, True, True, False, 20)
+        actions = chain.step([{"type": "brew_failed", "request_id": "r2", "reason": "stalled"}], False, True, True, False, 30)
+        self.assertEqual(actions, [("fail", "r3", "previous cup failed: stalled")])
+        self.assertTrue(chain.over)
+        self.assertEqual(chain.lost(), [])
+
+    def test_blocked_waits_then_gives_up(self):
+        chain = self.chain(2)
+        chain.step(self.done("r1"), False, True, True, False, 0)
+        self.assertEqual(chain.step([], False, True, True, True, 30), [])  # tank empty - refilled in time?
+        self.assertEqual(chain.step([], False, True, True, True, policy.READY_TIMEOUT), [("fail", "r2", "blocked")])
+
+    def test_a_lost_connection_fails_what_wasnt_made(self):
+        chain = self.chain()
+        self.assertEqual(chain.lost(), [("fail", "r2", "disconnected"), ("fail", "r3", "disconnected")])
+
+
 class LockTestCase(SimpleTestCase):
     def test_locks_unlocks_and_waits(self):
         self.assertTrue(policy.needs_lock(True, [], -100, 0))

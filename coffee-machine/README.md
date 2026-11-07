@@ -49,12 +49,12 @@ All payloads JSON; `<prefix>` defaults to `coffeemachine`.
 |---|---|---|---|
 | `status` | bridge | yes (also last will) | `online` / `offline` / `disabled` (plain text) |
 | `config` | app | yes | `{"driver", "address", "block_manual"}` |
-| `cmd` | app | no | `{"id", "action": "scan" \| "brew" \| "refresh", "product", "options", "source"}` |
+| `cmd` | app | no | `{"id", "action": "scan" \| "brew" \| "refresh", "product", "options", "source", "request_ids"}` |
 | `scan` | bridge | no | `{"id", "devices": [{"address", "name", "rssi", "article", "model"}], "error"}` |
 | `state` | bridge | yes | `{"connected", "model", "article", "firmware", "alerts": [...], "blocking": [...], "locked", "progress": {"phase", "product", "percent", "water_ml", "strength"}, "error", "driver", "address", "block_manual", "updated"}` |
-| `event` | bridge | no | `{"type", "request_id", "source", "product", "water_ml", "strength", "reason", "time"}` |
+| `event` | bridge | no | `{"type", "request_id", "source", "product", "water_ml", "strength", "reason", "cup", "of", "time"}` |
 | `counters` | bridge | yes | `{"total", "products": {"<code>": n}, "maintenance": {"counters": {...}, "percent": {...}}, "taken"}` |
-| `products` | bridge | yes | `{"article", "model", "products": [{"code", "name", "strokes", "water_ml", "strength", "brewable"}]}` |
+| `products` | bridge | yes | `{"article", "model", "products": [{"code", "name", "strokes", "water_ml", "strength", "brewable", "recipe"}]}` |
 
 - `progress.phase`: `idle`, `heating`, `starting`, `dispensing`, `done`.
 - `event.type`: `brew_started`, `brew_done`, `brew_failed` (`reason`: `busy`, `blocked`, `not started`,
@@ -62,6 +62,14 @@ All payloads JSON; `<prefix>` defaults to `coffeemachine`.
   `ha`, `manual` (started at the machine).
 - `brew` options: `water_ml`, `strength`, `temperature` (0 low, 1 normal, 2 high); without them the
   machine definition's defaults. A product without a definition (the E6's hot water) needs `water_ml`.
+- `recipe` of a product: what a brew may ask for - `{"strength": {"min", "max", "default"}, "water": {"min",
+  "max", "step", "default"}, "temperature": {"options": [...], "default"}}`, each only where the product
+  has it; `{}` for one that takes nothing (milk foam), missing for one without a definition.
+- **Several cups in a row:** `request_ids` (one per cup) makes a `brew` that many cups of the same recipe,
+  into one big cup or a jug - CoffeePy's "my coffees". The next starts once the machine is idle and says
+  `coffee_ready` again (or 30 s later, for a model that doesn't); each cup has its own `brew_started`/
+  `brew_done` with `cup` and `of`. A cup that fails, a blocking message that stays for 2 minutes or a lost
+  connection ends the chain: the cups not made yet get `brew_failed`. Home Assistant's buttons brew one.
 
 ## What the JURA does (measured, E6)
 

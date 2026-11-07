@@ -602,3 +602,26 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 .privacy-qr svg { display: block; width: 150px; height: 150px; }
 .privacy-qr figcaption { font-size: 0.85rem; color: var(--coffee-light); }
 .privacy-gate { margin: 0; font-weight: 600; color: var(--coffee); }
+
+/* "My coffees" (coffee/slots.py) on the order screen: a row of their own above the sorts, the same
+   tiles with what the slot changes in a small line - two rows of sorts are left below them. */
+.slot-row { display: flex; flex-direction: column; gap: 10px; }
+.slot-option .slot-details { font-size: 0.85rem; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brew-options, .brew-cups { margin: 4px 0 0; font-size: 1.2rem; font-weight: 600; }
+
+/* The editor of "my coffees": three cards side by side, every row always laid out (slots_editor.js only
+   hides a row the sort can't set, with visibility) - nothing moves, nothing scrolls. */
+.slots-card .panel-header { font-size: 2rem; }
+.slots-hint { margin: 0; font-size: 0.95rem; color: var(--coffee-light); }
+.slot-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.slot-card { display: flex; flex-direction: column; gap: 6px; background: var(--cream-dark); border-radius: var(--radius); padding: 8px; }
+.slot-card.empty .slot-sort .slot-value { color: var(--coffee-light); font-weight: 400; }
+.slot-ctl { display: flex; align-items: center; gap: 6px; min-height: 48px; }
+.slot-ctl button { min-width: 48px; min-height: 48px; padding: 0; font-size: 1.4rem; font-weight: 700; }
+.slot-ctl .slot-wide { flex: 1; font-size: 1rem; }
+.slot-ctl .slot-label { flex: 1; font-size: 0.95rem; }
+.slot-ctl .slot-value { min-width: 64px; text-align: center; font-weight: 600; white-space: nowrap; }
+.slot-sort .slot-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 1.1rem; }
+.slot-fav { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.slot-fav input, .slot-hide input { width: 28px; height: 28px; }
+.slot-hide { display: flex; align-items: center; gap: 10px; font-size: 1rem; }

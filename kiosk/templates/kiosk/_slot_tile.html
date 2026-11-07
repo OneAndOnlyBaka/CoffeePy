@@ -1,0 +1,7 @@
+{% load l10n %}{% comment %}A tile of "my coffees" on the order screen: in the same radio group as the sorts (views.order_select).{% endcomment %}
+<label class="coffee-option slot-option">
+    <input type="radio" name="coffee_id" value="{{ tile.value }}"
+           {% if tile.value == selected_slot %}checked{% endif %}
+           hx-post="{% url 'kiosk:order_select' %}" hx-trigger="change" hx-swap="none">
+    <span class="sort-text"><span>{{ tile.name }}</span><span class="slot-details">{{ tile.details }}</span><span class="price">{{ tile.price }}€</span></span>
+</label>

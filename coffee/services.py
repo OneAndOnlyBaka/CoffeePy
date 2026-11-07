@@ -164,6 +164,12 @@ def member_data(member: Member, own: bool = False) -> dict:
             "balance": str(account_balance(member)),
             "cups_total": total_cups(member),
         },
+        "my_coffees": {
+            "slots": [{"position": slot.position, "coffee_sort": slot.coffee_sort.name, "strength": slot.strength,
+                       "water_ml": slot.water_ml, "temperature": slot.temperature, "cups": slot.count}
+                      for slot in member.slots.select_related("coffee_sort").order_by("position")],
+            "preselected": member.favourite_slot, "only_my_coffees_when_ordering": member.hide_standard_sorts,
+        },
         "cards": [{"uid": member.uid, "added_at": None}] + [
             {"uid": card.uid, "added_at": when(card.created_at)} for card in member.alt_cards.order_by("created_at")],
         "phones": [{"label": device.label, "linked_at": when(device.created_at), "last_seen_at": when(device.last_seen_at)}

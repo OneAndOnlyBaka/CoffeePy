@@ -246,6 +246,12 @@ send commands with one publish each (`coffee/machine.py`), and every page reads 
   the machine - ask first.
 - The bridge's logic that decides anything (`codec.py`, `policy.py`, `ha.py`) imports neither bleak nor
   py-jura, so the app's tests import it from `coffee-machine/` directly.
+- **"My coffees"** (`coffee/slots.py`, `MemberSlot`): up to three slots a member sets at the kiosk (Settings →
+  My coffees) or on the phone - sort, strength, water, temperature within the product's `recipe` (what the
+  bridge reports from py-jura's definition), and n cups in a row into one jug. The bridge runs the n cups
+  itself (`policy.BrewChain`: the next once the machine is idle and says `coffee_ready`), one dispense row
+  and one order per cup, at the sort's price - a cup that fails ends the chain. With the sorts hidden behind
+  the slots, a slot is what is preselected: the auto-checkout must never book something out of sight.
 
 ## Django traps that already cost time here
 

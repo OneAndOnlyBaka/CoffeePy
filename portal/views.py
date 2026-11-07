@@ -12,9 +12,10 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
 from coffee import privacy, services
+from coffee import slots as my_coffees
 from coffee.models import (
-    AltUidCapture, AuditLogEntry, CASH_METHOD_NAME, InventoryItem, MemberDevice, MemberLinkToken, Payment,
-    PaymentMethod,
+    AltUidCapture, AuditLogEntry, CASH_METHOD_NAME, CoffeeSort, InventoryItem, MemberDevice, MemberLinkToken,
+    MemberSlot, Payment, PaymentMethod,
 )
 
 from dashboard import audit
@@ -321,3 +322,29 @@ def card_add_poll(request):
     error_html = f'<p class="msg error">{escape(_(capture.last_error))}</p>' if capture.last_error else ""
     waiting = _("Waiting for a card to be tapped on the kiosk reader… (%(seconds)ss left)") % {"seconds": seconds_left}
     return HttpResponse(f"{error_html}<p>{escape(waiting)}</p>")
+
+
+@portal_login_required
+@portal_privacy_required
+def coffees(request):
+    """"My coffees" on the phone (coffee/slots.py) - the same three slots as the kiosk's editor, with a
+    form a phone handles better. Values outside what the machine allows are put within it on saving."""
+    member = request.member
+    saved = False
+    if request.method == "POST":
+        found = my_coffees.save_form(member, request.POST)
+        who = audit.member_actor(member)
+        audit.log(request, "member.slots_update", target=who, actor=who, details="; ".join(
+            f"{p}: {my_coffees.describe(slot)}" for p, slot in found.items()) or "none")
+        saved = True
+    by_position = {slot.position: slot for slot in my_coffees.slots_for(member)}
+    cards = []
+    for position in MemberSlot.POSITIONS:
+        slot = by_position.get(position)
+        made = my_coffees.effective(slot) if slot is not None else {}
+        recipe = my_coffees.recipe(slot.coffee_sort) if slot is not None else {}
+        cards.append({"position": position, "slot": slot, "made": made, "recipe": recipe})
+    return render(request, "portal/coffees.html", {
+        "member": member, "cards": cards, "sorts": CoffeeSort.offered(), "max_count": MemberSlot.MAX_COUNT,
+        "counts": range(1, MemberSlot.MAX_COUNT + 1), "saved": saved,
+    })

@@ -9,6 +9,7 @@ urlpatterns = [
     path("link-invalid/", views.link_invalid, name="link_invalid"),
     path("", views.index, name="index"),
     path("privacy/", views.privacy_notice, name="privacy"),
+    path("coffees/", views.coffees, name="coffees"),
     path("pay/", views.pay, name="pay"),
     path("purchase/", views.purchase, name="purchase"),
     path("stats/", views.stats, name="stats"),

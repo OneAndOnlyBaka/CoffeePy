@@ -18,6 +18,7 @@ from django.utils.translation import gettext as _, gettext_lazy, gettext_noop, p
 from django.views.decorators.http import require_GET, require_POST
 
 from coffee import backups, clock, machine, names, privacy, rtc, services
+from coffee import slots as my_coffees
 from coffee.models import (
     AltUidCapture,
     CASH_METHOD_NAME,
@@ -25,6 +26,7 @@ from coffee.models import (
     InventoryItem,
     MachineDispense,
     MachineProduct,
+    MemberSlot,
     Member,
     MemberCard,
     MemberLinkToken,
@@ -300,12 +302,17 @@ def order_select(request):
         # checked tile; countdown.js switches the countdown). Re-rendering it swapped the panel
         # away under the finger, and that teardown crashed Chromium in 3 of 5 picks on the device
         # (2026-10-31) - the swap a poll would do, if this changed the panel, as well.
-        request.session.setdefault("shown_order", [request.session.get("order_coffee_id"),
-                                                   request.session.get("order_auto_checkout", True)])
         request.session.setdefault("shown_deadline", request.session.get("deadline"))
-        coffee_id = request.POST.get("coffee_id")
-        if coffee_id:
+        request.session.setdefault("shown_order", [request.session.get("order_coffee_id"),
+                                                   request.session.get("order_auto_checkout", True),
+                                                   request.session.get("order_slot")])
+        coffee_id = request.POST.get("coffee_id") or ""
+        if coffee_id.startswith("slot:"):  # one of "my coffees" - the same group of tiles
+            request.session["order_slot"] = _int(coffee_id[5:])
+            request.session["order_coffee_id"] = None
+        elif coffee_id:
             request.session["order_coffee_id"] = int(coffee_id)
+            request.session["order_slot"] = None
         # Whoever picks a sort confirms it themselves - with time for that from the pick on, and a
         # logout countdown in place of the checkout one.
         request.session["order_auto_checkout"] = False
@@ -335,12 +342,16 @@ def machine_start(request):
             pass  # the screen shows what to do; Start stays until it is done
         else:
             dispense = machine.request_brew(
-                product, member, sort, MachineDispense.SOURCE_FREE if brew.get("free") else MachineDispense.SOURCE_KIOSK)
+                product, member, sort, MachineDispense.SOURCE_FREE if brew.get("free") else MachineDispense.SOURCE_KIOSK,
+                options=brew.get("options"), count=brew.get("count", 1))
             request.session["brew"] = {**brew, "stage": "brewing", "dispense_id": dispense.pk,
                                        "since": time.time()}
             if member is not None:
                 who = audit.member_actor(member)
-                audit.log(request, "machine.brew", target=who, actor=who, details=f"{product.name} for {sort.name}")
+                extra = ", ".join([f"{k} {v}" for k, v in (brew.get("options") or {}).items()]
+                                  + ([f"{brew['count']} cups"] if brew.get("count", 1) > 1 else []))
+                audit.log(request, "machine.brew", target=who, actor=who,
+                          details=f"{product.name} for {sort.name}{' (' + extra + ')' if extra else ''}")
             else:
                 audit.log(request, "machine.brew", target=product.name, actor="", details="free")
     _touched(request)
@@ -521,7 +532,8 @@ def _in_session(request, mode):
 def _reset_session_state(request):
     request.session["logged_in"] = False
     for key in (
-        "uid", "deadline", "shown_deadline", "shown_order", "sort_order", "order_coffee_id", "order_auto_checkout", "is_new_user",
+        "uid", "deadline", "shown_deadline", "shown_order", "sort_order", "order_coffee_id", "order_slot",
+        "order_auto_checkout", "is_new_user", "settings_view", "slots_notice",
         "brew",
         "pending_nickname", "pending_favourite", "name_error", "then_mode",
         "inventory_page", "inventory_notice", "inventory_error", "privacy_pending", "privacy_confirmed",
@@ -563,7 +575,9 @@ def _start_session(request, mode, uid, is_new_user=False):
     # A free product on its cup screen is left to whoever tapped a card; one that runs, runs on.
     request.session.pop("brew", None)
     request.session["order_coffee_id"] = None
+    request.session["order_slot"] = None
     request.session["order_auto_checkout"] = True
+    request.session.pop("settings_view", None)
 
 
 def _consume_new_scan(request):
@@ -588,31 +602,57 @@ def _chosen_sort(request, member):
     return coffee_sort or CoffeeSort.offered().first()
 
 
+def _chosen(request, member, picked=None):
+    """(sort, slot) the member is about to get: a slot of "my coffees" picked, or a sort picked, or
+    the slot they preselect (Member.favourite_slot), or the favourite sort as always. `picked` is
+    (coffee_id, slot position) - the session's picks unless given."""
+    coffee_id, position = picked if picked is not None else (
+        request.session.get("order_coffee_id"), request.session.get("order_slot"))
+    slots = {slot.position: slot for slot in my_coffees.slots_for(member)}
+    if position in slots:
+        return slots[position].coffee_sort, slots[position]
+    if coffee_id:
+        sort = CoffeeSort.offered().filter(pk=coffee_id).first()
+        if sort is not None:
+            return sort, None
+    if member.favourite_slot in slots:
+        return slots[member.favourite_slot].coffee_sort, slots[member.favourite_slot]
+    if member.hide_standard_sorts and slots:
+        # The sorts are a page on: what the screen preselects - and checks out after 20 s - has to be
+        # in sight (the legacy device once booked a favourite nobody could see).
+        first = slots[min(slots)]
+        return first.coffee_sort, first
+    favourite = member.favourite_coffee
+    return (favourite if favourite is not None and not favourite.is_obsolete else CoffeeSort.offered().first()), None
+
+
 def _checkout(request):
     """Order now, or the automatic checkout: with a coffee machine that makes this sort, the member is
     guided through the brew and it is booked once the machine is done (coffee.machine.book) - else it
     is booked here, as it always was."""
     uid = request.session["uid"]
     member = Member.objects.filter(uid=uid).first()
-    sort = _chosen_sort(request, member) if member is not None else None
+    sort, slot = _chosen(request, member) if member is not None else (None, None)
+    count = slot.count if slot is not None else 1
     product = machine.product_for(sort) if sort is not None and machine.brewing_available() else None
     if product is not None:
         request.session["brew"] = {"stage": "cup", "uid": uid, "sort_id": sort.pk, "code": product.code,
-                                   "until": time.time() + CUP_SECONDS}
+                                   "until": time.time() + CUP_SECONDS, "count": count,
+                                   "options": my_coffees.options(slot) if slot is not None else {}}
         # The deadline of the order screen is over: the brew has timeouts of its own.
         request.session.pop("deadline", None)
         request.session.pop("shown_deadline", None)
         return
-    order = _place_order(request)
+    order = _place_order(request, sort, count)
     if order is not None:
         _start_thank_you(request, uid)
     _reset_session_state(request)
 
 
-def _brew_message(request, reason):
+def _brew_message(request, reason, made=0):
     brew = request.session.get("brew") or {}
     request.session["brew"] = {**brew, "stage": "failed" if reason != "done_free" else "done_free",
-                               "reason": reason, "until": time.time() + BREW_MESSAGE_SECONDS}
+                               "reason": reason, "made": made, "until": time.time() + BREW_MESSAGE_SECONDS}
 
 
 def _brew_tick(request):
@@ -629,10 +669,14 @@ def _brew_tick(request):
             _reset_session_state(request)
         return
     dispense = MachineDispense.objects.filter(pk=brew.get("dispense_id")).first()
-    if dispense is None or now - brew.get("since", now) > BREW_GIVE_UP_SECONDS:
+    # Several cups: the give-up clock runs per cup, from the start of the one running.
+    progress = machine.chain_progress(dispense) if dispense is not None else None
+    if dispense is None or now - brew.get("since", now) > BREW_GIVE_UP_SECONDS * (progress["of"] if progress else 1):
         request.session.pop("brew", None)
         _reset_session_state(request)
-    elif dispense.state == MachineDispense.DONE:
+    elif not progress["over"]:
+        return
+    elif progress["failed"] is None:
         if brew.get("free"):
             _brew_message(request, "done_free")
         else:
@@ -640,8 +684,8 @@ def _brew_tick(request):
             request.session.pop("brew", None)
             _start_thank_you(request, uid)
             _reset_session_state(request)
-    elif dispense.state == MachineDispense.FAILED:
-        _brew_message(request, dispense.reason)
+    else:
+        _brew_message(request, progress["failed"].reason, made=progress["done"])
 
 
 def _brew_context(request):
@@ -654,18 +698,27 @@ def _brew_context(request):
     ctx = {"state": "brew", "stage": stage, "free": bool(brew.get("free")), "member": member,
            "product_name": sort.name if sort is not None else (machine.product_label(product.name) if product else ""),
            "brew_deadline_ms": int(brew["until"] * 1000) if brew.get("until") else None}
+    count = brew.get("count", 1)
+    water = (brew.get("options") or {}).get("water_ml")
+    ctx["count"] = count
+    ctx["options_text"] = _options_text(brew.get("options") or {})
     if stage == "cup":
         ctx["blocking"] = [machine.alert_label(key) for key in state["blocking"]]
-        ctx["tasks"] = [t for t in machine.tasks_before(product) if t not in ctx["blocking"]] if product else []
+        ctx["tasks"] = [t for t in machine.tasks_before(product, water, count)
+                        if t not in ctx["blocking"]] if product else []
     elif stage == "brewing":
-        ctx["tasks"] = machine.tasks_after(product) if product else []
+        ctx["tasks"] = machine.tasks_after(product, water, count) if product else []
+        first = MachineDispense.objects.filter(pk=brew.get("dispense_id")).first()
+        if first is not None and count > 1:
+            ctx["cup"] = machine.chain_progress(first)["cup"]
         phase = (state["state"].get("progress") or {}).get("phase", "")
         # Only two pictures: every change of the panel's HTML is a swap, and each swap risks the
         # renderer crash (CLAUDE.md) - no percentages here, the animation runs on its own.
         ctx["phase"] = "brewing" if phase in ("starting", "dispensing", "done", "busy") else "heating"
     elif stage == "failed":
         reason = brew.get("reason", "")
-        ctx["reason"] = _(BREW_REASONS.get(reason, BREW_REASON_OTHER))
+        ctx["reason"] = _(BREW_REASONS.get(reason.split(":")[0], BREW_REASON_OTHER))
+        ctx["made"] = brew.get("made", 0)
         if reason == "blocked":
             ctx["blocking"] = [machine.alert_label(key) for key in state["blocking"]]
     return ctx
@@ -679,7 +732,7 @@ def _free_products():
         :machine.FREE_ON_KIOSK]
 
 
-def _place_order(request):
+def _place_order(request, coffee_sort=None, count=1):
     """Returns the created Order, or None if there was no CoffeeSort to order at all
     (shouldn't normally happen - the order screen requires one to exist) - callers use
     this to decide whether an order actually went through before e.g. showing thanks.
@@ -691,19 +744,22 @@ def _place_order(request):
     member = Member.objects.filter(uid=uid).first()
     if member is None:
         return None
-    coffee_sort = _chosen_sort(request, member)
+    if coffee_sort is None:
+        coffee_sort = _chosen_sort(request, member)
     if coffee_sort is None:
         return None
-    order = Order.objects.create(
-        member_id=uid,
-        coffee_sort=coffee_sort,
-        value=coffee_sort.price,
-        machine_strokes=coffee_sort.machine_strokes,
-        info=f"Ordered [{coffee_sort.pk}] {coffee_sort.name}",
-    )
-    who = audit.member_actor(member)
-    audit.log(request, "order.create", target=who, actor=who,
-              details=f"#{order.pk}: {coffee_sort.name}, {order.value} EUR, {order.machine_strokes} cup(s)")
+    # A slot of several cups without the machine: one order per cup, as the machine would book them.
+    for _cup in range(max(1, count)):
+        order = Order.objects.create(
+            member_id=uid,
+            coffee_sort=coffee_sort,
+            value=coffee_sort.price,
+            machine_strokes=coffee_sort.machine_strokes,
+            info=f"Ordered [{coffee_sort.pk}] {coffee_sort.name}",
+        )
+        who = audit.member_actor(member)
+        audit.log(request, "order.create", target=who, actor=who,
+                  details=f"#{order.pk}: {coffee_sort.name}, {order.value} EUR, {order.machine_strokes} cup(s)")
     return order
 
 
@@ -1069,6 +1125,8 @@ def _state_context(request, mode):
 
     if request.session.get("privacy_pending"):
         ctx = _privacy_context(request, uid)
+    elif mode == MODE_SETTINGS and request.session.get("settings_view") == "slots":
+        ctx = _slots_context(request, uid)
     elif mode == MODE_ORDER:
         ctx = _order_context(request, uid, seconds_left)
     elif mode == MODE_SETTINGS:
@@ -1147,13 +1205,16 @@ SORTS_WITHOUT_SCROLL = 12
 # (tiles per page, "For you" tiles) - a page is the grid's cells: back/next take one each.
 SORT_PAGES_ORDER = (9, 6)       # three by three
 SORT_PAGES_SETTINGS = (8, 6)    # four by two, next to the name field
+# Under a row of "my coffees" (coffee/slots.py) two rows of sorts are left: three by two.
+SORTS_WITHOUT_SCROLL_UNDER_SLOTS = 6
+SORT_PAGES_ORDER_UNDER_SLOTS = (6, 3)
 
 
-def _sort_pages(request, sorts, member, selected_id, layout):
+def _sort_pages(request, sorts, member, selected_id, layout, without_scroll=SORTS_WITHOUT_SCROLL):
     """The pages of sort tiles for the order or settings screen, and which one shows first (the
     one with the selected sort). The order is worked out once a session and kept in it: every
     poll then renders the same bytes (and the Pi isn't counting orders twice a second)."""
-    if len(sorts) <= SORTS_WITHOUT_SCROLL:
+    if len(sorts) <= without_scroll:
         return [{"index": 0, "heading": None, "sorts": sorts}], 0
     cells, for_you = layout
     preferred = request.session.get("sort_order")
@@ -1179,17 +1240,61 @@ def _sort_pages(request, sorts, member, selected_id, layout):
     return pages, current
 
 
+def _options_text(values: dict, recipe: dict | None = None) -> str:
+    """"strength 7 · 200 ml · extra hot" - what differs from the machine's default (a slot stores only
+    that), in the panel's language."""
+    parts = []
+    if values.get("strength") is not None:
+        parts.append(_("strength %(level)s") % {"level": values["strength"]})
+    if values.get("water_ml") is not None:
+        parts.append(_("%(ml)s ml") % {"ml": values["water_ml"]})
+    if values.get("temperature") is not None:
+        parts.append(_("extra hot") if values["temperature"] >= 2 else _("less hot"))
+    return " · ".join(parts)
+
+
+def _slot_tiles(slots):
+    """The order screen's tiles of "my coffees" (coffee/slots.py)."""
+    tiles = []
+    for slot in slots:
+        details = _options_text(my_coffees.options(slot))
+        if slot.count > 1:
+            details = " · ".join(filter(None, [details, f"{slot.count}×"]))  # the tile has room for little
+        tiles.append({"value": f"slot:{slot.position}", "position": slot.position, "name": slot.coffee_sort.name,
+                      "details": details or _("as the machine makes it"),
+                      "price": slot.coffee_sort.price * slot.count})
+    return tiles
+
+
 def _order_context(request, uid, seconds_left):
     member = Member.objects.filter(uid=uid).first()
     coffee_sorts = list(CoffeeSort.offered())
-    shown_coffee, shown_auto = request.session.get("shown_order") or (
-        request.session.get("order_coffee_id"), request.session.get("order_auto_checkout", True))
-    selected_id = (
-        shown_coffee
-        or (member.favourite_coffee_id if member else None)
-        or (coffee_sorts[0].pk if coffee_sorts else None)
-    )
-    sort_pages, sort_page = _sort_pages(request, coffee_sorts, member, selected_id, SORT_PAGES_ORDER)
+    shown = request.session.get("shown_order") or [
+        request.session.get("order_coffee_id"), request.session.get("order_auto_checkout", True),
+        request.session.get("order_slot")]
+    shown_coffee, shown_auto = shown[0], shown[1]
+    shown_slot = shown[2] if len(shown) > 2 else None
+    slots = my_coffees.slots_for(member)
+    sort, slot = _chosen(request, member, (shown_coffee, shown_slot)) if member is not None else (None, None)
+    selected_id = (sort.pk if sort is not None and slot is None else None) if member is not None else None
+    if selected_id is None and slot is None:
+        selected_id = coffee_sorts[0].pk if coffee_sorts else None
+    tiles = _slot_tiles(slots)
+    hide = bool(slots) and member.hide_standard_sorts
+    # "My coffees" take the first row: the sorts below get two rows then - or a page of their own,
+    # behind "Other sorts", for whoever hid them.
+    layout = SORT_PAGES_ORDER if hide or not slots else SORT_PAGES_ORDER_UNDER_SLOTS
+    limit = SORTS_WITHOUT_SCROLL if hide or not slots else SORTS_WITHOUT_SCROLL_UNDER_SLOTS
+    sort_pages, sort_page = _sort_pages(request, coffee_sorts, member, selected_id, layout, limit)
+    if hide:
+        for page in sort_pages:
+            page["index"] += 1
+        sort_pages[0]["back"] = True
+        if sort_pages[0]["heading"] is None:
+            sort_pages[0]["heading"] = _("Other sorts")
+        sort_pages.insert(0, {"index": 0, "heading": _("My coffees"), "slots": tiles, "sorts": [],
+                              "next": _("Other sorts"), "back": False})
+        sort_page = 0 if slot is not None or selected_id is None else sort_page + 1
     # Nudges members who still owe from before this month rolled over - same "ab dem
     # Vormonat" balance the dashboard pillory uses, so it can't say two different things.
     month_reminder_balance = None
@@ -1209,7 +1314,9 @@ def _order_context(request, uid, seconds_left):
         "member": member,
         "sort_pages": sort_pages,
         "sort_page": sort_page,
+        "slot_tiles": [] if hide else tiles,
         "selected_coffee_id": selected_id,
+        "selected_slot": f"slot:{slot.position}" if slot is not None else None,
         "auto_checkout": shown_auto,
         "month_reminder_balance": month_reminder_balance,
         "alltime_badge": alltime_badge,
@@ -1251,6 +1358,71 @@ def _settings_context(request, uid, seconds_left):
         "sort_page": sort_page,
         "seconds_left": seconds_left,
     }
+
+
+def _slots_context(request, uid):
+    """The editor of "my coffees" (coffee/slots.py): three slots side by side, each a sort and what its
+    machine product lets them set. Built once - its buttons only change text and hidden fields
+    (static/kiosk/slots_editor.js), so the panel stays the same bytes until Save."""
+    member = Member.objects.filter(uid=uid).first()
+    sorts = list(CoffeeSort.offered())
+    by_position = {slot.position: slot for slot in my_coffees.slots_for(member)}
+    cards = []
+    for position in MemberSlot.POSITIONS:
+        slot = by_position.get(position)
+        made = my_coffees.effective(slot) if slot is not None else {}
+        cards.append({"position": position, "sort_id": slot.coffee_sort_id if slot else "",
+                      "sort_name": slot.coffee_sort.name if slot else "", "count": slot.count if slot else 1,
+                      "strength": made.get("strength"), "water_ml": made.get("water_ml"),
+                      "temperature": made.get("temperature")})
+    return {
+        "state": "slots",
+        "member": member,
+        "cards": cards,
+        "max_count": MemberSlot.MAX_COUNT,
+        "recipes": {str(sort.pk): {"name": sort.name, "recipe": my_coffees.recipe(sort)} for sort in sorts},
+        "sort_ids": [""] + [str(sort.pk) for sort in sorts],
+        "hide_standard_sorts": member.hide_standard_sorts if member else False,
+        "favourite_slot": member.favourite_slot if member else None,
+        "notice": request.session.get("slots_notice"),
+    }
+
+
+@require_POST
+def slots_open(request):
+    if _in_session(request, MODE_SETTINGS) and Member.objects.filter(uid=request.session["uid"]).exists():
+        request.session["settings_view"] = "slots"
+        request.session.pop("slots_notice", None)
+        request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
+        request.session.pop("shown_deadline", None)
+    return _render_panel(request)
+
+
+@require_POST
+def slots_close(request):
+    if _in_session(request, MODE_SETTINGS):
+        request.session.pop("settings_view", None)
+        request.session.pop("slots_notice", None)
+        request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
+        request.session.pop("shown_deadline", None)
+    return _render_panel(request)
+
+
+@require_POST
+def slots_save(request):
+    """Save on the editor: each slot within its sort's recipe (my_coffees.clean), the preselected
+    one, and whether the sorts hide behind them on the order screen."""
+    if _in_session(request, MODE_SETTINGS) and request.session.get("settings_view") == "slots":
+        member = Member.objects.filter(uid=request.session["uid"]).first()
+        if member is not None:
+            saved = my_coffees.save_form(member, request.POST)
+            who = audit.member_actor(member)
+            audit.log(request, "member.slots_update", target=who, actor=who, details="; ".join(
+                f"{p}: {my_coffees.describe(slot)}" for p, slot in saved.items()) or "none")
+            request.session["slots_notice"] = True
+        request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
+        request.session.pop("shown_deadline", None)
+    return _render_panel(request)
 
 
 def _payment_method_qr_row(balance, member=None):

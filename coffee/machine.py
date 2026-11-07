@@ -271,6 +271,7 @@ def sync_products(payload: dict) -> dict:
             # E6 says nothing about hot water, and every reconnect used to clear what the admin entered.
             if product.brewable or item.get("water_ml"):
                 product.water_ml = item.get("water_ml")
+            product.recipe = item.get("recipe") or {}
             product.save()
         MachineProduct.objects.exclude(code__in=listed).update(present=False)
         sorts = {_norm(s.name): s for s in CoffeeSort.objects.filter(machine_product__isnull=True)}
@@ -331,6 +332,7 @@ def adopt_product(product: MachineProduct) -> CoffeeSort:
 # is booked after this: the coffee was most likely made. One asked for and never started fails.
 STARTED_TIMEOUT = 300
 REQUESTED_TIMEOUT = 90
+CHAIN_TIMEOUT = 180  # the bridge's READY_TIMEOUT and a margin
 
 
 # Free products the kiosk's wait screen offers: what fits in one row under its text at 1024x600 (a
@@ -359,19 +361,42 @@ def brewing_available() -> bool:
 
 
 def request_brew(product: MachineProduct, member: Member | None, sort: CoffeeSort | None,
-                 source=MachineDispense.SOURCE_KIOSK) -> MachineDispense:
-    """Asks the bridge for one product; the dispense row follows what the machine does (handle_event).
-    A kiosk brew is booked as an order once it is done - never before."""
-    dispense = MachineDispense.objects.create(request_id=uuid.uuid4().hex, code=product.code,
-                                              product_name=product.name, source=source, member=member,
-                                              coffee_sort=sort)
-    command = {"id": dispense.request_id, "action": "brew", "product": product.code, "source": source}
-    if not product.brewable and product.water_ml:
-        command["options"] = {"water_ml": product.water_ml}
+                 source=MachineDispense.SOURCE_KIOSK, options: dict | None = None, count: int = 1) -> MachineDispense:
+    """Asks the bridge for one product - or `count` cups of it in a row, into one big cup or a jug (a
+    member's slot, coffee/slots.py). One dispense row per cup follows what the machine does
+    (handle_event); a kiosk brew is booked cup by cup once each is done - never before. Returns the
+    first cup's row."""
+    options = dict(options or {})
+    if not product.brewable and product.water_ml and "water_ml" not in options:
+        options["water_ml"] = product.water_ml
+    cups = []
+    for cup in range(1, max(1, count) + 1):
+        request_id = uuid.uuid4().hex
+        cups.append(MachineDispense.objects.create(
+            request_id=request_id, code=product.code, product_name=product.name, source=source, member=member,
+            coffee_sort=sort, chain=cups[0].request_id if cups else (request_id if count > 1 else ""),
+            cup=cup, of=max(1, count), requested=options))
+    command = {"id": cups[0].request_id, "action": "brew", "product": product.code, "source": source}
+    if options:
+        command["options"] = options
+    if len(cups) > 1:
+        command["request_ids"] = [d.request_id for d in cups]
     if not send("cmd", command):
-        dispense.state, dispense.reason, dispense.finished_at = MachineDispense.FAILED, "unreachable", timezone.now()
-        dispense.save(update_fields=["state", "reason", "finished_at"])
-    return dispense
+        MachineDispense.objects.filter(pk__in=[d.pk for d in cups]).update(
+            state=MachineDispense.FAILED, reason="unreachable", finished_at=timezone.now())
+        cups[0].refresh_from_db()
+    return cups[0]
+
+
+def chain_progress(first: MachineDispense) -> dict:
+    """Where a brew of several cups stands: {"cup": the one running or next, "of", "done", "failed",
+    "over"} - for the kiosk's "cup k of n"."""
+    cups = list(MachineDispense.objects.filter(chain=first.chain).order_by("cup")) if first.chain else [first]
+    done = sum(1 for d in cups if d.state == MachineDispense.DONE)
+    failed = [d for d in cups if d.state == MachineDispense.FAILED]
+    running = next((d for d in cups if d.state in (MachineDispense.REQUESTED, MachineDispense.STARTED)), None)
+    return {"cup": running.cup if running else len(cups), "of": len(cups), "done": done,
+            "failed": failed[0] if failed else None, "over": running is None, "current": running}
 
 
 def handle_event(payload: dict):
@@ -421,9 +446,12 @@ def book(dispense: MachineDispense, reason: str = "") -> Order | None:
     sort = dispense.coffee_sort
     if sort is None:
         return None
+    made = ", ".join([dispense.product_name] + [f"{k.replace('_ml', '')} {v}{' ml' if k == 'water_ml' else ''}"
+                                                 for k, v in (dispense.requested or {}).items()]
+                     + ([f"cup {dispense.cup}/{dispense.of}"] if dispense.of > 1 else []))
     order = Order.objects.create(member_id=dispense.member_id, coffee_sort=sort, value=sort.price,
                                  machine_strokes=sort.machine_strokes,
-                                 info=f"Ordered [{sort.pk}] {sort.name} (machine: {dispense.product_name})")
+                                 info=f"Ordered [{sort.pk}] {sort.name} (machine: {made})"[:255])
     dispense.order = order
     dispense.save(update_fields=["order"])
     who = audit.member_actor(dispense.member)
@@ -445,8 +473,16 @@ def housekeeping(now=None):
             book(dispense, reason="no confirmation from the machine")
             count_supplies(dispense)
     MachineDispense.objects.filter(
-        state=MachineDispense.REQUESTED, created_at__lt=now - timezone.timedelta(seconds=REQUESTED_TIMEOUT)
+        state=MachineDispense.REQUESTED, cup=1, created_at__lt=now - timezone.timedelta(seconds=REQUESTED_TIMEOUT)
     ).update(state=MachineDispense.FAILED, finished_at=now, reason="no answer")
+    # A later cup of several waits for the one before - its time runs from that one's end (the bridge
+    # needs up to its READY_TIMEOUT to start it, 2 minutes).
+    for later in MachineDispense.objects.filter(state=MachineDispense.REQUESTED, cup__gt=1):
+        before = MachineDispense.objects.filter(chain=later.chain, cup=later.cup - 1).first()
+        if before is None or (before.state in (MachineDispense.DONE, MachineDispense.FAILED) and before.finished_at
+                              and before.finished_at < now - timezone.timedelta(seconds=CHAIN_TIMEOUT)):
+            later.state, later.finished_at, later.reason = MachineDispense.FAILED, now, "no answer"
+            later.save(update_fields=["state", "finished_at", "reason"])
     incidents_housekeeping(now)
 
 
@@ -562,13 +598,13 @@ def supply_levels() -> dict:
                           "left": s.left_percent} for s in supplies().values()]}
 
 
-def tasks_before(product: MachineProduct) -> list[str]:
-    """What the one at the cup screen should do before Start: water the brew wouldn't get, beans
-    nearly gone. Both are safe to do before - the machine isn't running yet."""
+def tasks_before(product: MachineProduct, water_ml: int | None = None, count: int = 1) -> list[str]:
+    """What the one at the cup screen should do before Start: water the brew wouldn't get (all of its
+    cups), beans nearly gone. Both are safe to do before - the machine isn't running yet."""
     found = supplies()
     water = found[MachineSupply.WATER]
     tasks = []
-    need = product.water_ml or 0
+    need = (water_ml or product.water_ml or 0) * max(1, count)
     if need and water.capacity - water.used < need:
         tasks.append(str(ALERT_LABELS["fill_water"]))
     if found[MachineSupply.BEANS].used_percent >= SOON_PERCENT and product.code not in FREE_BY_DEFAULT:
@@ -576,17 +612,17 @@ def tasks_before(product: MachineProduct) -> list[str]:
     return tasks
 
 
-def tasks_after(product: MachineProduct) -> list[str]:
+def tasks_after(product: MachineProduct, water_ml: int | None = None, count: int = 1) -> list[str]:
     """What the one waiting for the brew should do right after it - not during it: pulling the tank
     or the grounds container stops the machine."""
     found = supplies()
     tasks = []
     grounds = found[MachineSupply.GROUNDS]
-    portions = product.strokes if product.code not in FREE_BY_DEFAULT else 0
+    portions = (product.strokes if product.code not in FREE_BY_DEFAULT else 0) * max(1, count)
     if portions and (grounds.used + portions) * 100 / max(1, grounds.capacity) >= SOON_PERCENT:
         tasks.append(str(ALERT_LABELS["empty_grounds"]))
     water = found[MachineSupply.WATER]
-    if (water.used + (product.water_ml or 0)) * 100 / max(1, water.capacity) >= SOON_PERCENT:
+    if (water.used + (water_ml or product.water_ml or 0) * max(1, count)) * 100 / max(1, water.capacity) >= SOON_PERCENT:
         tasks.append(str(ALERT_LABELS["fill_water"]))
     return tasks
 

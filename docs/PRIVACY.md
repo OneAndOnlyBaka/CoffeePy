@@ -26,6 +26,7 @@ The technical protections are in [SECURITY.md](SECURITY.md).
 | Name - "First L." or a short code like "AB" | members | to show whose account it is | the member at the kiosk, or an admin |
 | Orders: time, coffee sort, price, cups | members | the tally | the kiosk |
 | Payments: time, amount, method | members | the tally | kiosk, portal, dashboard |
+| "My coffees": up to three saved coffees (sort, strength, water, temperature, cups in a row), which one is preselected, whether the other sorts are hidden | members | to make the coffee the way the member set it | the member at the kiosk or on the phone |
 | Balance, rankings, statistics | members | calculated from the above, never stored separately | - |
 | Linked phones: browser description, linked and last seen | members | to let the member see and log out their phones | the portal |
 | Dashboard users: user name, password hash, role | admins, managers | access to the dashboard | an admin |

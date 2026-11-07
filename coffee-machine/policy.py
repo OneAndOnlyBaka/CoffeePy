@@ -103,3 +103,73 @@ def needs_lock(block_manual: bool, alert_keys, last_sent: float, now: float) -> 
     if not block_manual and locked:
         return False
     return None
+
+
+# n brews of one recipe in a row, into one big cup or a jug (CoffeePy's "my coffees" slots): the
+# next starts once the machine is idle again and says so. The E6 reported "coffee_ready" ~9 s after a
+# product ended (2026-11-06); a model that never says it gets the next one after READY_FALLBACK.
+READY_PAUSE = 5.0
+READY_FALLBACK = 30.0
+# Idle and still not ready, or blocked, for this long: the rest of the chain is given up.
+READY_TIMEOUT = 120.0
+
+
+class BrewChain:
+    """The cups of one `brew` with `count` > 1, one request id each. `step` is fed what happened
+    and says what to do next:
+
+        ("start", request_id)          - brew the next cup now
+        ("fail", request_id, reason)   - a cup that won't be made (reported as brew_failed)
+
+    A failed cup ends the chain: the jug is wrong from there on, and whoever stands at the machine
+    has to see to it (a blocking alert says what). Cups already made stay made - and booked."""
+
+    def __init__(self, request_ids, product, options, source):
+        self.ids = list(request_ids)
+        self.product = product
+        self.options = options
+        self.source = source
+        self.started = 1  # the first cup is started with the command itself
+        self.done_at = None
+        self.over = False
+
+    def cup(self, request_id):
+        """(k, n) of a request id of this chain, or None."""
+        return (self.ids.index(request_id) + 1, len(self.ids)) if request_id in self.ids else None
+
+    def step(self, events, busy, idle, ready_alert, blocking, now):
+        actions = []
+        for event in events:
+            if event.get("request_id") not in self.ids:
+                continue
+            if event["type"] == "brew_failed":
+                actions += self._fail_rest("previous cup failed: " + str(event.get("reason", "")))
+            elif event["type"] == "brew_done":
+                self.done_at = now
+        if self.over or busy or self.done_at is None or self.started >= len(self.ids):
+            if self.started >= len(self.ids) and not busy and self.done_at is not None:
+                self.over = True
+            return actions
+        waited = now - self.done_at
+        if blocking and waited >= READY_PAUSE:
+            if waited >= READY_TIMEOUT:
+                actions += self._fail_rest("blocked")
+            return actions  # the machine asks for something first - maybe done in time
+        if idle and waited >= READY_PAUSE and (ready_alert or waited >= READY_FALLBACK):
+            actions.append(("start", self.ids[self.started]))
+            self.started += 1
+            self.done_at = None
+        elif waited >= READY_TIMEOUT:
+            actions += self._fail_rest("not ready")
+        return actions
+
+    def lost(self):
+        return self._fail_rest("disconnected")
+
+    def _fail_rest(self, reason):
+        if self.over:
+            return []
+        self.over = True
+        rest = self.ids[self.started:]
+        self.started = len(self.ids)
+        return [("fail", request_id, reason) for request_id in rest]

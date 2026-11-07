@@ -118,7 +118,9 @@ so **ask the user for each run**; the script creates and removes its test member
 and scans itself. `kiosk-machine-test.sh [ROUNDS]` does the same for the coffee machine's screens
 (guided brew, free product, blocked machine, the ring's modal, the runaways tab) - start the bridge
 with `sudo MACHINE_SIMULATE=true docker compose up -d machine-bridge` first (a deploy's `compose up`
-resets that). Both find the browser themselves: on cog through `wd.py` (WebDriver for the page, a
+resets that). `kiosk-slots-test.sh [ROUNDS]` (cog only) does "my coffees": the editor's buttons, the
+2-cup slot brewed by the simulator and booked twice, the sorts hidden behind the slots - screenshots in
+the Pi's `/tmp/slots-shots`. The first two find the browser themselves: on cog through `wd.py` (WebDriver for the page, a
 uinput touchscreen with the real one's capabilities for the taps - so as root), on Chromium
 through `cdp.py`. Read the result as a rate: cog had no crash in 13 rounds, so any crash there
 wants a look; Chromium's own teardown crash hits about one login/logout swap in 15-30. When a step

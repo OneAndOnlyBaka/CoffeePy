@@ -58,6 +58,12 @@
 </div>
 
 <div class="card">
+    <h2>{% translate "My coffees" %}</h2>
+    <p class="muted">{% translate "Up to three coffees the way you like them - strength, water, several cups in a row. They appear first at the kiosk." %}</p>
+    <a href="{% url 'portal:coffees' %}" class="btn secondary btn-block">{% translate "Set up my coffees" %}</a>
+</div>
+
+<div class="card">
     <h2>{% translate "Your data" %}</h2>
     <p class="muted">{% blocktranslate trimmed %}Everything this device stores about you - cards, linked phones, every
     coffee and payment, and the log entries about you - as one file.{% endblocktranslate %}</p>

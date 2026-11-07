@@ -47,6 +47,10 @@ class Member(models.Model):
     # nothing is booked for them until they do.
     privacy_version = models.PositiveSmallIntegerField(default=0)
     privacy_confirmed_at = models.DateTimeField(null=True, blank=True)
+    # "My coffees" (coffee/slots.py, MemberSlot): the order screen shows only their slots, the coffee
+    # sorts one page on - and the slot preselected (and checked out after 20 s) instead of the favourite.
+    hide_standard_sorts = models.BooleanField(default=False)
+    favourite_slot = models.PositiveSmallIntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.nickname or str(self.uid)
@@ -468,6 +472,9 @@ class MachineProduct(models.Model):
     present = models.BooleanField(default=True)
     brewable = models.BooleanField(default=True)  # the bridge knows a recipe it can send
     water_ml = models.PositiveSmallIntegerField(null=True, blank=True)  # the definition's default
+    # What a brew may ask for, as the bridge reports it (coffee-machine/README.md, `recipe`): strength,
+    # water and temperature with their limits - what a member's slot can set (coffee/slots.py).
+    recipe = models.JSONField(default=dict, blank=True)
     coffee_sort = models.OneToOneField(CoffeeSort, null=True, blank=True, on_delete=models.SET_NULL,
                                        related_name="machine_product")
     # Free: offered at the kiosk without a card and without a booking (hot water, milk foam) - and,
@@ -503,6 +510,13 @@ class MachineDispense(models.Model):
     order = models.OneToOneField(Order, null=True, blank=True, on_delete=models.SET_NULL, related_name="dispense")
     water_ml = models.PositiveSmallIntegerField(null=True, blank=True)
     strength = models.PositiveSmallIntegerField(null=True, blank=True)
+    # Several cups of one slot in a row (coffee-machine/README.md): the first cup's request id ties
+    # them together, `cup` of `of` says which; `requested` is what the slot asked for - water_ml and
+    # strength above are what the machine reported.
+    chain = models.CharField(max_length=40, blank=True)
+    cup = models.PositiveSmallIntegerField(default=1)
+    of = models.PositiveSmallIntegerField(default=1)
+    requested = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(default=timezone.now, db_index=True)
     finished_at = models.DateTimeField(null=True, blank=True)
 
@@ -602,3 +616,28 @@ class BackupSettings(models.Model):
     @classmethod
     def current(cls):
         return cls.objects.get_or_create(pk=1)[0]
+
+
+class MemberSlot(models.Model):
+    """One of a member's "my coffees" (coffee/slots.py): a coffee sort the way they like it - strength,
+    water, temperature as the machine's product allows (MachineProduct.recipe; empty: the machine's
+    default) - and how many of it in a row, into one big cup or a jug. Each cup is booked as an order
+    of the sort, at its price, once the machine has made it."""
+
+    POSITIONS = (1, 2, 3)
+    MAX_COUNT = 4
+
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="slots")
+    position = models.PositiveSmallIntegerField()
+    coffee_sort = models.ForeignKey(CoffeeSort, on_delete=models.CASCADE, related_name="+")
+    strength = models.PositiveSmallIntegerField(null=True, blank=True)
+    water_ml = models.PositiveSmallIntegerField(null=True, blank=True)
+    temperature = models.PositiveSmallIntegerField(null=True, blank=True)  # 0 low, 1 normal, 2 high
+    count = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ["member", "position"]
+        constraints = [models.UniqueConstraint(fields=["member", "position"], name="one_slot_per_position")]
+
+    def __str__(self):
+        return f"{self.member} #{self.position}: {self.coffee_sort}"

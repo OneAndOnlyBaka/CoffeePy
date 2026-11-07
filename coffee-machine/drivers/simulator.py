@@ -10,13 +10,21 @@ import time
 import codec
 
 BLOCKING = {"fill_water", "empty_grounds", "empty_tray", "insert_tray", "error_status"}
-PRODUCTS = [  # the E6's, as the bridge lists them for the real one
-    {"code": 2, "name": "Espresso", "strokes": 1, "water_ml": 45, "strength": 6, "brewable": True},
-    {"code": 3, "name": "Coffee", "strokes": 1, "water_ml": 100, "strength": 4, "brewable": True},
-    {"code": 4, "name": "Cappuccino", "strokes": 1, "water_ml": 60, "strength": 6, "brewable": True},
-    {"code": 8, "name": "Milk Foam", "strokes": 1, "brewable": True},
+TEMPERATURE = {"options": [1, 2], "default": 2}
+PRODUCTS = [  # the E6's, as the bridge lists them for the real one (py-jura's ef532v2 definition)
+    {"code": 2, "name": "Espresso", "strokes": 1, "water_ml": 45, "strength": 6, "brewable": True,
+     "recipe": {"strength": {"min": 1, "max": 8, "default": 6}, "water": {"min": 15, "max": 80, "step": 5, "default": 45},
+                "temperature": TEMPERATURE}},
+    {"code": 3, "name": "Coffee", "strokes": 1, "water_ml": 100, "strength": 4, "brewable": True,
+     "recipe": {"strength": {"min": 1, "max": 8, "default": 4}, "water": {"min": 25, "max": 240, "step": 5, "default": 100},
+                "temperature": TEMPERATURE}},
+    {"code": 4, "name": "Cappuccino", "strokes": 1, "water_ml": 60, "strength": 6, "brewable": True,
+     "recipe": {"strength": {"min": 1, "max": 8, "default": 6}, "water": {"min": 25, "max": 240, "step": 5, "default": 60},
+                "temperature": TEMPERATURE}},
+    {"code": 8, "name": "Milk Foam", "strokes": 1, "brewable": True, "recipe": {}},
     {"code": 13, "name": "Hot Water", "strokes": 1, "brewable": False},
-    {"code": 19, "name": "2 Coffee", "strokes": 2, "water_ml": 200, "strength": 4, "brewable": True},
+    {"code": 19, "name": "2 Coffee", "strokes": 2, "water_ml": 200, "strength": 4, "brewable": True,
+     "recipe": {"water": {"min": 25, "max": 240, "step": 5, "default": 100}, "temperature": TEMPERATURE}},
 ]
 # (phase state, seconds) - the real E6 heated ~4 s (30 s out of energy saving) and poured ~25 s.
 TIMELINE = ((codec.STATE_HEATING, 4), (codec.STATE_STARTING, 2), (codec.STATE_DISPENSING, 10), (codec.STATE_DONE, 3))

@@ -72,7 +72,8 @@ no seconds: the cup's animation runs in CSS, the countdown in countdown.js from 
         <div class="brew-text">
             {% if stage == "cup" %}
             <h2>{% translate "Put your cup under the outlet" %}</h2>
-            <p>{% if free %}{% translate "Free - nothing is booked." %}{% else %}{% blocktranslate trimmed with sort=product_name %}{{ sort }} - booked once the machine has made it.{% endblocktranslate %}{% endif %}</p>
+            <p>{% if free %}{% translate "Free - nothing is booked." %}{% elif count > 1 %}{% blocktranslate trimmed with sort=product_name count=count %}{{ count }} × {{ sort }} in a row, into this cup or jug - each booked once the machine has made it.{% endblocktranslate %}{% else %}{% blocktranslate trimmed with sort=product_name %}{{ sort }} - booked once the machine has made it.{% endblocktranslate %}{% endif %}</p>
+            {% if options_text %}<p class="brew-options">{{ options_text }}</p>{% endif %}
             {% if blocking %}
             <p class="msg error">{% translate "The machine needs this first:" %}</p>
             <ul class="brew-tasks">{% for task in blocking %}<li>{{ task }}</li>{% endfor %}</ul>
@@ -82,6 +83,7 @@ no seconds: the cup's animation runs in CSS, the countdown in countdown.js from 
             {% endif %}
             {% elif stage == "brewing" %}
             <h2>{% if phase == "heating" %}{% translate "The machine is getting ready ..." %}{% else %}{% blocktranslate trimmed with sort=product_name %}Your {{ sort }} is on its way{% endblocktranslate %}{% endif %}</h2>
+            {% if cup %}<p class="brew-cups">{% blocktranslate trimmed with cup=cup count=count %}Cup {{ cup }} of {{ count }}{% endblocktranslate %}</p>{% endif %}
             <p>{% translate "Leave the cup where it is until the machine is done." %}</p>
             {% if tasks %}
             {% comment %}Not now: pulling the tank or the grounds container stops the machine.{% endcomment %}
@@ -89,7 +91,7 @@ no seconds: the cup's animation runs in CSS, the countdown in countdown.js from 
             <ul class="brew-tasks">{% for task in tasks %}<li>{{ task }}</li>{% endfor %}</ul>
             {% endif %}
             {% elif stage == "failed" %}
-            <h2>{% translate "Nothing was booked" %}</h2>
+            <h2>{% if made %}{% blocktranslate trimmed with made=made count=count %}{{ made }} of {{ count }} made and booked{% endblocktranslate %}{% else %}{% translate "Nothing was booked" %}{% endif %}</h2>
             <p class="msg error">{{ reason }}</p>
             {% if blocking %}<ul class="brew-tasks">{% for task in blocking %}<li>{{ task }}</li>{% endfor %}</ul>{% endif %}
             {% elif stage == "done_free" %}
@@ -143,6 +145,16 @@ scrolled list crashed Chromium, CLAUDE.md); the same bytes on every poll until i
             {% comment %}Pages, not a scrolling list, once there are more sorts than fit - see
             views.SORTS_WITHOUT_SCROLL. Turning a page counts as a pick (order_select): whoever
             browses is choosing, and the favourite isn't booked under their fingers.{% endcomment %}
+            {% comment %}"My coffees" (coffee/slots.py): the member's own, first row, in the same group of tiles
+            as the sorts - one pick for all. Hidden sorts: they are a page of their own instead (views._order_context).{% endcomment %}
+            {% if slot_tiles %}
+            <div class="slot-row">
+                <h2 class="sort-group">{% translate "My coffees" %}</h2>
+                <div class="coffee-list">
+                    {% for tile in slot_tiles %}{% include "kiosk/_slot_tile.html" %}{% endfor %}
+                </div>
+            </div>
+            {% endif %}
             <div class="sort-pages{% if sort_pages|length > 1 %} paged{% endif %}">
                 {% for page in sort_pages %}
                 <div class="sort-page{% if page.index == sort_page %} current{% endif %}" data-page="{{ page.index }}">
@@ -150,6 +162,7 @@ scrolled list crashed Chromium, CLAUDE.md); the same bytes on every poll until i
                     <div class="coffee-list">
                         {% if page.back %}<button type="button" class="coffee-option sort-nav" data-sort-page="{{ page.index|add:-1 }}"
                                 hx-post="{% url 'kiosk:order_select' %}" hx-swap="none">‹ {% translate "Back" %}</button>{% endif %}
+                        {% for tile in page.slots %}{% include "kiosk/_slot_tile.html" %}{% endfor %}
                         {% for sort in page.sorts %}
                         <label class="coffee-option">
                             <input type="radio" name="coffee_id" value="{{ sort.pk|unlocalize }}"
@@ -203,7 +216,17 @@ scrolled list crashed Chromium, CLAUDE.md); the same bytes on every poll until i
             The highlight is CSS (:has(:checked)) - a pick changes nothing the poll renders.{% endcomment %}
             <fieldset class="field">
                 <legend>{% translate "Favourite coffee" %}</legend>
-                <div class="sort-pages{% if sort_pages|length > 1 %} paged{% endif %}">
+                {% comment %}"My coffees" (coffee/slots.py): the member's own, first row, in the same group of tiles
+            as the sorts - one pick for all. Hidden sorts: they are a page of their own instead (views._order_context).{% endcomment %}
+            {% if slot_tiles %}
+            <div class="slot-row">
+                <h2 class="sort-group">{% translate "My coffees" %}</h2>
+                <div class="coffee-list">
+                    {% for tile in slot_tiles %}{% include "kiosk/_slot_tile.html" %}{% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            <div class="sort-pages{% if sort_pages|length > 1 %} paged{% endif %}">
                     {% for page in sort_pages %}
                     <div class="sort-page{% if page.index == sort_page %} current{% endif %}" data-page="{{ page.index }}">
                         {% if page.heading %}<h2 class="sort-group">{{ page.heading }}</h2>{% endif %}
@@ -230,10 +253,61 @@ scrolled list crashed Chromium, CLAUDE.md); the same bytes on every poll until i
             <button type="button" class="btn secondary" title="{% translate "Link this phone" %}"
                     hx-get="{% url 'kiosk:link_phone_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
                     hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/phone.svg" %} {% translate "Link this phone" %}</button>
+            {% if not is_new_user and not name_required %}<button type="button" class="btn secondary"
+                    hx-post="{% url 'kiosk:slots_open' %}" hx-target="#panel" hx-swap="innerHTML">{% include "icons/cup.svg" %} {% translate "My coffees" %}</button>{% endif %}
             {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-touch-seconds="{{ touch_seconds|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
             <button type="submit" class="success primary-action">{% translate "Save" %}</button>
         </div>
     </form>
+</div>
+
+{% elif state == "slots" %}
+{% comment %}
+"My coffees" (coffee/slots.py, views._slots_context): three slots side by side - a sort (‹ ›), and what its
+machine product lets them set: strength, water, temperature, and how many cups in a row. Everything is laid
+out from the start; the buttons only change text and the hidden fields (static/kiosk/slots_editor.js), a row
+the sort can't set is only invisible - nothing is built or torn down, nothing scrolls, no <select>.
+{% endcomment %}
+<div class="panel-card slots-card">
+    <form class="slots-editor" hx-post="{% url 'kiosk:slots_save' %}" hx-target="#panel" hx-swap="innerHTML"
+          data-touch-url="{% url 'kiosk:settings_touch' %}" data-empty="{% translate "empty" %}"
+          data-temp-0="{% translate "less hot" %}" data-temp-1="{% translate "normal" %}" data-temp-2="{% translate "extra hot" %}"
+          data-sort-ids="{{ sort_ids|join:',' }}" data-max-count="{{ max_count|unlocalize }}">
+        <h1 class="panel-header">{% translate "My coffees" %}</h1>
+        <div class="panel-body">
+            <p class="slots-hint">{% translate "Your coffee the way you like it - it appears first when you order. Several cups run one after the other into the same big cup or jug, each at the sort's price." %}</p>
+            {% if notice %}<p class="msg success">{% translate "Saved - your coffees are on the order screen now." %}</p>{% endif %}
+            <div class="slot-cards">
+                {% for card in cards %}
+                <div class="slot-card" data-pos="{{ card.position }}">
+                    <input type="hidden" name="s{{ card.position }}-sort" value="{{ card.sort_id|unlocalize }}">
+                    <input type="hidden" name="s{{ card.position }}-strength" value="{{ card.strength|default_if_none:''|unlocalize }}">
+                    <input type="hidden" name="s{{ card.position }}-water" value="{{ card.water_ml|default_if_none:''|unlocalize }}">
+                    <input type="hidden" name="s{{ card.position }}-temperature" value="{{ card.temperature|default_if_none:''|unlocalize }}">
+                    <input type="hidden" name="s{{ card.position }}-count" value="{{ card.count|unlocalize }}">
+                    <div class="slot-ctl slot-sort"><button type="button" data-step="sort" data-by="-1">‹</button>
+                        <span class="slot-value" data-show="sort"></span><button type="button" data-step="sort" data-by="1">›</button></div>
+                    <div class="slot-ctl" data-needs="strength"><span class="slot-label">{% translate "Strength" %}</span>
+                        <button type="button" data-step="strength" data-by="-1">−</button><span class="slot-value" data-show="strength"></span><button type="button" data-step="strength" data-by="1">+</button></div>
+                    <div class="slot-ctl" data-needs="water"><span class="slot-label">{% translate "Water" %}</span>
+                        <button type="button" data-step="water" data-by="-1">−</button><span class="slot-value" data-show="water"></span><button type="button" data-step="water" data-by="1">+</button></div>
+                    <div class="slot-ctl" data-needs="temperature"><span class="slot-label">{% translate "Temperature" %}</span>
+                        <button type="button" data-step="temperature" data-by="1" class="slot-wide"><span class="slot-value" data-show="temperature"></span></button></div>
+                    <div class="slot-ctl" data-needs="sort"><span class="slot-label">{% translate "Cups" %}</span>
+                        <button type="button" data-step="count" data-by="-1">−</button><span class="slot-value" data-show="count"></span><button type="button" data-step="count" data-by="1">+</button></div>
+                    <label class="slot-fav" data-needs="sort"><input type="radio" name="favourite" value="{{ card.position }}"{% if favourite_slot == card.position %} checked{% endif %}> {% translate "Preselect" %}</label>
+                </div>
+                {% endfor %}
+            </div>
+            <label class="slot-hide"><input type="checkbox" name="hide_standard_sorts"{% if hide_standard_sorts %} checked{% endif %}> {% translate "Show only my coffees when I order (the other sorts one page on)" %}</label>
+        </div>
+        <div class="action-row panel-footer">
+            <button type="button" class="danger" hx-post="{% url 'kiosk:slots_close' %}" hx-target="#panel" hx-swap="innerHTML">‹ {% translate "Back" %}</button>
+            {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-touch-seconds="{{ touch_seconds|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
+            <button type="submit" class="success primary-action">✓ {% translate "Save" %}</button>
+        </div>
+    </form>
+    {{ recipes|json_script:"slot-recipes" }}
 </div>
 
 {% elif state == "info_pay" %}

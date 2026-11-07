@@ -67,6 +67,23 @@ async def scan(seconds=SCAN_SECONDS) -> list[dict]:
     return sorted(machines_seen, key=lambda m: -(m["rssi"] or -999))
 
 
+def recipe(known) -> dict:
+    """What a brew of this product may ask for (README, `products`): the definition's ranges and
+    defaults - CoffeePy's "my coffees" slots stay within them. Temperatures as their wire values
+    (0 low, 1 normal, 2 high)."""
+    out = {}
+    if known.strength is not None:
+        values = known.strength.values
+        out["strength"] = {"min": min(values), "max": max(values), "default": known.strength.default}
+    if known.water is not None:
+        w = known.water
+        out["water"] = {"min": w.min, "max": w.max, "step": w.step, "default": w.default}
+    if known.temperature is not None:
+        out["temperature"] = {"options": [t.value for t in known.temperature.options],
+                              "default": known.temperature.default.value}
+    return out
+
+
 class JuraBle:
     def __init__(self, address: str):
         self.address = address.upper()
@@ -205,6 +222,7 @@ class JuraBle:
                 if known.strength is not None:
                     item["strength"] = known.strength.default
                 item["brewable"] = True
+                item["recipe"] = recipe(known)
             else:
                 item["brewable"] = False  # no definition: its parameters would be guesses
             out.append(item)
