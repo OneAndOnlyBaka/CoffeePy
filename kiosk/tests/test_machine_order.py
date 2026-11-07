@@ -144,7 +144,7 @@ class MachineOrderTestCase(TestCase):
 
     def test_free_products_without_a_card(self):
         wait = self.panel()
-        self.assertContains(wait, "Hot water · free")
+        self.assertContains(wait, "<b>Hot water</b><small>free · no card needed</small>")
         self.assertEqual(wait.content, self.panel().content)
         response = self.client.post(reverse("kiosk:machine_free"), {"code": "13"})
         self.assertContains(response, "Free - nothing is booked.")

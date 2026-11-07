@@ -50,8 +50,8 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
     the only way to get it at all (coffee/machine.py). Changes only with the machine's state.{% endcomment %}
     <div class="free-products">
         {% for product in free_products %}
-        <button type="button" class="secondary" hx-post="{% url 'kiosk:machine_free' %}" hx-vals='{"code": "{{ product.code|unlocalize }}"}'
-                hx-target="#panel" hx-swap="innerHTML">{{ product.name|product_label }} · {% translate "free" %}</button>
+        <button type="button" class="free-btn" hx-post="{% url 'kiosk:machine_free' %}" hx-vals='{"code": "{{ product.code|unlocalize }}"}'
+                hx-target="#panel" hx-swap="innerHTML">{% include "icons/cup.svg" %}<span class="free-text"><b>{{ product.name|product_label }}</b><small>{% translate "free · no card needed" %}</small></span></button>
         {% endfor %}
     </div>
     {% endif %}

@@ -535,9 +535,20 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
    cup itself, and the card that once carried it too shrank to the cup's size. */
 .brew-cup { flex: 0 0 auto; width: 220px; height: 220px; }
 
-/* No card needed: the machine's free products on the waiting screen. */
-.free-products { display: flex; justify-content: center; gap: 14px; margin-top: 16px; }
-.free-products button { min-height: 60px; font-size: 1.15rem; padding: 8px 22px; }
+/* No card needed: the machine's free products on the waiting screen. Unmistakably buttons - the
+   first ones, light on cream, read as text boxes: the coffee colour of the main actions, a darker
+   bottom edge to press, the cup, and what a tap costs (nothing) in its own line. Plain paint only -
+   no shadow animation, no transform: the wait screen has to stay cheap to swap. */
+.free-products { display: flex; justify-content: center; gap: 16px; margin-top: 14px; }
+.free-btn { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 6px 24px 6px 18px;
+  background: var(--coffee); color: var(--text-inverse); border-top: 0 solid transparent;
+  border-bottom: 5px solid var(--coffee-dark); box-shadow: 0 3px 8px rgba(59, 35, 20, 0.25); text-align: left; }
+/* Pressed: the edge moves to the top, the height stays - nothing else on the screen moves. */
+.free-btn:active { border-top-width: 3px; border-bottom-width: 2px; }
+.free-btn .icon { width: 34px; height: 34px; flex: 0 0 auto; }
+.free-btn .free-text { display: flex; flex-direction: column; line-height: 1.15; }
+.free-btn b { font-size: 1.2rem; }
+.free-btn small { font-size: 0.9rem; color: var(--cream-dark); }
 
 /* The machine's ring next to the language button (coffee.machine.kiosk_level). */
 .machine-btn { position: static; background: var(--cream); color: var(--coffee); box-sizing: border-box; border: 5px solid var(--coffee-light); }
