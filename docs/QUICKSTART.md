@@ -77,7 +77,7 @@ sudo ./install/install.sh
 ```
 
 That is the whole thing. It installs Docker plus the Compose v2 plugin, the kiosk stack
-(X, Openbox, Chromium, autologin on tty1, the CoffeePy boot splash), the DS3231 RTC
+(WPE WebKit's cog straight on the display - no X -, autologin on tty1, the CoffeePy boot splash), the DS3231 RTC
 overlay and its write-back timer, the ACR122U udev rule and the modprobe blacklist that
 keeps the kernel's own NFC driver off the reader, the storage helper for the backup stick, the
 systemd units, and finally - after asking - the standalone WiFi access point. It copies the app to
@@ -103,8 +103,8 @@ Worth knowing:
   `VIDEO_MODE=` (empty) or your own `video=` string.
 
 **Devices installed before HTTPS** need two host-side pieces an update bundle cannot
-deliver - the kiosk session now opens `https://localhost:8443` and imports the device CA
-with `certutil`. Run `sudo ./install/install.sh --only=packages` and `--only=kiosk` once
+deliver - the kiosk session now opens `https://localhost:8443` and trusts the device CA.
+Run `sudo ./install/install.sh --only=packages` and `--only=kiosk` once
 from a current checkout; with the update alone the kiosk keeps pointing at the old,
 now closed port 8000.
 
@@ -121,7 +121,7 @@ a dev machine first:
 
 It collects the `.deb` packages from the *real* Raspberry Pi OS archives (Raspbian plus
 archive.raspberrypi.com, resolved in a container of the target architecture - Debian's own
-archive does not have `chromium` or `rpd-plym-splash` under those names), Docker's Compose
+archive does not have `rpd-plym-splash` or the Pi's own Mesa and kernel), Docker's Compose
 plugin, the app images built for the target platform, and this checkout. Building the
 images cross-compiles under qemu, so the machine needs working binfmt emulation - the same
 prerequisite any ARM cross-build has.

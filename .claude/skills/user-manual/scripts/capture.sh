@@ -5,8 +5,8 @@
 #   capture.sh --only kiosk,dashboard,portal,provision    whole areas, comma-separated
 #   capture.sh                                  everything, German and English
 #
-# The kiosk is captured on the test Pi itself (pi-device skill: the kiosk browser's debug
-# port, demo cards). Dashboard and portal are captured from this machine, in a throwaway
+# The kiosk is captured on the test Pi itself, in its own browser (pi-device skill: cog through
+# WebDriver, or Chromium's debug port; demo cards). Dashboard and portal are captured from this machine, in a throwaway
 # headless Chromium profile pointed at the Pi - nothing on the touchscreen changes for them.
 # Demo data is added first and - whatever happens - removed again, and the debug port is
 # turned off. Needs a Python with Pillow in $MANUAL_PYTHON (see capture_tui.sh) and
@@ -51,14 +51,19 @@ cleanup() {
 trap cleanup EXIT
 
 if wants kiosk || wants dashboard || wants portal; then
-	scp -q "${PI}/cdp.py" "${DIR}/demo_data.py" "${DIR}/capture_web.py" "${PI_USER}@${PI_HOST}:/tmp/"
+	scp -q "${PI}/cdp.py" "${PI}/wd.py" "${DIR}/demo_data.py" "${DIR}/capture_web.py" "${PI_USER}@${PI_HOST}:/tmp/"
 	"${PI}/django.sh" "${DIR}/demo_data.py" seed
 fi
 
 if wants kiosk; then
-	"${PI}/kiosk-browser.sh" on
-	"${PI}/kiosk-browser.sh" errors >/dev/null   # waits for the kiosk page to load
-	"${PI}/pi.sh" "rm -rf /tmp/manual; python3 -I /tmp/capture_web.py de en --only kiosk ${SHOTS_ARG[*]}"
+	"${PI}/kiosk-browser.sh" on   # cog: waits for the kiosk page to load itself
+	# cog (wd.py: WebDriver, as root) where the device has it, else Chromium's debug port (cdp.py)
+	if "${PI}/pi.sh" 'command -v cog >/dev/null'; then
+		"${PI}/pi.sh" "rm -rf /tmp/manual; sudo KIOSK_BROWSER=wpe python3 -I /tmp/capture_web.py de en --only kiosk ${SHOTS_ARG[*]}; sudo chown -R \$(id -u) /tmp/manual"
+	else
+		"${PI}/kiosk-browser.sh" errors >/dev/null   # waits for the kiosk page to load
+		"${PI}/pi.sh" "rm -rf /tmp/manual; python3 -I /tmp/capture_web.py de en --only kiosk ${SHOTS_ARG[*]}"
+	fi
 	mkdir -p "${OUT}"
 	scp -q -r "${PI_USER}@${PI_HOST}:/tmp/manual/." "${OUT}/"
 fi

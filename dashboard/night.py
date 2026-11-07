@@ -1,4 +1,4 @@
-"""The kiosk's night: Chromium ended and the screen dark between NightPolicy.off_at and
+"""The kiosk's night: the kiosk browser ended and the screen dark between NightPolicy.off_at and
 on_at - or the weekend's own rule. The containers can't touch the kiosk session, so the schedule goes to a file the host
 reads (data/storage/night.json; install/kiosk_night.py decides from it). Written when an
 admin saves it and on every minutely `tick` - so a restore, which brings back the database

@@ -48,9 +48,10 @@ phone. The device runs offline, inside one office or group.
 - the Pi's SSH left on with the Imager's password.
 
 **Parts with digital elements:** Raspberry Pi 3 or newer with Raspberry Pi OS, an ACR122U NFC
-reader, a DS3231 clock module, a touchscreen; on it five images (Caddy, the Django app,
-PostgreSQL, Mosquitto, the NFC bridge) in eight containers - the app runs as migrate, web, mqtt-listener and backup and host services (update watcher and recovery,
-storage helper, watchdog, RTC sync, the kiosk session with Chromium). Interfaces: HTTPS on
+reader, a DS3231 clock module, a touchscreen, optionally a coffee machine over Bluetooth; on it six
+images (Caddy, the Django app, PostgreSQL, Mosquitto, the NFC bridge, the coffee machine bridge) in
+nine containers - the app runs as migrate, web, mqtt-listener and backup and host services (update watcher and recovery,
+storage helper, watchdog, RTC sync, the kiosk session with WPE WebKit's cog). Interfaces: HTTPS on
 443 (network) and `127.0.0.1:8443` (kiosk), optionally a WPA2 access point, SSH (the
 operating system's), USB (reader, backup stick).
 
@@ -64,7 +65,7 @@ the sense of Annex III class I. CoffeePy therefore falls into the **default cate
 conformity by internal control (Module A, Art. 32(1)(a)) - the manufacturer assesses
 themselves; no notified body.
 
-Chromium and Raspberry Pi OS are themselves Annex III products; their conformity is their
+WPE WebKit (the kiosk's browser engine) and Raspberry Pi OS are themselves Annex III products; their conformity is their
 manufacturers' - the device's manufacturer has to keep them updated (below, R11).
 
 ## What is protected, against whom
@@ -109,7 +110,7 @@ existing measures in place; *accepted* means the operator is told in the manual 
 | R8 | Dashboard published to the internet | not foreseen by the product, the manual says not to ("Keeping it safe"); lockout and password rules still hold | 1 | 3 | low | A7 ✓ |
 | R9 | A forged or tampered update bundle | Ed25519-signed manifest, per-file SHA-256, platform and space check, forward only; key never in CI | 1 | 3 | low | - |
 | R10 | Signature check switched off on a device in use | labelled "development only" in the provisioning tool; permanent warning on the update page | 1 | 3 | low | - |
-| R11 | Known vulnerabilities in the OS, Chromium, the kernel or SSH on an offline device | `apt` at installation; **OS bundles** (`scripts/build_os_bundle.sh`): any set of packages - best the device's own list, downloadable on the update page - signed like an app bundle, applied through the same update page by the script signed into the bundle (`install/os_update.sh`), which upgrades what is installed (new packages only as their dependencies); database saved first, restart when kernel or firmware changed. Building and applying them is the operator's job: CoffeePy runs on more than one kind of hardware | 2 | 3 | medium (operator's) | A1 ✓ |
+| R11 | Known vulnerabilities in the OS, the browser engine (WPE WebKit), the kernel or SSH on an offline device | `apt` at installation; **OS bundles** (`scripts/build_os_bundle.sh`): any set of packages - best the device's own list, downloadable on the update page - signed like an app bundle, applied through the same update page by the script signed into the bundle (`install/os_update.sh`), which upgrades what is installed (new packages only as their dependencies); database saved first, restart when kernel or firmware changed. Building and applying them is the operator's job: CoffeePy runs on more than one kind of hardware | 2 | 3 | medium (operator's) | A1 ✓ |
 | R12 | Known vulnerabilities in the app's own images | `pip-audit` + Grype fail CI on anything fixable; Dependabot weekly; each exception in `.grype.yaml` says why it can't be taken and whether the code is reachable (CVE-2025-15367: `poplib`, never imported; CVE-2026-12345: `TemporaryDirectory`, only in directories nothing but the app can write; CVE-2026-103995: `http.client`, nothing makes HTTP requests at run time) | 1 | 3 | low | A5 ✓ |
 | R13 | Known vulnerabilities in third-party images (postgres, mosquitto, caddy) | pinned to exact versions in `docker-compose.yml`, moved weekly by Dependabot; CI reports their findings without failing - their packages are theirs to fix | 2 | 2 | medium | A4 ✓ (accepted: reported only) |
 | R14 | SSH with the Imager's password, reachable from the network | **off after the installation** (`install.sh`'s `ssh` step; `--keep-ssh` / the provisioning tool's "SSH" setting keep it); an admin switches it on in the dashboard (System → SSH), audited, with a warning for as long as it is on | 1 | 3 | low | A2 ✓ |

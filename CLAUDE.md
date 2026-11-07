@@ -99,7 +99,8 @@ immediately. Consequences, all of which have already caused bugs:
   `scripts/make_wait_gifs.py`.
 - **Every screen stays byte-identical from poll to poll** until something happens - not only for
   the GIFs: each swap of a differing panel tears its layout down, and that is where Chromium's
-  renderer crashes (below). So no `{% csrf_token %}` inside `#panel` (Django re-masks it on every
+  renderer crashed (below; cog, the kiosk's browser now, didn't - but the rule stays: devices
+  without cog still run Chromium, and a swap is layout work on a Pi 3 either way). So no `{% csrf_token %}` inside `#panel` (Django re-masks it on every
   render; the token goes along as `hx-headers` on `.kiosk-frame`, rendered once per page load),
   and the countdowns are a fixed `data-deadline` that `static/kiosk/countdown.js` counts down.
   `kiosk/tests/test_stable_panel.py` guards order, pay and settings. Still never key anything on
@@ -136,8 +137,10 @@ network only - `curl localhost:8000` on the device finds nothing.
   new one. The CA is created once; `ensure_tls` (migrate, and the backup loop) only
   re-issues the leaf certificates.
 - On the device, talk to the app as `curl --cacert /opt/coffeepy/data/tls/ca.crt
-  https://localhost:8443/...`. Chromium trusts the CA through the kiosk user's NSS store,
-  filled by `install/kiosk/openbox-autostart` with `certutil` on every session start.
+  https://localhost:8443/...`. The kiosk's cog trusts the CA through the system's CA store,
+  which only root may write: `coffeepy-ca-trust.path` watches `data/tls/ca.crt` and copies it
+  there on every change (the CA only appears at the stack's first start, after the installer's
+  services step). The Chromium session of a device without cog fills its own NSS store instead.
 
 ## Two languages
 
@@ -292,7 +295,7 @@ two-phase setup script and a pi-gen image build; what those cost us is worth kee
 mind before changing it:
 
 - **Package names have to be checked against Raspberry Pi OS, not Debian.** No `chromium`
-  in Raspbian (it comes from the Raspberry Pi archive), no `docker-compose-v2` anywhere
+  in Raspbian (it came from the Raspberry Pi archive), no `docker-compose-v2` anywhere
   (hence the pinned, checksummed plugin binary), and the "pix" boot splash is
   `rpd-plym-splash`. The installer therefore verifies every package *before* installing
   any of them - a wrong name half-way through leaves a half-configured device.
@@ -372,24 +375,23 @@ mind before changing it:
   it (`ReaderStatus`); before, a status that arrived too early was lost and the kiosk said
   "card reader not available" with a working reader. It also compares its last status with the row
   every 30s: a reset, restore or import replaces the database under it, and the bridge only
-  reports a change (the reset itself leaves `NfcReaderStatus` alone - `coffee/purge.py`). Starting Chromium
-  in parallel with the stack was tried and measured: both slowed down by half a minute and
+  reports a change (the reset itself leaves `NfcReaderStatus` alone - `coffee/purge.py`). Starting the
+  browser (Chromium then) in parallel with the stack was tried and measured: both slowed down by half a minute and
   the box went into swap, so the kiosk waits for `/health/` first. Measure from the
   device's journal, not by polling it over SSH - that alone slowed a boot by 30s.
-  Chromium itself waited 25s at every start for the XDG desktop portal (no desktop, so its
+  Chromium waited 25s at every start for the XDG desktop portal (no desktop, so its
   GTK backend dies and the portal sits out D-Bus's timeout): the installer masks the portal
   globally - look for a pause in the journal before blaming the CPU.
 - **The kiosk's night rest** (dashboard → System, `dashboard.models.NightPolicy`) is carried out
   by the kiosk session, not the app: `dashboard/night.py` writes `data/storage/night.json` (on save
   and in every `tick`, so a restore catches up), and `install/kiosk_night.py` - stdlib, the host
   has no Django - mirrors its `is_night`; keep the two identical (`test_night` compares them).
-  The file carries `TIME_ZONE`, because the host's own zone may be UTC. At night the autostart
-  ends Chromium and holds DPMS off; the watchdog leaves the kiosk alone then, and also a browser
+  The file carries `TIME_ZONE`, because the host's own zone may be UTC. At night the session
+  (`install/kiosk/cog-session`) ends cog and blanks its console (`setterm --blank force`), which
+  takes the display's signal down - `/sys/class/drm/card0-HDMI-A-1/dpms` says `Off`; the watchdog leaves the kiosk alone then, and also a browser
   younger than its stale limit (the morning's, with the evening's heartbeat). Taps at night are
   never booked: `kiosk.views.index` starts every page load at the newest scan. Measured on the
-  Pi: dark within 4s of the night's start, polling 28s after the morning's - but the first
-  Chromium after a *reboot* during the night hit the network-service crash below and needed the
-  90s restart.
+  Pi with Chromium: dark within 4s of the night's start, polling 28s after the morning's.
 - **The AP's channel is picked at every hostapd start** (`install/ap_channel.sh`, an
   `ExecStartPre`): as an access point the radio only hears its own channel, so the scan has
   to happen before. Transmit power needs no setting - the Pi 3 already runs at the
@@ -454,7 +456,8 @@ mind before changing it:
   black unless the mode is forced with `video=` on the kernel command line.
 - **What the device needs is measured, not guessed** - the manual's "What the device needs"
   has the numbers (Pi 3, 1 GB, 2026-10-29): about 530 MB RAM in use plus 340 MB in zram swap,
-  so nothing under 1 GB works; the kiosk's Chromium is most of the CPU. `resources.sh`
+  so nothing under 1 GB works; the kiosk's browser is most of the CPU (cog 24% of a core on the
+  wait screen, Chromium 44% - 2026-11-07; the manual's numbers are still Chromium's). `resources.sh`
   (pi-device skill) measures per process group; mind the ranking screen's 30s idle return
   when measuring it. Every `docker compose build` leaves the replaced image dangling, a few
   hundred MB each - `install.sh`'s image step and the update watcher prune them (only
@@ -468,21 +471,42 @@ mind before changing it:
   second to start, so each has its first frame as `poster`, which `kiosk/index.html` keeps
   loaded: the static files' 60s max-age would otherwise leave the stage empty while the poster
   is revalidated.
-- **The Pi 3's GPU has 256MB (CMA), and GPU rasterization fills it with GIF frames**:
+- **The kiosk's browser is cog (WPE WebKit), straight on the display through DRM/KMS** - no X, no
+  window manager (`install/kiosk/cog-session`, started by the autologin shell on tty1 through
+  `kiosk/bash_profile_kiosk`). It replaced Chromium on 2026-11-07, after the same UI tests with the
+  same touches on the same Pi 3 (`kiosk-ui-test.sh`, `kiosk-machine-test.sh`): Chromium 8 renderer
+  crashes in 9 rounds, cog none in 13; CPU 24% of a core against 44%, memory about the same, the
+  kiosk polling ~13s after a session start instead of ~45s. What it took:
+  `-O renderer=gles` (cog picked the plain modeset renderer and crashed at its first start); the
+  CA in the system store (above); GStreamer's plugins named in `packages.txt` (only Recommends of
+  WebKit, which `--no-install-recommends` leaves out - without them the ranking's videos stay
+  posters). cog does **not** reload after its web process dies: it prints "Crash!: The renderer
+  process crashed" and shows its own error page - the session reads its log every 2s and starts
+  cog afresh (seconds, not Chromium's minute). It does the same for a cog that never polls
+  (`KIOSK_LOAD_SECONDS`), and the loop restarts one that exits: twice in plain runs it ended with
+  SIGABRT ~45s after a start, after WebKit's "internallyFailedLoadTimerFired" (cause not found yet -
+  look in `$XDG_RUNTIME_DIR/kiosk.log` for "cog ended"). A device updated by app bundles has no cog
+  until an OS bundle (or an app bundle built `--with-os-packages`) brings it: `bash_profile_kiosk`
+  keeps such a device on the Chromium session, and the installer replaces the old `.profile` block
+  (`kiosk_profile`). Testing: `kill -SEGV` does nothing to a WPEWebProcess - JavaScriptCore handles
+  SEGV itself - use `kill -9` to play a crash. There is no X to ask for a screenshot: ffmpeg's
+  kmsgrab reads the scanout buffer, which is VC4-tiled, and `kms_untile.py` (pi-device skill)
+  reorders it; the tests drive cog through WPEWebDriver and a uinput touchscreen (`wd.py`).
+- **Chromium (the session of a device without cog), the Pi 3's GPU has 256MB (CMA), and GPU rasterization fills it with GIF frames**:
   Chromium keeps every decoded frame of an animated GIF as a texture, the ranking's GIFs
   are 120-160 frames of ~1MB, and the GPU process then dies (`dmesg`: "Failed to allocate
   from GEM DMA helper", `gpu-recent-crash-count` in its arguments). Hence
   `--disable-gpu-rasterization` in `install/kiosk/openbox-autostart`. A new long animation
   is worth a look at `/sys/kernel/debug/dri/0/bo_stats` on the device while it plays (with
   GPU rasterization on - off, as it is, the GPU stays near 20MB).
-- **After a power cut, Chromium's network service crashes at its first start** ("Network service
+- **Chromium (devices without cog): after a power cut, its network service crashes at its first start** ("Network service
   crashed or was terminated" in `$XDG_RUNTIME_DIR/chromium.log`; three times in three tries; once
   also after a clean reboot, when the night rest had delayed the start - never after a killed
   browser), the kiosk's page load dies with it and Chromium
   stays on `about:blank` - a white screen, the app answering. The root cause is inside
   Chromium; `install/kiosk/openbox-autostart` restarts a browser whose kiosk hasn't polled
   within `KIOSK_LOAD_SECONDS`. Reproduce with `sync; echo b > /proc/sysrq-trigger`.
-- **Chromium's renderer crashes in about one page load in ten** ("Aw, Snap!", error code 11 -
+- **Chromium (devices without cog): its renderer crashes in about one page load in ten** ("Aw, Snap!", error code 11 -
   Chromium 156.0.8078.73-1~deb13u1+rpt1, measured 2026-10-31: 3 in 40 reloads, 4-5 in 30
   maintenance cycles). Every crashpad dump (`~/.config/chromium/Crash Reports/pending/`) has the
   same frame - a null pointer (fault address 0x8) in `blink::FragmentData::SetLayer`, called from

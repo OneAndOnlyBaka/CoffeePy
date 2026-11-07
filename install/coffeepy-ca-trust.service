@@ -1,0 +1,15 @@
+[Unit]
+Description=Trust the device CA in the system's CA store (for the kiosk browser)
+# The kiosk's cog (WPE WebKit) checks https://localhost:8443 against the system store - unlike
+# Chromium, which had its own NSS store that the session filled itself. Only root may write the
+# system store, hence this unit instead of the session. Under one fixed name, so a re-created CA
+# replaces the old one instead of lingering next to it.
+ConditionPathExists=/opt/coffeepy/data/tls/ca.crt
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/install -m 0644 /opt/coffeepy/data/tls/ca.crt /usr/local/share/ca-certificates/coffeepy-device-ca.crt
+ExecStart=/usr/sbin/update-ca-certificates
+
+[Install]
+WantedBy=multi-user.target

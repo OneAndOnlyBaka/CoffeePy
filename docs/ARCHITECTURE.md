@@ -30,7 +30,7 @@ flowchart LR
     web[web: Django + gunicorn] <--> db
     backup[backup: tick every minute] <--> db
     caddy[Caddy] --> web
-    kiosk[Kiosk Chromium on the Pi] -->|127.0.0.1:8443, polls every 500ms| caddy
+    kiosk[Kiosk browser on the Pi: cog] -->|127.0.0.1:8443, polls every 500ms| caddy
     phones[Phones and PCs] -->|443| caddy
     backup -->|backups| stick[(USB stick)]
 ```
@@ -84,9 +84,11 @@ talk to the app through files under `/opt/coffeepy/data/`, never through Docker 
 | `coffeepy-update-recover.service` | before the stack starts: puts back an update a power cut interrupted |
 | `coffeepy-watchdog.timer` | every minute: restarts the kiosk session if its browser stopped polling, the stack if `/health/` stops answering - at most three times an hour |
 | `coffeepy-rtc-sync.timer` | every 10 minutes: writes a corrected system clock to the DS3231 |
+| `coffeepy-ca-trust.path` | whenever the device CA changes: puts it into the system's CA store, which the kiosk's cog trusts |
 
-Also installed: the kiosk session (autologin on tty1, X, Openbox, Chromium in kiosk mode,
-which trusts the device CA through its NSS store), the night rest that turns the screen off
+Also installed: the kiosk session (autologin on tty1 starts `install/kiosk/cog-session`: WPE
+WebKit's cog straight on the display through DRM/KMS, no X; it trusts the device CA through the
+system store, which `coffeepy-ca-trust.path` keeps in step), the night rest that turns the screen off
 at set hours, the CoffeePy boot splash, the ACR122U udev rule plus the blacklist that keeps
 the kernel's `pn533` driver off the reader, and - optionally - a WiFi access point
 (hostapd + dnsmasq on `192.168.4.1`, channel picked at every start) for the phones.
@@ -243,7 +245,7 @@ flowchart LR
 
 ### Operating system updates
 
-The images carry the app; the host's own packages - kernel, firmware, Chromium, OpenSSH,
+The images carry the app; the host's own packages - kernel, firmware, WPE WebKit, OpenSSH,
 Docker - are Raspberry Pi OS's. An offline device gets their updates through an **OS bundle**,
 which goes the same way as an app bundle: built on a machine with internet
 (`scripts/build_os_bundle.sh --packages LIST`), signed with `sign_update_bundle.sh`, uploaded

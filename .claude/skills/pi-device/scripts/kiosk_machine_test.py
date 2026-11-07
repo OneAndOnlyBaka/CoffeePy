@@ -16,7 +16,13 @@ import sys
 import time
 
 sys.path.insert(0, "/tmp")
-import cdp  # noqa: E402
+import os  # noqa: E402
+
+# KIOSK_BROWSER=wpe: the same run against WPE WebKit (cog) through wd.py - the browser trial.
+if os.environ.get("KIOSK_BROWSER") == "wpe":
+    import wd as cdp  # noqa: E402
+else:
+    import cdp  # noqa: E402
 
 CARD = "11223344"
 UID = 0x44332211
@@ -55,6 +61,10 @@ def crashes():
         r = subprocess.run(["sudo", "grep", "-c", "renderer crashed", f], capture_output=True, text=True)
         n += int(r.stdout.strip() or 0)
     return n
+
+
+if hasattr(cdp, "crashes"):  # WPE: its web process's deaths in the journal, not chromium.log
+    crashes = cdp.crashes  # noqa: F811
 
 
 class Kiosk:
@@ -212,7 +222,11 @@ for r in range(1, ROUNDS + 1):
     check("free: button on the wait screen", k.tap(".free-products button"))
     check("free: cup shown", k.wait(CUP, 5))
     k.tap(".brew-card .primary-action")
-    check("free: brewing", k.wait(BREWING, 8))
+    brewing = k.wait(BREWING, 8)
+    check("free: brewing", brewing, "" if brewing else "panel: " + str(k.ev(
+        "(e => e ? e.className + ' | ' + e.innerText.replace(/\\s+/g, ' ').slice(0, 160) : document.getElementById('panel').innerText.replace(/\\s+/g, ' ').slice(0, 160))(document.querySelector('.brew-card'))"))
+        + " | last dispense: " + sql("select id || ' ' || source || ' ' || state || ' ' || coalesce(reason, '') from coffee_machinedispense order by id desc limit 1")
+        + " | machine: " + sql("select state->'progress'->>'phase' from coffee_machinestatus"))
     check("free: done, nothing booked", k.wait("document.querySelector('.brew-card.stage-done_free')", 30) and orders() == before)
     k.wait(WAIT, 30)
 

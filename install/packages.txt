@@ -2,27 +2,23 @@
 # scripts/build_offline_bundle.sh, which downloads exactly these (plus their dependencies)
 # for an offline install - keeping the two in sync by keeping them in one file.
 #
-# Names are Raspberry Pi OS names, which are not always Debian's: chromium comes from the
-# Raspberry Pi archive, and the "pix" boot splash is rpd-plym-splash rather than one of
-# Debian's plymouth-theme-* packages.
+# Names are Raspberry Pi OS names, which are not always Debian's: the "pix" boot splash is
+# rpd-plym-splash rather than one of Debian's plymouth-theme-* packages.
 
-# Minimal X11 + Openbox kiosk (no desktop environment, no display manager - autologin plus
-# startx does that, see kiosk/bash_profile_kiosk).
-xserver-xorg
-xinit
-x11-xserver-utils
-openbox
-chromium
-unclutter-xfixes
-# Presses F5 for the kiosk session when a Chromium renderer crashed ("Aw, Snap!" - see
-# kiosk/openbox-autostart); without it the session restarts the whole browser instead.
-xdotool
+# The kiosk browser: WPE WebKit's cog, straight on the display through DRM/KMS - no X, no
+# window manager, no display manager (autologin on tty1 runs kiosk/cog-session). It replaced
+# Chromium under X/Openbox, whose renderer crashed on page changes (install/kiosk/cog-session).
+# A device installed before keeps its X and Chromium packages until an OS bundle removes them.
+cog
+# Video in WebKit is GStreamer, and its plugins are only Recommends - which install.sh leaves out:
+# the ranking's podium videos are VP9 in WebM (matroskademux and vp9dec are in -good), WebKit's
+# video sink needs the GL elements, decodebin and the converters are in -base.
+gstreamer1.0-plugins-base
+gstreamer1.0-plugins-good
+gstreamer1.0-gl
 # The UI's own icons are SVG (templates/icons/), but nicknames entered on a phone or PC
 # can carry emoji - without a colour emoji font those are empty boxes on the kiosk.
 fonts-noto-color-emoji
-# certutil: the kiosk session adds the device CA (dashboard/tls.py) to Chromium's NSS store,
-# so the kiosk's own https://localhost:8443 loads without a certificate warning.
-libnss3-tools
 
 # Boot splash, carried over from the original project's setup.
 plymouth

@@ -19,7 +19,13 @@ import sys
 import time
 
 sys.path.insert(0, "/tmp")
-import cdp  # noqa: E402
+import os  # noqa: E402
+
+# KIOSK_BROWSER=wpe: the same run against WPE WebKit (cog) through wd.py - the browser trial.
+if os.environ.get("KIOSK_BROWSER") == "wpe":
+    import wd as cdp  # noqa: E402
+else:
+    import cdp  # noqa: E402
 
 CARD = "11223344"          # uid_as_int little-endian: 0x44332211
 UID = 0x44332211
@@ -43,6 +49,10 @@ def crashes():
         r = subprocess.run(["sudo", "grep", "-c", "renderer crashed", f], capture_output=True, text=True)
         n += int(r.stdout.strip() or 0)
     return n
+
+
+if hasattr(cdp, "crashes"):  # WPE: its web process's deaths in the journal, not chromium.log
+    crashes = cdp.crashes  # noqa: F811
 
 
 class Kiosk:
@@ -223,6 +233,11 @@ for r in range(1, ROUNDS + 1):
     k.wait("false", 1)
     k.tap(".primary-action")
     k.wait("false", 2)
+    if k.ev("!!document.querySelector('.brew-card')"):
+        # A coffee machine set up (or simulated): the cup screen, booked once the machine is done
+        step("cup -> start -> thank you")
+        k.tap(".brew-card .primary-action")
+        k.wait("document.querySelector('.thank-you')", 40)
     check("order: Order now books one", int(sql(f"select count(*) from coffee_order where member_id = {UID}")) == int(before) + 1)
 
     step("pay")

@@ -1,0 +1,89 @@
+#!/bin/sh
+# The kiosk session: WPE WebKit's cog straight on the display (DRM/KMS) - no X, no window manager.
+# Started from the autologin shell on tty1 (kiosk/bash_profile_kiosk); runs until the session ends.
+#
+# Why not Chromium any more: its renderer crashed tearing down layouts - one page change in
+# 15-30 at best, four a round with the coffee machine's screens - and every kiosk rule in
+# CLAUDE.md about byte-identical panels exists because of that. The same UI tests on the same
+# Pi 3 (2026-11-07): Chromium 8 crashes in 9 rounds, cog none in 13, at half the CPU (24% of a
+# core on the wait screen against 44%) and about the same memory.
+
+# The kiosk is served by Caddy on 127.0.0.1:8443 only (docker-compose.yml), with a certificate
+# from the device's own CA (dashboard/tls.py). WebKit trusts the system's CA store, which
+# coffeepy-ca-trust.path keeps in step with that file.
+CA=/opt/coffeepy/data/tls/ca.crt
+KIOSK_URL=https://localhost:8443
+HEARTBEAT=/opt/coffeepy/data/storage/kiosk-heartbeat
+# In RAM, readable until the next boot, never on the card.
+LOG="${XDG_RUNTIME_DIR:-/tmp}/kiosk.log"
+
+# No text console between two browsers: no cursor, nothing on the screen.
+setterm --cursor off 2>/dev/null
+clear
+
+# Wait for the app to answer before cog loads it, so the first picture is the kiosk rather than
+# an error page. Bounded, so a stack that never comes up still ends in a browser showing why.
+for _ in $(seq 1 60); do
+    curl -sf --cacert "$CA" "$KIOSK_URL/health/" >/dev/null 2>&1 && break
+    sleep 2
+done
+
+# At night (dashboard -> System -> Night rest) there is no browser and no picture: the loop ends
+# cog when the night begins and blanks the console, which takes the display's signal down
+# (DPMS off - /sys/class/drm/card0-HDMI-A-1/dpms says so), again every 30s; a touch does not
+# wake a console, but a key would. In the morning a fresh cog.
+night() { python3 /opt/coffeepy/install/kiosk_night.py; }
+NIGHT_CHECK_SECONDS=30
+
+# cog does not reload by itself when its web process dies: it prints "Crash!: The renderer
+# process crashed" and shows its own error page - the kiosk would stand still until the watchdog
+# noticed the missing polls minutes later. The loop below reads cog's output every
+# CRASH_CHECK_SECONDS and starts cog afresh on that line, which takes a few seconds.
+CRASH_CHECK_SECONDS=2
+# A cog that runs but never shows the kiosk (an error page, a load that died) is ended too: the
+# kiosk's page touches HEARTBEAT when it polls (kiosk/views.py, at most every 30s per worker).
+KIOSK_LOAD_SECONDS=90
+
+# -O renderer=gles: the default picked the plain modeset renderer on a Pi 3, which crashed cog
+# at its first start (SIGSEGV, 2026-11-07).
+while true; do
+    if night; then
+        echo "$(date -Is) night - kiosk off until the morning" >> "$LOG"
+        while night; do
+            setterm --blank force 2>/dev/null
+            sleep "$NIGHT_CHECK_SECONDS"
+        done
+        setterm --blank poke 2>/dev/null
+        clear
+        echo "$(date -Is) morning - kiosk on" >> "$LOG"
+    fi
+    started=$(date +%s)
+    from=$(($(stat -c %s "$LOG" 2>/dev/null || echo 0) + 1))
+    cog -P drm -O renderer=gles "$KIOSK_URL/kiosk/" >> "$LOG" 2>&1 &
+    browser=$!
+    (
+        checked=0
+        while sleep "$CRASH_CHECK_SECONDS"; do
+            checked=$((checked + CRASH_CHECK_SECONDS))
+            if tail -c +"$from" "$LOG" 2>/dev/null | grep -q "renderer process crashed"; then
+                echo "$(date -Is) renderer crashed - restarting cog" >> "$LOG"
+                break
+            fi
+            if [ "$checked" -ge "$KIOSK_LOAD_SECONDS" ] && [ "$checked" -lt $((KIOSK_LOAD_SECONDS + CRASH_CHECK_SECONDS)) ] &&
+               [ "$(stat -c %Y "$HEARTBEAT" 2>/dev/null || echo 0)" -lt "$started" ]; then
+                echo "$(date -Is) kiosk never polled - restarting cog" >> "$LOG"
+                break
+            fi
+            if [ $((checked % NIGHT_CHECK_SECONDS)) -eq 0 ] && night; then
+                break  # the loop above takes it from here
+            fi
+        done
+        kill "$browser" 2>/dev/null
+    ) &
+    check=$!
+    wait "$browser"
+    echo "$(date -Is) cog ended ($?)" >> "$LOG"
+    kill "$check" 2>/dev/null
+    clear
+    sleep 1
+done

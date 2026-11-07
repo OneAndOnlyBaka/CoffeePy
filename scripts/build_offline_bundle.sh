@@ -78,7 +78,7 @@ log "Target ${PLATFORM} (${DEB_ARCH}), Raspberry Pi OS ${RELEASE}"
 
 log "Collecting packages from the Raspberry Pi OS archives"
 # Debian's own image plus the two Raspberry Pi archives: Raspbian carries the armhf rebuild
-# of Debian, archive.raspberrypi.com the Pi-specific packages (chromium, rpd-plym-splash).
+# of Debian, archive.raspberrypi.com the Pi-specific packages (rpd-plym-splash, the Pi builds of Mesa and the kernel).
 # Both are what a real Pi has configured, and only there do these names resolve.
 "${DOCKER}" run --rm --platform "${PLATFORM}" \
 	-v "$(realpath "${PACKAGE_LIST}")":/packages.txt:ro \

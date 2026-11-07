@@ -70,8 +70,10 @@ except FileNotFoundError:
 print("test data removed")
 PY
 "$DIR/django.sh" "$setup" "$sorts" | tail -2
+# cog (wd.py) where the device has it - what its kiosk session runs - else Chromium (cdp.py).
+browser="${KIOSK_BROWSER:-$("$DIR/pi.sh" 'command -v cog >/dev/null && echo wpe || echo chromium')}"
 "$DIR/kiosk-browser.sh" on | tail -1
-scp -q "$DIR/cdp.py" "$DIR/kiosk_machine_test.py" "$PI_USER@$PI_HOST:/tmp/"
-"$DIR/pi.sh" "python3 -I /tmp/kiosk_machine_test.py $rounds $variant; python3 -I /tmp/cdp.py eval 'document.querySelector(\"a.nav-btn[data-mode=order]\").click(); 1' >/dev/null" || true
+scp -q "$DIR/cdp.py" "$DIR/wd.py" "$DIR/kiosk_machine_test.py" "$PI_USER@$PI_HOST:/tmp/"
+"$DIR/pi.sh" "sudo KIOSK_BROWSER=$browser python3 -I /tmp/kiosk_machine_test.py $rounds $variant; [ \"$browser\" = wpe ] || python3 -I /tmp/cdp.py eval 'document.querySelector(\"a.nav-btn[data-mode=order]\").click(); 1' >/dev/null" || true
 "$DIR/django.sh" "$cleanup" | tail -1
 "$DIR/kiosk-browser.sh" off | tail -1

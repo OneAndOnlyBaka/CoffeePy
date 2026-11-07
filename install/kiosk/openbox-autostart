@@ -1,5 +1,8 @@
 #!/bin/sh
 # ~/.config/openbox/autostart - runs once Openbox itself is up.
+#
+# The Chromium session - only still used on a device without cog (kiosk/bash_profile_kiosk): one
+# updated by app bundles, which bring no packages. Everything new goes into kiosk/cog-session.
 
 # No mouse on a touchscreen kiosk: blank the cursor after half a second of inactivity,
 # and disable the screen blanking/DPMS a normal desktop would apply.

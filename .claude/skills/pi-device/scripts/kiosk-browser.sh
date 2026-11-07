@@ -1,19 +1,63 @@
 #!/bin/bash
-# Inspects the kiosk's real Chromium through the DevTools protocol.
+# Inspects the kiosk's real browser: cog (WPE WebKit) through WebDriver (wd.py), or - on a device
+# that still runs the Chromium session - Chromium through the DevTools protocol (cdp.py).
 #
-#   kiosk-browser.sh on              restart the kiosk with --remote-debugging-port=9222
-#   kiosk-browser.sh errors|eval|taps|cookie ...   run cdp.py on the Pi (see its docstring)
-#   kiosk-browser.sh off             restore the installed autostart and restart the kiosk
+#   kiosk-browser.sh on              cog: the kiosk session stopped, WPEWebDriver in its place and a
+#                                    session that starts cog on the display (same flags, + --automation);
+#                                    Chromium: restart the kiosk with --remote-debugging-port=9222
+#   kiosk-browser.sh eval 'JS'       the expression's value (both)
+#   kiosk-browser.sh shot OUT.png    WebDriver's screenshot of the page (cog; screenshot.sh takes the
+#                                    display itself, for both)
+#   kiosk-browser.sh cookie          the kiosk's cookies, sessionid included (both)
+#   kiosk-browser.sh errors|taps ... cdp.py's (Chromium only, see its docstring)
+#   kiosk-browser.sh off             back to the installed kiosk session
 #
-# ALWAYS finish with "off": the debug port is a remote-control socket for the browser, and
-# the installed autostart file is the one the next install.sh run expects to find.
-# on/off restart the X session - the screen goes black, then white, for up to a minute.
+# ALWAYS finish with "off": WebDriver and the debug port are remote controls for the browser, and
+# with cog the kiosk session itself (and the watchdog, which would restart it) is stopped while on.
+# on/off restart the browser - the screen is dark for a few seconds (cog) or up to a minute (Chromium).
 set -euo pipefail
 
 DIR="$(dirname "$0")"
 PI="$DIR/pi.sh"
-cmd="${1:?usage: kiosk-browser.sh on|off|errors|eval|taps|cookie}"
+. "$(git -C "$DIR" rev-parse --show-toplevel)/.device/pi.env"
+cmd="${1:?usage: kiosk-browser.sh on|off|eval|shot|errors|taps|cookie}"
 shift
+
+if "$PI" 'command -v cog >/dev/null'; then
+	case "$cmd" in
+		on)
+			scp -q "$DIR/wd.py" "$PI_USER@$PI_HOST:/tmp/wd.py"
+			"$PI" 'sudo systemctl stop coffeepy-watchdog.timer getty@tty1; sudo rm -f /run/coffeepy-wd-session
+				sudo systemctl stop wpedriver 2>/dev/null; sudo systemctl reset-failed wpedriver 2>/dev/null || true
+				sudo systemd-run --quiet --unit=wpedriver --uid="$(id -u)" --gid="$(id -g)" \
+					-p SupplementaryGroups="video render input" -E XDG_RUNTIME_DIR="/run/user/$(id -u)" -E HOME="$HOME" \
+					WPEWebDriver --port=4444 --replace-on-new-session
+				sleep 2; sudo python3 -I /tmp/wd.py navigator.userAgent'
+			;;
+		off)
+			"$PI" 'sudo systemctl stop wpedriver 2>/dev/null || true; sudo rm -f /run/coffeepy-wd-session; sleep 1
+				sudo systemctl start getty@tty1 coffeepy-watchdog.timer; echo "WebDriver off, kiosk session back"'
+			;;
+		eval)
+			scp -q "$DIR/wd.py" "$PI_USER@$PI_HOST:/tmp/wd.py"
+			"$PI" "sudo python3 -I /tmp/wd.py $(printf '%q' "$1")"
+			;;
+		cookie)
+			scp -q "$DIR/wd.py" "$PI_USER@$PI_HOST:/tmp/wd.py"
+			"$PI" 'sudo python3 -I /tmp/wd.py cookie'
+			;;
+		shot)
+			scp -q "$DIR/wd.py" "$PI_USER@$PI_HOST:/tmp/wd.py"
+			"$PI" 'sudo python3 -I /tmp/wd.py shot /tmp/wd-shot.png >/dev/null'
+			scp -q "$PI_USER@$PI_HOST:/tmp/wd-shot.png" "$1" && echo "saved $1"
+			;;
+		*)
+			echo "$cmd: Chromium only (cdp.py) - this device runs cog; eval, shot and cookie work here" >&2
+			exit 2
+			;;
+	esac
+	exit 0
+fi
 
 case "$cmd" in
 	on)
@@ -28,7 +72,6 @@ case "$cmd" in
 			sudo systemctl restart getty@tty1; echo "debug port off, kiosk restarting"'
 		;;
 	*)
-		. "$(git -C "$DIR" rev-parse --show-toplevel)/.device/pi.env"
 		scp -q "$DIR/cdp.py" "$PI_USER@$PI_HOST:/tmp/cdp.py"
 		"$PI" "python3 -I /tmp/cdp.py $cmd $(printf '%q ' "$@")"
 		;;

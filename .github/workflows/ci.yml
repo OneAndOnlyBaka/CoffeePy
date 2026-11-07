@@ -148,7 +148,7 @@ jobs:
         if: always()
         run: |
           mapfile -t scripts < <(git ls-files '*.sh' install/kiosk/xinitrc install/kiosk/openbox-autostart \
-            install/kiosk/bash_profile_kiosk)
+            install/kiosk/bash_profile_kiosk install/kiosk/cog-session)
           shellcheck --severity=error "${scripts[@]}"
 
       # The workflows themselves: injection through ${{ }}, unpinned actions, broad rights.

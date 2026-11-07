@@ -38,10 +38,19 @@ boards = KioskBoards.objects.get_or_create(pk=1)[0]
 open("/tmp/kiosk_ui_boards", "w").write(f"{int(boards.ranking)} {int(boards.pillory)}")
 boards.ranking = boards.pillory = True
 boards.save()
+# With a coffee machine set up, "Order now" goes through the brew: its dispenses go again after.
+from coffee.models import MachineDispense
+open("/tmp/kiosk_ui_dispense", "w").write(str(MachineDispense.objects.order_by("-pk").values_list("pk", flat=True).first() or 0))
 PY
 cat > "$cleanup" <<'PY'
-from coffee.models import Member, NfcScan, Order, Payment, PaymentMethod
+from coffee.models import MachineDispense, MachineIncident, Member, NfcScan, Order, Payment, PaymentMethod
 from dashboard.models import KioskBoards
+try:
+    last = int(open("/tmp/kiosk_ui_dispense").read())
+    MachineIncident.objects.filter(dispense__pk__gt=last).delete()
+    MachineDispense.objects.filter(pk__gt=last).delete()
+except FileNotFoundError:
+    pass
 Order.objects.filter(member_id=0x44332211).delete(); Payment.objects.filter(member_id=0x44332211).delete()
 Member.objects.filter(uid=0x44332211).delete(); PaymentMethod.objects.filter(name="PayPal Test").delete()
 NfcScan.objects.filter(uid="11223344").delete()
@@ -58,8 +67,10 @@ except FileNotFoundError:
 print("test data removed")
 PY
 "$DIR/django.sh" "$setup" "$sorts" | tail -2
+# cog (wd.py) where the device has it - what its kiosk session runs - else Chromium (cdp.py).
+browser="${KIOSK_BROWSER:-$("$DIR/pi.sh" 'command -v cog >/dev/null && echo wpe || echo chromium')}"
 "$DIR/kiosk-browser.sh" on | tail -1
-scp -q "$DIR/cdp.py" "$DIR/kiosk_ui_test.py" "$PI_USER@$PI_HOST:/tmp/"
-"$DIR/pi.sh" "python3 -I /tmp/kiosk_ui_test.py $rounds; python3 -I /tmp/cdp.py eval 'document.querySelector(\"a.nav-btn[data-mode=order]\").click(); 1' >/dev/null" || true
+scp -q "$DIR/cdp.py" "$DIR/wd.py" "$DIR/kiosk_ui_test.py" "$PI_USER@$PI_HOST:/tmp/"
+"$DIR/pi.sh" "sudo KIOSK_BROWSER=$browser python3 -I /tmp/kiosk_ui_test.py $rounds; [ \"$browser\" = wpe ] || python3 -I /tmp/cdp.py eval 'document.querySelector(\"a.nav-btn[data-mode=order]\").click(); 1' >/dev/null" || true
 "$DIR/django.sh" "$cleanup" | tail -1
 "$DIR/kiosk-browser.sh" off | tail -1

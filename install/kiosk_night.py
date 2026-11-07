@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Exits 0 while it is the kiosk's night, 1 otherwise - asked by the kiosk session
-(install/kiosk/openbox-autostart) and the watchdog (install/kiosk_watchdog.sh). The schedule
+(install/kiosk/cog-session) and the watchdog (install/kiosk_watchdog.sh). The schedule
 is data/storage/night.json, written by the app (dashboard/night.py, whose is_night() this
 mirrors - the host has no Django). Anything wrong with the file - missing, unreadable, half
 written - counts as day: a broken schedule must never leave the kiosk dark.

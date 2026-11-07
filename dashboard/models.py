@@ -69,7 +69,7 @@ class NamePolicy(models.Model):
 
 class NightPolicy(models.Model):
     """When the kiosk sleeps - set on the dashboard's System page, carried out by the kiosk
-    session itself (install/kiosk/openbox-autostart reads it from the file dashboard/night.py
+    session itself (install/kiosk/cog-session reads it from the file dashboard/night.py
     writes). One row; off until an admin turns it on. Saturday and Sunday can follow the
     weekdays, stay off all day, or have times of their own."""
 

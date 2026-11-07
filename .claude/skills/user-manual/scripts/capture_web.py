@@ -1,5 +1,5 @@
 """Takes the manual's screenshots of kiosk, dashboard and portal - runs ON the Pi, in the
-kiosk's own Chromium (debug port on), next to the pi-device skill's cdp.py and demo_data.py
+kiosk's own browser (kiosk-browser.sh on: cog through WebDriver, or Chromium's debug port), next to the pi-device skill's cdp.py and demo_data.py
 in /tmp. capture.sh drives it; run it by hand only for a subset:
 
     python3 -I capture_web.py de en                 everything, both languages
@@ -24,7 +24,12 @@ import sys
 import time
 
 sys.path.insert(0, os.environ.get("CDP_PATH", "/tmp"))
-import cdp  # noqa: E402
+# The kiosk's cog through WebDriver (the pi-device skill's wd.py) - or Chromium's DevTools, for the
+# dashboard and portal here and on a device that still runs Chromium.
+if os.environ.get("KIOSK_BROWSER") == "wpe":
+    import wd as cdp  # noqa: E402
+else:
+    import cdp  # noqa: E402
 
 BASE = os.environ.get("CAPTURE_BASE", "https://localhost:8443")
 OUT = os.environ.get("CAPTURE_OUT", "/tmp/manual")

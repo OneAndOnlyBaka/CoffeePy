@@ -42,6 +42,27 @@ class InstallerTestCase(SimpleTestCase):
         self.assertEqual(self.sourced(ask, SUDO_USER="admin", KIOSK_USER="kiosk"), "kiosk")
         self.assertEqual(self.sourced(f'GETTY_AUTOLOGIN="{self.root}/missing"; kiosk_user'), "pi")
 
+    # The kiosk's .profile block: a device from before cog has the startx snippet, with no end
+    # line - it is replaced, not left next to the new one; a second run changes nothing.
+    def test_the_kiosk_block_in_profile_is_replaced(self):
+        profile = self.root / ".profile"
+        profile.write_text('PATH="$HOME/bin:$PATH"\n\n# --- CoffeePy kiosk autostart ---\n# old\n'
+                           'if [ -z "${DISPLAY}" ] && [ "$(tty)" = "/dev/tty1" ]; then\n'
+                           '    exec startx -- -nocursor\nfi\nalias ll="ls -l"\n')
+        snippet = settings.BASE_DIR / "install" / "kiosk" / "bash_profile_kiosk"
+        self.sourced(f'kiosk_profile "{profile}" "{snippet}"')
+        once = profile.read_text()
+        self.assertIn('PATH="$HOME/bin:$PATH"', once)
+        self.assertIn('alias ll="ls -l"', once)  # what came after the old block stays
+        self.assertEqual(once.count("# --- CoffeePy kiosk autostart ---"), 1)
+        self.assertNotIn("# old", once)
+        self.assertIn("exec /opt/coffeepy/install/kiosk/cog-session", once)
+        self.sourced(f'kiosk_profile "{profile}" "{snippet}"')
+        self.assertEqual(profile.read_text(), once)
+        fresh = self.root / "fresh"  # an account without a .profile of its own
+        self.sourced(f'kiosk_profile "{fresh}" "{snippet}"')
+        self.assertTrue(fresh.read_text().startswith("# --- CoffeePy kiosk autostart ---"))
+
     def fake_ip(self, output):
         """A PATH with an `ip` that answers `ip -4 route get` like this host would."""
         bin_dir = self.root / "bin"

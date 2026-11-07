@@ -54,19 +54,24 @@ https://coffeepy.local/...` checks the real certificate chain; on the Pi, `curl 
 ## Looking at the device
 
 - **What is on the screen:** `screenshot.sh OUT.png` (into the scratchpad), then Read the
-  PNG. It prints the mean brightness: `1.0` blank white, `0` black, `~0.81` the kiosk.
-- **The kiosk browser itself:** `kiosk-browser.sh on`, then `errors` (reloads the page,
-  shows console errors and failed requests - the first thing to run when the screen looks
-  wrong), `eval 'JS'`, `taps order info ...` (tap latency with real touch events, and
-  whether a stale poll flips the screen back), `cookie`.
-  **Always `kiosk-browser.sh off` afterwards.** on/off restart the X session.
+  PNG. It prints the mean brightness: `1.0` blank white, `0` black, `~0.81` the kiosk. The
+  kiosk runs cog straight on KMS (CLAUDE.md), so this is ffmpeg's kmsgrab plus `kms_untile.py`
+  - the bottom right 1024x8 pixels come out black; on a Chromium device it is xwd.
+- **The kiosk browser itself:** `kiosk-browser.sh on` stops the kiosk session (and the
+  watchdog) and starts cog through WPEWebDriver instead, same flags plus `--automation`; then
+  `eval 'JS'`, `shot OUT.png` (WebDriver's screenshot) and `cookie` go through `wd.py`. The
+  DevTools commands `errors` and `taps` only exist on a device that still runs Chromium.
+  Look in `$XDG_RUNTIME_DIR/kiosk.log` (`/run/user/1000/kiosk.log`) first: cog's own output,
+  its crashes and the session's restarts. **Always `kiosk-browser.sh off` afterwards** - with
+  cog the kiosk session is gone until then.
 - **App errors:** `pi.sh 'cd /opt/coffeepy && sudo docker compose logs --since 10m web'` -
   500s are logged (`config/settings.py` LOGGING). A 500 only one browser gets usually
   lives in *that* session: `kiosk-browser.sh cookie`, then replay with a test `Client`
   carrying that `sessionid` and `raise_request_exception=True` via `django.sh`.
-- **Startup:** `startup-timeline.sh` restarts the session and logs black/white/kiosk every 3s.
+- **Startup:** `startup-timeline.sh` restarts the session and logs every 3s how far it got (cog:
+  processes, page loaded, age of the newest poll - ~13s to the first poll on a Pi 3).
 - **Both languages:** the device's default is `DJANGO_LANGUAGE_CODE` in `/opt/coffeepy/.env`;
-  the kiosk's DE/EN button (or a `django_language` cookie set over CDP) switches the kiosk.
+  the kiosk's DE/EN button (or a tap on it through `wd.py` / the cookie over CDP) switches the kiosk.
   Check a changed screen in both - a German string can overflow where the English one fit.
 - **The maintenance screen:** `pi.sh 'sudo bash -c ". /opt/coffeepy/install/maintenance.sh;
   maintenance_begin update; maintenance_step images 35"'` shows it, removing
@@ -90,7 +95,7 @@ about a Pi 3. Report numbers, not impressions.
   cleanup` - every page's server time against five years of synthetic history. An empty
   database makes every page look fast; the kiosk rows are the ones that matter (polled
   every 500ms).
-- Chromium tap latency: `kiosk-browser.sh taps ...` (see above).
+- Chromium tap latency: `kiosk-browser.sh taps ...` (see above; Chromium devices only).
 - **When the kiosk is usable:** delete `/opt/coffeepy/data/storage/kiosk-heartbeat`, reboot (or
   restart `getty@tty1`), then `stat -c %W` of it is the first poll - its birth time, which ext4
   keeps although the file is touched every 30s. Costs the device nothing while it boots.
@@ -105,14 +110,20 @@ more than anything else and notice every hiccup. Unit tests and a headless Chrom
 while the Pi's Chromium crashed on every Shift press, on every trip to the old keyboard page and
 after 10 of 15 order picks, and a `<select>` couldn't be operated there at all (2026-10-31).
 
-`kiosk-ui-test.sh [ROUNDS]` drives the kiosk's own Chromium with real touch events through
+`kiosk-ui-test.sh [ROUNDS]` drives the kiosk's own browser with real touch events through
 every screen (settings tiles, keyboard overlay with Shift, order pick/cancel/order now, sort pages beyond 12 sorts, pay with
 the numeric keyboard and a method tile, ranking) and reports each renderer crash with the step
 before it. It logs in with **synthetic scans of a test card** - an exception to the rule below,
 so **ask the user for each run**; the script creates and removes its test member, payment method
-and scans itself. Read the result as a rate: Chromium's own teardown crash still hits about one
-login/logout swap in 15-30; anything clearly above that is ours. When a step stands out, compare
-variants of just that step (same flow with and without the suspect action, 15 runs each).
+and scans itself. `kiosk-machine-test.sh [ROUNDS]` does the same for the coffee machine's screens
+(guided brew, free product, blocked machine, the ring's modal, the runaways tab) - start the bridge
+with `sudo MACHINE_SIMULATE=true docker compose up -d machine-bridge` first (a deploy's `compose up`
+resets that). Both find the browser themselves: on cog through `wd.py` (WebDriver for the page, a
+uinput touchscreen with the real one's capabilities for the taps - so as root), on Chromium
+through `cdp.py`. Read the result as a rate: cog had no crash in 13 rounds, so any crash there
+wants a look; Chromium's own teardown crash hits about one login/logout swap in 15-30. When a step
+stands out, compare variants of just that step (same flow with and without the suspect action, 15
+runs each - `kiosk-machine-test.sh 15 plain|cup` is one such A/B).
 
 ## Things that already went wrong here
 
@@ -127,9 +138,11 @@ variants of just that step (same flow with and without the suspect action, 15 ru
   client in `cdp.py`. In the web container, Django is available via `django.sh`.
 - **Background installs:** start them with `nohup … &` on the Pi, so a dropped SSH session
   does not kill them, and follow the log with Monitor.
-- **The screen is black, then white, for ~45s** after every session restart or boot,
-  even with the app already up - that is Chromium starting, not a hang. Wait before
-  judging a screenshot; `startup-timeline.sh` shows the phases.
+- **The screen is dark for a few seconds** after a session restart (cog), or black, then white,
+  for ~45s on a Chromium device - the browser starting, not a hang. Wait before judging a
+  screenshot; `startup-timeline.sh` shows the phases.
+- **`kill -SEGV` does nothing to a WPEWebProcess** - JavaScriptCore catches SEGV itself. To see
+  what a crash does, `kill -9` it: cog says "Crash!" and the session restarts it.
 - **A CDP expression that ends in a DOM node returns nothing.** `Runtime.evaluate` with
   `returnByValue` can't serialise an element, so `a && document.querySelector(...)` is never
   "true" to a polling script - wrap conditions in `!!(...)`. Cost two capture runs.
