@@ -437,11 +437,12 @@ def handle_event(payload: dict):
 
 
 def book(dispense: MachineDispense, reason: str = "") -> Order | None:
-    """The order for a kiosk brew that was made - once, whoever gets here first (the event, or
+    """The order for a kiosk or phone brew that was made - once, whoever gets here first (the event, or
     the timeout for one whose end never came)."""
     from dashboard import audit  # noqa: PLC0415 - dashboard imports coffee
 
-    if dispense.source != MachineDispense.SOURCE_KIOSK or dispense.order_id or dispense.member_id is None:
+    if (dispense.source not in (MachineDispense.SOURCE_KIOSK, MachineDispense.SOURCE_PHONE) or dispense.order_id
+            or dispense.member_id is None):
         return None
     sort = dispense.coffee_sort
     if sort is None:
@@ -455,7 +456,8 @@ def book(dispense: MachineDispense, reason: str = "") -> Order | None:
     dispense.order = order
     dispense.save(update_fields=["order"])
     who = audit.member_actor(dispense.member)
-    audit.log_actor(who, "order.create", target=who, source="kiosk",
+    audit.log_actor(who, "order.create", target=who,
+                    source="portal" if dispense.source == MachineDispense.SOURCE_PHONE else "kiosk",
                     details=f"#{order.pk}: {sort.name}, {order.value} EUR, {order.machine_strokes} cup(s), "
                             f"made by the machine{', ' + reason if reason else ''}")
     return order
@@ -650,7 +652,7 @@ def track_alerts(previous: list, current: list, now=None):
         if key in current and key not in previous:
             window = now - timezone.timedelta(seconds=INCIDENT_WINDOW)
             brew = MachineDispense.objects.filter(
-                source=MachineDispense.SOURCE_KIOSK, member__isnull=False,
+                source__in=(MachineDispense.SOURCE_KIOSK, MachineDispense.SOURCE_PHONE), member__isnull=False,
                 created_at__gte=now - timezone.timedelta(seconds=STARTED_TIMEOUT)).filter(
                 Q(state=MachineDispense.STARTED) | Q(state=MachineDispense.DONE, finished_at__gte=window)).first()
             if brew is not None and not MachineIncident.objects.filter(alert=key, cleared_at__isnull=True).exists():

@@ -16,6 +16,7 @@ urlpatterns = [
     path("machine/start/", views.machine_start, name="machine_start"),
     path("machine/cancel/", views.machine_cancel, name="machine_cancel"),
     path("machine/free/", views.machine_free, name="machine_free"),
+    path("machine/leave/", views.turn_leave, name="turn_leave"),
     path("settings/save/", views.settings_save, name="settings_save"),
     path("settings/touch/", views.settings_touch, name="settings_touch"),
     path("slots/", views.slots_open, name="slots_open"),

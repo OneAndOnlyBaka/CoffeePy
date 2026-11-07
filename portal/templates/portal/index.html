@@ -10,6 +10,9 @@
     <a href="{% url 'portal:privacy' %}" class="btn success btn-block">{% translate "Read and confirm" %}</a>
 </div>
 {% endif %}
+{% if machine_on %}
+<a href="{% url 'portal:order' %}" class="btn success btn-block order-cta">{% include "icons/cup.svg" %} {% translate "Order a coffee" %}</a>
+{% endif %}
 <div class="card stats-card">
     <div class="stats-row">
         <div class="stat"><span class="label">{% translate "Total cups" %}</span><span class="value">{{ total_cups }}</span></div>

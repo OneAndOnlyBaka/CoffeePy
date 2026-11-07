@@ -17,7 +17,7 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext as _, gettext_lazy, gettext_noop, pgettext
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import backups, clock, machine, names, privacy, rtc, services
+from coffee import backups, clock, machine, names, privacy, rtc, services, turns
 from coffee import slots as my_coffees
 from coffee.models import (
     AltUidCapture,
@@ -26,6 +26,7 @@ from coffee.models import (
     InventoryItem,
     MachineDispense,
     MachineProduct,
+    MachineTurn,
     MemberSlot,
     Member,
     MemberCard,
@@ -67,8 +68,11 @@ BREW_REASONS = {
     "busy": gettext_noop("The machine is busy with another product."),
     "disconnected": gettext_noop("The connection to the machine was lost."),
     "unreachable": gettext_noop("The machine can't be reached right now."),
+    "turn_over": gettext_noop("Your turn is over - order again to get back in line."),
 }
 BREW_REASON_OTHER = gettext_noop("The machine didn't make it.")
+# "You are in line" (coffee/turns.py): how long the kiosk says so before it is free for the next one.
+QUEUED_SECONDS = 15
 # Settings, Pay and the ranking go back to ordering when nobody used them for this long -
 # otherwise the next person walks up to an "apply your card" screen that won't order anything.
 IDLE_RETURN_SECONDS = 30
@@ -336,14 +340,25 @@ def machine_start(request):
         member = Member.objects.filter(uid=brew.get("uid")).first() if brew.get("uid") is not None else None
         sort = CoffeeSort.objects.filter(pk=brew.get("sort_id")).first()
         state = machine.status()
+        turns.advance()  # a minute that ran out ends here, not with a brew
+        turn = MachineTurn.objects.filter(pk=brew.get("turn_id")).first() if brew.get("turn_id") else None
         if product is None or not state["connected"] or (not brew.get("free") and (member is None or sort is None)):
             _brew_message(request, "unreachable")
         elif state["blocking"]:
             pass  # the screen shows what to do; Start stays until it is done
+        elif brew.get("free") and turns.active().exists():
+            _brew_message(request, "busy")  # someone was called meanwhile: the line goes first
+        elif not brew.get("free") and (turn is None or turn.state != MachineTurn.CALLED):
+            _brew_message(request, "turn_over")
         else:
-            dispense = machine.request_brew(
-                product, member, sort, MachineDispense.SOURCE_FREE if brew.get("free") else MachineDispense.SOURCE_KIOSK,
-                options=brew.get("options"), count=brew.get("count", 1))
+            if turn is not None:
+                dispense = turns.start(turn, MachineDispense.SOURCE_KIOSK)
+            else:
+                dispense = machine.request_brew(product, None, None, MachineDispense.SOURCE_FREE)
+            if dispense is None:
+                _brew_message(request, "unreachable")
+                _touched(request)
+                return _render_panel(request)
             request.session["brew"] = {**brew, "stage": "brewing", "dispense_id": dispense.pk,
                                        "since": time.time()}
             if member is not None:
@@ -360,12 +375,33 @@ def machine_start(request):
 
 @require_POST
 def machine_cancel(request):
-    """Back from "put your cup under it" - nothing was asked of the machine, nothing is booked."""
+    """Back from "put your cup under it" - nothing was asked of the machine, nothing is booked, and the
+    turn is given up (coffee/turns.py). From "you are in line" it only ends the screen: the place stays."""
     brew = request.session.get("brew")
-    if brew and brew.get("stage") == "cup":
+    if brew and brew.get("stage") in ("cup", "queued"):
+        if brew.get("stage") == "cup":
+            _leave_line(request, brew)
         request.session.pop("brew", None)
         _reset_session_state(request)
     return _render_panel(request)
+
+
+@require_POST
+def turn_leave(request):
+    """"Give up my place" on the "you are in line" screen."""
+    brew = request.session.get("brew")
+    if brew and brew.get("stage") == "queued":
+        _leave_line(request, brew)
+        request.session.pop("brew", None)
+        _reset_session_state(request)
+    return _render_panel(request)
+
+
+def _leave_line(request, brew):
+    turn = MachineTurn.objects.filter(pk=brew.get("turn_id")).select_related("member").first()
+    if turn is not None and turns.cancel(turn):
+        who = audit.member_actor(turn.member)
+        audit.log(request, "machine.queue_leave", target=who, actor=who, details=f"No. {turn.number}")
 
 
 @require_POST
@@ -374,7 +410,7 @@ def machine_free(request):
     keys locked the only way to get it. Only while nobody is logged in and the machine can do it."""
     product = MachineProduct.objects.filter(code=_int(request.POST.get("code")), free=True, present=True).first()
     if (not request.session.get("logged_in") and request.session.get("brew") is None and product is not None
-            and machine.can_brew(product) and machine.brewing_available()):
+            and machine.can_brew(product) and machine.brewing_available() and not turns.active().exists()):
         request.session["brew"] = {"stage": "cup", "code": product.code, "free": True,
                                    "until": time.time() + CUP_SECONDS}
     _touched(request)
@@ -636,9 +672,14 @@ def _checkout(request):
     count = slot.count if slot is not None else 1
     product = machine.product_for(sort) if sort is not None and machine.brewing_available() else None
     if product is not None:
-        request.session["brew"] = {"stage": "cup", "uid": uid, "sort_id": sort.pk, "code": product.code,
-                                   "until": time.time() + CUP_SECONDS, "count": count,
-                                   "options": my_coffees.options(slot) if slot is not None else {}}
+        # Every brew goes through the line (coffee/turns.py), also with nobody else in it: then it is
+        # called at once - and a phone sees that the machine is taken.
+        turn = turns.join(member, sort, slot, MachineTurn.SOURCE_KIOSK)
+        if turn.state != MachineTurn.CALLED:
+            who = audit.member_actor(member)
+            audit.log(request, "machine.queue_join", target=who, actor=who,
+                      details=f"No. {turn.number}: {sort.name}{f' x{count}' if count > 1 else ''}")
+        _turn_screen(request, turn)
         # The deadline of the order screen is over: the brew has timeouts of its own.
         request.session.pop("deadline", None)
         request.session.pop("shown_deadline", None)
@@ -647,6 +688,20 @@ def _checkout(request):
     if order is not None:
         _start_thank_you(request, uid)
     _reset_session_state(request)
+
+
+def _turn_screen(request, turn):
+    """The kiosk's screen for a member's turn: "put your cup under it" when it is theirs (the minute
+    starts afresh with the tap), else "you are in line"."""
+    product = machine.product_for(turn.coffee_sort)
+    if turn.state == MachineTurn.CALLED and product is not None:
+        turns.claim(turn)
+        request.session["brew"] = {"stage": "cup", "uid": turn.member_id, "sort_id": turn.coffee_sort_id,
+                                   "code": product.code, "until": time.time() + CUP_SECONDS, "count": turn.count,
+                                   "options": turn.options, "turn_id": turn.pk}
+    else:
+        request.session["brew"] = {"stage": "queued", "uid": turn.member_id, "turn_id": turn.pk,
+                                   "until": time.time() + QUEUED_SECONDS}
 
 
 def _brew_message(request, reason, made=0):
@@ -663,8 +718,15 @@ def _brew_tick(request):
         return
     now = time.time()
     stage = brew.get("stage")
-    if stage in ("cup", "failed", "done_free"):
+    if stage in ("cup", "failed", "done_free", "queued"):
+        if stage == "queued":
+            turn = MachineTurn.objects.filter(pk=brew.get("turn_id")).first()
+            if turn is not None and turn.state == MachineTurn.CALLED:
+                _turn_screen(request, turn)  # called while still on the screen: straight on
+                return
         if now >= brew.get("until", 0):
+            if stage == "cup":
+                _leave_line(request, brew)
             request.session.pop("brew", None)
             _reset_session_state(request)
         return
@@ -691,6 +753,8 @@ def _brew_tick(request):
 def _brew_context(request):
     brew = request.session["brew"]
     stage = brew["stage"]
+    if stage == "queued":
+        return _queued_context(request, brew)
     product = MachineProduct.objects.filter(code=brew.get("code")).first()
     member = Member.objects.filter(uid=brew.get("uid")).first() if brew.get("uid") is not None else None
     sort = CoffeeSort.objects.filter(pk=brew.get("sort_id")).first()
@@ -722,6 +786,30 @@ def _brew_context(request):
         if reason == "blocked":
             ctx["blocking"] = [machine.alert_label(key) for key in state["blocking"]]
     return ctx
+
+
+def _queued_context(request, brew):
+    """"You are in line": the member's number and how many come before - changes only when the line moves."""
+    turn = MachineTurn.objects.filter(pk=brew.get("turn_id")).select_related("member", "coffee_sort").first()
+    if turn is None or turn.state != MachineTurn.WAITING:  # left, over, or started from the phone
+        request.session.pop("brew", None)
+        _reset_session_state(request)
+        return _state_context(request, request.session.get("mode", MODE_ORDER))
+    return {"state": "brew", "stage": "queued", "member": turn.member, "number": turn.number,
+            "ahead": len(turns.ahead(turn, request.line)), "product_name": turn.coffee_sort.name,
+            "count": turn.count, "turn_seconds": turns.TURN_SECONDS,
+            "brew_deadline_ms": int(brew["until"] * 1000)}
+
+
+def _line_summary(line):
+    """For the wait screen, without names (a screen at a workplace): whose number is at the machine and
+    how many wait. None while nobody is in line."""
+    if not line:
+        return None
+    holder = line[0] if line[0].state != MachineTurn.WAITING else None
+    return {"number": holder.number if holder else None, "brewing": holder is not None and holder.state == MachineTurn.BREWING,
+            "phone": holder is not None and holder.source == MachineTurn.SOURCE_PHONE,
+            "waiting": sum(1 for t in line if t.state == MachineTurn.WAITING)}
 
 
 def _free_products():
@@ -831,6 +919,8 @@ def _render_panel(request):
         _reset_session_state(request)
     ctx = {"mode": mode}
 
+    # The line for the machine moves on with every poll (coffee/turns.py) - one query while it is empty.
+    request.line = turns.advance()
     _brew_tick(request)
     if not request.session.get("logged_in"):
         scan = _consume_new_scan(request)
@@ -1069,6 +1159,12 @@ def _handle_new_scan(request, mode, scan, ctx):
             _start_session(request, mode, session_uid)
         else:
             _start_session(request, MODE_SETTINGS, session_uid, is_new_user=True)
+    turn = turns.current_for(member) if mode in (MODE_ORDER, MODE_RANKING) and member is not None else None
+    if (turn is not None and turn.state != MachineTurn.BREWING and request.session.get("mode") == MODE_ORDER
+            and privacy.confirmed(member)):
+        # In line already (from here or the phone): their turn, or where they stand - not a second order.
+        _turn_screen(request, turn)
+        return
     if not privacy.confirmed(member):
         # The notice first, whatever the tap was for - a new card before its name is even asked.
         request.session["privacy_pending"] = True
@@ -1116,7 +1212,8 @@ def _state_context(request, mode):
             "wait_mode": mode if mode in (MODE_INFO, MODE_SETTINGS, MODE_PURCHASE) else MODE_ORDER,
             "checkout_seconds": ORDER_AUTO_CHECKOUT_SECONDS,
             "logout_seconds": AUTO_LOGOUT_SECONDS,
-            "free_products": _free_products() if mode == MODE_ORDER else [],
+            "free_products": _free_products() if mode == MODE_ORDER and not request.line else [],
+            "line": _line_summary(request.line) if mode == MODE_ORDER else None,
         }
 
     uid = request.session["uid"]
@@ -1241,16 +1338,7 @@ def _sort_pages(request, sorts, member, selected_id, layout, without_scroll=SORT
 
 
 def _options_text(values: dict, recipe: dict | None = None) -> str:
-    """"strength 7 · 200 ml · extra hot" - what differs from the machine's default (a slot stores only
-    that), in the panel's language."""
-    parts = []
-    if values.get("strength") is not None:
-        parts.append(_("strength %(level)s") % {"level": values["strength"]})
-    if values.get("water_ml") is not None:
-        parts.append(_("%(ml)s ml") % {"ml": values["water_ml"]})
-    if values.get("temperature") is not None:
-        parts.append(_("extra hot") if values["temperature"] >= 2 else _("less hot"))
-    return " · ".join(parts)
+    return my_coffees.options_text(values)
 
 
 def _slot_tiles(slots):
@@ -1322,6 +1410,8 @@ def _order_context(request, uid, seconds_left):
         "alltime_badge": alltime_badge,
         "month_badge": month_badge,
         "seconds_left": seconds_left,
+        # Someone else is at the machine or waiting: Order now gets a place in line (coffee/turns.py).
+        "line_ahead": sum(1 for t in request.line if t.member_id != uid),
     }
 
 

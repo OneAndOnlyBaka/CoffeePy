@@ -1,0 +1,75 @@
+{% load i18n %}
+{% comment %}The member's turn in the line for the machine (coffee/turns.py), polled every 2 s by order.html.
+Here, on the member's own phone, the line has names; the kiosk's screen shows numbers only.{% endcomment %}
+{% if turn %}
+<div class="card turn-card turn-{{ turn.state }}">
+    {% if turn.state == "called" %}
+    <h2>{% translate "It's your turn!" %}</h2>
+    <p>{% blocktranslate trimmed with sort=turn.coffee_sort.name count=turn.count %}Put your cup under the outlet: {{ count }} × {{ sort }}.{% endblocktranslate %}</p>
+    <p class="turn-left">{% blocktranslate trimmed with seconds=seconds_left %}{{ seconds }} s left to start - then it is the next one's turn.{% endblocktranslate %}</p>
+    {% if blocking %}
+    <p class="msg error">{% translate "The machine needs this first:" %}</p>
+    <ul>{% for task in blocking %}<li>{{ task }}</li>{% endfor %}</ul>
+    {% elif tasks %}
+    <p class="msg warning">{% translate "Better do this first, before you start:" %}</p>
+    <ul>{% for task in tasks %}<li>{{ task }}</li>{% endfor %}</ul>
+    {% endif %}
+    <form method="post" action="{% url 'portal:order' %}">
+        {% csrf_token %}
+        <button type="submit" name="action" value="start" class="success btn-block"{% if blocking %} disabled{% endif %}>▶ {% translate "Start" %}</button>
+        <button type="submit" name="action" value="leave" class="danger btn-block">{% translate "Give up my place" %}</button>
+    </form>
+    {% elif turn.state == "brewing" %}
+    <h2>{% blocktranslate trimmed with sort=turn.coffee_sort.name %}Your {{ sort }} is on its way{% endblocktranslate %}</h2>
+    {% if turn.count > 1 %}<p class="turn-number">{% blocktranslate trimmed with cup=cup count=turn.count %}Cup {{ cup }} of {{ count }}{% endblocktranslate %}</p>{% endif %}
+    <p>{% translate "Leave the cup where it is until the machine is done." %}</p>
+    {% if tasks %}
+    <p class="msg warning">{% translate "Right after, please:" %}</p>
+    <ul>{% for task in tasks %}<li>{{ task }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% else %}
+    <h2>{% blocktranslate trimmed with number=turn.number %}You are in line - No. {{ number }}{% endblocktranslate %}</h2>
+    <p>{% blocktranslate trimmed with sort=turn.coffee_sort.name count=turn.count %}{{ count }} × {{ sort }}{% endblocktranslate %}</p>
+    {% if ahead %}
+    <p class="muted">{% translate "Before you:" %}</p>
+    <ol class="turn-line">
+        {% for other in ahead %}
+        <li>{{ other.member.display_name }} <small>{% if other.state == "brewing" %}{% translate "at the machine" %}{% elif other.state == "called" %}{% translate "their turn" %}{% else %}{% translate "waiting" %}{% endif %} &middot; {% if other.source == "phone" %}{% translate "phone" %}{% else %}{% translate "kiosk" %}{% endif %}</small></li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p>{% translate "You are next." %}</p>
+    {% endif %}
+    {% if not available %}<p class="msg warning">{% translate "The machine isn't connected right now - the line waits for it." %}</p>{% endif %}
+    <form method="post" action="{% url 'portal:order' %}">
+        {% csrf_token %}
+        <button type="submit" name="action" value="leave" class="danger btn-block">{% translate "Give up my place" %}</button>
+    </form>
+    {% endif %}
+</div>
+{% else %}
+{% if last %}
+<div class="card">
+    {% if last.state == "done" %}
+    <p class="msg success">{% blocktranslate trimmed with sort=last.coffee_sort.name count=last_made|default:1 %}{{ count }} × {{ sort }} booked - enjoy!{% endblocktranslate %}</p>
+    {% elif last.state == "expired" %}
+    <p class="msg warning">{% translate "Your turn is over - get in line again when you are at the machine." %}</p>
+    {% else %}
+    <p class="msg error">{% if last_made %}{% blocktranslate trimmed with made=last_made count=last.count %}{{ made }} of {{ count }} made and booked{% endblocktranslate %}{% else %}{% translate "The machine didn't make it - nothing was booked." %}{% endif %}</p>
+    {% endif %}
+    {% comment %}A page load: the choice form is outside this card.{% endcomment %}
+    <a href="{% url 'portal:order' %}" class="btn btn-block">{% translate "Order another" %}</a>
+</div>
+{% endif %}
+{% if not available %}
+<div class="card"><p class="muted">{% translate "Ordering from the phone needs the coffee machine connected - right now you order at the kiosk." %}</p></div>
+{% elif holder or waiting %}
+<div class="card">
+    <h2>{% translate "At the machine" %}</h2>
+    <ol class="turn-line">
+        {% if holder %}<li>{{ holder.member.display_name }} <small>{% if holder.state == "brewing" %}{% translate "at the machine" %}{% else %}{% translate "their turn" %}{% endif %}</small></li>{% endif %}
+        {% for other in waiting %}<li>{{ other.member.display_name }} <small>{% translate "waiting" %}</small></li>{% endfor %}
+    </ol>
+</div>
+{% endif %}
+{% endif %}

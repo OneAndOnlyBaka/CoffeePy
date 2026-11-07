@@ -8,7 +8,7 @@ from django.core.management.base import BaseCommand
 from django.db import DatabaseError, close_old_connections
 from django.utils import timezone
 
-from coffee import machine
+from coffee import machine, turns
 from dashboard import audit
 from coffee.models import MachineStatus, NfcReaderStatus, NfcScan
 
@@ -282,6 +282,7 @@ class Command(BaseCommand):
                         try:
                             close_old_connections()
                             machine.housekeeping()
+                            turns.housekeeping()
                         except DatabaseError as exc:
                             log.warning("Could not look at the coffee machine's brews (%s)", exc)
             except OSError as exc:

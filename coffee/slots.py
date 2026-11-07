@@ -5,6 +5,8 @@ many of it in a row into one big cup or a jug (coffee-machine/README.md, several
 The price is the sort's, whatever the strength or the water, times the cups; each cup is booked
 once the machine has made it (coffee.machine.book). Without a machine - or for a sort the machine
 doesn't make - a slot is only the sort and the number of cups, booked straight away."""
+from django.utils.translation import gettext as _
+
 from coffee.models import CoffeeSort, MachineProduct, Member, MemberSlot
 
 TEMPERATURES = {0: "low", 1: "normal", 2: "high"}
@@ -136,3 +138,16 @@ def save_form(member: Member, data) -> dict:
     member.hide_standard_sorts = data.get("hide_standard_sorts") == "on"
     member.save(update_fields=["favourite_slot", "hide_standard_sorts"])
     return saved
+
+
+def options_text(values: dict) -> str:
+    """"strength 7 · 200 ml · extra hot" - what differs from the machine's default (a slot stores only
+    that), in the active language. The kiosk's order screen and brew, the phone's order page."""
+    parts = []
+    if values.get("strength") is not None:
+        parts.append(_("strength %(level)s") % {"level": values["strength"]})
+    if values.get("water_ml") is not None:
+        parts.append(_("%(ml)s ml") % {"ml": values["water_ml"]})
+    if values.get("temperature") is not None:
+        parts.append(_("extra hot") if values["temperature"] >= 2 else _("less hot"))
+    return " · ".join(parts)

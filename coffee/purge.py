@@ -21,6 +21,7 @@ from coffee.models import (
     MachineCounter,
     MachineDispense,
     MachineIncident,
+    MachineTurn,
     Member,
     MemberCard,
     MemberDevice,
@@ -38,6 +39,7 @@ from coffee.models import (
 # cascade with Member anyway; deleting them explicitly just keeps the order obvious.
 IMPORT_SCOPE = [
     # The coffee machine's brews and incidents: whose and which order they were goes with the members.
+    MachineTurn,
     MachineIncident,
     MachineDispense,
     Purchase,

@@ -96,9 +96,23 @@ no seconds: the cup's animation runs in CSS, the countdown in countdown.js from 
             {% if blocking %}<ul class="brew-tasks">{% for task in blocking %}<li>{{ task }}</li>{% endfor %}</ul>{% endif %}
             {% elif stage == "done_free" %}
             <h2>{% translate "Enjoy!" %}</h2>
+            {% elif stage == "queued" %}
+            {% comment %}coffee/turns.py: in line for the machine. Changes only when the line moves; called
+            while still here, the screen goes straight on to the cup (views._brew_tick).{% endcomment %}
+            <h2>{% blocktranslate trimmed with number=number %}You are in line - No. {{ number }}{% endblocktranslate %}</h2>
+            <p class="brew-cups">{% if ahead %}{% blocktranslate trimmed with n=ahead %}Before you: {{ n }}{% endblocktranslate %}{% else %}{% translate "You are next" %}{% endif %}</p>
+            <p>{% if count > 1 %}{% blocktranslate trimmed with sort=product_name count=count %}{{ count }} × {{ sort }}{% endblocktranslate %}{% else %}{{ product_name }}{% endif %}</p>
+            <p>{% blocktranslate trimmed with seconds=turn_seconds %}When it is your turn, tap your card again - or start it on your phone. You then have {{ seconds }} seconds.{% endblocktranslate %}</p>
             {% endif %}
         </div>
     </div>
+    {% if stage == "queued" %}
+    <div class="action-row panel-footer">
+        <button type="button" class="danger" hx-post="{% url 'kiosk:turn_leave' %}" hx-target="#panel" hx-swap="innerHTML">✕ {% translate "Give up my place" %}</button>
+        {% blocktranslate trimmed with seconds="{s}" asvar queued_text %}Back in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ brew_deadline_ms|unlocalize }}" data-text="{{ queued_text|force_escape }}"></span>
+        <button type="button" class="success primary-action" hx-post="{% url 'kiosk:machine_cancel' %}" hx-target="#panel" hx-swap="innerHTML">✓ {% translate "OK" %}</button>
+    </div>
+    {% endif %}
     {% if stage == "cup" %}
     <div class="action-row panel-footer">
         <button type="button" class="danger" hx-post="{% url 'kiosk:machine_cancel' %}" hx-target="#panel" hx-swap="innerHTML">✕ {% translate "Cancel" %}</button>
@@ -139,6 +153,9 @@ scrolled list crashed Chromium, CLAUDE.md); the same bytes on every poll until i
             {% if month_badge %}<span class="rank-badge" title="{% translate "Top 3 this month" %}">{% include "icons/medal.svg" with place=month_badge %}</span>{% endif %}
         </h1>
         <div class="panel-body">
+            {% if line_ahead %}
+            <p class="msg warning line-note">{% blocktranslate trimmed with n=line_ahead %}The machine is taken - a coffee from it puts you in line (before you: {{ n }}).{% endblocktranslate %}</p>
+            {% endif %}
             {% if month_reminder_balance %}
             <p class="msg error">{% blocktranslate trimmed with amount=month_reminder_balance %}Reminder: you still owe {{ amount }}€ from last month - please settle up soon (see Pay).{% endblocktranslate %}</p>
             {% endif %}

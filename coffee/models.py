@@ -492,8 +492,9 @@ class MachineDispense(models.Model):
     """One product the machine made, or was asked for and didn't: from the kiosk (booked as an order
     once done), free at the kiosk, from Home Assistant, or started at the machine itself."""
 
-    SOURCE_KIOSK, SOURCE_FREE, SOURCE_HA, SOURCE_MANUAL = "app", "free", "ha", "manual"
-    SOURCES = [(SOURCE_KIOSK, gettext_lazy("Kiosk")), (SOURCE_FREE, gettext_lazy("Free at the kiosk")),
+    SOURCE_KIOSK, SOURCE_PHONE, SOURCE_FREE, SOURCE_HA, SOURCE_MANUAL = "app", "phone", "free", "ha", "manual"
+    SOURCES = [(SOURCE_KIOSK, gettext_lazy("Kiosk")), (SOURCE_PHONE, gettext_lazy("Phone")),
+               (SOURCE_FREE, gettext_lazy("Free at the kiosk")),
                (SOURCE_HA, gettext_lazy("Home Assistant")), (SOURCE_MANUAL, gettext_lazy("At the machine"))]
     REQUESTED, STARTED, DONE, FAILED = "requested", "started", "done", "failed"
     STATES = [(REQUESTED, gettext_lazy("asked for")), (STARTED, gettext_lazy("running")),
@@ -641,3 +642,38 @@ class MemberSlot(models.Model):
 
     def __str__(self):
         return f"{self.member} #{self.position}: {self.coffee_sort}"
+
+
+class MachineTurn(models.Model):
+    """A member's place in the line for the machine (coffee/turns.py) - from the kiosk or the phone,
+    one line for both: one outlet, one cup under it at a time. Waiting, then "your turn" for
+    turns.TURN_SECONDS to press Start, then brewing; what was chosen goes along, so whoever is called
+    starts it with one tap. Finished rows are deleted after a day; `number` counts within the day."""
+
+    SOURCE_KIOSK, SOURCE_PHONE = "kiosk", "phone"
+    SOURCES = [(SOURCE_KIOSK, gettext_lazy("Kiosk")), (SOURCE_PHONE, gettext_lazy("Phone"))]
+    WAITING, CALLED, BREWING = "waiting", "called", "brewing"
+    DONE, FAILED, EXPIRED, CANCELLED = "done", "failed", "expired", "cancelled"
+    ACTIVE = (WAITING, CALLED, BREWING)
+    STATES = [(WAITING, "waiting"), (CALLED, "called"), (BREWING, "brewing"), (DONE, "done"),
+              (FAILED, "failed"), (EXPIRED, "expired"), (CANCELLED, "cancelled")]
+
+    number = models.PositiveIntegerField()
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="turns")
+    coffee_sort = models.ForeignKey(CoffeeSort, on_delete=models.CASCADE, related_name="+")
+    slot_position = models.PositiveSmallIntegerField(null=True, blank=True)
+    options = models.JSONField(default=dict, blank=True)
+    count = models.PositiveSmallIntegerField(default=1)
+    source = models.CharField(max_length=10, choices=SOURCES)
+    state = models.CharField(max_length=10, choices=STATES, default=WAITING, db_index=True)
+    dispense = models.ForeignKey(MachineDispense, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    reason = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    called_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self):
+        return f"#{self.number} {self.member} ({self.state})"

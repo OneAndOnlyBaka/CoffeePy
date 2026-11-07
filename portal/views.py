@@ -11,11 +11,11 @@ from django.utils.html import escape
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import privacy, services
+from coffee import machine, privacy, services, turns
 from coffee import slots as my_coffees
 from coffee.models import (
-    AltUidCapture, AuditLogEntry, CASH_METHOD_NAME, CoffeeSort, InventoryItem, MemberDevice, MemberLinkToken,
-    MemberSlot, Payment, PaymentMethod,
+    AltUidCapture, AuditLogEntry, CASH_METHOD_NAME, CoffeeSort, InventoryItem, MachineDispense, MachineTurn,
+    MemberDevice, MemberLinkToken, MemberSlot, Payment, PaymentMethod,
 )
 
 from dashboard import audit
@@ -98,6 +98,7 @@ def index(request):
         "recent_orders": member.orders.select_related("coffee_sort")[:10],
         "recent_payments": member.payments.select_related("purchase__item")[:10],
         "privacy_confirmed": privacy.confirmed(member),
+        "machine_on": machine.status()["machine"].configured,
     }
     return render(request, "portal/index.html", ctx)
 
@@ -348,3 +349,98 @@ def coffees(request):
         "member": member, "cards": cards, "sorts": CoffeeSort.offered(), "max_count": MemberSlot.MAX_COUNT,
         "counts": range(1, MemberSlot.MAX_COUNT + 1), "saved": saved,
     })
+
+
+# --- ordering from the phone: the line for the machine (coffee/turns.py) --------------------------
+
+# "Booked" stays on the page this long after the member's brew ended.
+TURN_RESULT_SECONDS = 120
+
+
+def _choices(member):
+    """What the phone orders: the member's slots and the sorts the machine makes - one outlet, so only
+    what goes through the line. A sort without the machine is booked at the kiosk, as ever."""
+    slots = [s for s in my_coffees.slots_for(member) if machine.product_for(s.coffee_sort) is not None]
+    sorts = [s for s in CoffeeSort.offered() if machine.product_for(s) is not None]
+    return slots, sorts
+
+
+def _turn_context(member):
+    line = turns.advance()
+    turn = next((t for t in line if t.member_id == member.pk), None)
+    ctx = {"member": member, "turn": turn, "available": machine.brewing_available(),
+           "holder": line[0] if line and line[0].state != MachineTurn.WAITING else None,
+           "waiting": [t for t in line if t.state == MachineTurn.WAITING]}
+    if turn is not None:
+        ctx["ahead"] = turns.ahead(turn, line)
+        product = machine.product_for(turn.coffee_sort)
+        water = (turn.options or {}).get("water_ml")
+        state = machine.status()
+        if turn.state == MachineTurn.CALLED:
+            ctx["seconds_left"] = max(0, int((turns.deadline(turn) - timezone.now()).total_seconds()))
+            ctx["blocking"] = [machine.alert_label(key) for key in state["blocking"]]
+            ctx["tasks"] = [t for t in machine.tasks_before(product, water, turn.count)
+                            if t not in ctx["blocking"]] if product else []
+        elif turn.state == MachineTurn.BREWING:
+            progress = machine.chain_progress(turn.dispense) if turn.dispense_id else None
+            ctx["cup"] = progress["cup"] if progress else 1
+            ctx["tasks"] = machine.tasks_after(product, water, turn.count) if product else []
+    else:
+        since = timezone.now() - timedelta(seconds=TURN_RESULT_SECONDS)
+        ctx["last"] = MachineTurn.objects.filter(member=member, finished_at__gte=since).exclude(
+            state=MachineTurn.CANCELLED).order_by("-finished_at").first()
+        if ctx["last"] is not None and ctx["last"].dispense_id:
+            ctx["last_made"] = machine.chain_progress(ctx["last"].dispense)["done"]
+    return ctx
+
+
+@portal_login_required
+@portal_privacy_required
+def order(request):
+    """A coffee from the phone: in line with the kiosk's members, Start once it is the member's turn and
+    the cup is under the outlet. Booked cup by cup as the machine makes them, like at the kiosk."""
+    member = request.member
+    action = request.POST.get("action") if request.method == "POST" else None
+    who = audit.member_actor(member)
+    turn = turns.current_for(member)
+    if action == "join" and machine.brewing_available():
+        slots, sorts = _choices(member)
+        picked = request.POST.get("choice", "")
+        slot = next((s for s in slots if picked == f"slot:{s.position}"), None)
+        sort = slot.coffee_sort if slot is not None else next((s for s in sorts if picked == str(s.pk)), None)
+        if sort is not None:
+            turn = turns.join(member, sort, slot, MachineTurn.SOURCE_PHONE)
+            audit.log(request, "machine.queue_join", target=who, actor=who,
+                      details=f"No. {turn.number}: {sort.name}{f' x{turn.count}' if turn.count > 1 else ''} (phone)")
+    elif action == "start" and turn is not None:
+        dispense = turns.start(turn, MachineDispense.SOURCE_PHONE)
+        if dispense is not None:
+            audit.log(request, "machine.brew", target=who, actor=who, details=f"{dispense.product_name} for "
+                      f"{turn.coffee_sort.name}{f' ({turn.count} cups)' if turn.count > 1 else ''}, from the phone")
+    elif action == "leave" and turn is not None and turns.cancel(turn):
+        audit.log(request, "machine.queue_leave", target=who, actor=who, details=f"No. {turn.number} (phone)")
+    if action:
+        return redirect("portal:order")
+    slots, sorts = _choices(member)
+    choices = [{"value": f"slot:{s.position}", "name": s.coffee_sort.name, "count": s.count, "slot": s.position,
+                "price": s.coffee_sort.price * s.count, "options": my_coffees.options_text(my_coffees.options(s))} for s in slots]
+    choices += [{"value": str(s.pk), "name": s.name, "count": 1, "price": s.price} for s in sorts]
+    ctx = _turn_context(member)
+    ctx.update({"choices": choices, "preselected": _preselected(member, slots, sorts)})
+    return render(request, "portal/order.html", ctx)
+
+
+def _preselected(member, slots, sorts):
+    """As on the kiosk: the slot they preselect, else the favourite sort, else the first."""
+    if member.favourite_slot in {s.position for s in slots}:
+        return f"slot:{member.favourite_slot}"
+    if member.favourite_coffee_id in {s.pk for s in sorts}:
+        return str(member.favourite_coffee_id)
+    return f"slot:{slots[0].position}" if slots else (str(sorts[0].pk) if sorts else "")
+
+
+@portal_login_required
+@portal_privacy_required
+def order_status(request):
+    """The page's turn card, polled every 2 s."""
+    return render(request, "portal/_turn.html", _turn_context(request.member))

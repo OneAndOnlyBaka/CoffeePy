@@ -27,6 +27,7 @@ The technical protections are in [SECURITY.md](SECURITY.md).
 | Orders: time, coffee sort, price, cups | members | the tally | the kiosk |
 | Payments: time, amount, method | members | the tally | kiosk, portal, dashboard |
 | "My coffees": up to three saved coffees (sort, strength, water, temperature, cups in a row), which one is preselected, whether the other sorts are hidden | members | to make the coffee the way the member set it | the member at the kiosk or on the phone |
+| The line for the coffee machine: a member's place and number, the coffee chosen, kiosk or phone | members | one cup under the outlet at a time; the names show on the members' phones only, the kiosk's screen shows numbers | the member at the kiosk or on the phone |
 | Balance, rankings, statistics | members | calculated from the above, never stored separately | - |
 | Linked phones: browser description, linked and last seen | members | to let the member see and log out their phones | the portal |
 | Dashboard users: user name, password hash, role | admins, managers | access to the dashboard | an admin |
@@ -63,6 +64,7 @@ not to rely on it alone. A coffee list is voluntary and not part of anyone's job
 | Members, orders, payments | until the member is deleted, or the database reset | an admin (Members → Delete; System → Reset) |
 | A departed member's data | kept for the history, hidden from rankings and pillory; with a period set under Members → Departed members, suggested for deletion once it is over and the balance is settled | an admin deleting the member - never automatically |
 | Audit log (with IP addresses) | `AUDIT_RETENTION_DAYS`, **90 days** by default | automatically, hourly |
+| Places in the line for the coffee machine | **one day** after they ended | automatically |
 | Raw card taps (`NfcScan`) | at least **one hour** - deleted with the next card tap after that | automatically |
 | One-time phone links | **5 minutes**, or until used | automatically |
 | Phone sessions | **6 months** after the last use | automatically; at once by logging the phone out, revoking, or marking the member as departed |

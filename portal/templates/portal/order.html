@@ -1,0 +1,33 @@
+{% extends "portal/base.html" %}
+{% load i18n l10n %}
+{% block title %}{% translate "Order a coffee" %} - CoffeePy{% endblock %}
+{% block portal_content %}
+<h1>{% translate "Order a coffee" %}</h1>
+{% comment %}The turn card follows the line every 2 s (views.order_status). The choice stays outside it, so
+a poll never resets a pick under the finger.{% endcomment %}
+<div id="turn" hx-get="{% url 'portal:order_status' %}" hx-trigger="every 2s" hx-swap="innerHTML">
+    {% include "portal/_turn.html" %}
+</div>
+{% if not turn and available %}
+<div class="card">
+    <h2>{% translate "What would you like?" %}</h2>
+    {% if choices %}
+    <p class="muted">{% translate "You get in line with everyone at the kiosk. When it is your turn, put your cup under the outlet and tap Start - here or with your card at the kiosk." %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="join">
+        <div class="choice-list">
+            {% for choice in choices %}
+            <label class="choice"><input type="radio" name="choice" value="{{ choice.value }}"{% if choice.value == preselected %} checked{% endif %}>
+                <span><b>{{ choice.name }}{% if choice.count > 1 %} &times;{{ choice.count }}{% endif %}</b>
+                    <small>{% if choice.slot %}{% blocktranslate trimmed with n=choice.slot %}My coffee {{ n }}{% endblocktranslate %}{% if choice.options %} &middot; {{ choice.options }}{% endif %} &middot; {% endif %}{{ choice.price }}€</small></span></label>
+            {% endfor %}
+        </div>
+        <button type="submit" class="success btn-block">{% translate "Get in line" %}</button>
+    </form>
+    {% else %}
+    <p class="muted">{% translate "The machine makes none of the coffee sorts right now." %}</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

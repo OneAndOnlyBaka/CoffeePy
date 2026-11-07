@@ -58,7 +58,7 @@ All payloads JSON; `<prefix>` defaults to `coffeemachine`.
 
 - `progress.phase`: `idle`, `heating`, `starting`, `dispensing`, `done`.
 - `event.type`: `brew_started`, `brew_done`, `brew_failed` (`reason`: `busy`, `blocked`, `not started`,
-  `stalled`, `disconnected`, ...). `source`: `app` (asked for over `cmd`), `free` (asked for, no tally),
+  `stalled`, `disconnected`, ...). `source`: `app` (asked for over `cmd`), `phone` (the same, from a member's phone), `free` (asked for, no tally),
   `ha`, `manual` (started at the machine).
 - `brew` options: `water_ml`, `strength`, `temperature` (0 low, 1 normal, 2 high); without them the
   machine definition's defaults. A product without a definition (the E6's hot water) needs `water_ml`.

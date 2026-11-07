@@ -546,6 +546,11 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
    first ones, light on cream, read as text boxes: the coffee colour of the main actions, a darker
    bottom edge to press, the cup, and what a tap costs (nothing) in its own line. Plain paint only -
    no shadow animation, no transform: the wait screen has to stay cheap to swap. */
+/* The line for the machine (coffee/turns.py), above the free products. */
+.line-banner { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 10px 0 0;
+    font-size: 1.15rem; padding: 6px 14px; border-radius: var(--radius); background: #fdf1dc; color: #7a4a00; }
+.line-banner .icon { width: 26px; height: 26px; }
+.line-note { margin: 0 0 6px; }
 .free-products { display: flex; justify-content: center; gap: 16px; margin-top: 14px; }
 .free-btn { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 6px 24px 6px 18px;
   background: var(--coffee); color: var(--text-inverse); border-top: 0 solid transparent;

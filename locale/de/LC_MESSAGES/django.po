@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 21:50+0100\n"
+"POT-Creation-Date: 2026-11-08 00:43+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -180,6 +180,9 @@ msgstr "Verwendungszweck"
 msgid "Kiosk"
 msgstr "Kiosk"
 
+msgid "Phone"
+msgstr "Handy"
+
 msgid "Free at the kiosk"
 msgstr "Frei am Kiosk"
 
@@ -243,6 +246,20 @@ msgstr "der Pranger (wer Geld schuldet)"
 
 msgid "\"Ran off\" (who left the machine for the next one)"
 msgstr "„Weggelaufen“ (wer die Maschine dem Nächsten überlassen hat)"
+
+#, python-format
+msgid "strength %(level)s"
+msgstr "Stärke %(level)s"
+
+#, python-format
+msgid "%(ml)s ml"
+msgstr "%(ml)s ml"
+
+msgid "extra hot"
+msgstr "extra heiß"
+
+msgid "less hot"
+msgstr "weniger heiß"
 
 msgid "Only admins may open that page."
 msgstr "Diese Seite dürfen nur Admins öffnen."
@@ -3093,6 +3110,22 @@ msgstr ""
 "Bei einer neuen Karte oder einem Namen, der noch nicht passt, fragt der "
 "Kiosk zuerst nach deinem Namen."
 
+#, python-format
+msgid "The machine is in use from a phone (No. %(number)s)"
+msgstr "Die Maschine wird per Handy bedient (Nr. %(number)s)"
+
+#, python-format
+msgid "The machine is in use (No. %(number)s)"
+msgstr "Die Maschine ist belegt (Nr. %(number)s)"
+
+#, python-format
+msgid "<b>No. %(number)s</b>, it's your turn - tap your card"
+msgstr "<b>Nr. %(number)s</b>, du bist dran - leg deine Karte auf"
+
+#, python-format
+msgid "waiting: %(n)s"
+msgstr "wartend: %(n)s"
+
 msgid "Free, no card needed:"
 msgstr "Gratis, ohne Karte:"
 
@@ -3198,6 +3231,36 @@ msgid "Enjoy!"
 msgstr "Lass es dir schmecken!"
 
 #, python-format
+msgid "You are in line - No. %(number)s"
+msgstr "Du bist angestellt - Nr. %(number)s"
+
+#, python-format
+msgid "Before you: %(n)s"
+msgstr "Vor dir: %(n)s"
+
+msgid "You are next"
+msgstr "Du bist als Nächstes dran"
+
+#, python-format
+msgid "%(count)s × %(sort)s"
+msgstr "%(count)s × %(sort)s"
+
+#, python-format
+msgid ""
+"When it is your turn, tap your card again - or start it on your phone. You "
+"then have %(seconds)s seconds."
+msgstr ""
+"Wenn du dran bist, leg deine Karte wieder auf - oder starte am Handy. Du "
+"hast dann %(seconds)s Sekunden."
+
+msgid "Give up my place"
+msgstr "Platz freigeben"
+
+#, python-format
+msgid "Back in %(seconds)ss"
+msgstr "Zurück in %(seconds)ss"
+
+#, python-format
 msgid "Cancelled in %(seconds)ss"
 msgstr "Abbruch in %(seconds)ss"
 
@@ -3233,6 +3296,12 @@ msgstr "Top 3 insgesamt"
 
 msgid "Top 3 this month"
 msgstr "Top 3 in diesem Monat"
+
+#, python-format
+msgid ""
+"The machine is taken - a coffee from it puts you in line (before you: %(n)s)."
+msgstr ""
+"Die Maschine ist belegt - ein Kaffee aus ihr stellt dich an (vor dir: %(n)s)."
 
 #, python-format
 msgid ""
@@ -3296,14 +3365,8 @@ msgstr "Dieses Handy verknüpfen"
 msgid "empty"
 msgstr "leer"
 
-msgid "less hot"
-msgstr "weniger heiß"
-
 msgid "normal"
 msgstr "normal"
-
-msgid "extra hot"
-msgstr "extra heiß"
 
 msgid ""
 "Your coffee the way you like it - it appears first when you order. Several "
@@ -3427,6 +3490,9 @@ msgstr "Die Verbindung zur Maschine ist abgebrochen."
 msgid "The machine can't be reached right now."
 msgstr "Die Maschine ist gerade nicht erreichbar."
 
+msgid "Your turn is over - order again to get back in line."
+msgstr "Deine Zeit ist um - bestell nochmal, um dich wieder anzustellen."
+
 msgid "The machine didn't make it."
 msgstr "Die Maschine hat es nicht gemacht."
 
@@ -3545,19 +3611,68 @@ msgstr "Weitere Sorten"
 msgid "More sorts (%(page)s of %(pages)s)"
 msgstr "Weitere Sorten (%(page)s von %(pages)s)"
 
-#, python-format
-msgid "strength %(level)s"
-msgstr "Stärke %(level)s"
-
-#, python-format
-msgid "%(ml)s ml"
-msgstr "%(ml)s ml"
-
 msgid "as the machine makes it"
 msgstr "wie die Maschine ihn macht"
 
 msgid "Other sorts"
 msgstr "Andere Sorten"
+
+msgid "It's your turn!"
+msgstr "Du bist dran!"
+
+#, python-format
+msgid "Put your cup under the outlet: %(count)s × %(sort)s."
+msgstr "Stell deine Tasse unter den Auslauf: %(count)s × %(sort)s."
+
+#, python-format
+msgid "%(seconds)s s left to start - then it is the next one's turn."
+msgstr "Noch %(seconds)s s für Start - dann ist der Nächste dran."
+
+msgid "Before you:"
+msgstr "Vor dir:"
+
+msgid "at the machine"
+msgstr "an der Maschine"
+
+msgid "their turn"
+msgstr "ist dran"
+
+msgid "waiting"
+msgstr "wartet"
+
+msgid "phone"
+msgstr "Handy"
+
+msgid "kiosk"
+msgstr "Kiosk"
+
+msgid "You are next."
+msgstr "Du bist als Nächstes dran."
+
+msgid "The machine isn't connected right now - the line waits for it."
+msgstr ""
+"Die Maschine ist gerade nicht verbunden - die Warteschlange wartet auf sie."
+
+#, python-format
+msgid "%(count)s × %(sort)s booked - enjoy!"
+msgstr "%(count)s × %(sort)s gebucht - lass es dir schmecken!"
+
+msgid "Your turn is over - get in line again when you are at the machine."
+msgstr ""
+"Deine Zeit ist um - stell dich wieder an, wenn du an der Maschine bist."
+
+msgid "The machine didn't make it - nothing was booked."
+msgstr "Die Maschine hat es nicht gemacht - nichts wurde gebucht."
+
+msgid "Order another"
+msgstr "Noch einen bestellen"
+
+msgid ""
+"Ordering from the phone needs the coffee machine connected - right now you "
+"order at the kiosk."
+msgstr ""
+"Bestellen am Handy geht nur mit verbundener Kaffeemaschine - gerade "
+"bestellst du am Kiosk."
 
 msgid "My CoffeePy"
 msgstr "Mein CoffeePy"
@@ -3633,6 +3748,9 @@ msgstr ""
 
 msgid "Read and confirm"
 msgstr "Lesen und bestätigen"
+
+msgid "Order a coffee"
+msgstr "Kaffee bestellen"
 
 msgid "Total cups"
 msgstr "Tassen gesamt"
@@ -3714,6 +3832,26 @@ msgid ""
 msgstr ""
 "Dein Browser warnt vor dieser Seite? <a href=\"%(certificate_url)s\">Lade "
 "das Gerätezertifikat herunter</a> und installiere es einmal."
+
+msgid "What would you like?"
+msgstr "Was darf es sein?"
+
+msgid ""
+"You get in line with everyone at the kiosk. When it is your turn, put your "
+"cup under the outlet and tap Start - here or with your card at the kiosk."
+msgstr ""
+"Du stellst dich mit allen am Kiosk an. Wenn du dran bist, stell deine Tasse "
+"unter den Auslauf und tippe auf Start - hier oder mit deiner Karte am Kiosk."
+
+#, python-format
+msgid "My coffee %(n)s"
+msgstr "Mein Kaffee %(n)s"
+
+msgid "Get in line"
+msgstr "Anstellen"
+
+msgid "The machine makes none of the coffee sorts right now."
+msgstr "Die Maschine macht gerade keine der Kaffeesorten."
 
 #, python-format
 msgid "Current balance: <strong>%(balance)s€</strong>"

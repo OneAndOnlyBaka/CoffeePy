@@ -252,6 +252,12 @@ send commands with one publish each (`coffee/machine.py`), and every page reads 
   itself (`policy.BrewChain`: the next once the machine is idle and says `coffee_ready`), one dispense row
   and one order per cup, at the sort's price - a cup that fails ends the chain. With the sorts hidden behind
   the slots, a slot is what is preselected: the auto-checkout must never book something out of sight.
+- **One line for the machine** (`coffee/turns.py`, `MachineTurn`): every brew for a member - kiosk or phone
+  (portal → Order a coffee) - takes a turn; the first one while the machine is free is called and has
+  `TURN_SECONDS` to press Start, at the kiosk after a card tap or on the phone. Free products wait while
+  anyone is in line. `turns.advance` moves it on every kiosk poll (one query while empty - keep it so),
+  every phone poll and in the listener; the kiosk's wait screen shows numbers only, names are for the
+  members' phones. A brew from the phone is `MachineDispense.SOURCE_PHONE` and booked like a kiosk one.
 
 ## Django traps that already cost time here
 
