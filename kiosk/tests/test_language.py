@@ -7,6 +7,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from coffee.models import CoffeeSort, NfcReaderStatus
+from dashboard.models import KioskBoards
 from kiosk import views
 
 
@@ -49,10 +50,37 @@ class DeviceLanguageTestCase(TestCase):
         self.client.get(reverse("kiosk:language"))
         self.assertEqual(self.client.cookies[settings.LANGUAGE_COOKIE_NAME].value, "en")
 
-    def test_wait_screen_shows_the_button_labelled_with_the_other_language(self):
-        self.assertContains(self.panel(), 'class="info-btn lang-btn"')
+    def test_the_wait_screen_carries_both_languages_whatever_is_active(self):
+        """Its button only shows the other copy (language.js): no fetch first, no swap, the animation
+        runs on - and the next poll is the same bytes in either language."""
+        self.client.cookies[settings.LANGUAGE_COOKIE_NAME] = "en"
+        english = self.panel()
+        for text in ('data-lang="de"', 'data-lang="en"', "Karte auflegen", "Apply your card",
+                     'data-lang-to="en">EN</a>', 'data-lang-to="de">DE</a>'):
+            self.assertContains(english, text)
+        self.assertNotContains(english, "hx-get=\"" + reverse("kiosk:language"))
         self.client.cookies[settings.LANGUAGE_COOKIE_NAME] = "de"
-        self.assertContains(self.panel(), ">EN</a>")
+        self.assertEqual(english.content, self.panel().content)
+
+    @override_settings(LANGUAGE_CODE="en")
+    def test_the_wait_screens_button_only_keeps_the_choice(self):
+        for _ in range(2):  # named, not toggled: a repeated tap doesn't flip it back
+            response = self.client.get(reverse("kiosk:language"), {"to": "de"})
+            self.assertEqual(response.status_code, 204)
+            self.assertEqual(self.client.cookies[settings.LANGUAGE_COOKIE_NAME].value, "de")
+        self.assertEqual(self.panel()["Content-Language"], "de")
+
+    @override_settings(LANGUAGE_CODE="de")
+    def test_the_page_carries_its_texts_in_every_language(self):
+        page = self.client.get(reverse("kiosk:index")).content.decode()
+        self.assertIn('class="kiosk-frame" data-mode="order" data-lang="de"', page)
+        texts = json.loads(re.search(r'<script id="kiosk-texts" type="application/json">(.*?)</script>', page).group(1))
+        self.assertEqual((texts["de"]["order"], texts["en"]["order"]), ("Bestellen", "Order"))
+
+    def test_elsewhere_the_button_swaps_the_panel(self):
+        KioskBoards.objects.update_or_create(pk=1, defaults={"ranking": True})
+        self.client.get(reverse("kiosk:nav", args=["ranking"]))
+        self.assertContains(self.panel(), 'hx-get="' + reverse("kiosk:language"))
 
     def test_wait_screen_with_language_button_is_identical_from_poll_to_poll(self):
         # The reason the kiosk has its own GET button: a set_language form's csrf token

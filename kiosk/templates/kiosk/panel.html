@@ -1,63 +1,15 @@
 {% load static i18n l10n coffee_tags %}
 <div id="panel-state" data-panel-key="{{ panel_key }}" data-mode="{{ mode }}" data-ranking="{{ ranking_views|yesno:'1,0' }}" data-inventory="{{ inventory_on|yesno:'1,0' }}" hidden></div>
 {% if state == "wait_for_card" %}
-{% include "kiosk/_corner_buttons.html" %}
 {% comment %}
-Nothing on this screen may change from one poll to the next: identical HTML is what lets
-panel_stable_swap.js skip the swap, and only a skipped swap keeps the animation running
-instead of restarting it every second. Hence the clock is filled in by clock.js, not here.
+The wait screen in every language at once, stacked in one grid cell: the language button here only
+changes which one is visible (static/kiosk/language.js, .kiosk-frame[data-lang]) - nothing is fetched,
+nothing swapped, the animation runs on. The HTML is the same whatever the active language, so the next
+poll is byte-identical to this one either way. Measured on the Pi 3 (2026-11-07): the second copy costs
+the server ~2ms a poll, and cog stayed at its 27% of a core - the hidden GIF isn't painted.
 {% endcomment %}
-{% if not reader_online %}
-<div class="wait-card error">
-    <h1>{% translate "Card reader not available" %}</h1>
-    <p>{% translate "The NFC reader isn't responding - please tell an admin." %}</p>
-    <div class="clock" data-kiosk-clock></div>
-</div>
-{% else %}
-<div class="wait-card wait-{{ wait_mode }}">
-    <h1>{% translate "Apply your card" %}</h1>
-    <p class="wait-purpose">
-        {% if wait_mode == "info" %}{% translate "to see your account or pay" %}{% elif wait_mode == "settings" %}{% translate "to change your settings" %}{% elif wait_mode == "purchase" %}{% translate "to book what you bought" %}{% else %}{% translate "to order a coffee" %}{% endif %}
-        &middot; {% translate "the scanner is at the marked spot" %}
-    </p>
-    <div class="wait-body">
-        <img class="wait-gif" src="{% static 'kiosk/img/wait/wait_'|add:wait_mode|add:'.gif' %}" alt="">
-        <div class="info-box">
-            <h2>{% translate "What happens next" %}</h2>
-            <ul>
-                {% if wait_mode == "info" %}
-                <li>{% translate "You see your cups this month and in total, and your balance." %}</li>
-                <li>{% translate "Enter what you paid - or scan a payment QR code, if one is shown." %}</li>
-                <li>{% blocktranslate trimmed with seconds=logout_seconds %}You are logged out after {{ seconds }} seconds.{% endblocktranslate %}</li>
-                {% elif wait_mode == "purchase" %}
-                <li>{% translate "Pick what you bought for everyone - coffee, milk, cookies." %}</li>
-                <li>{% translate "Enter the quantity and what you paid for all of it: that is credited to your balance." %}</li>
-                <li>{% blocktranslate trimmed with seconds=logout_seconds %}You are logged out after {{ seconds }} seconds.{% endblocktranslate %}</li>
-                {% elif wait_mode == "settings" %}
-                <li>{% translate "Change your name and your favourite coffee." %}</li>
-                <li>{% translate "Link your phone to see your stats and pay from there." %}</li>
-                <li>{% translate "A card the kiosk doesn't know yet is registered here." %}</li>
-                {% else %}
-                <li>{% translate "Your favourite coffee is preselected - tap another one to change it." %}</li>
-                <li>{% blocktranslate trimmed with seconds=checkout_seconds %}Tap <strong>Order now</strong>, or it is booked after {{ seconds }} seconds.{% endblocktranslate %}</li>
-                <li>{% translate "A new card, or a name that doesn't fit the rules yet, is asked for a name first." %}</li>
-                {% endif %}
-            </ul>
-        </div>
-    </div>
-    {% if free_products %}
-    {% comment %}No card needed: what the machine makes for free (hot water) - with its keys locked
-    the only way to get it at all (coffee/machine.py). Changes only with the machine's state.{% endcomment %}
-    <div class="free-products">
-        {% for product in free_products %}
-        <button type="button" class="free-btn" hx-post="{% url 'kiosk:machine_free' %}" hx-vals='{"code": "{{ product.code|unlocalize }}"}'
-                hx-target="#panel" hx-swap="innerHTML">{% include "icons/cup.svg" %}<span class="free-text"><b>{{ product.name|product_label }}</b><small>{% translate "free · no card needed" %}</small></span></button>
-        {% endfor %}
-    </div>
-    {% endif %}
-    <div class="clock" data-kiosk-clock></div>
-</div>
-{% endif %}
+<div class="lang-variants">{% for code, html in wait_variants %}<div class="lang-variant" data-lang="{{ code }}">
+{{ html }}</div>{% endfor %}</div>
 
 {% elif state == "assigning_alt_uid" %}
 <div class="wait-card{% if capture_error %} error{% endif %}">

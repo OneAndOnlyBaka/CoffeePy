@@ -142,6 +142,9 @@ class BrewTestCase(TestCase):
         hot.save()
         machine.request_brew(hot, None, None, MachineDispense.SOURCE_FREE)
         self.assertEqual(self.send.call_args.args[1]["options"], {"water_ml": 200})
+        machine.sync_products(E6)  # every reconnect: the machine says nothing about it, the page's stays
+        hot.refresh_from_db()
+        self.assertEqual(hot.water_ml, 200)
 
     def test_a_brew_at_the_machine(self):
         machine.handle_event({"type": "brew_started", "request_id": "", "source": "manual", "product": 3})

@@ -166,10 +166,14 @@ browser's language (`config/language.py`).
   message lives in the session, the alt-card error in the database (read by kiosk, dashboard
   and portal, each in its own language). "Cash" is data too - show it via `|method_label`.
 - The kiosk's language button is a GET, not `set_language`'s form: a csrf token would make the
-  wait screen differ per poll (see above). Through htmx it swaps only `#panel` and relabels the rest
-  of the page in place (`kiosk.views._page_texts`, `static/kiosk/language.js`) - a page load per
-  tap was a navigation, and a few taps in a row crashed Chromium. So **index.html takes every text
-  from `_page_texts`** (`test_language` checks that). Relabelling changes text only: setting
+  wait screen differ per poll (see above). **The wait screen comes in both languages at once**
+  (`kiosk/_wait.html`, rendered per language by `_wait_variants`, stacked in one grid cell): its button
+  only moves `.kiosk-frame`'s `data-lang`, relabels the page from the texts index.html carries for every
+  language, and saves the choice with `?to=` (204) - no wait, no swap, the GIF runs on. Elsewhere the
+  button swaps only `#panel` through htmx and relabels the rest of the page in place
+  (`kiosk.views._page_texts`, `static/kiosk/language.js`) - a page load per tap was a navigation, and a
+  few taps in a row crashed Chromium. So **index.html takes every text from `_page_texts`**
+  (`test_language` checks that), and a test that counts something on the wait screen counts it twice. Relabelling changes text only: setting
   `<html lang>` crashed the renderer 7 times in 8 switches on the Pi, the nav icons' `alt` 2 in 8,
   text alone 0 (2026-11-01) - both rebuild layout.
 

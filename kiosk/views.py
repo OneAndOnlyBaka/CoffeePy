@@ -10,6 +10,7 @@ from django.core.cache import cache
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone, translation
 from django.utils.formats import date_format
@@ -129,6 +130,8 @@ def index(request):
         "ranking_on": bool(_ranking_views(request)),
         "inventory_on": _inventory_on(request),
         "texts": _page_texts(),
+        "language": translation.get_language(),
+        "all_texts": _all_page_texts(),
     })
 
 
@@ -152,6 +155,27 @@ def _page_texts():
         "back_text": _("CoffeePy is being updated - ordering is paused for a moment."),
         "steps": {key: str(label) for key, label in MAINTENANCE_STEPS.items()},
     }
+
+
+def _all_page_texts():
+    """_page_texts in every language, for the wait screen's language button: it relabels the page
+    from these without asking the server (static/kiosk/language.js)."""
+    texts = {}
+    for code, _name in settings.LANGUAGES:
+        with translation.override(code):
+            texts[code] = _page_texts()
+    return texts
+
+
+def _wait_variants(request, ctx):
+    """The wait screen once per language (kiosk/_wait.html), stacked by panel.html - its language
+    button only shows the other one. Costs a second render per poll of the wait screen: measured on
+    the Pi 3, see CLAUDE.md."""
+    variants = []
+    for code, _name in settings.LANGUAGES:
+        with translation.override(code):
+            variants.append((code, render_to_string("kiosk/_wait.html", ctx, request)))
+    return variants
 
 
 def _ranking_views(request):
@@ -187,9 +211,14 @@ def language(request):
     Through htmx it answers with the panel in the new language and, for the rest of the page,
     its texts (_page_texts) - the page itself is never loaded again. Only reachable on the
     device itself, like the rest of /kiosk/."""
-    target = "en" if translation.get_language() == "de" else "de"
+    chosen = request.GET.get("to")
+    target = chosen if chosen in dict(settings.LANGUAGES) else ("en" if translation.get_language() == "de" else "de")
     _touched(request)
-    if request.headers.get("HX-Request"):
+    if chosen:
+        # The wait screen's button: the page already shows that language (language.js) - only keep it.
+        # Named, not toggled: two quick taps must not end in whichever request came last.
+        response = HttpResponse(status=204)
+    elif request.headers.get("HX-Request"):
         translation.activate(target)
         request.LANGUAGE_CODE = target
         response = _render_panel(request)
@@ -633,7 +662,8 @@ def _free_products():
     """What the waiting screen offers without a card - only while the machine can make it."""
     if not machine.brewing_available():
         return []
-    return [p for p in MachineProduct.objects.filter(free=True, present=True) if machine.can_brew(p)]
+    return [p for p in MachineProduct.objects.filter(free=True, present=True) if machine.can_brew(p)][
+        :machine.FREE_ON_KIOSK]
 
 
 def _place_order(request):
@@ -764,6 +794,8 @@ def _render_panel(request):
         ctx["clock_corrected"] = clock.corrected() is not None
         ctx["admin_task"] = bool(services.departed_members_due(MemberRetention.current().departed_months))
         ctx["machine_level"] = machine.kiosk_level()
+    if ctx["state"] == "wait_for_card":
+        ctx["wait_variants"] = _wait_variants(request, ctx)
 
     return render(request, "kiosk/panel.html", ctx)
 

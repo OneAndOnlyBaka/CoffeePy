@@ -117,6 +117,13 @@ html, body.kiosk { overflow: hidden; }
 .wait-card {
   text-align: center;
 }
+/* The wait screen in both languages, one on top of the other in a single grid cell (panel.html):
+   both always laid out, the other one only invisible - switching builds and tears down nothing, and
+   the cell is as large as the larger of the two, so nothing moves either. */
+.lang-variants { display: grid; }
+.lang-variant { grid-area: 1 / 1; display: flex; align-items: center; justify-content: center; }
+.kiosk-frame[data-lang="de"] .lang-variant:not([data-lang="de"]),
+.kiosk-frame[data-lang="en"] .lang-variant:not([data-lang="en"]) { visibility: hidden; }
 
 .wait-card h1 { color: var(--coffee); margin-bottom: 8px; font-size: 3rem; }
 .wait-card.error h1 { color: var(--danger); }
@@ -549,6 +556,17 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 .free-btn .free-text { display: flex; flex-direction: column; line-height: 1.15; }
 .free-btn b { font-size: 1.2rem; }
 .free-btn small { font-size: 0.9rem; color: var(--cream-dark); }
+/* Three to five: "free, no card needed" once above, the buttons only the name, all the same width;
+   a long name wraps between its words (two lines fit the height) instead of pushing the row off the
+   screen. A smaller type than the two-up buttons: at five across "Milchschaum" broke inside the word -
+   WebKit here hyphenates nothing, it only cuts (break-word is for a word that fits no line at all). */
+.free-caption { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 0 0;
+  font-size: 1.05rem; font-weight: 600; color: var(--coffee); }
+.free-caption .icon { width: 26px; height: 26px; }
+.free-products.many { gap: 12px; margin-top: 4px; }
+.free-products.many .free-btn { flex: 1 1 0; max-width: 200px; min-width: 0; min-height: 58px; justify-content: center;
+  padding: 4px 8px; text-align: center; overflow-wrap: break-word; }
+.free-products.many .free-btn b { font-size: 1.05rem; }
 
 /* The machine's ring next to the language button (coffee.machine.kiosk_level). */
 .machine-btn { position: static; background: var(--cream); color: var(--coffee); box-sizing: border-box; border: 5px solid var(--coffee-light); }

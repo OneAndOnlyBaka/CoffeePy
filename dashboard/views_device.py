@@ -130,7 +130,7 @@ def device(request):
         "machine_error": state.get("error", ""),
         "form": form, "settings": settings_, "status": status, "bluetooth": _bluetooth_status(),
         "counter_rows": machine.counter_rows(status), "maintenance": status["counters"].get("maintenance") or {},
-        "products": products, "sorts": CoffeeSort.objects.order_by("name"),
+        "products": products, "sorts": CoffeeSort.objects.order_by("name"), "free_max": machine.FREE_ON_KIOSK,
         "supplies": list(machine.supplies().values()) if products else [],
         **_statistics(request),
     })

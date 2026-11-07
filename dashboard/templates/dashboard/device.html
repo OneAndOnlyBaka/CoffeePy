@@ -124,10 +124,11 @@
 {% if products %}
 <div class="card">
     <h2>{% translate "Products and coffee sorts" %}</h2>
-    <p class="muted">{% blocktranslate trimmed %}
+    <p class="muted">{% blocktranslate trimmed with free_max=free_max %}
         What the machine makes, and the coffee sort each is sold as at the kiosk. A sort no product of the machine
         is sold as is obsolete - not offered any more - unless it is marked "without the machine" (Coffee sorts).
-        Free products are offered at the kiosk without a card and booked nowhere.
+        Free products are offered at the kiosk without a card and booked nowhere - up to {{ free_max }}, more don't
+        fit its screen.
     {% endblocktranslate %}</p>
     <form method="post">
         {% csrf_token %}

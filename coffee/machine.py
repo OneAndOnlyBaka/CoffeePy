@@ -267,7 +267,10 @@ def sync_products(payload: dict) -> dict:
             product.name = item.get("name") or product.name
             product.present = True
             product.brewable = bool(item.get("brewable", True))
-            product.water_ml = item.get("water_ml")
+            # The machine's own amount where its definition has one; otherwise the device page's - the
+            # E6 says nothing about hot water, and every reconnect used to clear what the admin entered.
+            if product.brewable or item.get("water_ml"):
+                product.water_ml = item.get("water_ml")
             product.save()
         MachineProduct.objects.exclude(code__in=listed).update(present=False)
         sorts = {_norm(s.name): s for s in CoffeeSort.objects.filter(machine_product__isnull=True)}
@@ -328,6 +331,12 @@ def adopt_product(product: MachineProduct) -> CoffeeSort:
 # is booked after this: the coffee was most likely made. One asked for and never started fails.
 STARTED_TIMEOUT = 300
 REQUESTED_TIMEOUT = 90
+
+
+# Free products the kiosk's wait screen offers: what fits in one row under its text at 1024x600 (a
+# fifth button is ~150px wide) - never a second row or a scrolling one (CLAUDE.md). The device page
+# says so.
+FREE_ON_KIOSK = 5
 
 
 def can_brew(product: MachineProduct) -> bool:

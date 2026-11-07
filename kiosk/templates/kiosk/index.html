@@ -34,7 +34,7 @@ The csrf token goes along with every htmx request from here, once per page load:
 inside #panel is masked anew on every render, so a screen with a form differed on every poll -
 and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
 {% endcomment %}
-<div class="kiosk-frame" data-mode="{{ mode }}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<div class="kiosk-frame" data-mode="{{ mode }}" data-lang="{{ language }}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% comment %}
     The buttons swap #panel in place instead of loading a page (see views.nav). hx-sync
     aborts a poll that is still in flight - its answer predates the tap and would put the
@@ -117,4 +117,5 @@ and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
     </div>
 </div>
 {{ texts.steps|json_script:"maintenance-steps" }}
+{{ all_texts|json_script:"kiosk-texts" }}
 {% endblock %}

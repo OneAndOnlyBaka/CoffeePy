@@ -4,6 +4,7 @@ import time
 from decimal import Decimal
 from unittest import mock
 
+from django.conf import settings
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -160,6 +161,16 @@ class MachineOrderTestCase(TestCase):
         self.assertFalse(Order.objects.exists())
         self.client.post(reverse("kiosk:machine_free"), {"code": "2"})  # not a free one
         self.assertNotContains(self.panel(), "Put your cup")
+
+    def test_many_free_products_share_one_caption_and_stop_at_one_row(self):
+        for code, name in ((20, "Milk"), (21, "Milk Foam"), (22, "Hot Milk"), (23, "Tea Water"), (24, "Steam")):
+            MachineProduct.objects.create(code=code, name=name, strokes=1, present=True, free=True, water_ml=100)
+        wait = self.panel()
+        self.assertContains(wait, "Free, no card needed:", count=1)
+        self.assertContains(wait, 'class="free-products many"')
+        self.assertNotContains(wait, "free · no card needed")  # said once above, not in every button
+        # Six free, five fit - in each language's copy of the wait screen (panel.html).
+        self.assertContains(wait, 'class="free-btn"', count=machine.FREE_ON_KIOSK * len(settings.LANGUAGES))
 
     def test_obsolete_sorts_are_not_offered(self):
         CoffeeSort.objects.create(name="Latte", price=Decimal("0.80"), machine_strokes=1, is_obsolete=True)
