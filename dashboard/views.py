@@ -44,6 +44,7 @@ from .models import (
     DeletionHold,
     InventoryPolicy,
     KioskBoards,
+    PrivacyContact,
     MemberRetention,
     NamePolicy,
     NightPolicy,
@@ -61,6 +62,7 @@ from .forms import (
     OwnPasswordChangeForm,
     NamePolicyForm,
     KioskBoardsForm,
+    PrivacyContactForm,
     NightPolicyForm,
     PasswordPolicyForm,
     PaymentForm,
@@ -541,6 +543,14 @@ def system_dashboard(request):
     form = NightPolicyForm(instance=policy)
     boards_form = KioskBoardsForm(instance=boards)
     inventory_form = InventoryPolicyForm(instance=inventory)
+    privacy_form = PrivacyContactForm(instance=PrivacyContact.current())
+    if request.method == "POST" and request.POST.get("form") == "privacy":
+        privacy_form = PrivacyContactForm(request.POST, instance=PrivacyContact.current())
+        if privacy_form.is_valid():
+            contact = privacy_form.save()
+            audit.log(request, "privacy_contact.update", details=contact.controller or "(the admin of this device)")
+            messages.success(request, _("Saved - the kiosk follows with its next poll."))
+            return redirect("dashboard:system_dashboard")
     if request.method == "POST" and request.POST.get("form") == "ssh":
         # The host's storage helper switches it (install/storage_helper.py), within seconds.
         enabled = request.POST.get("enabled") == "1"
@@ -564,7 +574,7 @@ def system_dashboard(request):
             audit.log(request, "inventory_policy.update", details=inventory.mode)
             messages.success(request, _("Saved - the kiosk follows with its next poll."))
             return redirect("dashboard:system_dashboard")
-    elif request.method == "POST":
+    elif request.method == "POST" and request.POST.get("form") != "privacy":
         form = NightPolicyForm(request.POST, instance=policy)
         if form.is_valid():
             policy = form.save()
@@ -574,7 +584,7 @@ def system_dashboard(request):
             return redirect("dashboard:system_dashboard")
     return render(request, "dashboard/system_dashboard.html", {
         "stats": system_stats.gather(), "public_host": public_host(), "night_form": form,
-        "boards_form": boards_form, "inventory_form": inventory_form, "ssh": _ssh_status(),
+        "boards_form": boards_form, "inventory_form": inventory_form, "privacy_form": privacy_form, "ssh": _ssh_status(),
         # Without PUBLIC_HOST the address is detected inside the container - usually the
         # container's own, which no phone reaches (coffee/network.py).
         "public_host_guessed": not settings.PUBLIC_HOST,

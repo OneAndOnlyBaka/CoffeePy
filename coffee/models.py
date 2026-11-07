@@ -43,6 +43,10 @@ class Member(models.Model):
     # One of the "selected people" who may correct the stock at the kiosk and in the portal
     # (dashboard → Members). Only matters while the inventory is switched on.
     may_take_stock = models.BooleanField(default=False)
+    # The privacy notice this member confirmed, and when (coffee/privacy.py) - 0: none yet, and
+    # nothing is booked for them until they do.
+    privacy_version = models.PositiveSmallIntegerField(default=0)
+    privacy_confirmed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.nickname or str(self.uid)
@@ -62,6 +66,13 @@ class Member(models.Model):
     @property
     def is_departed(self) -> bool:
         return self.departed_at is not None
+
+    @property
+    def privacy_open(self) -> bool:
+        """Hasn't confirmed the current privacy notice yet - and can't book anything until they do."""
+        from coffee import privacy  # noqa: PLC0415 - privacy is about this model
+
+        return not privacy.confirmed(self)
 
 
 class MemberCard(models.Model):

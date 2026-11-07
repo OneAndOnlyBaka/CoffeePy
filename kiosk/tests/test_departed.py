@@ -4,6 +4,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from coffee import privacy
 from coffee.models import CoffeeSort, Member, MemberCard, NfcScan
 
 
@@ -11,7 +12,7 @@ class DepartedMemberTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=42, nickname="Alice X.", departed_at=timezone.now())
+        self.alice = Member.objects.create(privacy_version=privacy.VERSION, uid=42, nickname="Alice X.", departed_at=timezone.now())
         self.client.get(reverse("kiosk:index"))
 
     def _scan(self, uid, event=NfcScan.EVENT_INSERTED):
@@ -30,7 +31,7 @@ class DepartedMemberTestCase(TestCase):
         self.assertContains(response, "Account no longer active")
 
     def test_active_member_is_unaffected(self):
-        Member.objects.create(uid=99, nickname="Bob X.")
+        Member.objects.create(privacy_version=privacy.VERSION, uid=99, nickname="Bob X.")
         self._scan("63", "card_inserted")  # uid_as_int() -> 99
         response = self.client.get(reverse("kiosk:panel"))
         self.assertContains(response, "Hi Bob X.!")

@@ -14,6 +14,7 @@ from .models import (
     KioskBoards,
     MemberRetention,
     NamePolicy,
+    PrivacyContact,
     NightPolicy,
     PasswordPolicy,
 )
@@ -504,6 +505,15 @@ class KioskBoardsForm(forms.ModelForm):
                   "pillory": gettext_lazy("Pillory at the kiosk (who owes money)"),
                   "runaways": gettext_lazy("\"Ran off\" at the kiosk (who left water, grounds or beans for the next "
                                            "one, and who stepped in) - only with a coffee machine")}
+
+
+class PrivacyContactForm(forms.ModelForm):
+    class Meta:
+        model = PrivacyContact
+        fields = ["controller"]
+        labels = {"controller": gettext_lazy("Responsible for the data (name and how to reach them)")}
+        help_texts = {"controller": gettext_lazy("Shown in the privacy notice at the kiosk and on the phone. "
+                                                 "Empty: \"the admin of this device\".")}
 
 
 class InventoryPolicyForm(forms.ModelForm):

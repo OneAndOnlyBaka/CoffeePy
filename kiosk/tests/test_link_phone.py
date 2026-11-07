@@ -5,6 +5,7 @@ from unittest import mock
 from django.test import Client, TestCase
 from django.urls import reverse
 
+from coffee import privacy
 from coffee.models import CoffeeSort, Member, MemberLinkToken, NfcReaderStatus, NfcScan
 
 
@@ -12,7 +13,7 @@ class LinkPhonePopupTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=42, nickname="Alice X.")
+        self.alice = Member.objects.create(privacy_version=privacy.VERSION, uid=42, nickname="Alice X.")
         self.client.get(reverse("kiosk:index"))
 
     def log_in(self):
@@ -79,7 +80,7 @@ class PanelStateMarkerTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=0xDDCCBBAA, nickname="Alice X.")
+        self.alice = Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Alice X.")
         NfcReaderStatus.objects.create(pk=1, is_online=True)
         self.client.get(reverse("kiosk:index"))
 

@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.urls import reverse
 
+from coffee import privacy
 from coffee.models import AuditLogEntry, CoffeeSort, Member, NfcScan, Order
 from dashboard.models import KioskBoards
 
@@ -60,7 +61,7 @@ class KioskBoardsTestCase(TestCase):
         self.assertContains(panel, 'data-ranking="0"')
 
     def test_no_podium_badge_without_the_ranking(self):
-        member = Member.objects.create(uid=0xDDCCBBAA, nickname="Alice X.", favourite_coffee=self.espresso)
+        member = Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Alice X.", favourite_coffee=self.espresso)
         Order.objects.create(member=member, coffee_sort=self.espresso, value=Decimal("0.30"), machine_strokes=1)
         for ranking, badge in ((True, True), (False, False)):
             with self.subTest(ranking=ranking):
@@ -89,7 +90,7 @@ class KioskBoardsMigrationTestCase(TestCase):
     migration = import_module("dashboard.migrations.0005_kioskboards")
 
     def test_a_device_with_members_keeps_both(self):
-        Member.objects.create(uid=1, nickname="Alice X.")
+        Member.objects.create(privacy_version=privacy.VERSION, uid=1, nickname="Alice X.")
         KioskBoards.objects.all().delete()
         self.migration.keep_what_a_running_device_shows(apps, None)
         self.assertEqual(KioskBoards.current().kiosk_views(), ["alltime", "month", "pillory"])

@@ -32,6 +32,22 @@
 </div>
 
 <div class="card">
+    <h2>{% translate "Privacy notice" %}</h2>
+    <p class="muted">{% blocktranslate trimmed %}
+        Every member confirms it before their first booking - at their next card tap, or on their phone - and
+        nothing is booked for them until they do: what this device records about them, what for, where it stays,
+        and a link to the full documentation (docs/PRIVACY.md on GitHub). The GDPR also asks it to name who is
+        responsible for the data, and how to reach them.
+    {% endblocktranslate %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="privacy">
+        {{ privacy_form.as_p }}
+        <button type="submit" class="btn">{% translate "Save" %}</button>
+    </form>
+</div>
+
+<div class="card">
     <h2>{% translate "Purchases and inventory" %}</h2>
     <p class="muted">{% blocktranslate trimmed %}
         What is bought for everyone - coffee, milk, cookies - with its price, the stock and what a cup costs.

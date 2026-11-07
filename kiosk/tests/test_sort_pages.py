@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from coffee import services
+from coffee import privacy, services
 from coffee.models import CoffeeSort, Member, NfcScan, Order
 from kiosk.views import SORT_PAGES_ORDER, SORT_PAGES_SETTINGS, SORTS_WITHOUT_SCROLL
 
@@ -39,7 +39,7 @@ class SortPagesTestCase(TestCase):
 
     def test_up_to_the_limit_one_alphabetical_grid(self):
         sorts = self.make_sorts(SORTS_WITHOUT_SCROLL)
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=sorts[-1])
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=sorts[-1])
         content = self.panel()
         self.assertNotIn("For you", content)
         self.assertNotIn("data-sort-page", content)
@@ -47,8 +47,8 @@ class SortPagesTestCase(TestCase):
 
     def test_beyond_it_the_likely_ones_come_first(self):
         sorts = self.make_sorts(SORTS_WITHOUT_SCROLL + 3)
-        tom = Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=sorts[9])
-        anna = Member.objects.create(uid=1, nickname="Anna B.")
+        tom = Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=sorts[9])
+        anna = Member.objects.create(privacy_version=privacy.VERSION, uid=1, nickname="Anna B.")
         for sort, times in ((sorts[4], 3), (sorts[7], 1)):
             for _ in range(times):
                 Order.objects.create(member=tom, coffee_sort=sort, value=Decimal("0.40"), machine_strokes=1)
@@ -69,7 +69,7 @@ class SortPagesTestCase(TestCase):
 
     def test_long_lists_take_several_pages(self):
         self.make_sorts(30)
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.")
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.")
         content = self.panel()
         pages = self.pages_in(content)
         # no favourite, no history: no empty "For you" - 30 sorts, seven a page
@@ -82,9 +82,9 @@ class SortPagesTestCase(TestCase):
         """Worked out once at the card: an order somebody else places meanwhile must not reorder
         the tiles - the poll would differ and swap the panel (Chromium's crash, CLAUDE.md)."""
         sorts = self.make_sorts(SORTS_WITHOUT_SCROLL + 1)
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.")
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.")
         first = self.panel()
-        anna = Member.objects.create(uid=1, nickname="Anna B.")
+        anna = Member.objects.create(privacy_version=privacy.VERSION, uid=1, nickname="Anna B.")
         for _ in range(5):
             Order.objects.create(member=anna, coffee_sort=sorts[-1], value=Decimal("0.40"), machine_strokes=1)
         self.assertEqual(first, self.client.get(reverse("kiosk:panel")).content.decode())
@@ -93,7 +93,7 @@ class SortPagesTestCase(TestCase):
 
     def test_settings_group_the_same_way(self):
         sorts = self.make_sorts(SORTS_WITHOUT_SCROLL + 1)
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=sorts[5])
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=sorts[5])
         content = self.panel("settings")
         pages = self.pages_in(content)
         self.assertEqual(pages[0][:2], ("For you", pages[0][1]))
@@ -104,6 +104,6 @@ class SortPagesTestCase(TestCase):
     def test_preferred_sorts_without_a_member_or_orders(self):
         sorts = self.make_sorts(3)
         self.assertEqual(services.preferred_sorts(None, 6), [])
-        Order.objects.create(member=Member.objects.create(uid=1, nickname="Anna B."), coffee_sort=sorts[1],
+        Order.objects.create(member=Member.objects.create(privacy_version=privacy.VERSION, uid=1, nickname="Anna B."), coffee_sort=sorts[1],
                              value=Decimal("0.40"), machine_strokes=1)
         self.assertEqual(services.preferred_sorts(None, 6), [sorts[1].pk])

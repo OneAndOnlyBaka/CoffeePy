@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils import timezone, translation
 from django.utils.formats import date_format
 
+from coffee import privacy
 from coffee.models import CoffeeSort, Member, NfcScan, Order
 from dashboard.models import KioskBoards
 
@@ -16,10 +17,10 @@ class RankingBadgeTestCase(TestCase):
         KioskBoards.objects.update_or_create(pk=1, defaults={"ranking": True, "pillory": True})
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=1, nickname="Alice X.")
-        self.bob = Member.objects.create(uid=2, nickname="Bob X.")
-        self.carol = Member.objects.create(uid=3, nickname="Carol X.")
-        self.dave = Member.objects.create(uid=4, nickname="Dave X.")
+        self.alice = Member.objects.create(privacy_version=privacy.VERSION, uid=1, nickname="Alice X.")
+        self.bob = Member.objects.create(privacy_version=privacy.VERSION, uid=2, nickname="Bob X.")
+        self.carol = Member.objects.create(privacy_version=privacy.VERSION, uid=3, nickname="Carol X.")
+        self.dave = Member.objects.create(privacy_version=privacy.VERSION, uid=4, nickname="Dave X.")
         for member, strokes in ((self.alice, 10), (self.bob, 8), (self.carol, 6), (self.dave, 4)):
             Order.objects.create(
                 member=member, coffee_sort=self.espresso, value=Decimal("0.30"), machine_strokes=strokes
@@ -119,9 +120,9 @@ class OrderScreenBadgeTestCase(TestCase):
         KioskBoards.objects.update_or_create(pk=1, defaults={"ranking": True, "pillory": True})
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=1, nickname="Alice X.", favourite_coffee=self.espresso)
-        self.bob = Member.objects.create(uid=2, nickname="Bob X.", favourite_coffee=self.espresso)
-        self.dave = Member.objects.create(uid=4, nickname="Dave X.", favourite_coffee=self.espresso)
+        self.alice = Member.objects.create(privacy_version=privacy.VERSION, uid=1, nickname="Alice X.", favourite_coffee=self.espresso)
+        self.bob = Member.objects.create(privacy_version=privacy.VERSION, uid=2, nickname="Bob X.", favourite_coffee=self.espresso)
+        self.dave = Member.objects.create(privacy_version=privacy.VERSION, uid=4, nickname="Dave X.", favourite_coffee=self.espresso)
         for member, strokes in ((self.alice, 10), (self.bob, 8)):
             Order.objects.create(
                 member=member, coffee_sort=self.espresso, value=Decimal("0.30"), machine_strokes=strokes

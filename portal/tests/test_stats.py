@@ -6,6 +6,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from coffee import privacy
 from coffee.models import CoffeeSort, Member, MemberLinkToken, Order
 
 
@@ -13,8 +14,8 @@ class PortalStatsTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=42, nickname="Alice")
-        self.bob = Member.objects.create(uid=43, nickname="Bob")
+        self.alice = Member.objects.create(privacy_version=privacy.VERSION, uid=42, nickname="Alice")
+        self.bob = Member.objects.create(privacy_version=privacy.VERSION, uid=43, nickname="Bob")
         token = MemberLinkToken.objects.create(member=self.alice, expires_at=timezone.now() + timedelta(minutes=5))
         self.client.get(reverse("portal:link", args=[token.token]))
 

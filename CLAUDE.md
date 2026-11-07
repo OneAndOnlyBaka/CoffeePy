@@ -74,6 +74,12 @@ Rules that hold across all four:
   name screen first (`then_mode` in the session; the kiosk's purchase screen does the same) - and the dashboard's member form applies
   the same rules. So **test fixtures that order need a valid name** (`"Alice X."`), and so do
   the manual's demo members (`demo_data.py` NAMES).
+- **Nothing is booked for a member who hasn't confirmed the privacy notice** (`coffee/privacy.py`):
+  the card tap shows it first - a new card before its name - and every booking view refuses past it
+  (`kiosk.views._in_session`, the portal's `portal_privacy_required`). So test fixtures that book
+  also need `privacy_version=privacy.VERSION`, as do `demo_data.py` and the Pi's UI tests' probe
+  member. Raising `VERSION` asks everyone again. The notice links docs/PRIVACY.md on GitHub (master):
+  what it says about the data has to stay true there.
 - Tests live in `<app>/tests/test_*.py`. UI text is bilingual - see "Two languages" below.
 - **A change users can see also changes the manual** (`docs/MANUAL.de.md` + `.en.md`, with
   screenshots in both languages; what members do at the kiosk or on the phone also the one-page

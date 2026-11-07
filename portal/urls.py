@@ -8,6 +8,7 @@ urlpatterns = [
     path("link/<str:token>/", views.link, name="link"),
     path("link-invalid/", views.link_invalid, name="link_invalid"),
     path("", views.index, name="index"),
+    path("privacy/", views.privacy_notice, name="privacy"),
     path("pay/", views.pay, name="pay"),
     path("purchase/", views.purchase, name="purchase"),
     path("stats/", views.stats, name="stats"),

@@ -29,7 +29,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from coffee import services
+from coffee import privacy, services
 from coffee.models import CoffeeSort, InventoryItem, Member, NfcScan, Order, Payment, PaymentMethod, Purchase, StockCount
 from dashboard.models import InventoryPolicy
 
@@ -72,7 +72,8 @@ def seed():
     sorts = [CoffeeSort.objects.get_or_create(name=n, defaults={"price": Decimal(p), "machine_strokes": s})[0]
              for n, p, s in SORTS]
     favourites = [sorts[0], sorts[1], sorts[0], sorts[2], sorts[1], sorts[0]]
-    members = [Member.objects.create(uid=uid(i), nickname=NAMES[n], favourite_coffee=favourites[i])
+    members = [Member.objects.create(uid=uid(i), nickname=NAMES[n], favourite_coffee=favourites[i],
+                                     privacy_version=privacy.VERSION)  # or every screenshot is the notice
                for i, n in enumerate(MEMBERS)]
     thirst = [4, 3, 2, 2, 1, 1]  # cups on a busy day - Anna leads every ranking
     now = timezone.now()

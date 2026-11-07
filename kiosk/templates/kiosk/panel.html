@@ -106,6 +106,29 @@ no seconds: the cup's animation runs in CSS, the countdown in countdown.js from 
     {% endif %}
 </div>
 
+{% elif state == "privacy" %}
+{% comment %}
+The privacy notice before the first booking (coffee/privacy.py, views._privacy_context): what is
+recorded, what for, where, and where it is documented in full - a QR code to docs/PRIVACY.md on
+GitHub, for a phone that has the internet the device hasn't. Fits the screen without scrolling (a
+scrolled list crashed Chromium, CLAUDE.md); the same bytes on every poll until it is answered.
+{% endcomment %}
+<div class="panel-card privacy-card">
+    <h1 class="panel-header">{% if member %}{% blocktranslate trimmed with name=member.display_name %}Hi {{ name }} - before you go on{% endblocktranslate %}{% else %}{% translate "Welcome, new card! Before you go on" %}{% endif %}</h1>
+    <div class="panel-body privacy-body">
+        <div class="privacy-text">
+            {% include "includes/privacy_notice.html" %}
+        </div>
+        <figure class="privacy-qr">{{ docs_qr_svg|safe }}<figcaption>{% translate "Scan to read it" %}</figcaption></figure>
+    </div>
+    <p class="privacy-gate">{% translate "Without your confirmation you can't order or book anything here." %}</p>
+    <div class="action-row panel-footer">
+        <button type="button" class="danger" hx-post="{% url 'kiosk:privacy_decline' %}" hx-target="#panel" hx-swap="innerHTML">✕ {% translate "No, log out" %}</button>
+        {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
+        <button type="button" class="success primary-action" hx-post="{% url 'kiosk:privacy_confirm' %}" hx-target="#panel" hx-swap="innerHTML">✓ {% translate "Understood - go on" %}</button>
+    </div>
+</div>
+
 {% elif state == "order" %}
 <div class="panel-card">
     <form hx-target="#panel" hx-swap="innerHTML">

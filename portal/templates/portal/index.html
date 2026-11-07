@@ -3,6 +3,13 @@
 {% block title %}{{ member.display_name }} - CoffeePy{% endblock %}
 {% block portal_content %}
 <h1>{% blocktranslate trimmed with name=member.display_name %}Hi {{ name }}!{% endblocktranslate %}</h1>
+{% if not privacy_confirmed %}
+<div class="card privacy-card">
+    <h2>{% translate "Please read the privacy notice" %}</h2>
+    <p>{% translate "Before you can pay or book anything here, confirm that you have read what this device records about you." %}</p>
+    <a href="{% url 'portal:privacy' %}" class="btn success btn-block">{% translate "Read and confirm" %}</a>
+</div>
+{% endif %}
 <div class="card stats-card">
     <div class="stats-row">
         <div class="stat"><span class="label">{% translate "Total cups" %}</span><span class="value">{{ total_cups }}</span></div>
@@ -55,6 +62,7 @@
     <p class="muted">{% blocktranslate trimmed %}Everything this device stores about you - cards, linked phones, every
     coffee and payment, and the log entries about you - as one file.{% endblocktranslate %}</p>
     <a href="{% url 'portal:my_data' %}" class="btn secondary btn-block">{% translate "Download my data" %}</a>
+    <a href="{% url 'portal:privacy' %}" class="btn secondary btn-block">{% translate "Privacy notice" %}</a>
 </div>
 
 <div class="card">

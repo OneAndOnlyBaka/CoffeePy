@@ -6,6 +6,7 @@ from unittest import mock
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+from coffee import privacy
 from coffee.models import CoffeeSort, Member, MemberCard, NfcReaderStatus, NfcScan, Order
 from dashboard.models import KioskBoards
 
@@ -22,7 +23,7 @@ class KioskPanelTestCase(TestCase):
         return NfcScan.objects.create(uid=uid, event=event)
 
     def _member_with_alt_card(self, uid, alt_uid, **kwargs):
-        member = Member.objects.create(uid=uid, **kwargs)
+        member = Member.objects.create(privacy_version=privacy.VERSION, uid=uid, **kwargs)
         MemberCard.objects.create(member=member, uid=alt_uid)
         return member
 
@@ -32,7 +33,7 @@ class KioskPanelTestCase(TestCase):
         self.assertContains(response, "Welcome, new card!")
 
     def test_known_member_in_order_mode_shows_order_panel(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         self._scan("AABBCCDD")
         response = self.client.get(reverse("kiosk:panel"))
         self.assertContains(response, "Hi Tom X.!")
@@ -66,7 +67,7 @@ class KioskPanelTestCase(TestCase):
         self.assertNotContains(response, "Welcome, new card!")
 
     def test_order_confirm_creates_order_and_logs_out(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         self._scan("AABBCCDD")
         self.client.get(reverse("kiosk:panel"))  # logs in
 
@@ -76,7 +77,7 @@ class KioskPanelTestCase(TestCase):
         self.assertEqual(Order.objects.get().member_id, 0xDDCCBBAA)
 
     def test_order_auto_checkout_after_timeout(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         self._scan("AABBCCDD")
         self.client.get(reverse("kiosk:panel"))  # logs in, deadline = now + 20s
 
@@ -87,7 +88,7 @@ class KioskPanelTestCase(TestCase):
         self.assertEqual(Order.objects.count(), 1)
 
     def test_picking_a_sort_gives_time_to_confirm_and_books_nothing_by_itself(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         other = CoffeeSort.objects.create(name="lungo", price=Decimal("0.40"), machine_strokes=1)
         self._scan("AABBCCDD")
         start = time.time()
@@ -108,7 +109,7 @@ class KioskPanelTestCase(TestCase):
         self.assertEqual(Order.objects.count(), 0)
 
     def test_a_picked_sort_is_what_order_now_books(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         other = CoffeeSort.objects.create(name="lungo", price=Decimal("0.40"), machine_strokes=1)
         self._scan("AABBCCDD")
         self.client.get(reverse("kiosk:panel"))
@@ -118,7 +119,7 @@ class KioskPanelTestCase(TestCase):
         self.assertNotIn("shown_order", self.client.session)
 
     def test_member_deleted_while_logged_in_logs_out_instead_of_failing(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         self._scan("AABBCCDD")
         self.client.get(reverse("kiosk:panel"))  # logs in
         Member.objects.filter(uid=0xDDCCBBAA).delete()  # e.g. merged away on the dashboard
@@ -130,7 +131,7 @@ class KioskPanelTestCase(TestCase):
         self.assertEqual(Order.objects.count(), 0)
 
     def test_nav_resets_session_and_logs_out(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         self._scan("AABBCCDD")
         self.client.get(reverse("kiosk:panel"))  # logs in
 
@@ -139,7 +140,7 @@ class KioskPanelTestCase(TestCase):
         self.assertContains(response, "Apply your card")
 
     def test_nav_via_htmx_returns_the_new_panel_instead_of_a_redirect(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         self._scan("AABBCCDD")
         self.client.get(reverse("kiosk:panel"))  # logs in
 

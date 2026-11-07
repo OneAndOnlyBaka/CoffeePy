@@ -118,6 +118,18 @@ class KioskBoards(models.Model):
                 + (["runaways"] if self.runaways and CoffeeMachine.current().configured else []))
 
 
+class PrivacyContact(models.Model):
+    """Who is responsible for the data on this device, as the kiosk's and the portal's privacy notice
+    names it (coffee/privacy.py) - Art. 13 GDPR asks for the controller and how to reach them. Free
+    text, set on the System page; empty, the notice points to the device's admin."""
+
+    controller = models.CharField(max_length=200, blank=True)
+
+    @classmethod
+    def current(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+
 class InventoryPolicy(models.Model):
     """Whether the device keeps an inventory, and who books into it. "dashboard": one person keeps
     purchases and stock in the dashboard, paid by a member (credited) or from the coffee box.

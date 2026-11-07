@@ -6,13 +6,14 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from coffee import privacy
 from coffee.models import Member, MemberLinkToken, Order, Payment, PaymentMethod
 
 
 class PortalPayTestCase(TestCase):
     def setUp(self):
         self.client = Client()
-        self.alice = Member.objects.create(uid=42, nickname="Alice")
+        self.alice = Member.objects.create(privacy_version=privacy.VERSION, uid=42, nickname="Alice")
         token = MemberLinkToken.objects.create(member=self.alice, expires_at=timezone.now() + timedelta(minutes=5))
         self.client.get(reverse("portal:link", args=[token.token]))
 

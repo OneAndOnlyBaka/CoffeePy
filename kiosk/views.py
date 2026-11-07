@@ -17,7 +17,7 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext as _, gettext_lazy, gettext_noop, pgettext
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import backups, clock, machine, names, rtc, services
+from coffee import backups, clock, machine, names, privacy, rtc, services
 from coffee.models import (
     AltUidCapture,
     CASH_METHOD_NAME,
@@ -47,6 +47,8 @@ VALID_MODES = (MODE_ORDER, MODE_INFO, MODE_SETTINGS, MODE_RANKING, MODE_PURCHASE
 
 ORDER_AUTO_CHECKOUT_SECONDS = 20
 AUTO_LOGOUT_SECONDS = 20
+# The privacy notice is read, not tapped through: three times the usual logout (coffee/privacy.py).
+PRIVACY_SECONDS = 60
 LINK_TOKEN_TTL_SECONDS = 300
 
 THANK_YOU_SECONDS = 20
@@ -293,7 +295,7 @@ def ranking_view(request, view):
 
 @require_POST
 def order_select(request):
-    if request.session.get("logged_in") and request.session.get("mode") == MODE_ORDER:
+    if _in_session(request, MODE_ORDER):
         # The panel goes on showing what it showed at the card: the pick is the browser's (a
         # checked tile; countdown.js switches the countdown). Re-rendering it swapped the panel
         # away under the finger, and that teardown crashed Chromium in 3 of 5 picks on the device
@@ -313,7 +315,7 @@ def order_select(request):
 
 @require_POST
 def order_confirm(request):
-    if request.session.get("logged_in") and request.session.get("mode") == MODE_ORDER:
+    if _in_session(request, MODE_ORDER):
         _checkout(request)
     return _render_panel(request)
 
@@ -370,14 +372,14 @@ def machine_free(request):
 
 @require_POST
 def order_cancel(request):
-    if request.session.get("logged_in") and request.session.get("mode") == MODE_ORDER:
+    if _in_session(request, MODE_ORDER):
         _reset_session_state(request)
     return _render_panel(request)
 
 
 @require_POST
 def settings_save(request):
-    if request.session.get("logged_in") and request.session.get("mode") == MODE_SETTINGS:
+    if _in_session(request, MODE_SETTINGS):
         uid = request.session["uid"]
         # No falling back to the card's uid any more: that is how the legacy device ended up
         # with a third of its members listed as numbers (coffee/names.py).
@@ -400,6 +402,10 @@ def settings_save(request):
         )
         audit.log(request, "member.create" if created else "member.update", target=audit.member_actor(member),
                   actor=audit.member_actor(member), details="own settings at the kiosk")
+        if request.session.get("privacy_confirmed") and not privacy.confirmed(member):
+            privacy.confirm(member)
+            audit.log(request, "member.privacy_confirm", target=audit.member_actor(member),
+                      actor=audit.member_actor(member), details=f"notice {privacy.VERSION}, new card")
         then_mode = request.session.get("then_mode")
         _reset_session_state(request)
         if then_mode in (MODE_ORDER, MODE_PURCHASE):
@@ -424,7 +430,7 @@ def settings_touch(request):
 
 @require_POST
 def pay(request):
-    if request.session.get("logged_in") and request.session.get("mode") == MODE_INFO:
+    if _in_session(request, MODE_INFO):
         try:
             # A German keyboard - and the German panel's own number format - says "1,50".
             amount = Decimal(request.POST.get("amount", "0").replace(",", "."))
@@ -450,7 +456,7 @@ def _purchase_notice(request, notice):
 @require_POST
 def purchase_book(request):
     """A purchase from the kiosk: the member is credited what they paid (services.book_purchase)."""
-    if request.session.get("logged_in") and request.session.get("mode") == MODE_PURCHASE and _inventory_on(request):
+    if _in_session(request, MODE_PURCHASE) and _inventory_on(request):
         member = Member.objects.filter(uid=request.session["uid"]).first()
         item = InventoryItem.objects.filter(is_active=True, pk=_int(request.POST.get("item_id"))).first()
         quantity = services.parse_quantity(request.POST.get("quantity", ""))
@@ -472,7 +478,7 @@ def purchase_book(request):
 @require_POST
 def stock_count(request):
     """A stock-take of one item, by one of the members the admin picked (Member.may_take_stock)."""
-    if request.session.get("logged_in") and request.session.get("mode") == MODE_PURCHASE and _inventory_on(request):
+    if _in_session(request, MODE_PURCHASE) and _inventory_on(request):
         member = Member.objects.filter(uid=request.session["uid"], may_take_stock=True).first()
         item = InventoryItem.objects.filter(is_active=True, pk=_int(request.POST.get("count_item_id"))).first()
         quantity = services.parse_quantity(request.POST.get("count", ""))
@@ -505,13 +511,20 @@ STOCK_ERROR = gettext_noop("Pick an item and enter what you counted.")
 # --- internal helpers -------------------------------------------------
 
 
+def _in_session(request, mode):
+    """A member is logged in on this screen and may book: never while the privacy notice is still
+    waiting for them (coffee/privacy.py) - the screen shows it, and a request sent past it is refused."""
+    return (request.session.get("logged_in") and request.session.get("mode") == mode
+            and not request.session.get("privacy_pending"))
+
+
 def _reset_session_state(request):
     request.session["logged_in"] = False
     for key in (
         "uid", "deadline", "shown_deadline", "shown_order", "sort_order", "order_coffee_id", "order_auto_checkout", "is_new_user",
         "brew",
         "pending_nickname", "pending_favourite", "name_error", "then_mode",
-        "inventory_page", "inventory_notice", "inventory_error",
+        "inventory_page", "inventory_notice", "inventory_error", "privacy_pending", "privacy_confirmed",
     ):
         request.session.pop(key, None)
     _touched(request)
@@ -868,7 +881,7 @@ def link_phone_popup(request):
     fished for by someone else standing at the machine."""
     uid = request.session.get("uid")
     member = Member.objects.filter(pk=uid).first() if request.session.get("logged_in") and uid is not None else None
-    if member is None:
+    if member is None or not privacy.confirmed(member):
         return HttpResponseForbidden()
     member.link_tokens.all().delete()
     audit.log(request, "portal.link_issued", target=audit.member_actor(member), actor=audit.member_actor(member))
@@ -1000,6 +1013,10 @@ def _handle_new_scan(request, mode, scan, ctx):
             _start_session(request, mode, session_uid)
         else:
             _start_session(request, MODE_SETTINGS, session_uid, is_new_user=True)
+    if not privacy.confirmed(member):
+        # The notice first, whatever the tap was for - a new card before its name is even asked.
+        request.session["privacy_pending"] = True
+        request.session["deadline"] = time.time() + PRIVACY_SECONDS
 
 
 def _tick(request):
@@ -1010,7 +1027,7 @@ def _tick(request):
         return
     if time.time() < deadline:
         return
-    if mode == MODE_ORDER and request.session.get("order_auto_checkout", True):
+    if mode == MODE_ORDER and request.session.get("order_auto_checkout", True) and not request.session.get("privacy_pending"):
         _checkout(request)
         return
     _reset_session_state(request)
@@ -1050,7 +1067,9 @@ def _state_context(request, mode):
     deadline = request.session.get("deadline")
     seconds_left = max(0, int(deadline - time.time())) if deadline else None
 
-    if mode == MODE_ORDER:
+    if request.session.get("privacy_pending"):
+        ctx = _privacy_context(request, uid)
+    elif mode == MODE_ORDER:
         ctx = _order_context(request, uid, seconds_left)
     elif mode == MODE_SETTINGS:
         ctx = _settings_context(request, uid, seconds_left)
@@ -1067,6 +1086,46 @@ def _state_context(request, mode):
     ctx["deadline_ms"] = int(shown * 1000) if shown else None
     ctx["touch_seconds"] = AUTO_LOGOUT_SECONDS
     return ctx
+
+
+def _privacy_context(request, uid):
+    """The privacy notice (coffee/privacy.py) - the same bytes on every poll until it is answered."""
+    return {
+        "state": "privacy",
+        "member": Member.objects.filter(uid=uid).first(),
+        "docs_qr_svg": _qr_svg(privacy.DOCS_URL),
+        **privacy.notice_context(),
+    }
+
+
+@require_POST
+def privacy_confirm(request):
+    """"Understood": from now on this member may book, and the session goes on to what the tap was for
+    - with its own fresh countdown, so an order isn't checked out the moment the notice is gone."""
+    if request.session.get("logged_in") and request.session.get("privacy_pending"):
+        uid = request.session["uid"]
+        member = Member.objects.filter(uid=uid).first()
+        if member is not None:
+            privacy.confirm(member)
+            who = audit.member_actor(member)
+            audit.log(request, "member.privacy_confirm", target=who, actor=who, details=f"notice {privacy.VERSION}")
+        else:  # a new card: confirmed with its name (settings_save), the first thing stored about it
+            request.session["privacy_confirmed"] = privacy.VERSION
+        request.session.pop("privacy_pending", None)
+        _start_session(request, request.session["mode"], uid, is_new_user=request.session.get("is_new_user", False))
+    return _render_panel(request)
+
+
+@require_POST
+def privacy_decline(request):
+    """"No": logged out, nothing booked, nothing stored about a new card."""
+    if request.session.get("logged_in") and request.session.get("privacy_pending"):
+        uid = request.session["uid"]
+        member = Member.objects.filter(uid=uid).first()
+        who = audit.member_actor(member) if member is not None else f"card {uid}"
+        audit.log(request, "member.privacy_decline", target=who, actor=who, details=f"notice {privacy.VERSION}")
+        _reset_session_state(request)
+    return _render_panel(request)
 
 
 def _rank_badge(uid, ranking_rows):

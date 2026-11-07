@@ -17,6 +17,7 @@ sorts="${2:-3}"
 setup="$(mktemp)"; cleanup="$(mktemp)"; trap 'rm -f "$setup" "$cleanup"' EXIT
 cat > "$setup" <<'PY'
 from decimal import Decimal
+from coffee import privacy
 from coffee.models import CoffeeSort, Member, PaymentMethod
 from dashboard.models import KioskBoards
 import os
@@ -32,7 +33,7 @@ for name in extra:
         made.append(name)
 open("/tmp/kiosk_ui_sorts", "w").write("\n".join(made))
 print("sorts:", CoffeeSort.objects.count())
-Member.objects.update_or_create(uid=0x44332211, defaults={"nickname": "Probe P.", "favourite_coffee": CoffeeSort.objects.get(name="Kaffee")})
+Member.objects.update_or_create(uid=0x44332211, defaults={"nickname": "Probe P.", "favourite_coffee": CoffeeSort.objects.get(name="Kaffee"), "privacy_version": privacy.VERSION})
 PaymentMethod.objects.get_or_create(name="PayPal Test", defaults={"provider": "paypal", "identifier": "kaffeetest"})
 boards = KioskBoards.objects.get_or_create(pk=1)[0]
 open("/tmp/kiosk_ui_boards", "w").write(f"{int(boards.ranking)} {int(boards.pillory)}")

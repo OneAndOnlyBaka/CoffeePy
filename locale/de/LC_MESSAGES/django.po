@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 17:57+0100\n"
+"POT-Creation-Date: 2026-11-07 20:25+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -234,6 +234,15 @@ msgid ""
 msgstr ""
 "Den Namen trägt schon jemand – nimm einen Buchstaben deines Nachnamens dazu, "
 "z. B. „Anna Be.“"
+
+msgid "the ranking (who drinks the most)"
+msgstr "die Rangliste (wer am meisten trinkt)"
+
+msgid "the pillory (who owes money)"
+msgstr "der Pranger (wer Geld schuldet)"
+
+msgid "\"Ran off\" (who left the machine for the next one)"
+msgstr "„Weggelaufen“ (wer die Maschine dem Nächsten überlassen hat)"
 
 msgid "Only admins may open that page."
 msgstr "Diese Seite dürfen nur Admins öffnen."
@@ -537,6 +546,14 @@ msgid ""
 msgstr ""
 "„Weggelaufen“ am Kiosk (wer Wasser, Trester oder Bohnen dem Nächsten "
 "überlassen hat, und wer eingesprungen ist) - nur mit Kaffeemaschine"
+
+msgid "Responsible for the data (name and how to reach them)"
+msgstr "Verantwortlich für die Daten (Name und wie man die Person erreicht)"
+
+msgid ""
+"Shown in the privacy notice at the kiosk and on the phone. Empty: \"the "
+"admin of this device\"."
+msgstr "Steht im Datenschutzhinweis am Kiosk und auf dem Handy. Leer: „den Admin dieses Geräts“."
 
 msgid "Inventory"
 msgstr "Inventar"
@@ -2095,6 +2112,14 @@ msgstr "Ausgeschieden"
 msgid "New name at next coffee"
 msgstr "Neuer Name beim nächsten Kaffee"
 
+msgid ""
+"Asked at their next card tap - nothing is booked for them until they confirm "
+"it."
+msgstr "Wird beim nächsten Antippen der Karte gefragt - bis zur Bestätigung wird nichts gebucht."
+
+msgid "Privacy notice not confirmed"
+msgstr "Datenschutzhinweis nicht bestätigt"
+
 msgid "UID"
 msgstr "UID"
 
@@ -2368,6 +2393,17 @@ msgstr ""
 "je nach Betrieb eine Frage für Datenschutz und Betriebsrat (siehe "
 "Anleitung). Der Pranger im Dashboard, für den, der das Geld einsammelt, "
 "bleibt so oder so."
+
+msgid "Privacy notice"
+msgstr "Datenschutzhinweis"
+
+msgid ""
+"Every member confirms it before their first booking - at their next card "
+"tap, or on their phone - and nothing is booked for them until they do: what "
+"this device records about them, what for, where it stays, and a link to the "
+"full documentation (docs/PRIVACY.md on GitHub). The GDPR also asks it to "
+"name who is responsible for the data, and how to reach them."
+msgstr "Jedes Mitglied bestätigt ihn vor der ersten Buchung - beim nächsten Antippen der Karte oder auf dem Handy -, vorher wird nichts gebucht. Er sagt, was dieses Gerät erfasst, wozu und wo es bleibt, und verlinkt die vollständige Dokumentation (docs/PRIVACY.md auf GitHub). Die DSGVO verlangt außerdem, dass er nennt, wer für die Daten verantwortlich ist und wie man diese Person erreicht."
 
 msgid "Purchases and inventory"
 msgstr "Einkäufe und Inventar"
@@ -2725,14 +2761,14 @@ msgstr "Bitte beide Konten auswählen."
 msgid "Pick two different accounts."
 msgstr "Bitte zwei verschiedene Konten auswählen."
 
+msgid "Saved - the kiosk follows with its next poll."
+msgstr "Gespeichert - der Kiosk folgt mit seiner nächsten Abfrage."
+
 msgid "SSH is being switched on - reload in a few seconds."
 msgstr "SSH wird eingeschaltet - lade die Seite in ein paar Sekunden neu."
 
 msgid "SSH is being switched off - reload in a few seconds."
 msgstr "SSH wird ausgeschaltet - lade die Seite in ein paar Sekunden neu."
-
-msgid "Saved - the kiosk follows with its next poll."
-msgstr "Gespeichert - der Kiosk folgt mit seiner nächsten Abfrage."
 
 msgid "Saved - the kiosk follows within a minute."
 msgstr "Gespeichert - der Kiosk folgt innerhalb einer Minute."
@@ -3142,6 +3178,29 @@ msgstr "Abbruch in %(seconds)ss"
 msgid "Start"
 msgstr "Start"
 
+#, python-format
+msgid "Hi %(name)s - before you go on"
+msgstr "Hallo %(name)s - bevor es weitergeht"
+
+msgid "Welcome, new card! Before you go on"
+msgstr "Willkommen, neue Karte! Bevor es weitergeht"
+
+msgid "Scan to read it"
+msgstr "Zum Lesen scannen"
+
+msgid "Without your confirmation you can't order or book anything here."
+msgstr "Ohne deine Bestätigung kannst du hier nichts bestellen und nichts buchen."
+
+msgid "No, log out"
+msgstr "Nein, abmelden"
+
+#, python-format
+msgid "Automatic logout in %(seconds)ss"
+msgstr "Automatische Abmeldung in %(seconds)s s"
+
+msgid "Understood - go on"
+msgstr "Verstanden - weiter"
+
 msgid "Top 3 all-time"
 msgstr "Top 3 insgesamt"
 
@@ -3158,10 +3217,6 @@ msgstr ""
 
 msgid "Back"
 msgstr "Zurück"
-
-#, python-format
-msgid "Automatic logout in %(seconds)ss"
-msgstr "Automatische Abmeldung in %(seconds)s s"
 
 #, python-format
 msgid "Automatic checkout in %(seconds)ss"
@@ -3477,6 +3532,17 @@ msgstr "Abmelden"
 msgid "No linked devices."
 msgstr "Keine verknüpften Geräte."
 
+msgid "Please read the privacy notice"
+msgstr "Bitte lies den Datenschutzhinweis"
+
+msgid ""
+"Before you can pay or book anything here, confirm that you have read what "
+"this device records about you."
+msgstr "Bevor du hier bezahlen oder etwas buchen kannst, bestätige, dass du gelesen hast, was dieses Gerät über dich erfasst."
+
+msgid "Read and confirm"
+msgstr "Lesen und bestätigen"
+
 msgid "Total cups"
 msgstr "Tassen gesamt"
 
@@ -3576,6 +3642,19 @@ msgstr "Zahlung eintragen"
 msgid "Already paid? Log it here (cash or any method above)."
 msgstr "Schon bezahlt? Trag es hier ein (bar oder eine der Methoden oben)."
 
+msgid "Privacy"
+msgstr "Datenschutz"
+
+msgid "Open the documentation"
+msgstr "Dokumentation öffnen"
+
+#, python-format
+msgid "You confirmed this on %(date)s."
+msgstr "Du hast das am %(date)s bestätigt."
+
+msgid "Not now"
+msgstr "Jetzt nicht"
+
 msgid "Thank you! The purchase is booked and credited to you."
 msgstr "Danke! Der Einkauf ist gebucht und dir gutgeschrieben."
 
@@ -3645,6 +3724,54 @@ msgstr "An welchem Wochentag"
 
 msgid "Which coffee"
 msgstr "Welcher Kaffee"
+
+msgid "Your data on this coffee machine"
+msgstr "Deine Daten an dieser Kaffeemaschine"
+
+msgid "What:"
+msgstr "Was:"
+
+msgid ""
+"your card number, the name you enter, what you order and when, what you pay "
+"and book."
+msgstr "deine Kartennummer, der Name, den du eingibst, was du wann bestellst, was du bezahlst und buchst."
+
+msgid "What for:"
+msgstr "Wozu:"
+
+msgid ""
+"only the coffee tally - who had what and who paid. The data is bound to this "
+"purpose and is used for nothing else."
+msgstr "nur für die Strichliste - wer was hatte und wer bezahlt hat. Die Daten sind zweckgebunden und werden für nichts anderes verwendet."
+
+#, python-format
+msgid ""
+"Switched on on this device and visible to everyone at the kiosk: %(boards)s."
+msgstr "Auf diesem Gerät eingeschaltet und für alle am Kiosk sichtbar: %(boards)s."
+
+msgid "Where:"
+msgstr "Wo:"
+
+msgid ""
+"only on this device and its backup stick - no cloud, nobody else gets it."
+msgstr "nur auf diesem Gerät und seinem Backup-Stick - keine Cloud, niemand sonst bekommt sie."
+
+msgid "Your rights:"
+msgstr "Deine Rechte:"
+
+msgid "the admin of this device"
+msgstr "den Admin dieses Geräts"
+
+#, python-format
+msgid ""
+"see your data under Pay or on your phone and download it from your phone; to "
+"correct or delete it, ask %(who)s."
+msgstr ""
+"deine Daten unter Bezahlen oder auf dem Handy ansehen und auf dem Handy "
+"herunterladen; zum Berichtigen oder Löschen wende dich an %(who)s."
+
+msgid "What exactly is stored, where and for how long is documented on GitHub:"
+msgstr "Was genau wo und wie lange gespeichert wird, ist auf GitHub dokumentiert:"
 
 msgid "CoffeePy is being updated. This page comes back on its own."
 msgstr ""

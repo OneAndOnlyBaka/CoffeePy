@@ -11,7 +11,7 @@ from django.utils.html import escape
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import services
+from coffee import privacy, services
 from coffee.models import (
     AltUidCapture, AuditLogEntry, CASH_METHOD_NAME, InventoryItem, MemberDevice, MemberLinkToken, Payment,
     PaymentMethod,
@@ -20,7 +20,7 @@ from coffee.models import (
 from dashboard import audit
 from dashboard.models import InventoryPolicy
 
-from .decorators import ROLLING_SESSION_SECONDS, portal_login_required
+from .decorators import ROLLING_SESSION_SECONDS, portal_login_required, portal_privacy_required
 
 CARD_ADD_CAPTURE_SECONDS = 60
 # Generous: a member re-opening an old QR photo a few times must not be locked out.
@@ -96,8 +96,27 @@ def index(request):
         "owed": -balance if balance < 0 else Decimal("0.00"),
         "recent_orders": member.orders.select_related("coffee_sort")[:10],
         "recent_payments": member.payments.select_related("purchase__item")[:10],
+        "privacy_confirmed": privacy.confirmed(member),
     }
     return render(request, "portal/index.html", ctx)
+
+
+@portal_login_required
+def privacy_notice(request):
+    """The privacy notice on the phone (coffee/privacy.py) - for a phone linked before there was one;
+    a phone linked since was linked by a member who had confirmed it at the kiosk."""
+    member = request.member
+    target = request.GET.get("next", "")
+    if not target.startswith("/portal/") or target.startswith("//"):  # only back into the portal
+        target = reverse("portal:index")
+    if request.method == "POST":
+        if not privacy.confirmed(member):
+            privacy.confirm(member)
+            who = audit.member_actor(member)
+            audit.log(request, "member.privacy_confirm", target=who, actor=who, details=f"notice {privacy.VERSION}")
+        return redirect(target)
+    return render(request, "portal/privacy.html", {
+        "member": member, "confirmed": privacy.confirmed(member), "next": target, **privacy.notice_context()})
 
 
 @portal_login_required
@@ -131,6 +150,7 @@ def _payment_methods_context(balance: Decimal, member=None):
 
 
 @portal_login_required
+@portal_privacy_required
 def pay(request):
     member = request.member
     balance = services.account_balance(member)
@@ -153,6 +173,7 @@ def pay(request):
 
 
 @portal_login_required
+@portal_privacy_required
 def purchase(request):
     """Booking a purchase from the phone - and, for the members the admin picked
     (Member.may_take_stock), the stock-take. A <select> is fine here: only the kiosk's
@@ -257,6 +278,7 @@ def cards(request):
 
 
 @portal_login_required
+@portal_privacy_required
 def card_add_start(request):
     """Self-service version of the dashboard's "Add card" - same AltUidCapture the
     kiosk watches for (see kiosk.views._handle_new_scan), just armed from the member's

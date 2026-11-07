@@ -8,7 +8,7 @@ from django.conf import settings
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from coffee import machine
+from coffee import machine, privacy
 from coffee.models import (
     CoffeeSort, MachineDispense, MachineIncident, MachineProduct, Member, NfcReaderStatus, NfcScan, Order,
 )
@@ -33,7 +33,7 @@ class MachineOrderTestCase(TestCase):
         hot.save()
         self.connect()
         NfcReaderStatus.objects.create(pk=1, is_online=True)
-        self.member = Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        self.member = Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         patcher = mock.patch.object(machine, "send", return_value=True)
         self.send = patcher.start()
         self.addCleanup(patcher.stop)

@@ -1,0 +1,13 @@
+{% load i18n %}
+{% comment %}
+The privacy notice's text (coffee/privacy.py) - the kiosk's screen and the portal's page say the same.
+Context: coffee.privacy.notice_context().
+{% endcomment %}
+<h2>{% translate "Your data on this coffee machine" %}</h2>
+<ul>
+    <li><b>{% translate "What:" %}</b> {% translate "your card number, the name you enter, what you order and when, what you pay and book." %}</li>
+    <li><b>{% translate "What for:" %}</b> {% translate "only the coffee tally - who had what and who paid. The data is bound to this purpose and is used for nothing else." %}{% if shown_boards %} {% blocktranslate trimmed with boards=shown_boards|join:", " %}Switched on on this device and visible to everyone at the kiosk: {{ boards }}.{% endblocktranslate %}{% endif %}</li>
+    <li><b>{% translate "Where:" %}</b> {% translate "only on this device and its backup stick - no cloud, nobody else gets it." %}</li>
+    <li><b>{% translate "Your rights:" %}</b> {% blocktranslate trimmed with who=controller|default:_("the admin of this device") %}see your data under Pay or on your phone and download it from your phone; to correct or delete it, ask {{ who }}.{% endblocktranslate %}</li>
+</ul>
+<p class="privacy-docs">{% translate "What exactly is stored, where and for how long is documented on GitHub:" %}<br><span class="privacy-url">{{ docs_url }}</span></p>

@@ -160,6 +160,7 @@ def member_data(member: Member, own: bool = False) -> dict:
             "name": member.nickname,
             "favourite_coffee": member.favourite_coffee.name if member.favourite_coffee else None,
             "departed_at": when(member.departed_at),
+            "privacy_notice_confirmed": {"version": member.privacy_version, "at": when(member.privacy_confirmed_at)},
             "balance": str(account_balance(member)),
             "cups_total": total_cups(member),
         },

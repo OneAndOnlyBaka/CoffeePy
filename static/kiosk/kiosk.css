@@ -587,3 +587,18 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 .machine-bar .bar-fill.warn { background: var(--accent); }
 .machine-card .action-row { margin-top: 16px; }
 .ticker-hero { color: #9be3a6; font-weight: 700; }
+
+/* The privacy notice before the first booking (panel.html "privacy"): all of it at once, no
+   scrolling - the text next to the QR code of docs/PRIVACY.md, the confirmation at the bottom. */
+.privacy-card .panel-header { font-size: 2rem; }
+.privacy-body { flex-direction: row; align-items: flex-start; gap: 20px; overflow: hidden; }
+.privacy-text { flex: 1 1 auto; min-width: 0; }
+.privacy-text h2 { margin: 0 0 6px; font-size: 1.2rem; color: var(--coffee); }
+.privacy-text ul { margin: 0; padding-left: 20px; }
+.privacy-text li { font-size: 1rem; line-height: 1.3; margin: 3px 0; }
+.privacy-docs { margin: 8px 0 0; font-size: 0.95rem; }
+.privacy-url { color: var(--coffee-light); overflow-wrap: anywhere; }
+.privacy-qr { flex: 0 0 auto; margin: 0; text-align: center; }
+.privacy-qr svg { display: block; width: 150px; height: 150px; }
+.privacy-qr figcaption { font-size: 0.85rem; color: var(--coffee-light); }
+.privacy-gate { margin: 0; font-weight: 600; color: var(--coffee); }

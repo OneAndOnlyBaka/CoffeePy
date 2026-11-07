@@ -12,6 +12,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from coffee import privacy
 from coffee.models import AuditLogEntry, CoffeeSort, Member, NfcScan
 from dashboard import audit, security
 from dashboard.models import AccountSecurity, PasswordPolicy
@@ -167,7 +168,7 @@ class ActivityTestCase(TestCase):
 
     def test_kiosk_card_login_and_order_are_logged(self):
         sort = CoffeeSort.objects.create(name="Espresso", price=Decimal("0.30"), machine_strokes=1)
-        Member.objects.create(uid=1, nickname="Anna X.", favourite_coffee=sort)
+        Member.objects.create(uid=1, nickname="Anna X.", favourite_coffee=sort, privacy_version=privacy.VERSION)
         kiosk = Client()
         kiosk.get(reverse("kiosk:index"))
         NfcScan.objects.create(uid="01000000", event=NfcScan.EVENT_INSERTED)
