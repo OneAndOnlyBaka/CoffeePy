@@ -171,6 +171,8 @@ def kiosk(b):
         kiosk_ranking(b)
     if wanted("kiosk-wait-purchase", "kiosk-purchase", "kiosk-stock-take"):
         kiosk_inventory(b)
+    if wanted(*MACHINE_SHOTS):
+        kiosk_machine(b)
     if wanted("kiosk-maintenance"):
         kiosk_maintenance(b)
 
@@ -193,6 +195,10 @@ def kiosk_order(b):
     django("scan", "Anna")
     b.wait_state("order:")
     b.shot("kiosk-order")
+    # The jug is the sort the machine doesn't make (demo_data.py): with a machine connected, the others go to its
+    # cup screen instead of the thank-you.
+    b.js("[...document.querySelectorAll('input[name=coffee_id]')].find(i => i.closest('label').textContent.includes('Kanne')).click()")
+    time.sleep(0.6)
     b.click("button[hx-post*='order/confirm']")
     b.wait_state("thank_you")
     b.shot("kiosk-thank-you", settle=1.5)
@@ -225,6 +231,10 @@ def kiosk_new_card(b):
     b.click("a.nav-btn[data-mode=settings]")  # a nav tap logs out
     b.wait_state("wait_for_card")
     django("scan", "new")
+    # A new card sees the privacy notice before it is asked for a name.
+    b.wait_state("privacy")
+    b.shot("kiosk-privacy")
+    b.click("button[hx-post*='privacy/confirm']")
     b.wait_state("settings")
     b.shot("kiosk-new-card")
 
@@ -268,6 +278,57 @@ def kiosk_inventory(b):
         django("inventory", "off")
 
 
+MACHINE_SHOTS = ("kiosk-wait-machine", "kiosk-machine-popup", "kiosk-order-slots", "kiosk-cup", "kiosk-slots",
+                 "kiosk-wait-line", "kiosk-queued")
+
+
+def kiosk_machine(b):
+    """The coffee machine's screens - needs one connected (or the bridge's simulator) and nobody at the kiosk."""
+    django("machine")
+    b.click("a.nav-btn[data-mode=order]")
+    b.wait_state("wait_for_card")
+    b.wait("document.querySelector('.free-btn')")
+    b.shot("kiosk-wait-machine")
+    if wanted("kiosk-machine-popup"):
+        b.click(".machine-btn")
+        b.wait("document.querySelector('.machine-card')", timeout=8)
+        b.shot("kiosk-machine-popup")
+        b.js("document.getElementById('qr-modal').classList.remove('open')")
+    if wanted("kiosk-order-slots", "kiosk-cup"):
+        django("scan", "Anna")
+        b.wait_state("order:")
+        b.shot("kiosk-order-slots")
+        b.click("button[hx-post*='order/confirm']")
+        b.wait_state("brew:")
+        b.shot("kiosk-cup")
+        b.click("button[hx-post*='machine/cancel']")  # nothing asked of the machine, the turn is given up
+        b.wait_state("wait_for_card")
+    if wanted("kiosk-slots"):
+        b.click("a.nav-btn[data-mode=settings]")
+        b.wait_state("wait_for_card")
+        django("scan", "Anna")
+        b.wait_state("settings")
+        b.click("button[hx-post$='/slots/']")
+        b.wait_state("slots")
+        b.shot("kiosk-slots")
+        b.click("a.nav-btn[data-mode=order]")
+        b.wait_state("wait_for_card")
+    if wanted("kiosk-wait-line", "kiosk-queued"):
+        django("line", "on")  # Ben, on his phone: called at once, a minute to press Start
+        try:
+            b.wait("document.querySelector('.line-banner')")
+            b.shot("kiosk-wait-line")
+            django("scan", "Emma")  # her favourite is a sort the machine makes
+            b.wait_state("order:")
+            b.click("button[hx-post*='order/confirm']")
+            b.wait("document.querySelector('.stage-queued')")
+            b.shot("kiosk-queued")
+            b.click("button[hx-post*='kiosk/machine/cancel']")  # OK: the screen ends, the place stays
+            b.wait_state("wait_for_card")
+        finally:
+            django("line", "off")
+
+
 def kiosk_maintenance(b):
     b.click("a.nav-btn[data-mode=order]")
     b.wait_state("wait_for_card")
@@ -290,9 +351,9 @@ DASHBOARD_PAGES = [
     ("/dashboard/bookings/", "dashboard-bookings"), ("/dashboard/bookings/payments/add/", "dashboard-payment-form"),
     ("/dashboard/users/", "dashboard-users"), ("/dashboard/users/add/", "dashboard-user-form"),
     ("/dashboard/login-rules/", "dashboard-password-policy"), ("/dashboard/account/", "dashboard-account"),
-    ("/dashboard/backup/restore/upload/", "dashboard-restore-upload"),
+    ("/dashboard/backup/restore/upload/", "dashboard-restore-upload"), ("/dashboard/device/", "dashboard-device"),
 ]
-FULL_PAGE = ("dashboard-update", "dashboard-backup", "dashboard-system", "dashboard-inventory-costs")
+FULL_PAGE = ("dashboard-update", "dashboard-backup", "dashboard-system", "dashboard-device", "dashboard-inventory-costs")
 # Taken with the inventory on (demo_data.py inventory on), after the others.
 INVENTORY_PAGES = [
     ("/dashboard/inventory/", "dashboard-inventory"), ("/dashboard/inventory/purchases/", "dashboard-inventory-purchases"),
@@ -403,6 +464,10 @@ def portal(b):
     b.shot("portal-link-invalid")
     if wanted("portal-purchase"):
         portal_purchase(b)
+    if wanted("portal-privacy"):
+        portal_privacy(b)
+    if wanted("portal-coffees", "portal-order", "portal-order-line", "portal-order-turn"):
+        portal_order(b)
     if not wanted("portal-home", "portal-pay", "portal-stats", "portal-cards", "portal-devices"):
         return
     token = shell_django(
@@ -417,6 +482,49 @@ def portal(b):
         if wanted(name):
             b.go(path)
             b.shot(name, settle=1.5 if "stats" in path else 0.6)
+
+
+def portal_login(b, name):
+    token = shell_django(
+        "from datetime import timedelta; from django.utils import timezone; "
+        "from coffee.models import Member, MemberLinkToken; "
+        f"print(MemberLinkToken.objects.create(member=Member.objects.get(nickname='{name}'), "
+        "expires_at=timezone.now() + timedelta(minutes=5)).token)")
+    b.go(f"/portal/link/{token}/")
+
+
+def portal_privacy(b):
+    django("privacy", "Felix", "no")
+    try:
+        portal_login(b, "Felix H.")
+        b.go("/portal/privacy/")
+        b.shot("portal-privacy")
+    finally:
+        django("privacy", "Felix", "yes")
+
+
+def portal_order(b):
+    """Anna with her "my coffees" (demo_data.py machine): the choice, in line behind Ben, then her turn."""
+    django("machine")
+    portal_login(b, "Anna B.")
+    b.go("/portal/coffees/")
+    b.shot("portal-coffees")
+    b.go("/portal/order/")
+    b.shot("portal-order")
+    if not wanted("portal-order-line", "portal-order-turn"):
+        return
+    django("line", "on")
+    try:
+        b.js("document.querySelector('input[name=action][value=join]').form.submit()")
+        b.page.collect(0.5, until="Page.loadEventFired")
+        b.wait("document.querySelector('.turn-line')")
+        b.shot("portal-order-line")
+        django("line", "next")
+        b.go("/portal/order/")
+        b.wait("document.querySelector('.turn-called')")
+        b.shot("portal-order-turn")
+    finally:
+        django("line", "off")
 
 
 def portal_purchase(b):

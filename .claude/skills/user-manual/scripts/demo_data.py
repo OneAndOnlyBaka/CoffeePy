@@ -30,7 +30,7 @@ from decimal import Decimal
 from django.utils import timezone
 
 from coffee import privacy, services
-from coffee.models import CoffeeSort, InventoryItem, Member, NfcScan, Order, Payment, PaymentMethod, Purchase, StockCount
+from coffee.models import CoffeeSort, InventoryItem, MachineProduct, MachineTurn, Member, NfcScan, Order, Payment, PaymentMethod, Purchase, StockCount
 from dashboard.models import InventoryPolicy
 
 MEMBERS = ["Anna", "Ben", "Clara", "David", "Emma", "Felix"]
@@ -54,6 +54,7 @@ ITEMS = [("Kaffeebohnen · Coffee beans", "kg", "1", "14.49", "16.99", 30),
 # Where the mode was before seed switched the inventory off - in the web container, which every
 # django.sh call of one capture run shares.
 MODE_FILE = "/tmp/manual-inventory-mode"
+SORTS_FILE = "/tmp/manual-demo-sorts"
 
 
 def card_hex(index):
@@ -69,8 +70,14 @@ def seed():
         print("already seeded")
         return
     random.seed(7)
-    sorts = [CoffeeSort.objects.get_or_create(name=n, defaults={"price": Decimal(p), "machine_strokes": s})[0]
-             for n, p, s in SORTS]
+    made = [CoffeeSort.objects.get_or_create(name=n, defaults={"price": Decimal(p), "machine_strokes": s})
+            for n, p, s in SORTS]
+    sorts = [sort for sort, _created in made]
+    with open(SORTS_FILE, "w") as f:  # cleanup takes away what this made - a device's own Espresso stays
+        f.write("\n".join(sort.name for sort, created in made if created))
+    # The jug is booked from the tally even with the machine connected: the one way to reach the thank-you
+    # without a brew (capture_web.py kiosk_order).
+    CoffeeSort.objects.filter(pk=sorts[2].pk).update(without_machine=True, is_obsolete=False)
     favourites = [sorts[0], sorts[1], sorts[0], sorts[2], sorts[1], sorts[0]]
     members = [Member.objects.create(uid=uid(i), nickname=NAMES[n], favourite_coffee=favourites[i],
                                      privacy_version=privacy.VERSION)  # or every screenshot is the notice
@@ -143,6 +150,40 @@ def inventory_off():
     InventoryPolicy.objects.filter(pk=InventoryPolicy.current().pk).update(mode=InventoryPolicy.MODE_OFF)
 
 
+def machine_on():
+    """Anna's "my coffees", and the demo's Cappuccino sold as the machine's - for the machine's shots."""
+    from coffee import slots  # noqa: PLC0415
+
+    espresso, cappuccino = CoffeeSort.objects.get(name="Espresso"), CoffeeSort.objects.get(name="Cappuccino")
+    MachineProduct.objects.filter(name="Espresso", coffee_sort__isnull=True).update(coffee_sort=espresso)
+    MachineProduct.objects.filter(name="Cappuccino").update(coffee_sort=cappuccino)
+    anna = Member.objects.get(uid=uid(0))
+    slots.save(anna, 1, espresso, strength=8, water_ml=60)
+    slots.save(anna, 2, cappuccino, strength=7, water_ml=120, count=2)
+    anna.favourite_slot = 1
+    anna.save(update_fields=["favourite_slot"])
+
+
+def line(step):
+    """The line for the machine: "on" - Ben on his phone is called; "next" - he gives up his place; "off" - nobody."""
+    from coffee import turns  # noqa: PLC0415
+
+    ben = Member.objects.get(uid=uid(1))
+    if step == "on":
+        turns.join(ben, CoffeeSort.objects.get(name="Espresso"), None, MachineTurn.SOURCE_PHONE)
+    elif step == "next":
+        for turn in MachineTurn.objects.filter(member=ben, state__in=MachineTurn.ACTIVE):
+            turns.cancel(turn)
+    else:
+        MachineTurn.objects.filter(member__uid__in=[uid(i) for i in range(len(MEMBERS))]).delete()
+        turns.advance()
+
+
+def privacy_open(who, confirmed):
+    """A demo member who hasn't confirmed the notice yet, for the portal's page."""
+    Member.objects.filter(uid=uid(MEMBERS.index(who))).update(privacy_version=privacy.VERSION if confirmed else 0)
+
+
 def scan(who):
     hex_uid = NEW_CARD if who == "new" else card_hex(MEMBERS.index(who))
     NfcScan.objects.create(uid=hex_uid, event=NfcScan.EVENT_INSERTED)
@@ -151,6 +192,7 @@ def scan(who):
 
 def cleanup():
     inventory_off()
+    MachineTurn.objects.filter(member__uid__in=[uid(i) for i in range(len(MEMBERS))]).delete()
     try:
         with open(MODE_FILE) as f:
             InventoryPolicy.objects.filter(pk=InventoryPolicy.current().pk).update(mode=f.read().strip())
@@ -160,11 +202,18 @@ def cleanup():
     uids = [uid(i) for i in range(len(MEMBERS))]
     print("members:", Member.objects.filter(uid__in=uids).delete()[0])
     print("scans:", NfcScan.objects.filter(uid__startswith=CARD_PREFIX).delete()[0])
-    print("sorts:", CoffeeSort.objects.filter(name__in=[n for n, _, _ in SORTS], order__isnull=True).delete()[0])
+    try:
+        with open(SORTS_FILE) as f:
+            made = f.read().split("\n")
+        os.remove(SORTS_FILE)
+    except FileNotFoundError:
+        made = []
+    print("sorts:", CoffeeSort.objects.filter(name__in=made, order__isnull=True).delete()[0])
     print("payment method:", PaymentMethod.objects.filter(name=PAYPAL, identifier="coffeefund").delete()[0])
     print("girocode:", PaymentMethod.objects.filter(name=GIROCODE, iban=GIROCODE_IBAN).delete()[0])
 
 
 args = os.environ.get("SCRIPT_ARGS", "").split()
-{"seed": lambda: seed(), "scan": lambda: scan(args[1]), "cleanup": lambda: cleanup(),
+{"seed": lambda: seed(), "scan": lambda: scan(args[1]), "cleanup": lambda: cleanup(), "machine": lambda: machine_on(),
+ "line": lambda: line(args[1]), "privacy": lambda: privacy_open(args[1], args[2] == "yes"),
  "inventory": lambda: inventory_on() if args[1] == "on" else inventory_off()}[args[0]]()

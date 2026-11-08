@@ -30,6 +30,11 @@ So a later price change never rewrites history, and every ranking, statistic and
 counts **cups = the sum of `machine_strokes`**, not the number of orders. The one exception
 is the statistics page's distribution by coffee sort, which counts orders (see below).
 
+**With a coffee machine** the order is booked when the machine reports the brew done, not when it is
+asked for. A member's saved coffee of n cups in a row (`MemberSlot.count`) is **n orders**, one per
+cup made, each at the sort's own price and strokes - whatever its strength or water. A cup that wasn't
+made isn't booked. Without a machine the same coffee books its n orders at once.
+
 **A payment** is an amount and a method name ("Cash" or a configured payment method). It is a
 note that someone says they paid - nothing is transferred, and an admin can correct it under
 "Bookings".

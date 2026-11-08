@@ -58,6 +58,7 @@ die [Sicherheitsmechanismen](SECURITY.md), der [DSGVO-konforme Betrieb](PRIVACY.
 | Echtzeituhr | **DS3231**-Modul mit CR2032-Batterie, damit der Pi auch ohne Internet die richtige Uhrzeit hat. Anschluss an I²C-1: VCC→Pin 1, GND→Pin 6, SDA→Pin 3, SCL→Pin 5. CoffeePy prüft es regelmäßig und warnt, wenn es fehlt, nicht antwortet oder die Zeit verloren hat. **Die Batterie alle zwei bis drei Jahre tauschen**, auch ohne Warnung (siehe [Wenn etwas nicht klappt](#8-wenn-etwas-nicht-klappt)). |
 | Karten | Beliebige MIFARE-Karten oder -Schlüsselanhänger (ISO 14443A) – eine pro Mitglied. Viele Firmen- oder Fahrkarten funktionieren auch. |
 | USB-Stick (empfohlen) | Für automatische Backups. Vorzubereiten ist nichts: Du richtest ihn im Dashboard ein (siehe [Backups](#backups)) – dabei wird er gelöscht. |
+| JURA-Kaffeemaschine (optional) | Eine JURA mit **Smart Connect**, verbunden über Bluetooth – getestet mit einer E6. Am Pi reicht ein **USB-Bluetooth-Stick**, er hatte am Testgerät mehr Reichweite als das eingebaute Funkmodul des Pi 3. Ohne Maschine bucht CoffeePy einfach über die Strichliste. Siehe [Kaffeemaschine](#kaffeemaschine). |
 
 ### Was das Gerät braucht
 
@@ -311,6 +312,7 @@ entscheiden muss:
 | Rot, Datenbank-Symbol | **Backups laufen nicht** – der Backup-Stick fehlt, oder das letzte Backup ist fehlgeschlagen. Details im Dashboard unter **Backup**. |
 | Rot, Uhr-Symbol | **Das Uhrenmodul (RTC) ist defekt** – es fehlt, antwortet nicht, oder seine Batterie ist leer –, oder **die Uhr ging falsch und wurde vorgestellt**. Details auf der **Übersicht** im Dashboard. |
 | Bernstein, Klemmbrett | **Eine Aufgabe für den Admin**: Ausgeschiedene Mitglieder sind zum Löschen vorgeschlagen (siehe [Mitglieder](#mitglieder)). Es zeigt keine Namen und verschwindet, sobald alle gelöscht oder behalten sind – oder die Frist auf 0 steht. |
+| Ring mit Maschine | **Die Kaffeemaschine** – nur, wenn eine eingerichtet ist. Die Farbe des Rings zeigt ihren Zustand: bereit, bald ist etwas zu tun, sie braucht erst etwas, oder nicht verbunden. Antippen zeigt die Einzelheiten, siehe [Mit Kaffeemaschine](#mit-kaffeemaschine). |
 
 ![Warnzeichen am Kiosk](pictures/manual/de/kiosk-device-alarm.png)
 
@@ -324,6 +326,21 @@ rote Countdown neben den Knöpfen zeigt, wie lange noch. Ein Tipp auf einen Bere
 ebenfalls ab. **Bezahlen**, **Einstellungen**, **Einkauf** und
 die **Rangliste** springen nach 30 Sekunden ohne Tipp von selbst zurück auf **Bestellen** – so
 findet der Nächste den Kiosk immer bestellbereit vor.
+
+### Datenschutzhinweis
+
+Bevor für jemanden zum ersten Mal etwas gebucht wird, zeigt der Kiosk den Datenschutzhinweis – bei
+einer neuen Karte noch vor der Frage nach dem Namen: **was** erfasst wird (Kartennummer, Name,
+Bestellungen, Zahlungen), **wofür** (nur für die Strichliste, zweckgebunden), **wo** es liegt (nur
+auf diesem Gerät und seinem Backup-Stick) und welche **Rechte** du hast. Der QR-Code führt zur
+genauen Beschreibung der Datenhaltung auf GitHub.
+
+![Datenschutzhinweis](pictures/manual/de/kiosk-privacy.png)
+
+**Verstanden - weiter** bestätigt den Hinweis, danach fragt der Kiosk nicht mehr. **Nein, abmelden**
+meldet ab, und ohne Eingabe passiert das nach 60 Sekunden von selbst. **Ohne Bestätigung lässt sich
+nichts bestellen und nichts buchen** – weder am Kiosk noch am Handy. Wer für die Daten verantwortlich
+ist, trägt der Admin unter [System](#system) ein.
 
 ### Bestellen
 
@@ -361,6 +378,83 @@ Danach ein Dankeschön – je nachdem, wie viele Tassen es heute schon waren, mi
 Animation.
 
 ![Danke](pictures/manual/de/kiosk-thank-you.png)
+
+### Mit Kaffeemaschine
+
+Ist eine JURA verbunden (siehe [Kaffeemaschine](#kaffeemaschine)), führt der Kiosk durch den Bezug,
+und **gebucht wird erst, wenn die Maschine fertig ist**. Nach **Jetzt bestellen** – oder wenn der
+Countdown abläuft – heißt es *Stell deine Tasse unter den Auslauf*, und erst **Start** lässt die
+Maschine loslaufen. Tippst du nicht auf **Start**, geht der Kiosk nach 30 Sekunden zurück: kein
+Kaffee, keine Buchung. **Abbrechen** tut dasselbe sofort.
+
+![Tasse unter den Auslauf](pictures/manual/de/kiosk-cup.png)
+
+Braucht die Maschine vorher etwas – Wasser, leeren Trester, die Schale –, steht es auf diesem
+Bildschirm, und **Start** bleibt gesperrt, bis es erledigt ist. Was bald fällig wäre, empfiehlt er
+nur. Macht die Maschine den Kaffee nicht, sagt der Kiosk warum, und es wird nichts gebucht. Sorten,
+die die Maschine gar nicht macht (Tee, ein Keks – im Dashboard als *ohne die Kaffeemaschine*
+markiert), werden wie immer sofort gebucht.
+
+Auf dem Startbildschirm stehen die **Gratisprodukte**, die der Admin freigegeben hat, zum Beispiel
+heißes Wasser: ohne Karte, ohne Buchung, bis zu fünf Stück. Sind die Tasten der Maschine gesperrt,
+ist das der einzige Weg dorthin.
+
+![Startbildschirm mit Kaffeemaschine](pictures/manual/de/kiosk-wait-machine.png)
+
+Der **Ring** oben rechts zeigt, was die Maschine meldet, die vorhergesagten **Füllstände** und wie
+weit die **Pflege** ist. Hast du Bohnen aufgefüllt, tippe auf **Bohnen nachgefüllt** – Wassertank und
+Trester merkt die Maschine von selbst.
+
+![Zustand der Kaffeemaschine](pictures/manual/de/kiosk-machine-popup.png)
+
+Fehlt während deines Bezugs oder kurz danach Wasser, ist der Trester voll oder sind die Bohnen leer,
+steht das auf deinem Danke-Bildschirm. Wer es dem Nächsten überlässt, taucht nach drei Minuten unter
+**Weggelaufen** auf – wenn der Admin das eingeschaltet hat (siehe [Rangliste](#rangliste)).
+
+### Meine Kaffees
+
+Jedes Mitglied kann sich bis zu **drei eigene Kaffees** speichern: **Einstellungen** antippen, Karte
+auflegen, **Meine Kaffees**. Pro Kaffee stellst du mit ‹ › die Sorte ein und mit − und + **Stärke**,
+**Wasser**, **Temperatur** und **Tassen** – jeweils nur, was die Maschine bei dieser Sorte zulässt
+(beim Kaffee der E6 zum Beispiel Stärke 1 bis 8 und 25 bis 240 ml). **Vorwählen** macht ihn zu dem,
+der beim Bestellen schon ausgewählt ist und nach dem Countdown zur Maschine geht. Am Handy geht das
+genauso (siehe [Handy-Portal](#5-das-handy-portal)).
+
+![Meine Kaffees](pictures/manual/de/kiosk-slots.png)
+
+Beim Bestellen stehen deine Kaffees ganz oben, mit ihren Einstellungen und dem Preis.
+
+![Bestellen mit eigenen Kaffees](pictures/manual/de/kiosk-order-slots.png)
+
+**Tassen** heißt: So viele Bezüge laufen **direkt nacheinander in dieselbe große Tasse oder Kanne**,
+ohne dass du noch etwas tippen musst. Der Bildschirm zählt mit (*Tasse 2 von 2*). Jede Tasse kostet
+den Preis der Sorte – egal wie stark oder wie groß – und wird gebucht, sobald sie fertig ist. Bricht
+die Maschine mittendrin ab, ist Schluss, und gebucht ist nur, was gemacht wurde. Ohne Maschine bucht
+ein Kaffee mit zwei Tassen einfach zwei Bestellungen.
+
+Mit dem Haken *Beim Bestellen nur meine Kaffees zeigen* bleibt die Seite aufgeräumt: Die übrigen
+Sorten liegen dann hinter **Andere Sorten ›**.
+
+### Wenn die Maschine belegt ist
+
+Die Maschine hat einen Auslauf, und bestellt wird am Kiosk und am Handy – deshalb stehen alle in
+**einer Warteschlange**. Wer an der Reihe ist, hat **60 Sekunden** für **Start**, sonst ist der
+Nächste dran; gebucht wird dann nichts.
+
+Der Startbildschirm zeigt den Stand – nur mit Nummern, Namen stehen hier nicht. Die Gratisprodukte
+sind in der Zeit ausgeblendet.
+
+![Startbildschirm mit Warteschlange](pictures/manual/de/kiosk-wait-line.png)
+
+Bestellst du, während jemand anderes dran ist, sagt dir der Bestellbildschirm das schon vorher, und
+**Jetzt bestellen** stellt dich an: Du bekommst eine Nummer und siehst, wie viele vor dir sind.
+**OK** gibt den Kiosk für den Nächsten frei, dein Platz bleibt; **Platz freigeben** gibt ihn auf.
+
+![Du bist angestellt](pictures/manual/de/kiosk-queued.png)
+
+Bist du dran, **leg deine Karte wieder auf** – der Kiosk geht direkt zur Tasse, mit dem, was du
+gewählt hast – oder starte am Handy. Bezahlen, Einstellungen und Sorten ohne Maschine gehen die ganze
+Zeit weiter.
 
 ### Bezahlen
 
@@ -440,7 +534,7 @@ gekauft wurde.
 
 ### Rangliste
 
-Braucht keine Karte. Oben bis zu drei Reiter (welche, entscheidet der Admin, siehe unten), jeder mit eigener Retro-Animation; die Namen stehen im
+Braucht keine Karte. Oben bis zu vier Reiter (welche, entscheidet der Admin, siehe unten), jeder mit eigener Retro-Animation; die Namen stehen im
 Balken darunter. Gezählt werden Tassen – eine Kanne zählt zwei.
 
 - **Gesamt** – das Siegerpodest: die Top 3 seit Beginn, der Erste in der Mitte.
@@ -458,6 +552,9 @@ Balken darunter. Gezählt werden Tassen – eine Kanne zählt zwei.
   Banner, und der Henker steht ohne Arbeit auf dem leeren Schafott.
 
   ![Pranger](pictures/manual/de/kiosk-ranking-pillory.png)
+
+Mit Kaffeemaschine kann der Admin zusätzlich **Weggelaufen** einschalten: wer in diesem Monat Wasser,
+Trester oder Bohnen dem Nächsten überlassen hat – und wer dann eingesprungen ist.
 
 Die Rangliste öffnet immer mit ihrem ersten Reiter.
 
@@ -500,6 +597,34 @@ Seite: **Meine Daten herunterladen** – alles, was das Gerät über dich speich
 das Gerätezertifikat.
 
 ![Portal Start](pictures/manual/de/portal-home.png)
+
+**Kaffee bestellen** – der grüne Knopf auf **Start**, wenn eine Kaffeemaschine eingerichtet ist. Du
+wählst einen deiner Kaffees oder eine Sorte, die die Maschine macht, und tippst **Anstellen**: Du
+stehst dann in derselben [Warteschlange](#wenn-die-maschine-belegt-ist) wie alle am Kiosk. Geh mit
+deiner Tasse zur Maschine – ohne jemanden, der sie hinstellt, läuft nichts.
+
+![Kaffee bestellen am Handy](pictures/manual/de/portal-order.png)
+
+Hier siehst du die Warteschlange **mit Namen**, und wie weit du bist. **Platz freigeben** nimmt dich
+wieder heraus.
+
+![In der Warteschlange](pictures/manual/de/portal-order-line.png)
+
+Bist du dran, hast du 60 Sekunden: Tasse unter den Auslauf, **Start** tippen – oder am Kiosk die
+Karte auflegen. Was die Maschine vorher braucht, steht dabei; danach zählt die Seite die Tassen mit
+und meldet, was gebucht wurde – Tasse für Tasse, wie am Kiosk.
+
+![Du bist dran](pictures/manual/de/portal-order-turn.png)
+
+**Meine Kaffees** (auf **Start**) sind dieselben drei gespeicherten Kaffees wie am Kiosk, siehe
+[Meine Kaffees](#meine-kaffees).
+
+![Meine Kaffees am Handy](pictures/manual/de/portal-coffees.png)
+
+Hat ein Mitglied den [Datenschutzhinweis](#datenschutzhinweis) noch nicht bestätigt, steht auf
+**Start** eine Aufforderung dazu. Bis dahin lässt sich auch am Handy nichts buchen.
+
+![Datenschutzhinweis am Handy](pictures/manual/de/portal-privacy.png)
 
 **Bezahlen** öffnet deine Bezahl-App mit dem offenen Betrag – bei einem GiroCode stehen dort die
 Überweisungsdaten zum Abschreiben –, oder du trägst eine Zahlung ein,
@@ -694,6 +819,37 @@ blendet eine Methode aus, ohne sie zu löschen, *Reihenfolge* legt ihren Platz f
 
 ![Zahlungsmethode hinzufügen](pictures/manual/de/dashboard-payment-method-form.png)
 
+### Kaffeemaschine
+
+Optional und nur für Admins: Eine JURA mit Smart Connect wird über Bluetooth angebunden. Ohne
+Maschine ändert sich nichts, der Kiosk bucht aus der Strichliste.
+
+![Kaffeemaschine](pictures/manual/de/dashboard-device.png)
+
+**Einrichten:** Unter *Verbindung* die Kaffeemaschine und den Bluetooth-Adapter wählen und speichern
+– Bluetooth wird dabei eingeschaltet. Das eingebaute Funkmodul des Pi braucht einmal **Gerät neu
+starten**, ein USB-Stick nicht. Maschine einschalten, die JURA-App auf allen Handys schließen (eine
+verbundene Maschine lässt sich nicht finden), **Nach Maschinen suchen** und **Verbinden**.
+
+**Tasten der Maschine sperren**: Solange CoffeePy verbunden ist, lässt sich nichts an der
+Strichliste vorbei beziehen. Geht die Verbindung verloren, entsperrt sich die Maschine innerhalb
+einer Minute von selbst.
+
+**Produkte und Kaffeesorten** ordnet jedem Produkt der Maschine die Sorte zu, als die es am Kiosk
+verkauft wird; **Als neue Sorte** legt sie an. Eine Sorte, zu der kein Produkt mehr gehört, wird nicht
+mehr angeboten – außer, sie ist unter **Kaffeesorten** als *ohne die Kaffeemaschine* markiert. **Frei**
+macht ein Produkt zum Gratisprodukt am Kiosk (bis zu fünf passen auf den Bildschirm).
+
+**Füllstände** sind vorhergesagt, nicht gemessen: Jeder Bezug zieht sein Wasser, eine Portion Trester
+und seine Bohnen ab. Hier stellst du Tankgröße, Trester-Portionen und Bohnenbehälter ein;
+**Nachgefüllt** setzt einen Füllstand zurück. Verschwindet die Meldung der Maschine – Tank wieder
+drin, Trester geleert –, füllt sich der Stand von selbst auf.
+
+Darunter: **Zähler** und **Pflege** der Maschine, **Gemachte Produkte** mit Verlauf und jedem
+einzelnen Bezug, und **Dem Nächsten überlassen** – welche Meldung während wessen Bezug kam und ob sich
+jemand darum gekümmert hat. Die Reihenfolge am Auslauf steht unter
+[Wenn die Maschine belegt ist](#wenn-die-maschine-belegt-ist).
+
 ### Inventar
 
 Was für alle gekauft wird – Kaffeebohnen, Milch, Kekse –, mit Preis, dazu der Bestand und was eine
@@ -886,6 +1042,10 @@ das Geld einsammelt, bleibt davon unberührt. Siehe
 **Einkäufe und Inventar**: *Aus*, *Nur im Dashboard* oder *Auch für Mitglieder* – was die Stufen
 bedeuten, steht unter [Inventar](#inventar). Ein neues Gerät startet mit *Aus*; der Kiosk folgt mit
 seiner nächsten Abfrage.
+
+**Datenschutzhinweis**: *Verantwortlich für die Daten* steht im
+[Hinweis](#datenschutzhinweis) an Kiosk und Handy – Name und wie man die Person erreicht. Leer heißt
+dort *der Admin dieses Geräts*.
 
 **SSH**: die Fernanmeldung am Betriebssystem des Geräts. Nach der Installation ist sie aus und
 nur nötig, um das [Provisioning-Tool](#das-provisioning-tool) noch einmal laufen zu lassen, oder
@@ -1214,6 +1374,12 @@ Was dabei hilft, ohne Rechtsberatung zu sein:
 - **Jemand fragt, was über ihn gespeichert ist**: Mitglieder laden es im Portal selbst herunter
   (**Meine Daten herunterladen**), Admins mit **Daten exportieren** in seiner Zeile unter
   **Mitglieder**.
+- **Der Datenschutzhinweis ist Pflicht vor der ersten Buchung** (siehe
+  [Datenschutzhinweis](#datenschutzhinweis)): Trag unter **System** ein, wer verantwortlich ist.
+  Ein Mitglied, das ihn noch nicht bestätigt hat, ist unter **Mitglieder** markiert.
+- **Die Warteschlange** zeigt Namen nur auf den Handys der Mitglieder, der Kiosk nur Nummern; ihre
+  Einträge werden einen Tag nach dem Ende gelöscht.
+
 - **Backups** enthalten dieselben Daten – den Stick so verwahren wie die Daten selbst, und seine
   Passphrase getrennt davon.
 - Das Dashboard ist nur mit Anmeldung erreichbar; wer Admin ist, sieht alles. Vergib die
@@ -1241,6 +1407,9 @@ der Kiosk mit dem **DE/EN**-Knopf, Handys und PCs oben rechts im Portal und im D
 | Der Kiosk zeigte kurz „Aw, Snap!“ (oder wurde weiß) und kam dann von selbst wieder. | Der Browser des Kiosks ist beim Laden der Seite abgestürzt – der Browser von Raspberry Pi OS tut das ab und zu, meist direkt nach einem Update oder einer Wiederherstellung. Das Gerät merkt es innerhalb von Sekunden und lädt die Seite neu; dabei geht nichts verloren. |
 | Der Kiosk war kurz schwarz und startete neu. | Das Gerät hat einen hängenden Kiosk oder die App selbst neu gestartet (siehe [Wenn der Kiosk hängt](#wenn-der-kiosk-hängt)); das **Protokoll** sagt, was es war. Passiert das öfter, steht dort, wo es hakt. |
 | *Kartenleser nicht verfügbar* | Kabel des Lesers prüfen und das Gerät neu starten. |
+| Am Kiosk steht die Kaffeemaschine auf *nicht verbunden*. | Unter **Kaffeemaschine** nachsehen: Ist die Maschine an und in Reichweite, und ist keine JURA-App auf einem Handy mit ihr verbunden? Bis dahin bucht der Kiosk aus der Strichliste. |
+| Nach **Jetzt bestellen** kommt kein Tassen-Bildschirm, sondern *Du bist angestellt*. | Die Maschine ist belegt, oder jemand steht vor dir in der Warteschlange. Bist du dran, leg die Karte wieder auf. |
+| *Deine Zeit ist um* | Die 60 Sekunden für **Start** sind abgelaufen, es wurde nichts gebucht. Einfach neu bestellen. |
 | Eine Karte wird nicht erkannt. | Karte flach und ruhig auflegen; eine Karte, die als ausgeschieden markiert ist, wird abgewiesen. |
 | Rotes **Datenbank**-Zeichen am Kiosk | Backups laufen nicht: den Backup-Stick wieder einstecken, oder im Dashboard unter **Backup** nach dem Fehler sehen. |
 | Rotes **Uhr**-Zeichen am Kiosk, oder die Uhrzeit stimmt nicht | Steht auf der Übersicht eine Zeile *Uhrzeit – korrigiert*, ging die Uhr zurück und wurde vorgestellt: unter **Systemzeit** prüfen und stellen oder bestätigen. Sonst sagt die Zeile *Uhrenmodul (RTC)*, warum. *Nicht gefunden* / *Antwortet nicht*: Modul und Verkabelung prüfen. *Hatte die Uhrzeit verloren*: Batterie (CR2032) tauschen, dann unter **Systemzeit** die Zeit korrigieren – das Zeichen verschwindet, sobald das Modul die Zeit über einen Neustart gehalten hat. |

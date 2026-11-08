@@ -16,9 +16,24 @@ start screen is **Order**.
 
 With many sorts, yours come first under **For you**, the rest is behind **More sorts ›**. A jug counts as two cups.
 
+## With a coffee machine connected
+
+After **Order now** you put your cup under the outlet and tap **Start** – it is booked only once the
+machine is done. Without **Start** nothing happens, and nothing is booked. If the screen says what the
+machine needs (water, grounds ...): please see to it, then it goes on. Hot water and the like are free
+and need no card, right on the start screen.
+
+**Machine taken?** **Order now** puts you in line and gives you a number. When the kiosk shows your
+number, tap your card again – there isn't long, then it is the next one's turn. **Give up my place**
+takes you out again.
+
+**Your coffee the way you like it:** under **Settings** → **My coffees** you save the sort, strength,
+water, temperature and several cups in a row into one jug. Each cup costs the sort's price.
+
 ## The first time
 
-Hold your card to the reader on **Order**. The kiosk asks for your **name** – first name and
+Hold your card to the reader on **Order**. First comes the **privacy notice** – nothing can be booked
+without **Understood - go on**. Then the kiosk asks for your **name** – first name and
 the first letter of your last name, e.g. *Anna B.*, or a short code like *AB* – and your
 **favourite coffee**. **Save**, and you go straight on to your order. Any card with an NFC chip
 works, often your company or transit card too.
@@ -41,7 +56,8 @@ it's under **Purchase**.
 Tap **Settings**, hold up your card: change your name or favourite coffee, **Save**. There,
 **Link this phone** connects your phone – scan the QR code with its camera yourself (a WiFi code
 next to it first). With no app and no password it then shows your balance, bookings and stats,
-takes payments and spare cards, and **Download my data** gives you everything the device stores
+takes payments and spare cards, gets you in line at the machine with **Order a coffee** (if one is
+connected), and **Download my data** gives you everything the device stores
 about you.
 
 ## When something goes wrong

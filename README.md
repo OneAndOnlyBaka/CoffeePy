@@ -5,7 +5,7 @@
 **The tally sheet next to your office coffee machine - as a touchscreen that knows everyone by
 their card.**
 
-Tap your card, take your coffee, done. CoffeePy keeps count of who drank what, who paid, and
+Tap your card, take your coffee, done - and with a JURA connected, CoffeePy brews it too. It keeps count of who drank what, who paid, and
 who still owes - so nobody has to keep a paper list, chase colleagues or do the maths at the end
 of the month. It runs on a Raspberry Pi in a small 3D-printed housing next to the machine,
 works completely offline, and everyone checks their own balance on their phone.
@@ -18,6 +18,14 @@ works completely offline, and everyone checks their own balance on their phone.
   <tr>
     <td align="center"><em>Tap your card - your favourite is already selected</em></td>
     <td align="center"><em>An optional podium for the office's most loyal drinkers</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/pictures/manual/en/kiosk-slots.png" alt="Saving your own coffees on the kiosk"></td>
+    <td><img src="docs/pictures/manual/en/kiosk-cup.png" alt="The kiosk asking for the cup before the JURA starts"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>With a JURA: your strength, your water, your two cups in a row - saved on your card</em></td>
+    <td align="center"><em>Booked only once the machine has actually made it</em></td>
   </tr>
   <tr>
     <td><img src="docs/pictures/manual/en/dashboard-statistics.png" alt="Statistics in the dashboard"></td>
@@ -71,6 +79,27 @@ works completely offline, and everyone checks their own balance on their phone.
   nothing to do. Peer pressure, but the friendly kind - and like the podium, it is off by default:
   a workplace decision, not a software one.
 
+### Plugged into your JURA
+Optional, over Bluetooth, tested on an E6 with Smart Connect - and without a machine everything simply
+works from the tally.
+
+- **Your card brews your coffee.** Tap, put your cup under, press Start. The machine does the rest, and
+  the cup is booked when it is really in your hand - a brew that fails costs nobody anything.
+- **Three coffees of your own.** Strength, water, temperature, each within what the machine allows for
+  that sort, saved per person, at the kiosk or on your phone. Hide everything else and the order
+  screen is just *your* coffees.
+- **Two cups in a row, one tap.** Pick a number and the machine runs that many into one big cup or jug,
+  waiting by itself until it is ready for the next - and books them cup by cup.
+- **Order from your phone, and no more elbows at the machine.** Kiosk and phones share one line: you see
+  who is ahead of you, get called when it's your turn and start it from where you stand. The kiosk's
+  screen shows numbers only; names stay on the members' phones.
+- **Nothing brewed past the tally.** Lock the machine's own keys while CoffeePy is connected. Hot water
+  and milk foam stay free, one tap on the start screen, no card.
+- **It knows what's left.** Water, grounds and beans are predicted brew by brew, what wants doing soon
+  shows up before you start - and whoever leaves an empty tank for the next one can, if you switch it
+  on, find their name on the *Ran off* board. Whoever steps in gets the credit.
+- **The machine's own numbers in the dashboard:** counters, maintenance, every single brew.
+
 ### Beans, milk and what a cup really costs
 - **Settle up in kind.** Whoever buys beans, milk or cookies for everyone books it at the kiosk
   or on their phone, and the price is credited to their balance - no cash changes hands, no
@@ -115,7 +144,8 @@ works completely offline, and everyone checks their own balance on their phone.
 ## What you need
 
 A Raspberry Pi 3 or newer with 1 GB RAM, a 1024×600 touchscreen, an ACR122U NFC reader, a
-DS3231 clock module and, recommended, a USB stick for backups - the
+DS3231 clock module and, recommended, a USB stick for backups. A JURA with Smart Connect and a USB
+Bluetooth stick are optional - the
 [manual](docs/MANUAL.en.md#1-what-you-need) has the full list with what the device actually
 uses. The housing is printable:
 
