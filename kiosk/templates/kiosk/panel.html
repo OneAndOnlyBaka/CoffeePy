@@ -266,7 +266,7 @@ scrolled list crashed Chromium, CLAUDE.md); the same bytes on every poll until i
                 </div>
             </fieldset>
         </div>
-        <div class="action-row panel-footer">
+        <div class="action-row panel-footer crowded">
             <button type="button" class="btn secondary" title="{% translate "Link this phone" %}"
                     hx-get="{% url 'kiosk:link_phone_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
                     hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/phone.svg" %} {% translate "Link this phone" %}</button>

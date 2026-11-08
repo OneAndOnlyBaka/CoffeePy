@@ -135,3 +135,6 @@ body.portal { user-select: auto; font-size: 16px; }
 .turn-called { outline: 3px solid var(--success); }
 .turn-left, .turn-number { font-weight: 600; }
 .turn-line { margin: 4px 0 0; padding-left: 22px; }
+
+/* The privacy notice's link to docs/PRIVACY.md: one long word to a phone, it ran out of the card. */
+.privacy-url { overflow-wrap: anywhere; }

@@ -263,6 +263,10 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 .action-row button, .action-row .btn { min-height: 72px; font-size: 1.1rem; padding: 12px 20px; white-space: nowrap; }
 
 .countdown { color: var(--danger); font-weight: 600; font-size: 1rem; white-space: nowrap; }
+/* Three buttons and the countdown (Settings): in German they don't fit one line of text each - the buttons
+   keep their width, tighter, and the countdown takes two lines. Shrinking buttons overran their own labels. */
+.action-row.crowded button, .action-row.crowded .btn { flex: 0 0 auto; padding-left: 14px; padding-right: 14px; }
+.action-row.crowded .countdown { flex: 0 1 auto; min-width: 0; white-space: normal; text-align: center; }
 
 .field {
   display: flex;

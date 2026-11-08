@@ -284,7 +284,14 @@ MACHINE_SHOTS = ("kiosk-wait-machine", "kiosk-machine-popup", "kiosk-order-slots
 
 def kiosk_machine(b):
     """The coffee machine's screens - needs one connected (or the bridge's simulator) and nobody at the kiosk."""
-    django("machine")
+    django("machine", "on")
+    try:
+        kiosk_machine_screens(b)
+    finally:
+        django("machine", "off")
+
+
+def kiosk_machine_screens(b):
     b.click("a.nav-btn[data-mode=order]")
     b.wait_state("wait_for_card")
     b.wait("document.querySelector('.free-btn')")
@@ -505,7 +512,14 @@ def portal_privacy(b):
 
 def portal_order(b):
     """Anna with her "my coffees" (demo_data.py machine): the choice, in line behind Ben, then her turn."""
-    django("machine")
+    django("machine", "on")
+    try:
+        portal_order_pages(b)
+    finally:
+        django("machine", "off")
+
+
+def portal_order_pages(b):
     portal_login(b, "Anna B.")
     b.go("/portal/coffees/")
     b.shot("portal-coffees")

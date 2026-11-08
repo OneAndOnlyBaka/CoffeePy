@@ -30,7 +30,7 @@ from decimal import Decimal
 from django.utils import timezone
 
 from coffee import privacy, services
-from coffee.models import CoffeeSort, InventoryItem, MachineProduct, MachineTurn, Member, NfcScan, Order, Payment, PaymentMethod, Purchase, StockCount
+from coffee.models import CoffeeSort, InventoryItem, MachineProduct, MachineTurn, Member, MemberSlot, NfcScan, Order, Payment, PaymentMethod, Purchase, StockCount
 from dashboard.models import InventoryPolicy
 
 MEMBERS = ["Anna", "Ben", "Clara", "David", "Emma", "Felix"]
@@ -150,6 +150,12 @@ def inventory_off():
     InventoryPolicy.objects.filter(pk=InventoryPolicy.current().pk).update(mode=InventoryPolicy.MODE_OFF)
 
 
+def machine_off():
+    """Anna without her coffees again: the next language's plain order screen mustn't show them."""
+    MemberSlot.objects.filter(member__uid=uid(0)).delete()
+    Member.objects.filter(uid=uid(0)).update(favourite_slot=None)
+
+
 def machine_on():
     """Anna's "my coffees", and the demo's Cappuccino sold as the machine's - for the machine's shots."""
     from coffee import slots  # noqa: PLC0415
@@ -214,6 +220,6 @@ def cleanup():
 
 
 args = os.environ.get("SCRIPT_ARGS", "").split()
-{"seed": lambda: seed(), "scan": lambda: scan(args[1]), "cleanup": lambda: cleanup(), "machine": lambda: machine_on(),
+{"seed": lambda: seed(), "scan": lambda: scan(args[1]), "cleanup": lambda: cleanup(), "machine": lambda: machine_on() if args[1] == "on" else machine_off(),
  "line": lambda: line(args[1]), "privacy": lambda: privacy_open(args[1], args[2] == "yes"),
  "inventory": lambda: inventory_on() if args[1] == "on" else inventory_off()}[args[0]]()
