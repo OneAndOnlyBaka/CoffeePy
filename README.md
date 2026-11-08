@@ -201,4 +201,18 @@ The kiosk's nav icons (`static/kiosk/img/nav/`) and its "apply your card" animat
 `scripts/make_wait_gifs.py` - change them there and re-run. V1's photographic nav icons
 from [iconarchive.com](https://iconarchive.com/) were replaced to match the flat design.
 
+The JURA connection stands on other people's work:
+
+- **[py-jura](https://github.com/g4bri3lDev/py-jura)** by g4bri3lDev (Apache-2.0) provides the JURA
+  cipher, the Bluetooth UUIDs, the command builders and the machine definitions - the recipes behind
+  "My coffees" come from there. It is used as a library, and installed from PyPI.
+- **[Jutta-Proto](https://github.com/Jutta-Proto)**, in particular
+  [protocol-bt-cpp](https://github.com/Jutta-Proto/protocol-bt-cpp) (GPL-3.0), reverse-engineered the
+  protocol that py-jura builds on, and its documentation helped us make sense of what the E6 sent. None
+  of its code is part of CoffeePy.
+- **[bleak](https://github.com/hbldh/bleak)** does the Bluetooth itself.
+
+CoffeePy is an independent project, not affiliated with or endorsed by JURA; JURA is a trademark of
+its owner.
+
 MIT licensed - see [LICENSE](LICENSE).

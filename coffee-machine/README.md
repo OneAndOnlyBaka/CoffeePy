@@ -92,3 +92,11 @@ do at the machine (water, grounds, drip tray, beans, error, keys locked), sensor
 product and the maintenance due, and the brewing phase. `availability` is `<prefix>/status`.
 In CoffeePy's stack the broker is internal; for Home Assistant on another host either point this
 bridge at Home Assistant's broker or bridge the two mosquittos.
+
+## Credits
+
+[py-jura](https://github.com/g4bri3lDev/py-jura) by g4bri3lDev (Apache-2.0) is what this bridge uses for
+the cipher, UUIDs, command builders and machine definitions. Its protocol work is based on the reverse
+engineering by [Jutta-Proto](https://github.com/Jutta-Proto), in particular
+[protocol-bt-cpp](https://github.com/Jutta-Proto/protocol-bt-cpp) (GPL-3.0), whose documentation was also
+a reference here; none of its code is included. The frame layouts in `codec.py` were measured on an E6.
