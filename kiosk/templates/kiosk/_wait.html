@@ -50,10 +50,10 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
     {% if line %}
     {% comment %}The line for the machine (coffee/turns.py) - numbers, no names: a screen at a workplace.
     Whoever's number it is taps their card. Changes only when the line moves.{% endcomment %}
-    <p class="line-banner">{% include "icons/cup.svg" %}
+    <p class="line-banner">{% include "icons/cup.svg" %}<span>
         {% if line.number and line.brewing %}{% if line.phone %}{% blocktranslate trimmed with number=line.number %}The machine is in use from a phone (No. {{ number }}){% endblocktranslate %}{% else %}{% blocktranslate trimmed with number=line.number %}The machine is in use (No. {{ number }}){% endblocktranslate %}{% endif %}{% elif line.number %}{% blocktranslate trimmed with number=line.number %}<b>No. {{ number }}</b>, it's your turn - tap your card{% endblocktranslate %}{% endif %}
         {% if line.waiting %}{% if line.number %}&middot; {% endif %}{% blocktranslate trimmed with n=line.waiting %}waiting: {{ n }}{% endblocktranslate %}{% endif %}
-    </p>
+    </span></p>
     {% endif %}
     {% if free_products %}
     {% comment %}No card needed: what the machine makes for free (hot water) - with its keys locked

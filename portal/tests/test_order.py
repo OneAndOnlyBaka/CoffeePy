@@ -64,6 +64,8 @@ class PortalOrderTestCase(TestCase):
         page = self.post(action="join", choice=f"slot:{slot.position}")
         self.assertContains(page, "It's your turn!")
         self.assertContains(page, "s left to start")
+        turns.join(self.anna, self.kaffee, None, MachineTurn.SOURCE_KIOSK)
+        self.assertContains(self.client.get(reverse("portal:order_status")), "Waiting after you: Anna X.")
         page = self.post(action="start")
         command = self.send.call_args.args[1]
         self.assertEqual((command["source"], command["options"], len(command["request_ids"])),

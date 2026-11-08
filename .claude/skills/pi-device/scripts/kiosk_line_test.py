@@ -1,6 +1,6 @@
 """kiosk-line-test.sh runs this on the Pi: the line for the machine (coffee/turns.py) with the kiosk driven by real touches and a
 phone (the portal over HTTPS, like a member's browser) at the same time - against the bridge's simulator."""
-import http.cookiejar, json, re, ssl, subprocess, sys, time, urllib.parse, urllib.request
+import json, re, ssl, subprocess, sys, time, urllib.parse, urllib.request
 sys.path.insert(0, "/tmp")
 import wd
 CARD, P, Q = "11223344", 0x44332211, 0x55667788
@@ -14,19 +14,22 @@ def sql(q):
                            f'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "{q}"'],
                           cwd="/opt/coffeepy", capture_output=True, text=True).stdout.strip()
 
-# --- the phone
-jar = http.cookiejar.CookieJar()
+# --- the phone (cookies by hand: http.cookiejar refuses them for a plain "localhost")
 ctx = ssl.create_default_context(cafile="/opt/coffeepy/data/tls/ca.crt")
-opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx), urllib.request.HTTPCookieProcessor(jar))
-cookie = f"sessionid={SESSION}; django_language=de"
+opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx))
+cookies = {"sessionid": SESSION, "django_language": "de"}
 def phone(path, data=None):
-    headers = {"Cookie": cookie + "".join(f"; {c.name}={c.value}" for c in jar if c.name == "csrftoken")}
     if data is not None:
-        page = phone("/portal/order/")
-        data = {"csrfmiddlewaretoken": re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', page).group(1), **data}
+        page_ = phone("/portal/order/")
+        data = {"csrfmiddlewaretoken": re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', page_).group(1), **data}
+    headers = {"Cookie": "; ".join(f"{k}={v}" for k, v in cookies.items())}
+    if data is not None:
         headers.update({"Origin": BASE, "Referer": BASE + "/portal/order/"})
     req = urllib.request.Request(BASE + path, data=urllib.parse.urlencode(data).encode() if data else None, headers=headers)
     with opener.open(req, timeout=20) as r:
+        for header in r.headers.get_all("Set-Cookie") or []:
+            name, _, rest = header.partition("=")
+            cookies[name.strip()] = rest.split(";")[0]
         return r.read().decode()
 
 page = wd.Page()

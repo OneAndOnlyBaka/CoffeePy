@@ -373,6 +373,8 @@ def _turn_context(member):
            "waiting": [t for t in line if t.state == MachineTurn.WAITING]}
     if turn is not None:
         ctx["ahead"] = turns.ahead(turn, line)
+        # Called or brewing: who waits after them - a reason not to take all of the minute.
+        ctx["behind"] = [t for t in line if t.state == MachineTurn.WAITING and t.pk != turn.pk] if turn.state != MachineTurn.WAITING else []
         product = machine.product_for(turn.coffee_sort)
         water = (turn.options or {}).get("water_ml")
         state = machine.status()

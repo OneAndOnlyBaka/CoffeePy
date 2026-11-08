@@ -550,6 +550,8 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 .line-banner { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 10px 0 0;
     font-size: 1.15rem; padding: 6px 14px; border-radius: var(--radius); background: #fdf1dc; color: #7a4a00; }
 .line-banner .icon { width: 26px; height: 26px; }
+/* The kiosk's font turns "Nr." into a "№" ligature (and leaves a gap after it) - the number reads plainer without. */
+.line-banner, .stage-queued h2 { font-variant-ligatures: none; font-feature-settings: "liga" 0, "dlig" 0, "calt" 0; }
 .line-note { margin: 0 0 6px; }
 .free-products { display: flex; justify-content: center; gap: 16px; margin-top: 14px; }
 .free-btn { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 6px 24px 6px 18px;

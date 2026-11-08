@@ -27,7 +27,11 @@ Here, on the member's own phone, the line has names; the kiosk's screen shows nu
     <p class="msg warning">{% translate "Right after, please:" %}</p>
     <ul>{% for task in tasks %}<li>{{ task }}</li>{% endfor %}</ul>
     {% endif %}
-    {% else %}
+    {% endif %}
+    {% if behind %}
+    <p class="muted">{% translate "Waiting after you:" %} {% for other in behind %}{{ other.member.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    {% endif %}
+    {% if turn.state == "waiting" %}
     <h2>{% blocktranslate trimmed with number=turn.number %}You are in line - No. {{ number }}{% endblocktranslate %}</h2>
     <p>{% blocktranslate trimmed with sort=turn.coffee_sort.name count=turn.count %}{{ count }} × {{ sort }}{% endblocktranslate %}</p>
     {% if ahead %}
