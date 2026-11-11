@@ -176,7 +176,7 @@ services:
   # one place /kiosk/ is served). The Caddyfile and certificates are written by the app
   # (dashboard/tls.py); --watch picks up a changed certificate without a restart.
   caddy:
-    image: caddy:2.11.7-alpine
+    image: caddy:2.11.9-alpine
     restart: unless-stopped
     command: ["caddy", "run", "--config", "/tls/Caddyfile", "--adapter", "caddyfile", "--watch"]
     depends_on:
