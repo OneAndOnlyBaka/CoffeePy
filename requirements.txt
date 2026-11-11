@@ -1,4 +1,4 @@
-Django>=5.2.18,<6.0
+Django>=5.2.19,<6.0
 # psycopg's binary build ships no armv7 wheel, and a 1GB Pi 3B runs the 32-bit OS - pip
 # would fall back to compiling it against libpq there. The pure-Python
 # implementation talks to the same libpq through ctypes (libpq5 arrives with
@@ -6,7 +6,7 @@ Django>=5.2.18,<6.0
 psycopg[binary]>=3.1,<4; platform_machine != "armv7l"
 psycopg>=3.1,<4; platform_machine == "armv7l"
 gunicorn>=26.2.0
-paho-mqtt>=2.1.0,<3
+paho-mqtt>=2.2.0,<3
 whitenoise>=6.12.0
 qrcode>=8.2,<9
 # No armv7 wheel either, but there is no pure-Python psutil - it is compiled in the
