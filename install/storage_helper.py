@@ -31,6 +31,7 @@ Python's standard library only: it runs on the plain Raspberry Pi OS python3.
 """
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -70,6 +71,12 @@ BT_OVERLAY = "dtoverlay=disable-bt"
 BOOT_CONFIG = Path(os.environ.get("COFFEEPY_BOOT_CONFIG", "/boot/firmware/config.txt"))
 SYS_BLUETOOTH = Path(os.environ.get("COFFEEPY_SYS_BLUETOOTH", "/sys/class/bluetooth"))
 bluetooth = {}
+# The Pi 3's own radio - one chip with the WiFi, which runs the access point - stuck on 2026-11-23, twice in an
+# afternoon: commands to it timing out, once caught scanning. Nothing in BlueZ or the bridge's container got it
+# back; binding its UART driver again did (the firmware is loaded afresh). The kernel says when it is stuck.
+SYS_SERIAL_BT = Path(os.environ.get("COFFEEPY_SYS_SERIAL_BT", "/sys/bus/serial/drivers/hci_uart_bcm"))
+BT_STUCK = re.compile(r"hci\d+: (.*tx timeout|Opcode 0x[0-9a-f]+ failed: -110|Unable to disable scanning)")
+BT_RESET_SECONDS = 600  # at most one reset in this time: a chip that stays stuck isn't reset every cycle
 
 
 def log(message):
@@ -372,6 +379,35 @@ def set_overlay(present):
     return True
 
 
+def kernel_log(since):
+    """The kernel's messages since a Unix time, one per line."""
+    result = subprocess.run(("journalctl", "-k", "-o", "cat", "--no-pager", "--since", f"@{int(since)}"),
+                            capture_output=True, text=True)
+    return result.stdout if result.returncode == 0 else ""
+
+
+def watch_onboard_bluetooth(now=None):
+    """The Pi's own Bluetooth stuck (BT_STUCK in the kernel log since the last look): its driver bound again."""
+    now = now or time.time()
+    since, bluetooth["watched"] = bluetooth.get("watched", now), now
+    wanted = bluetooth_wanted()
+    if not (wanted["enabled"] and wanted["onboard"]) or now - bluetooth.get("reset_at", 0) < BT_RESET_SECONDS:
+        return False
+    stuck = next((line for line in kernel_log(since).splitlines() if BT_STUCK.search(line)), None)
+    devices = sorted(SYS_SERIAL_BT.glob("serial*")) if stuck else []
+    if not devices:
+        return False
+    for device in devices:
+        (SYS_SERIAL_BT / "unbind").write_text(device.name)
+        time.sleep(3)
+        (SYS_SERIAL_BT / "bind").write_text(device.name)
+    bluetooth["reset_at"] = now
+    bluetooth["resets"] = bluetooth.get("resets", 0) + 1
+    log(f"onboard Bluetooth stuck ({stuck.strip()}) - driver bound again")
+    event("bluetooth.reset", details=stuck.strip()[:200])
+    return True
+
+
 def bluetooth_state():
     wanted = bluetooth_wanted()
     result = subprocess.run(("systemctl", "is-active", BT_UNIT), capture_output=True, text=True)
@@ -382,6 +418,7 @@ def bluetooth_state():
         "adapters": adapters,
         # The Pi's radio asked for, the firmware line gone, and still no adapter: the restart is due.
         "restart_needed": wanted["enabled"] and wanted["onboard"] and not overlay_set() and not adapters,
+        "resets": bluetooth.get("resets", 0),
         "checked": time.time(),
     }
 
@@ -593,6 +630,7 @@ def cycle(last):
     if time.time() - ssh.get("checked", 0) >= SSH_SECONDS:
         ssh.update(ssh_state())
     if time.time() - bluetooth.get("checked", 0) >= SSH_SECONDS:
+        watch_onboard_bluetooth()
         bluetooth.update(bluetooth_state())
     handle_requests(disks, mount_table, our_id, last)
     if last.get("state") == "done":

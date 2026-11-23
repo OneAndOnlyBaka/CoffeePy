@@ -106,12 +106,19 @@ def needs_lock(block_manual: bool, alert_keys, last_sent: float, now: float) -> 
 
 
 # n brews of one recipe in a row, into one big cup or a jug (CoffeePy's "my coffees" slots): the
-# next starts once the machine is idle again and says so. The E6 reported "coffee_ready" ~9 s after a
-# product ended (2026-11-06); a model that never says it gets the next one after READY_FALLBACK.
+# next starts once the machine is at rest again and says so. The E6 reported "coffee_ready" 9 s after a
+# product ended once (2026-11-06), 29-30 s in a row later (2026-11-23); a model that never says it gets
+# the next one after READY_FALLBACK.
 READY_PAUSE = 5.0
 READY_FALLBACK = 30.0
 # Idle and still not ready, or blocked, for this long: the rest of the chain is given up.
 READY_TIMEOUT = 120.0
+
+
+def at_rest(phase: str) -> bool:
+    """Nothing being made: idle - or "done", where the E6 stays after a product until the next command
+    (measured 2026-11-23: a chain waiting for "idle" never started its second cup)."""
+    return phase in ("idle", "done")
 
 
 class BrewChain:

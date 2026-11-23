@@ -30,6 +30,14 @@ log = logging.getLogger("coffee-machine.jura")
 HEARTBEAT_SECONDS = 9  # py-jura's; without it the BlueFrog drops the connection
 SCAN_ATTEMPTS = 4  # each up to SCAN_SECONDS: one advertisement in a few lacks the key
 SCAN_SECONDS = 10
+# After this many failed connects in a row, the machine is removed from BlueZ and found afresh. Measured
+# 2026-11-23 on a Pi 3's own Bluetooth: after a garbled read the link died, BlueZ kept saying "connected", and
+# every connect failed with "Not connected" for 12 minutes - until the device was removed by hand.
+# (bleak-retry-connector's close_stale_connections_by_address before every connect was tried too: it tore
+# the new connection down 2-3 s after it came up, every time - bluetoothd "No matching connection".)
+FORGET_AFTER = 3
+READ_TIMEOUT = 10.0  # one GATT read or D-Bus call; nothing here may wait for ever (bridge.CONNECT_TIMEOUT)
+_failed_connects = 0  # module-level: every session makes a new JuraBle
 STATS_TIMEOUT = 10.0
 
 
@@ -94,12 +102,33 @@ class JuraBle:
         self.lost = asyncio.Event()
         self._heartbeat = None
         self._lock = asyncio.Lock()  # one GATT exchange at a time: the statistics take several
+        # The last frames that decoded soundly (codec.sound) - what a garbled read is answered with.
+        self._progress = {"state": 0, "phase": "idle", "product": 0}
+        self._alerts = []
+        self._status_hex = ""
+        self._frames = {}  # uuid: the last frame believed
 
     # --- connection -------------------------------------------------------------------------
     async def connect(self):
+        global _failed_connects
+        try:
+            await self._connect(found := {})
+        except NotConnected:
+            raise  # not found, or no key: switched off or asleep - the normal case at night, nothing to repair
+        except Exception:
+            if found.get("device") is not None:  # there, and still no connection: BlueZ is stuck on it
+                _failed_connects += 1
+                if _failed_connects >= FORGET_AFTER:
+                    _failed_connects = 0
+                    await forget(found["device"])
+            raise
+        _failed_connects = 0
+
+    async def _connect(self, found):
         device, data = None, None
         for _ in range(SCAN_ATTEMPTS):
             device, data = await self._find()
+            found["device"] = device or found.get("device")
             if device is not None and data is not None:
                 break
         if device is None:
@@ -162,26 +191,47 @@ class JuraBle:
     async def _read(self, uuid) -> bytes:
         if not self.connected:
             raise NotConnected("not connected")
-        return encdec(bytes(await self.client.read_gatt_char(uuid)), self.key)
+        return encdec(bytes(await asyncio.wait_for(self.client.read_gatt_char(uuid), READ_TIMEOUT)), self.key)
 
     async def _write(self, uuid, data, response=True):
         await self.client.write_gatt_char(uuid, data, response=response)
 
     async def about(self) -> dict:
-        raw = bytes(await self.client.read_gatt_char(ABOUT_MACHINE_UUID))  # plain text, not encoded
+        raw = bytes(await asyncio.wait_for(self.client.read_gatt_char(ABOUT_MACHINE_UUID), READ_TIMEOUT))  # plain text
         text = lambda b: b.replace(b"\x00", b"").decode("ascii", "replace").strip()  # noqa: E731
         return {"bluefrog": text(raw[27:35]), "firmware": text(raw[35:51])}
 
-    async def progress(self) -> dict:
+    async def _believed(self, uuid, name) -> bytes | None:
+        """A frame read and - if it changed - read again to confirm it (codec.confirmed); None if not."""
         async with self._lock:
-            return codec.progress(await self._read(PRODUCT_PROGRESS_UUID))
+            first = await self._read(uuid)
+            previous = self._frames.get(uuid)
+            second = None if first == previous else await self._read(uuid)
+        frame = codec.confirmed(previous, first, second) if codec.sound(first, self.key) else None
+        if frame is None:
+            log.warning("%s frame not believed: %s, then %s", name, first.hex(), second.hex() if second else "-")
+            return None
+        self._frames[uuid] = frame
+        return frame
+
+    async def progress(self) -> dict:
+        frame = await self._believed(PRODUCT_PROGRESS_UUID, "progress")
+        if frame is not None:
+            self._progress = codec.progress(frame)
+        return self._progress
 
     async def alerts(self) -> list[dict]:
-        async with self._lock:
-            bits = codec.alert_bits(await self._read(MACHINE_STATUS_UUID))
+        frame = await self._believed(MACHINE_STATUS_UUID, "status")
+        if frame is None:
+            return self._alerts
+        if frame.hex() != self._status_hex:  # rare, and what the next unknown bit is found from
+            self._status_hex = frame.hex()
+            log.info("status frame %s", self._status_hex)
         known = self.definition.alerts if self.definition else {}
-        return [{"bit": b, "key": known[b].key if b in known else f"bit_{b}",
-                 "blocking": bool(known[b].blocking) if b in known else False} for b in bits]
+        self._alerts = [{"bit": b, "key": known[b].key if b in known else f"bit_{b}",
+                         "blocking": bool(known[b].blocking) if b in known else False}
+                        for b in codec.alert_bits(frame)]
+        return self._alerts
 
     async def _stats(self, mode) -> bytes:
         async with self._lock:
@@ -257,3 +307,27 @@ class JuraBle:
     async def lock(self, locked: bool):
         async with self._lock:
             await self._write(BARISTA_MODE_UUID, (build_lock_command if locked else build_unlock_command)(self.key))
+
+
+
+
+async def forget(device):
+    """Removes the machine from BlueZ (Adapter1.RemoveDevice, what `bluetoothctl remove` does): a link BlueZ
+    still holds for connected goes with it, and the next scan finds the machine as new. Only for a machine that
+    is there - one switched off is simply looked for again. (Switching the adapter off and on as well was tried
+    on 2026-11-23: on a Pi 3's own Bluetooth the "on" failed once and left the chip hanging until its driver was
+    bound again by hand.)"""
+    from dbus_fast import BusType, Message  # noqa: PLC0415 - bleak's own D-Bus library, Linux only
+    from dbus_fast.aio import MessageBus  # noqa: PLC0415
+
+    path = (getattr(device, "details", None) or {}).get("path") or ""
+    if "/dev_" not in path:
+        return
+    bus = await asyncio.wait_for(MessageBus(bus_type=BusType.SYSTEM).connect(), READ_TIMEOUT)
+    try:
+        reply = await asyncio.wait_for(bus.call(Message(
+            destination="org.bluez", path=path.rsplit("/", 1)[0], interface="org.bluez.Adapter1",
+            member="RemoveDevice", signature="o", body=[path])), READ_TIMEOUT)
+        log.warning("removed %s from BlueZ after %s failed connects: %s", path, FORGET_AFTER, reply.message_type.name)
+    finally:
+        bus.disconnect()

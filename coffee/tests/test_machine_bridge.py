@@ -55,6 +55,22 @@ class CodecTestCase(SimpleTestCase):
         self.assertTrue(codec.is_active(codec.STATE_DISPENSING))
         self.assertFalse(codec.is_active(codec.STATE_DONE))
 
+    def test_a_frame_for_another_key_is_not_believed(self):
+        self.assertTrue(codec.sound(H(MANUAL[0]), 0x2A))
+        self.assertTrue(codec.sound(H(APP_STARTING), 0x0A))
+        self.assertFalse(codec.sound(H(APP_STARTING), 0x2A))
+        self.assertFalse(codec.sound(b"\x2a", 0x2A))
+
+    def test_a_garbled_frame_needs_a_second_read(self):
+        """The two status frames the E6 sent through a Pi 3's own Bluetooth on 2026-11-23, 1.5 s apart."""
+        good, garbled = H("2a000400000d0000000000000000000000000006"), H("2a000400000ddcde8026f318a4abfaa8d258a763")
+        self.assertTrue(codec.sound(garbled, 0x2A))  # the key byte survived - not enough on its own
+        self.assertIsNone(codec.confirmed(good, garbled, good))
+        self.assertEqual(codec.confirmed(good, good, None), good)  # unchanged: no second read needed
+        changed = H("2a000400000c0000000000000000000000000006")
+        self.assertEqual(codec.confirmed(good, changed, changed), changed)
+        self.assertEqual(codec.confirmed(None, good, good), good)  # the first frame of a session
+
     def test_counters(self):
         counted = codec.counters(H(COUNTERS))
         self.assertEqual(counted["total"], 4214)
@@ -166,6 +182,16 @@ class BrewChainTestCase(SimpleTestCase):
         self.assertEqual(chain.step([], False, True, True, False, 90), [])
         self.assertTrue(chain.over)
 
+    def test_the_e6_stays_done_between_the_cups(self):
+        """What the E6 sent on 2026-11-23: after cup 1 the phase stays "done" (never "idle") until the
+        next command, and "coffee_ready" comes back 30 s later - that is when cup 2 has to start."""
+        chain = self.chain(2)
+        at_rest = policy.at_rest("done")
+        self.assertEqual(chain.step(self.done("r1"), False, at_rest, False, False, 0), [])
+        self.assertEqual(chain.step([], False, at_rest, False, False, 20), [])
+        self.assertEqual(chain.step([], False, at_rest, True, False, 30), [("start", "r2")])
+        self.assertFalse(policy.at_rest("dispensing"))
+
     def test_a_failed_cup_ends_the_chain(self):
         chain = self.chain()
         chain.step(self.done("r1"), False, True, True, False, 10)
@@ -215,3 +241,34 @@ class HomeAssistantTestCase(SimpleTestCase):
         button = json.loads(next(c for t, c in configs.items() if "/button/" in t))
         self.assertEqual(json.loads(button["payload_press"]), {"action": "brew", "product": 2, "source": "ha"})
         self.assertEqual(button["command_topic"], "cm/cmd")
+
+
+class ConnectTimeoutTestCase(SimpleTestCase):
+    """A connect that never finishes ends the session (bridge.CONNECT_TIMEOUT) - on 2026-11-23 one waited five
+    hours for BlueZ, and the machine stayed "not connected" until the bridge was restarted by hand."""
+
+    def test_a_hanging_connect_is_given_up(self):
+        import asyncio  # noqa: PLC0415
+        import types  # noqa: PLC0415
+        from unittest import mock  # noqa: PLC0415
+
+        sys.path.insert(0, str(settings.BASE_DIR / "coffee-machine"))
+        try:
+            import bridge  # noqa: PLC0415 - paho, no bleak
+        finally:
+            sys.path.pop(0)
+
+        class Hanging:
+            def __init__(self, address):
+                self.address = address
+
+            async def connect(self):
+                await asyncio.Event().wait()
+
+        machine = bridge.Bridge()
+        machine.client = mock.Mock()
+        with mock.patch.object(bridge, "CONNECT_TIMEOUT", 0.05):
+            with self.assertRaises(TimeoutError):
+                asyncio.run(machine.session(types.SimpleNamespace(JuraBle=Hanging)))
+        self.assertFalse(machine.state["connected"])
+        self.assertIn("no connection within", machine.state["error"])

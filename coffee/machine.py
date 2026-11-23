@@ -581,14 +581,14 @@ def count_supplies(dispense: MachineDispense):
             supply.save(update_fields=["used"])
 
 
-def refill(kind: str, actor: str = "") -> MachineSupply:
+def refill(kind: str, actor: str = "", source: str = "") -> MachineSupply:
     from dashboard import audit  # noqa: PLC0415
 
     supply = supplies()[kind]
     supply.used, supply.reset_at = 0, timezone.now()
     supply.save(update_fields=["used", "reset_at"])
     audit.log_actor(actor or "coffee machine", "machine.refill", target=kind,
-                    source="kiosk" if actor else "system")
+                    source=source or ("kiosk" if actor else "system"))
     return supply
 
 

@@ -5,6 +5,7 @@ import json
 import re
 from datetime import timedelta
 
+from django.conf import settings as django_settings
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
@@ -72,10 +73,16 @@ def device(request):
             if not settings_.enabled or not ADDRESS.match(address):
                 messages.error(request, _("That is not a machine that can be connected."))
                 return redirect("dashboard:device")
+            known = settings_.address == address
             settings_.address, settings_.name = address, request.POST.get("name", "").strip()[:100]
             settings_.save(update_fields=["address", "name"])
             machine.send_config()
             audit.log(request, "coffee_machine.connect", target=address, details=settings_.name)
+            if not known:
+                # Water, grounds and beans are predicted brew by brew: what was counted for another machine (or the
+                # simulator) says nothing about this one - it starts full, its own messages correct it from there.
+                for kind, _label in MachineSupply.KINDS:
+                    machine.refill(kind, actor=request.user.get_username(), source="dashboard")
             messages.success(request, _("Connecting - this takes up to a minute."))
             return redirect("dashboard:device")
         elif action == "forget":
@@ -114,7 +121,7 @@ def device(request):
         elif action == "refill":
             kind = request.POST.get("kind")
             if kind in dict(MachineSupply.KINDS):
-                machine.refill(kind, actor=request.user.get_username())
+                machine.refill(kind, actor=request.user.get_username(), source="dashboard")
             return redirect("dashboard:device")
         elif action == "reboot":
             backups.storage_request("reboot", requested_by=request.user.get_username())
@@ -129,6 +136,8 @@ def device(request):
         "machine_name": settings_.name or state.get("model") or settings_.address, "firmware": firmware,
         "machine_error": state.get("error", ""),
         "form": form, "settings": settings_, "status": status, "bluetooth": _bluetooth_status(),
+        "onboard_with_ap": settings_.enabled and settings_.adapter == CoffeeMachine.ADAPTER_ONBOARD
+        and bool(django_settings.AP_SSID),
         "counter_rows": machine.counter_rows(status), "maintenance": status["counters"].get("maintenance") or {},
         "products": products, "sorts": CoffeeSort.objects.order_by("name"), "free_max": machine.FREE_ON_KIOSK,
         "supplies": list(machine.supplies().values()) if products else [],

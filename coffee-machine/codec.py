@@ -48,6 +48,23 @@ def is_active(state: int) -> bool:
     return state in ACTIVE_STATES and state != STATE_DONE
 
 
+def sound(frame: bytes, key: int) -> bool:
+    """A decoded frame starts with the key it was encoded with (every E6 frame did). One that doesn't was
+    decoded with the wrong key or read half: on 2026-11-23, right before a dropped connection, such a status
+    frame set 59 alert bits at once - "close_tab" among them, a blocking one. Better the last good one."""
+    return len(frame) > 1 and frame[0] == key
+
+
+def confirmed(previous: bytes | None, first: bytes, second: bytes | None) -> bytes | None:
+    """Which frame to believe: one that didn't change needs no second look; a changed one only once a second
+    read right after says the same. A Pi 3's own Bluetooth garbles a frame now and then (the kernel logs "Frame
+    reassembly failed"): on 2026-11-23 a status frame came with its first six bytes - key included - right and
+    the rest random, 59 alert bits; the next read was clean. None: believe neither, keep the last."""
+    if first == previous:
+        return first
+    return first if second == first else None
+
+
 def alert_bits(frame: bytes) -> list[int]:
     """The set bits of a decoded machine-status frame: bit i is byte 1 + i // 8, MSB first."""
     return [i for i in range(8 * (len(frame) - 1)) if frame[1 + i // 8] >> (7 - i % 8) & 1]

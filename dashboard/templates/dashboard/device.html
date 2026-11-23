@@ -24,6 +24,15 @@
 {% if settings.enabled %}
 <div class="card">
     <h2>{% translate "Bluetooth" %}</h2>
+    {% if onboard_with_ap %}
+    {% comment %}Measured 2026-11-23 on a Pi 3: one chip for the access point and the Bluetooth - garbled frames,
+    dropped links, twice the chip stuck (the storage helper binds its driver again, see there).{% endcomment %}
+    <p class="msg warning">{% blocktranslate trimmed with resets=bluetooth.resets|default:0 %}
+        The Raspberry Pi's own Bluetooth shares its chip with the WiFi this device runs for the phones: the connection
+        to the machine drops now and then, and the chip can get stuck - the device then restarts it by itself
+        ({{ resets }} times so far). A USB Bluetooth stick avoids all of it.
+    {% endblocktranslate %}</p>
+    {% endif %}
     {% if bluetooth is None %}
     <p class="muted">{% translate "Unknown - the device's storage service is not running." %}</p>
     {% elif bluetooth.restart_needed %}

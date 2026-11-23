@@ -41,6 +41,10 @@ ALERT_SECONDS = 5.0
 COUNTER_SECONDS = 15 * 60
 COUNTERS_AFTER_BREW = 5.0  # the machine counts a product a few seconds after it ended
 RECONNECT_BACKOFF = (5, 10, 30, 60)
+# A connect that hasn't finished by then never will: on 2026-11-23 one waited five hours for BlueZ (the
+# machine removed from it, no scan running) - and the kiosk's machine stayed "not connected" all along.
+# The driver's own scans take up to SCAN_ATTEMPTS x SCAN_SECONDS (40 s), a connect up to three tries.
+CONNECT_TIMEOUT = 120.0
 
 
 def env_config() -> dict:
@@ -196,7 +200,7 @@ class Bridge:
         if chain is None or chain.over:
             return
         ready = "coffee_ready" in self.state["alerts"] and self.alerts_at > (chain.done_at or now) + policy.READY_PAUSE
-        for action in chain.step(events, self.tracker.busy(), prog.get("phase") == "idle", ready,
+        for action in chain.step(events, self.tracker.busy(), policy.at_rest(prog.get("phase", "")), ready,
                                  bool(self.state["blocking"]), now):
             if action[0] == "start":
                 await self.start(machine, action[1], chain.product, chain.options, chain.source)
@@ -230,8 +234,10 @@ class Bridge:
         machine = machine_class(mod)(self.config["address"])
         self.tracker = policy.BrewTracker()
         try:
-            await machine.connect()
+            await asyncio.wait_for(machine.connect(), CONNECT_TIMEOUT)
         except Exception as exc:  # noqa: BLE001 - retried with a backoff
+            if isinstance(exc, TimeoutError):
+                exc = TimeoutError(f"no connection within {CONNECT_TIMEOUT:.0f} s")
             self.publish_state(connected=False, error=str(exc))
             self.set_status("offline")
             raise

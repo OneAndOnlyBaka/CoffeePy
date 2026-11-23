@@ -392,6 +392,39 @@ class StorageHelperTestCase(SimpleTestCase):
         self.request("bluetooth", enabled=False)
         self.assertEqual(self.boot_config.read_text().count("dtoverlay=disable-bt"), 1)
 
+    def test_a_stuck_onboard_radio_is_bound_again(self):
+        """What the kernel said on 2026-11-23 when the Pi 3's own Bluetooth stuck - and what got it back."""
+        driver = self.root / "hci_uart_bcm"
+        (driver / "serial0-0").mkdir(parents=True)
+        kernel = {"log": ""}
+        for name, value in (("SYS_SERIAL_BT", driver), ("kernel_log", lambda since: kernel["log"])):
+            patcher = mock.patch.object(self.helper, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.request("bluetooth", enabled=True, onboard=True)
+        with mock.patch.object(self.helper.time, "sleep"):
+            self.assertFalse(self.helper.watch_onboard_bluetooth(1000))
+            kernel["log"] = "Bluetooth: hci0: Frame reassembly failed (-84)\n"  # a garbled frame: not stuck
+            self.assertFalse(self.helper.watch_onboard_bluetooth(1030))
+            kernel["log"] = ("Bluetooth: hci0: command 0x0406 tx timeout\n"
+                             "Bluetooth: hci0: Opcode 0x0c03 failed: -110\n")
+            self.assertTrue(self.helper.watch_onboard_bluetooth(1060))
+            self.assertEqual(((driver / "unbind").read_text(), (driver / "bind").read_text()), ("serial0-0", "serial0-0"))
+            self.assertFalse(self.helper.watch_onboard_bluetooth(1090))  # stuck again: not before BT_RESET_SECONDS
+            kernel["log"] = "Bluetooth: hci0: Unable to disable scanning: -16\n"
+            self.assertTrue(self.helper.watch_onboard_bluetooth(1060 + self.helper.BT_RESET_SECONDS))
+        self.assertEqual(self.events().count("bluetooth.reset"), 2)
+        self.request("bluetooth", enabled=True, onboard=False)  # a USB stick: the Pi's own radio isn't watched
+        self.assertFalse(self.helper.watch_onboard_bluetooth(5000))
+
+    def test_the_kernel_log_since_a_moment(self):
+        with mock.patch.object(self.helper.subprocess, "run", return_value=subprocess.CompletedProcess(
+                (), 0, "Bluetooth: hci0: command 0x0406 tx timeout\n", "")) as run:
+            self.assertIn("tx timeout", self.helper.kernel_log(1795426800.5))
+        self.assertEqual(run.call_args.args[0][-2:], ("--since", "@1795426800"))
+        with mock.patch.object(self.helper.subprocess, "run", return_value=subprocess.CompletedProcess((), 1, "", "no journal")):
+            self.assertEqual(self.helper.kernel_log(0), "")
+
     def test_bluetooth_without_a_firmware_config(self):
         self.boot_config.unlink()  # not a Pi
         status = self.request("bluetooth", enabled=True, onboard=True)

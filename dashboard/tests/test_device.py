@@ -97,6 +97,30 @@ class DeviceTestCase(TestCase):
         self.assertEqual(AuditLogEntry.objects.get(action="coffee_machine.connect").target, "F4:57:52:42:0C:04")
         self.assertEqual(self.send.call_args.args[1]["address"], "F4:57:52:42:0C:04")
 
+    def test_a_new_machine_starts_full(self):
+        """What was counted for another machine - or the simulator - says nothing about the one connected now."""
+        self.save()
+        for supply in machine.supplies().values():
+            supply.used = supply.capacity * 2
+            supply.save()
+        self.client.post(self.url, {"form": "connect", "address": "F4:57:52:42:0C:04"})
+        self.assertEqual([s.used for s in machine.supplies().values()], [0, 0, 0])
+        self.assertEqual(set(AuditLogEntry.objects.filter(action="machine.refill").values_list("source", flat=True)),
+                         {"dashboard"})
+        water = machine.supplies()["water"]
+        water.used = 500
+        water.save()
+        self.client.post(self.url, {"form": "connect", "address": "F4:57:52:42:0C:04"})  # the same one again
+        self.assertEqual(machine.supplies()["water"].used, 500)
+
+    def test_the_pis_own_bluetooth_next_to_the_access_point(self):
+        self.save()
+        self.client.post(self.url, {"form": "settings", "driver": "jura_ble", "adapter": "onboard"})
+        with self.settings(AP_SSID="CoffeePy"):
+            self.assertContains(self.client.get(self.url), "A USB Bluetooth stick avoids all of it.")
+        with self.settings(AP_SSID=""):  # on the office's own WiFi: no shared chip to warn about
+            self.assertNotContains(self.client.get(self.url), "A USB Bluetooth stick avoids all of it.")
+
     def test_connecting_takes_only_an_address(self):
         self.save()
         self.client.post(self.url, {"form": "connect", "address": "'; DROP"})
