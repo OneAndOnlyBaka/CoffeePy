@@ -7,7 +7,7 @@ services:
   # The images of others are pinned to exact versions (Dependabot moves them): a floating tag
   # put whatever was newest at build time into a bundle, and two builds of one commit differed.
   db:
-    image: postgres:16.15-alpine
+    image: postgres:16.16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-coffeepy}
