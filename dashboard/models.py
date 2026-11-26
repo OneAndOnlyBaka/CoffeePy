@@ -83,6 +83,8 @@ class NightPolicy(models.Model):
     ]
 
     enabled = models.BooleanField(default=False)
+    # Also dark while the coffee machine is switched off (dashboard/night.py, MACHINE_OFF_SECONDS), whatever the time.
+    follow_machine = models.BooleanField(default=False)
     off_at = models.TimeField(default=datetime.time(20, 0))
     on_at = models.TimeField(default=datetime.time(5, 30))
     weekend = models.CharField(max_length=10, choices=WEEKEND_CHOICES, default=WEEKEND_SAME)

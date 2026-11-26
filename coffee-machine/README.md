@@ -51,7 +51,7 @@ All payloads JSON; `<prefix>` defaults to `coffeemachine`.
 | `config` | app | yes | `{"driver", "address", "block_manual"}` |
 | `cmd` | app | no | `{"id", "action": "scan" \| "brew" \| "refresh", "product", "options", "source", "request_ids"}` |
 | `scan` | bridge | no | `{"id", "devices": [{"address", "name", "rssi", "article", "model"}], "error"}` |
-| `state` | bridge | yes | `{"connected", "model", "article", "firmware", "alerts": [...], "blocking": [...], "locked", "progress": {"phase", "product", "percent", "water_ml", "strength"}, "error", "driver", "address", "block_manual", "updated"}` |
+| `state` | bridge | yes | `{"connected", "model", "article", "firmware", "alerts": [...], "blocking": [...], "locked", "progress": {"phase", "product", "percent", "water_ml", "strength"}, "error", "missing_since", "driver", "address", "block_manual", "updated"}` |
 | `event` | bridge | no | `{"type", "request_id", "source", "product", "water_ml", "strength", "reason", "cup", "of", "time"}` |
 | `counters` | bridge | yes | `{"total", "products": {"<code>": n}, "maintenance": {"counters": {...}, "percent": {...}}, "taken"}` |
 | `products` | bridge | yes | `{"article", "model", "products": [{"code", "name", "strokes", "water_ml", "strength", "brewable", "recipe"}]}` |
@@ -65,6 +65,9 @@ All payloads JSON; `<prefix>` defaults to `coffeemachine`.
 - `recipe` of a product: what a brew may ask for - `{"strength": {"min", "max", "default"}, "water": {"min",
   "max", "step", "default"}, "temperature": {"options": [...], "default"}}`, each only where the product
   has it; `{}` for one that takes nothing (milk foam), missing for one without a definition.
+- `missing_since`: Unix time since which scans haven't found the machine at all - switched off, by hand or by its
+  own timer; `null` once connected again. Other failures (a stuck radio) leave it as it was. The app's kiosk night
+  can follow it (dashboard → System → Night rest).
 - **Several cups in a row:** `request_ids` (one per cup) makes a `brew` that many cups of the same recipe,
   into one big cup or a jug - CoffeePy's "my coffees". The next starts once the machine is idle and says
   `coffee_ready` again (or 30 s later, for a model that doesn't); each cup has its own `brew_started`/

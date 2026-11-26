@@ -238,13 +238,19 @@ class Bridge:
         except Exception as exc:  # noqa: BLE001 - retried with a backoff
             if isinstance(exc, TimeoutError):
                 exc = TimeoutError(f"no connection within {CONNECT_TIMEOUT:.0f} s")
-            self.publish_state(connected=False, error=str(exc))
+            # Not found by a scan: switched off (by hand, or its own timer after an hour or two) - since when, for
+            # the kiosk's night (dashboard/night.py). Any other failure leaves it as it was: the machine is there.
+            missing = self.state.get("missing_since") or time.time() if getattr(exc, "missing", False) else None
+            # force: published - "updated" anew - at every attempt, the app's sign that the bridge still looks
+            # (its last will says "offline" just like a machine that isn't connected).
+            self.publish_state(connected=False, error=str(exc), force=True,
+                               missing_since=missing if missing else self.state.get("missing_since"))
             self.set_status("offline")
             raise
         try:
             about = await machine.about()
             from py_jura import machines as known  # noqa: PLC0415
-            self.publish_state(connected=True, error="", article=machine.article, firmware=about["firmware"],
+            self.publish_state(connected=True, error="", missing_since=None, article=machine.article, firmware=about["firmware"],
                                bluefrog=about["bluefrog"], model=known.ARTICLE_NAMES.get(machine.article, ""))
             self.set_status("online")
             await self.publish_products(machine)

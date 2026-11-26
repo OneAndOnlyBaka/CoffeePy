@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import threading
 import time
 
 import paho.mqtt.client as mqtt
@@ -9,7 +10,7 @@ from django.db import DatabaseError, close_old_connections
 from django.utils import timezone
 
 from coffee import machine, turns
-from dashboard import audit
+from dashboard import audit, night
 from coffee.models import MachineStatus, NfcReaderStatus, NfcScan
 
 log = logging.getLogger("coffee.mqtt_listener")
@@ -189,6 +190,7 @@ class Command(BaseCommand):
         last_prune = time.monotonic()
         status = ReaderStatus()
         machine_row = MachineRow()
+        night_due = threading.Event()  # set in paho's callback, written in the loop after the row is stored
         config = MachineConfig()
         machine_prefix = machine.topic("")
         last_housekeeping = 0.0
@@ -237,7 +239,10 @@ class Command(BaseCommand):
             if payload is None:
                 return
             fields = machine.row_fields(name, payload)
-            previous_alerts = ((machine_row.known or {}).get("state") or {}).get("alerts")
+            previous = (machine_row.known or {}).get("state") or {}
+            previous_alerts = previous.get("alerts")
+            if name == "state" and any(previous.get(k) != payload.get(k) for k in ("connected", "missing_since")):
+                night_due.set()  # the machine gone or back: the kiosk's night follows (dashboard/night.py)
             if fields is not None:
                 machine_row.set_fields(**fields)
             try:
@@ -277,6 +282,12 @@ class Command(BaseCommand):
                     status.flush()
                     machine_row.flush()
                     config.push(client)
+                    if night_due.is_set():
+                        night_due.clear()
+                        try:
+                            night.write_file()
+                        except (DatabaseError, OSError) as exc:
+                            log.warning("Could not write the kiosk's night (%s)", exc)
                     if time.monotonic() - last_housekeeping > STATUS_CHECK_SECONDS:
                         last_housekeeping = time.monotonic()
                         try:

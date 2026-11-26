@@ -408,11 +408,13 @@ step_hardware() {
 
 	log "Installing the udev rules"
 	run install -m 0644 "${SCRIPT_DIR}/99-acr122u.rules" /etc/udev/rules.d/
+	run install -m 0644 "${SCRIPT_DIR}/99-coffeepy-display.rules" /etc/udev/rules.d/
 	# The backup stick is no longer mounted by udev but by coffeepy-storage.service, which
 	# checks it really is this device's stick first (install/storage_helper.py).
 	run rm -f /etc/udev/rules.d/99-usb-backup-mount.rules
 	run install -d /srv/coffeepy-usb
 	run udevadm control --reload-rules
+	run udevadm trigger --subsystem-match=graphics --action=add  # the framebuffer is there already
 
 	if [ "${COFFEEPY_FROM_WATCHER:-0}" = "1" ]; then
 		# The display mode is chosen at provisioning; the watcher has no VIDEO_MODE to pass, and

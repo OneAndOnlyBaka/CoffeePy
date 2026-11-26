@@ -45,6 +45,11 @@ class NotConnected(Exception):
     pass
 
 
+class NotFound(NotConnected):
+    """No advertisement at all: the machine is switched off (bridge.py notes since when)."""
+    missing = True
+
+
 def product_name(code: int, definition=None) -> str:
     known = definition.products.get(Product(code)) if definition and code in Product._value2member_map_ else None
     if known is not None:
@@ -132,7 +137,7 @@ class JuraBle:
             if device is not None and data is not None:
                 break
         if device is None:
-            raise NotConnected(f"{self.address} not found")
+            raise NotFound(f"{self.address} not found")
         if data is None:
             raise NotConnected(f"{self.address} advertises no key")
         self.key, self.article = data

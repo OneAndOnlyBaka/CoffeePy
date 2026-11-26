@@ -34,11 +34,20 @@ for _ in $(seq 1 60); do
 done
 
 # At night (dashboard -> System -> Night rest) there is no browser and no picture: the loop ends
-# cog when the night begins and blanks the console, which takes the display's signal down
-# (DPMS off - /sys/class/drm/card0-HDMI-A-1/dpms says so), again every 30s; a touch does not
-# wake a console, but a key would. In the morning a fresh cog.
+# cog when the night begins and takes the display's signal down (dark() below - DPMS off,
+# /sys/class/drm/card0-HDMI-A-1/dpms says so), again every WAKE_CHECK_SECONDS; a touch does not
+# wake it. In the morning a fresh cog.
 night() { python3 /opt/coffeepy/install/kiosk_night.py; }
+# The signal off: setterm alone left it on now and then (a black screen, its backlight lit all night -
+# 2026-11-23); the framebuffer's own blank took it down every time. 4 = powerdown, 0 = on again
+# (install/99-coffeepy-display.rules lets the kiosk user write it).
+FB_BLANK=/sys/class/graphics/fb0/blank
+dark() { setterm --blank force 2>/dev/null; echo 4 2>/dev/null > "$FB_BLANK"; }
+light() { echo 0 2>/dev/null > "$FB_BLANK"; setterm --blank poke 2>/dev/null; }
 NIGHT_CHECK_SECONDS=30
+# While dark the night is asked more often: switching the coffee machine on ends it (NightPolicy.follow_machine),
+# and whoever did is waiting at the kiosk. kiosk_night.py only reads a file.
+WAKE_CHECK_SECONDS=10
 
 # cog does not reload by itself when its web process dies: it prints "Crash!: The renderer
 # process crashed" and shows its own error page - the kiosk would stand still until the watchdog
@@ -55,10 +64,10 @@ while true; do
     if night; then
         note "night - kiosk off until the morning"
         while night; do
-            setterm --blank force 2>/dev/null
-            sleep "$NIGHT_CHECK_SECONDS"
+            dark
+            sleep "$WAKE_CHECK_SECONDS"
         done
-        setterm --blank poke 2>/dev/null
+        light
         clear
         note "morning - kiosk on"
     fi

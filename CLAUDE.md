@@ -413,8 +413,15 @@ mind before changing it:
   and in every `tick`, so a restore catches up), and `install/kiosk_night.py` - stdlib, the host
   has no Django - mirrors its `is_night`; keep the two identical (`test_night` compares them).
   The file carries `TIME_ZONE`, because the host's own zone may be UTC. At night the session
-  (`install/kiosk/cog-session`) ends cog and blanks its console (`setterm --blank force`), which
-  takes the display's signal down - `/sys/class/drm/card0-HDMI-A-1/dpms` says `Off`; the watchdog leaves the kiosk alone then, and also a browser
+  (`install/kiosk/cog-session`) ends cog and takes the display's signal down through the framebuffer
+  (`/sys/class/graphics/fb0/blank` = 4, writable for group video by `install/99-coffeepy-display.rules`) -
+  `setterm --blank force` alone left it on now and then, a black screen with its backlight lit all night
+  (2026-11-23); check `/sys/class/drm/card0-HDMI-A-1/dpms` = `Off` and the HDMI CRTC's `active=0` in
+  `/sys/kernel/debug/dri/0/state`, a KMS screenshot only shows the last buffer. With `follow_machine` the night
+  is also on while the coffee machine is switched off: the bridge's state carries `missing_since`, believed while
+  the bridge keeps saying so (`BRIDGE_FRESH_SECONDS`), dark after `MACHINE_OFF_SECONDS`; the listener writes
+  night.json the moment it changes, and the session asks every 10 s while dark - measured 16-22 s from the
+  machine back to the kiosk. The watchdog leaves the kiosk alone then, and also a browser
   younger than its stale limit (the morning's, with the evening's heartbeat). Taps at night are
   never booked: `kiosk.views.index` starts every page load at the newest scan. Measured on the
   Pi with Chromium: dark within 4s of the night's start, polling 28s after the morning's.

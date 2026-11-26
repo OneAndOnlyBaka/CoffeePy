@@ -70,9 +70,18 @@ class IsNightTestCase(SimpleTestCase):
         self.assertTrue(self.night("2026-11-09T20:00", **rule))
         self.assertFalse(self.night("2026-11-08T12:00", weekend="times", weekend_off="09:00", weekend_on="09:00"))
 
+    def test_the_coffee_machine_switched_off(self):
+        gone = datetime(2026, 11, 3, 12, 0).timestamp()  # midday: no night by the clock
+        machine = {"machine_off_since": gone, "machine_off_after": 300}
+        self.assertFalse(self.night("2026-11-03T12:04", **machine))  # a dropped link, maybe
+        self.assertTrue(self.night("2026-11-03T12:05", **machine))
+        self.assertTrue(self.night("2026-11-03T12:05", enabled=False, **machine))  # without the timed night too
+        self.assertFalse(self.night("2026-11-03T12:05"))  # back: the file no longer says since when
+
     def test_the_host_script_decides_the_same(self):
+        gone = {"machine_off_since": datetime(2026, 11, 4, 9, 0).timestamp(), "machine_off_after": 300, "enabled": False}
         for changes in ({}, {"off": "01:00", "on": "04:00"}, {"off": "08:00", "on": "08:00"}, {"weekend": "all_day"},
-                        {"weekend": "times", "weekend_off": "18:00", "weekend_on": "09:00"}):
+                        {"weekend": "times", "weekend_off": "18:00", "weekend_on": "09:00"}, gone):
             schedule = {**WEEKDAYS, **changes}
             for day in range(2, 10):
                 for hour in range(24):
@@ -131,6 +140,31 @@ class NightSettingTestCase(TestCase):
 
     def schedule(self):
         return json.loads((self.root / "night.json").read_text())
+
+    def test_following_the_coffee_machine(self):
+        from coffee import machine  # noqa: PLC0415
+        from dashboard.models import CoffeeMachine  # noqa: PLC0415
+
+        settings_ = CoffeeMachine.current()
+        settings_.driver, settings_.address = CoffeeMachine.DRIVER_JURA_BLE, "F4:57:52:42:0C:04"
+        settings_.save()
+        import time as clock  # noqa: PLC0415
+
+        machine.store({"online": False, "status": "offline", "state": {"connected": False, "missing_since": 1795426800.0,
+                                                                       "updated": clock.time()}})
+        self.client.post(reverse("dashboard:system_dashboard"), {"off_at": "20:00", "on_at": "05:30", "weekend": "same",
+                                                                 "weekend_off_at": "20:00", "weekend_on_at": "08:00",
+                                                                 "follow_machine": "on"})
+        self.assertTrue(NightPolicy.current().follow_machine)
+        self.assertEqual((self.schedule()["machine_off_since"], self.schedule()["machine_off_after"]), (1795426800.0, 300))
+        self.assertTrue(AuditLogEntry.objects.filter(action="night.update", details="with the coffee machine").exists())
+        machine.store({"state": {"connected": False, "missing_since": 1795426800.0,
+                                 "updated": clock.time() - night.BRIDGE_FRESH_SECONDS - 1}})
+        night.write_file()  # the bridge stopped saying so - gone itself, maybe: never dark for it
+        self.assertNotIn("machine_off_since", self.schedule())
+        machine.store({"online": True, "state": {"connected": True}})
+        night.write_file()
+        self.assertNotIn("machine_off_since", self.schedule())
 
     def test_off_by_default(self):
         response = self.client.get(reverse("dashboard:system_dashboard"))

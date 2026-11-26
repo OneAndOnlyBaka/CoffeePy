@@ -272,3 +272,64 @@ class ConnectTimeoutTestCase(SimpleTestCase):
                 asyncio.run(machine.session(types.SimpleNamespace(JuraBle=Hanging)))
         self.assertFalse(machine.state["connected"])
         self.assertIn("no connection within", machine.state["error"])
+
+    def test_since_when_the_machine_is_gone(self):
+        """Switched off is "not found" (drivers.jura_ble.NotFound): since when goes into the state - the kiosk's
+        night follows it - and only a connection clears it."""
+        import asyncio  # noqa: PLC0415
+        import types  # noqa: PLC0415
+        from unittest import mock  # noqa: PLC0415
+
+        sys.path.insert(0, str(settings.BASE_DIR / "coffee-machine"))
+        try:
+            import bridge  # noqa: PLC0415
+        finally:
+            sys.path.pop(0)
+
+        class Gone(Exception):
+            missing = True
+
+        outcome = {"exc": Gone("F4:57:52:42:0C:04 not found")}
+
+        class Machine:
+            def __init__(self, address):
+                pass
+
+            async def connect(self):
+                raise outcome["exc"]
+
+        machine = bridge.Bridge()
+        machine.client = mock.Mock()
+        module = types.SimpleNamespace(JuraBle=Machine)
+        with mock.patch.object(bridge.time, "time", return_value=1000.0), self.assertRaises(Gone):
+            asyncio.run(machine.session(module))
+        self.assertEqual(machine.state["missing_since"], 1000.0)
+        with mock.patch.object(bridge.time, "time", return_value=2000.0), self.assertRaises(Gone):
+            asyncio.run(machine.session(module))
+        self.assertEqual(machine.state["missing_since"], 1000.0)  # still since the first time
+        outcome["exc"] = RuntimeError("Operation already in progress")  # the radio, not the machine
+        with self.assertRaises(RuntimeError):
+            asyncio.run(machine.session(module))
+        self.assertEqual(machine.state["missing_since"], 1000.0)
+
+        class Back(Machine):  # switched on again: connects; the test ends the session right after
+            article = 15377
+            connected = False  # what the session's cleanup asks
+
+            async def connect(self):
+                pass
+
+            async def about(self):
+                return {"firmware": "EF532M V02.03", "bluefrog": "V05.08F"}
+
+            def products(self, counted):
+                raise RuntimeError("enough")
+
+            async def disconnect(self):
+                pass
+
+        fake_py_jura = types.SimpleNamespace(machines=types.SimpleNamespace(ARTICLE_NAMES={15377: "E6 (EB)"}))
+        with mock.patch.dict(sys.modules, {"py_jura": fake_py_jura, "py_jura.machines": fake_py_jura.machines}):
+            with self.assertRaises(RuntimeError):
+                asyncio.run(machine.session(types.SimpleNamespace(JuraBle=Back)))
+        self.assertIsNone(machine.state["missing_since"])  # and stays so when that session ends

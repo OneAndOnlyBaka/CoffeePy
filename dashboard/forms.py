@@ -478,11 +478,15 @@ class MemberRetentionForm(forms.ModelForm):
 class NightPolicyForm(forms.ModelForm):
     class Meta:
         model = NightPolicy
-        fields = ["enabled", "off_at", "on_at", "weekend", "weekend_off_at", "weekend_on_at"]
+        fields = ["enabled", "off_at", "on_at", "weekend", "weekend_off_at", "weekend_on_at", "follow_machine"]
         labels = {"enabled": gettext_lazy("Switch the kiosk off at night"), "off_at": gettext_lazy("Off from"),
+                  "follow_machine": gettext_lazy("Also switch it off while the coffee machine is off"),
                   "on_at": gettext_lazy("On again from"), "weekend": gettext_lazy("Saturday and Sunday"),
                   "weekend_off_at": gettext_lazy("Weekend: off from"),
                   "weekend_on_at": gettext_lazy("Weekend: on again from")}
+        help_texts = {"follow_machine": gettext_lazy(
+            "Dark once the machine has been gone for five minutes - switched off by hand or by its own timer - and on "
+            "again within about two minutes of switching it on. Taps in between are not booked, as at night.")}
         widgets = {name: forms.TimeInput(attrs={"type": "time"}, format="%H:%M")
                    for name in ("off_at", "on_at", "weekend_off_at", "weekend_on_at")}
 

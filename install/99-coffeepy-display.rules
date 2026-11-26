@@ -1,0 +1,4 @@
+# The kiosk session takes the display's signal down at night (kiosk/cog-session) through the framebuffer's
+# blank - root's alone otherwise, and the session runs as the kiosk user (group video). setterm --blank, its
+# first way, left the HDMI signal on now and then: a black screen with its backlight on all night (2026-11-23).
+SUBSYSTEM=="graphics", KERNEL=="fb0", RUN+="/bin/chgrp video /sys%p/blank", RUN+="/bin/chmod g+w /sys%p/blank"

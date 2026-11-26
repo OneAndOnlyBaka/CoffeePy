@@ -139,6 +139,11 @@ services:
     env_file: .env
     environment:
       COFFEEPY_PREPARE: "0"
+      STORAGE_DIR: /storage
+    volumes:
+      # night.json: the kiosk goes dark and wakes with the coffee machine (dashboard/night.py) - written the
+      # moment the machine is gone or back, not at the next minutely tick.
+      - ./data/storage:/storage:z
 
   backup:
     build: .
