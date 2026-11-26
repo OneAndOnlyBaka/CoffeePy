@@ -385,7 +385,9 @@ Ist eine JURA verbunden (siehe [Kaffeemaschine](#kaffeemaschine)), führt der Ki
 und **gebucht wird erst, wenn die Maschine fertig ist**. Nach **Jetzt bestellen** – oder wenn der
 Countdown abläuft – heißt es *Stell deine Tasse unter den Auslauf*, und erst **Start** lässt die
 Maschine loslaufen. Tippst du nicht auf **Start**, geht der Kiosk nach 30 Sekunden zurück: kein
-Kaffee, keine Buchung. **Abbrechen** tut dasselbe sofort.
+Kaffee, keine Buchung. **Abbrechen** tut dasselbe sofort. Neben der Tasse siehst du die Maschine – die
+Zeichnung ihrer Baureihe oder das Foto, das der Admin von ihr hochgeladen hat (siehe
+[Kaffeemaschine](#kaffeemaschine)).
 
 ![Tasse unter den Auslauf](pictures/manual/de/kiosk-cup.png)
 
@@ -402,7 +404,8 @@ ist das der einzige Weg dorthin.
 ![Startbildschirm mit Kaffeemaschine](pictures/manual/de/kiosk-wait-machine.png)
 
 Der **Ring** oben rechts zeigt, was die Maschine meldet, die vorhergesagten **Füllstände** und wie
-weit die **Pflege** ist. Hast du Bohnen aufgefüllt, tippe auf **Bohnen nachgefüllt** – Wassertank und
+weit die **Pflege** ist. Ihre Meldungen nur, solange sie verbunden ist: Ist sie aus, steht dort nur
+*Nicht verbunden*. Hast du Bohnen aufgefüllt, tippe auf **Bohnen nachgefüllt** – Wassertank und
 Trester merkt die Maschine von selbst.
 
 ![Zustand der Kaffeemaschine](pictures/manual/de/kiosk-machine-popup.png)
@@ -601,7 +604,8 @@ das Gerätezertifikat.
 **Kaffee bestellen** – der grüne Knopf auf **Start**, wenn eine Kaffeemaschine eingerichtet ist. Du
 wählst einen deiner Kaffees oder eine Sorte, die die Maschine macht, und tippst **Anstellen**: Du
 stehst dann in derselben [Warteschlange](#wenn-die-maschine-belegt-ist) wie alle am Kiosk. Geh mit
-deiner Tasse zur Maschine – ohne jemanden, der sie hinstellt, läuft nichts.
+deiner Tasse zur Maschine – ohne jemanden, der sie hinstellt, läuft nichts. Oben siehst du, welche
+Maschine es ist: ihre Zeichnung oder das Foto, das der Admin von ihr hochgeladen hat.
 
 ![Kaffee bestellen am Handy](pictures/manual/de/portal-order.png)
 
@@ -831,6 +835,11 @@ Maschine ändert sich nichts, der Kiosk bucht aus der Strichliste.
 starten**, ein USB-Stick nicht. Maschine einschalten, die JURA-App auf allen Handys schließen (eine
 verbundene Maschine lässt sich nicht finden), **Nach Maschinen suchen** und **Verbinden**.
 
+Das eingebaute Funkmodul des Pi teilt sich seinen Chip mit dem WLAN, das das Gerät für die Handys
+aufspannt: Die Verbindung zur Maschine bricht ab und zu ab, und der Chip kann hängen bleiben – das
+Gerät startet ihn dann selbst neu, und die Seite zeigt, wie oft das schon war. Ein
+**USB-Bluetooth-Stick** vermeidet all das.
+
 **Tasten der Maschine sperren**: Solange CoffeePy verbunden ist, lässt sich nichts an der
 Strichliste vorbei beziehen. Geht die Verbindung verloren, entsperrt sich die Maschine innerhalb
 einer Minute von selbst.
@@ -845,8 +854,19 @@ und seine Bohnen ab. Hier stellst du Tankgröße, Trester-Portionen und Bohnenbe
 **Nachgefüllt** setzt einen Füllstand zurück. Verschwindet die Meldung der Maschine – Tank wieder
 drin, Trester geleert –, füllt sich der Stand von selbst auf.
 
-Darunter: **Zähler** und **Pflege** der Maschine, **Gemachte Produkte** mit Verlauf und jedem
-einzelnen Bezug, und **Dem Nächsten überlassen** – welche Meldung während wessen Bezug kam und ob sich
+**Bild**: Jede JURA-Baureihe hat eine eigene Zeichnung (ENA, E, J, S, Z, GIGA, X …). Sie erscheint in
+der Übersicht, auf dieser Seite, am Kiosk – im Zustand der Maschine und beim Bezug – und im Portal
+unter *Kaffee bestellen*. **Foto hochladen** ersetzt sie überall durch ein Foto deiner eigenen
+Maschine – JPEG, PNG oder WebP; der Browser verkleinert es vorher (800 Pixel an der langen Seite), das
+Gerät nimmt bis 1,5 MB. **Foto entfernen** holt die Zeichnung zurück. Das Foto liegt in der
+Datenbank, ein Backup nimmt es also mit.
+
+Darunter: **Zähler** und **Pflege** der Maschine – wie weit jedes Pflegeprogramm fällig ist und
+*zuletzt am* welchem Tag es lief; **Gelaufene Pflegeprogramme** listet jedes Entkalken, Reinigen,
+jeden Filterwechsel und jede Milchsystem-Reinigung mit Datum (die Spülungen beim Ein- und Ausschalten
+zählen nicht). Dann **Gemachte Produkte** mit Verlauf und jedem einzelnen Bezug – mit Stärke, *extra
+heiß*, wie viele Sekunden er gedauert hat und, wenn ihn jemand an der Maschine gestoppt hat, *bei …%
+gestoppt*: gebucht wird er trotzdem. Und **Dem Nächsten überlassen** – welche Meldung während wessen Bezug kam und ob sich
 jemand darum gekümmert hat. Die Reihenfolge am Auslauf steht unter
 [Wenn die Maschine belegt ist](#wenn-die-maschine-belegt-ist).
 
@@ -866,7 +886,9 @@ Ausgeschaltet bleiben schon gebuchte Einkäufe als Gutschrift im Kontostand. Das
 Reiter:
 
 **Bestand**: was im Regal sein sollte – die letzte Inventur plus alles, was seitdem gekauft
-wurde; pro Tasse wird nichts abgezogen. Zum Zählen trägst du bei den Artikeln ein, was du gezählt
+wurde. Mit Kaffeemaschine, und wenn für einen Artikel der Verbrauch unter **Artikel** eingetragen ist,
+steht dabei, was die Maschine seit der Inventur verbraucht hat und wie viel etwa noch da sein sollte –
+Tassen an der Strichliste vorbei eingeschlossen; sonst wird pro Tasse nichts abgezogen. Zum Zählen trägst du bei den Artikeln ein, was du gezählt
 hast, und tippst **Inventur speichern**; ein leeres Feld lässt den Artikel, wie er ist. Darunter
 die letzten Inventuren und wer gezählt hat.
 
@@ -909,12 +931,20 @@ Bestellungen behalten ihren Preis. Die Rechnung im Einzelnen steht in
 Ein Artikel, der schon gekauft wurde, lässt sich nicht löschen; nimm stattdessen den Haken bei
 *Buchbar* heraus.
 
+Ist eine Kaffeemaschine verbunden, hat das Formular eines Artikels zusätzlich **Verbrauch der
+Kaffeemaschine**: wie viel davon jedes Produkt der Maschine verbraucht, in der Einheit des Artikels
+(0,008 für 8 g Bohnen, wenn in kg gezählt wird). **Vorschlag für Kaffeebohnen** füllt das aus der
+Portion unter **Kaffeemaschine** → *Füllstände* mal den Tassen des Produkts; **Vorschlag für Milch
+(geschätzt)** mit Schätzwerten – die Maschine meldet keine Milch, lass also am besten einmal einen
+Milchschaum in einen Messbecher laufen und korrigiere die Werte. Gespeichert wird erst mit
+**Speichern**.
+
 ![Inventar – Artikel](pictures/manual/de/dashboard-inventory-items.png)
 
 #### So rechnet das Inventar
 
 **Der Bestand** ist, was laut Buchungen im Regal sein sollte: die letzte Inventur eines Artikels
-plus alles, was seitdem gekauft wurde. Pro Tasse zieht CoffeePy nichts ab – es weiß ja nicht, wie
+plus alles, was seitdem gekauft wurde. Ohne Kaffeemaschine zieht CoffeePy pro Tasse nichts ab – es weiß ja nicht, wie
 viel Bohnen eine Tasse braucht oder wer Milch nimmt. Ohne Inventur ist der Bestand alles, was je
 gekauft wurde. Eine **Inventur** hält fest, was wirklich da ist, und ist ab dann der neue
 Ausgangspunkt; eine Zahl, die sich vertippt hat, korrigiert die nächste Inventur. Was verbraucht
@@ -935,7 +965,9 @@ Beträge dann zusammen:
    Großeinkauf, der noch im Schrank liegt, macht die Tasse so nicht teurer. Ohne zwei Inventuren
    zählt einfach, was im Zeitraum für den Artikel ausgegeben wurde.
 2. **Geteilt durch die Tassen derselben Zeit** – zwischen den beiden Inventuren bzw. im ganzen
-   Zeitraum. Gezählt werden Bezüge: Eine Kanne zählt zwei Tassen.
+   Zeitraum. Gezählt werden Bezüge: Eine Kanne zählt zwei Tassen. Mit einer Kaffeemaschine, deren
+   Zähler diese Zeit abdecken, gilt stattdessen ihre eigene Zählung – auch Tassen an der Strichliste
+   vorbei haben Bohnen und Milch verbraucht; Gratisprodukte wie heißes Wasser zählen nicht als Tassen.
 3. **Die Kosten pro Tasse** sind die Summe dieser Beträge über alle Artikel.
 
 **Milch, Kekse und alles andere werden gleichmäßig auf jede Tasse umgelegt**, ganz gleich, wer
@@ -1064,7 +1096,10 @@ Sonntag* wählst du *Wie unter der Woche*, *Den ganzen Tag aus* oder *Eigene Zei
 (*Wochenende: aus ab* / *wieder an ab*). Eine Nacht gehört zu dem Tag, an dem sie beginnt: Die
 Freitagnacht läuft bis Samstagmorgen nach den Zeiten unter der Woche, und nach einem ganz
 ausgeschalteten Sonntag kommt der Kiosk am Montag zu *Wieder an ab*. In der Nacht werden Karten an der
-Maschine **nicht gebucht** – auch nicht nachträglich am Morgen. Das Handy-Portal, die Backups
+Maschine **nicht gebucht** – auch nicht nachträglich am Morgen. Mit *Auch ausschalten, solange die
+Kaffeemaschine aus ist* wird der Kiosk zusätzlich dunkel, sobald die Maschine fünf Minuten weg ist –
+von Hand ausgeschaltet oder von ihrem eigenen Timer – und kommt etwa zwei Minuten nach dem Einschalten
+wieder; auch dazwischen wird nichts gebucht. Das Handy-Portal, die Backups
 und das Dashboard laufen weiter. Eine Änderung greift innerhalb einer Minute; sie steht als
 *night.update* im **Protokoll**.
 

@@ -194,6 +194,8 @@ class MachineOrderTestCase(TestCase):
         self.assertContains(popup, "Fill the water tank")
         self.assertContains(popup, "Supplies")
         self.assertContains(self.client.post(reverse("kiosk:machine_refill")), "Beans refilled")
+        self.connect(connected=False, alerts=["fill_water"])  # the last messages stay in the state
+        self.assertNotContains(self.client.get(reverse("kiosk:machine_popup")), "Fill the water tank")
         CoffeeMachine.objects.filter(pk=1).update(driver="none")
         self.assertNotContains(self.panel(), "machine-btn")
 

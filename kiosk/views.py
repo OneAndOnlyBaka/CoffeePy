@@ -1006,7 +1006,8 @@ def machine_popup(request):
     return render(request, "kiosk/_machine_popup.html", {
         "level": machine.kiosk_level(), "status": current,
         "name": current["machine"].name or current["state"].get("model", ""), "model": current["state"].get("model", ""),
-        "messages": [machine.alert_label(k) for k in current["alerts"]],
+        # Only while connected: the state keeps the last messages, and "switching off" stood there all night.
+        "messages": [machine.alert_label(k) for k in current["alerts"]] if current["connected"] else [],
         "maintenance": [{"label": machine.MAINTENANCE_LABELS.get(k, k), "percent": v} for k, v in percent.items()],
         **machine.supply_levels(),
     })

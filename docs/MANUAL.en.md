@@ -363,7 +363,8 @@ With a JURA connected (see [Coffee machine](#coffee-machine)), the kiosk guides 
 and **it is booked only once the machine is done**. After **Order now** – or when the countdown runs
 out – it says *Put your cup under the outlet*, and only **Start** sets the machine going. If you don't
 tap **Start**, the kiosk goes back after 30 seconds: no coffee, nothing booked. **Cancel** does the same
-right away.
+right away. Next to the cup you see the machine – the drawing of its product line, or the admin's photo
+of it (see [Coffee machine](#coffee-machine)).
 
 ![Put your cup under the outlet](pictures/manual/en/kiosk-cup.png)
 
@@ -379,7 +380,8 @@ no booking, up to five of them. With the machine's keys locked, this is the only
 ![Start screen with a coffee machine](pictures/manual/en/kiosk-wait-machine.png)
 
 The **ring** at the top right shows what the machine reports, the predicted **supplies** and how far
-its **maintenance** is. If you topped up the beans, tap **Beans refilled** – the machine notices the
+its **maintenance** is. Its messages only while it is connected: switched off, it just says *Not
+connected*. If you topped up the beans, tap **Beans refilled** – the machine notices the
 water tank and the grounds container by itself.
 
 ![State of the coffee machine](pictures/manual/en/kiosk-machine-popup.png)
@@ -562,7 +564,8 @@ something about you, an admin say, appear by their role only) – and the device
 **Order a coffee** – the green button on **Home**, when a coffee machine is set up. Pick one of your
 coffees or a sort the machine makes and tap **Get in line**: you are then in the same
 [line](#when-the-machine-is-taken) as everyone at the kiosk. Take your cup to the machine – nothing runs
-without someone to put it there.
+without someone to put it there. At the top you see which machine it is: its drawing, or the admin's
+photo of it.
 
 ![Ordering a coffee on the phone](pictures/manual/en/portal-order.png)
 
@@ -780,6 +783,10 @@ Bluetooth is switched on along the way. The Pi's built-in radio needs **Restart 
 stick doesn't. Switch the machine on, close the JURA app on every phone (a connected machine can't be
 found), **Search for machines** and **Connect**.
 
+The Pi's built-in radio shares its chip with the WiFi the device runs for the phones: the connection to
+the machine drops now and then, and the chip can get stuck – the device then restarts it by itself, and
+the page says how often that happened. A **USB Bluetooth stick** avoids all of it.
+
 **Lock the machine's own keys**: nothing can be brewed past the tally while CoffeePy is connected. If
 the connection is lost, the machine unlocks itself within a minute.
 
@@ -793,8 +800,19 @@ beans. Here you set the tank size, the grounds portions and the bean container; 
 level. When the machine's message goes away – tank back in, grounds emptied – the level refills by
 itself.
 
-Below that: the machine's **Counters** and **Maintenance**, **Products made** with a chart and every
-single brew, and **Left for the next one** – which message came during whose brew, and whether someone
+**Picture**: every JURA product line has a drawing of its own (ENA, E, J, S, Z, GIGA, X …), shown on
+the overview, on this page, on the kiosk – the machine's state and the brew screen – and on *Order a
+coffee* in the portal. **Upload photo** replaces it everywhere with a photo of your own machine – JPEG,
+PNG or WebP; the browser makes it small first (800 pixels on its long side), and the device takes up
+to 1.5 MB. **Remove photo** brings the drawing back. The photo is kept in the database, so a backup
+carries it along.
+
+Below that: the machine's **Counters** and **Maintenance** – how far each care programme is due and
+*last on* which day it ran; **Care programmes run** lists every descaling, cleaning, filter change and
+milk system cleaning with its date (the rinses when the machine is switched on and off don't count).
+Then **Products made** with a chart and every single brew – with its strength, *extra hot*, how many
+seconds it took and, if someone stopped it at the machine, *stopped at …%*: it is booked all the same.
+And **Left for the next one** – which message came during whose brew, and whether someone
 saw to it. The order at the outlet is explained under
 [When the machine is taken](#when-the-machine-is-taken).
 
@@ -812,8 +830,10 @@ cup really costs. The inventory only exists once an admin has switched it on und
 
 Switched off, purchases already booked stay credited in the balance. The inventory has five tabs:
 
-**Stock**: what should be on the shelf – the last stock-take plus everything bought since; nothing
-is taken off per cup. To count, enter what you counted for the items and tap **Save stock-take**;
+**Stock**: what should be on the shelf – the last stock-take plus everything bought since. With a
+coffee machine, and an item's consumption set under **Items**, it adds what the machine used since the
+stock-take and about how much should be left – cups past the tally included; otherwise nothing is
+taken off per cup. To count, enter what you counted for the items and tap **Save stock-take**;
 an empty field leaves the item as it is. Below, the recent stock-takes and who counted.
 
 ![Inventory – stock](pictures/manual/en/dashboard-inventory.png)
@@ -852,12 +872,19 @@ in detail is in [the calculations](CALCULATIONS.md#purchases-stock-and-the-price
 **Items**: what can be booked – name, *Unit* (*kg*, *l* …), *Can be booked* and *Order*. An item
 that has been bought can't be deleted; untick *Can be booked* instead.
 
+With a coffee machine connected, an item's form also has **Used by the coffee machine**: how much of
+the item each of the machine's products takes, in the item's unit (0.008 for 8 g of beans counted in
+kg). **Suggest for coffee beans** fills it in from the portion under **Coffee machine** → *Supplies*
+times the product's cups; **Suggest for milk (estimated)** with estimates – the machine doesn't report
+milk, so best let one milk foam run into a measuring jug once and correct the values. Nothing is saved
+before **Save**.
+
 ![Inventory – items](pictures/manual/en/dashboard-inventory-items.png)
 
 #### How the inventory reckons
 
 **The stock** is what should be on the shelf according to the bookings: an item's last stock-take
-plus everything bought since. CoffeePy takes nothing off per cup – it doesn't know how many beans
+plus everything bought since. Without a coffee machine CoffeePy takes nothing off per cup – it doesn't know how many beans
 a cup takes or who has milk. Without a stock-take, the stock is everything ever bought. A
 **stock-take** records what is really there and is the new starting point from then on; a number
 that was mistyped is put right by the next stock-take. What was used follows from two stock-takes:
@@ -878,7 +905,9 @@ are then added up:
    cupboard doesn't make the cup dearer that way. Without two stock-takes, simply what was spent
    on the item in the period counts.
 2. **Divided by the cups of the same time** – between the two stock-takes, or over the whole
-   period. Machine strokes are counted: a jug is two cups.
+   period. Machine strokes are counted: a jug is two cups. With a coffee machine whose counters cover
+   that time, its own count is taken instead – cups past the tally used beans and milk too; free
+   products such as hot water don't count as cups.
 3. **The cost per cup** is the sum of these amounts over all items.
 
 **Milk, cookies and everything else are spread evenly over every cup**, whoever has milk or eats a
@@ -997,7 +1026,9 @@ choose *Like the weekdays*, *Off all day* or *Times of its own* (*Weekend: off f
 from*). A night belongs to the day it starts on: Friday night runs to Saturday morning by the
 weekday times, and after a Sunday that was off all day the kiosk comes back on Monday at *On
 again from*. At night, cards at the machine are **not booked** – not later in the morning
-either. The phone portal, the backups and the dashboard keep running. A change takes effect
+either. With *Also switch it off while the coffee machine is off* the kiosk also goes dark once the
+machine has been gone for five minutes – switched off by hand or by its own timer – and comes back
+within about two minutes of switching it on; taps in between aren't booked either. The phone portal, the backups and the dashboard keep running. A change takes effect
 within a minute and shows up in the **Audit log** as *night.update*.
 
 **System time**: only needed when the clock module is missing or wrong. The new time is

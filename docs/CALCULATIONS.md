@@ -162,10 +162,21 @@ from the coffee box** (dashboard only) creates no payment: it counts in the stoc
 the costs and the statistics' purchases bar, in nobody's balance.
 
 ```
-stock = newest stock-take + quantity bought since      (nothing is taken off per cup)
+stock = newest stock-take + quantity bought since      (nothing is taken off per order)
 ```
 
-Without a stock-take the stock is everything ever bought.
+Without a stock-take the stock is everything ever bought. **With a coffee machine** and an item's
+consumption per product set (dashboard → Inventory → Items, "Used by the coffee machine"), the
+dashboard's stock page adds:
+
+```
+machine used = Σ over its products: products made since the stock-take × amount per product
+expected     = stock − machine used                    (never below 0)
+```
+
+"Products made" comes from the machine's own counters (`services.machine_counted`), added up reading
+by reading: a reading of another machine, or one whose total went down, starts afresh from itself.
+It includes what was brewed past the tally. Kiosk and portal show the plain stock.
 
 **Costs** (dashboard → Inventory → Costs) cover the last 3, 6 or 12 months. Every item is
 reckoned over its own stretch:
@@ -180,7 +191,10 @@ otherwise:
   cost     = sum of the item's purchase prices in the period
   stretch  = the whole period
 
-per cup (item)  = cost ÷ strokes ordered in the item's stretch
+per cup (item)  = cost ÷ cups in the item's stretch
+cups            = the machine's own count, where its counters cover the stretch - each product
+                  times its strokes, free products (hot water, milk foam) not counted;
+                  otherwise the strokes ordered
 cost per cup    = sum over all items
 ```
 

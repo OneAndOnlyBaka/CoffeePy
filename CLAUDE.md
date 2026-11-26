@@ -252,6 +252,12 @@ send commands with one publish each (`coffee/machine.py`), and every page reads 
   itself (`policy.BrewChain`: the next once the machine is idle and says `coffee_ready`), one dispense row
   and one order per cup, at the sort's price - a cup that fails ends the chain. With the sorts hidden behind
   the slots, a slot is what is preselected: the auto-checkout must never book something out of sight.
+- **Its picture** (`coffee/machine_image.py`): the drawing of its JURA line, found from py-jura's model name
+  (`static/machines/`, drawn by `scripts/make_machine_images.py` - `test_machine_image` compares the files with
+  the script), or the admin's photo, kept in the database (a backup carries it). The image has no Pillow: the
+  dashboard's page downsizes the photo in the browser, the server only checks type and size. It is served at
+  `/machine-photo/<digest>.<ext>` without a login - the kiosk on 8443 needs it as much as the phones - and its
+  URL changes only with the photo, so the brew screen stays byte-identical.
 - **One line for the machine** (`coffee/turns.py`, `MachineTurn`): every brew for a member - kiosk or phone
   (portal → Order a coffee) - takes a turn; the first one while the machine is free is called and has
   `TURN_SECONDS` to press Start, at the kiosk after a card tap or on the phone. Free products wait while
