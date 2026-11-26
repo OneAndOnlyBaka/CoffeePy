@@ -1,8 +1,12 @@
 {% extends "portal/base.html" %}
-{% load i18n l10n %}
+{% load i18n l10n coffee_tags %}
 {% block title %}{% translate "Order a coffee" %} - CoffeePy{% endblock %}
 {% block portal_content %}
 <h1>{% translate "Order a coffee" %}</h1>
+<div class="machine-banner">
+    <img src="{% machine_image %}" alt="">
+    <span>{{ machine_name|default:_("Coffee machine") }}</span>
+</div>
 {% comment %}The turn card follows the line every 2 s (views.order_status). The choice stays outside it, so
 a poll never resets a pick under the finger.{% endcomment %}
 <div id="turn" hx-get="{% url 'portal:order_status' %}" hx-trigger="every 2s" hx-swap="innerHTML">

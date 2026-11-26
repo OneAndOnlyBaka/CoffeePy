@@ -428,7 +428,8 @@ def order(request):
                 "price": s.coffee_sort.price * s.count, "options": my_coffees.options_text(my_coffees.options(s))} for s in slots]
     choices += [{"value": str(s.pk), "name": s.name, "count": 1, "price": s.price} for s in sorts]
     ctx = _turn_context(member)
-    ctx.update({"choices": choices, "preselected": _preselected(member, slots, sorts)})
+    ctx.update({"choices": choices, "preselected": _preselected(member, slots, sorts),
+                "machine_name": machine.status()["machine"].name})
     return render(request, "portal/order.html", ctx)
 
 

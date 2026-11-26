@@ -218,10 +218,16 @@ class CoffeeMachine(models.Model):
     # The machine's own keys locked while CoffeePy is connected, so nothing is brewed past the tally.
     # The lock drops by itself shortly after the connection is lost - never a machine nobody can use.
     block_manual = models.BooleanField(default=True)
+    # An admin's own photo of the machine, shown instead of the drawing of its product line
+    # (coffee/machine_image.py). In the database, so a backup carries it along; made small in the browser
+    # before the upload - the image has no Pillow to do it here. Deferred: the kiosk polls past this row.
+    photo = models.BinaryField(null=True, blank=True, editable=False)
+    photo_type = models.CharField(max_length=20, blank=True)
+    photo_digest = models.CharField(max_length=16, blank=True)
 
     @classmethod
     def current(cls):
-        return cls.objects.get_or_create(pk=1)[0]
+        return cls.objects.defer("photo").get_or_create(pk=1)[0]
 
     @property
     def enabled(self) -> bool:

@@ -91,6 +91,7 @@ class DeviceTestCase(TestCase):
         machine.handle_scan({"id": request_id, "devices": [{"address": "F4:57:52:42:0C:04", "model": "E6 (EB)"}]})
         answer = self.client.get(reverse("dashboard:device_scan_status"), {"id": request_id}).json()
         self.assertEqual(answer["devices"][0]["model"], "E6 (EB)")
+        self.assertEqual(answer["devices"][0]["image"], "/static/machines/e.svg")
         self.client.post(self.url, {"form": "connect", "address": "f4:57:52:42:0c:04", "name": "JURA E6 (EB)"})
         settings_ = CoffeeMachine.current()
         self.assertEqual((settings_.address, settings_.name), ("F4:57:52:42:0C:04", "JURA E6 (EB)"))

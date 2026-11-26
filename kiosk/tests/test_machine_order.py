@@ -69,6 +69,7 @@ class MachineOrderTestCase(TestCase):
         self.assertContains(response, "Put your cup under the outlet")
         # Not "brew-cup": that is the cup's own class, and the card once shrank to its 200px.
         self.assertContains(response, 'class="panel-card brew-card stage-cup"')
+        self.assertContains(response, 'class="brew-machine" alt="" src="/static/machines/')
         self.assertFalse(Order.objects.exists())  # nothing booked yet
         response = self.client.post(reverse("kiosk:machine_start"))
         dispense = MachineDispense.objects.get()
@@ -189,6 +190,7 @@ class MachineOrderTestCase(TestCase):
         self.connect(alerts=["fill_water"], blocking=["fill_water"])
         popup = self.client.get(reverse("kiosk:machine_popup"))
         self.assertContains(popup, "E6 (EB)")
+        self.assertContains(popup, 'class="machine-photo" src="/static/machines/e.svg"')
         self.assertContains(popup, "Fill the water tank")
         self.assertContains(popup, "Supplies")
         self.assertContains(self.client.post(reverse("kiosk:machine_refill")), "Beans refilled")

@@ -4,6 +4,7 @@ from django import template
 from django.utils.formats import number_format
 
 from coffee import machine
+from coffee.machine_image import url as machine_image_url
 from coffee.models import payment_method_label
 
 register = template.Library()
@@ -36,3 +37,9 @@ def inventory_on() -> bool:
     from dashboard.models import InventoryPolicy  # noqa: PLC0415 - dashboard imports coffee
 
     return InventoryPolicy.current().members_book
+
+
+@register.simple_tag
+def machine_image(model=""):
+    """URL of the coffee machine's picture: the admin's photo, else its product line's drawing."""
+    return machine_image_url(model=model)

@@ -11,13 +11,14 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.db.models.functions import TruncDate
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from coffee import backups, machine
+from coffee import backups, machine, machine_image
 from coffee.models import CoffeeSort, MachineDispense, MachineIncident, MachineMaintenance, MachineProduct, MachineSupply
 
 from . import audit
@@ -122,6 +123,24 @@ def device(request):
             kind = request.POST.get("kind")
             if kind in dict(MachineSupply.KINDS):
                 machine.refill(kind, actor=request.user.get_username(), source="dashboard")
+            return redirect("dashboard:device")
+        elif action == "photo":
+            upload = request.FILES.get("photo")
+            data = upload.read(machine_image.MAX_BYTES + 1) if upload else b""
+            kind = machine_image.sniff(data)
+            if kind is None or len(data) > machine_image.MAX_BYTES:
+                messages.error(request, _("That is no photo this device can show - a JPEG, PNG or WebP up to 1.5 MB."))
+                return redirect("dashboard:device")
+            settings_.photo, settings_.photo_type, settings_.photo_digest = data, kind, machine_image.digest(data)
+            settings_.save(update_fields=["photo", "photo_type", "photo_digest"])
+            audit.log(request, "coffee_machine.photo", details=f"{kind}, {len(data) // 1024} KB")
+            messages.success(request, _("Saved - the photo now shows wherever the machine does."))
+            return redirect("dashboard:device")
+        elif action == "photo_remove":
+            settings_.photo, settings_.photo_type, settings_.photo_digest = None, "", ""
+            settings_.save(update_fields=["photo", "photo_type", "photo_digest"])
+            audit.log(request, "coffee_machine.photo_remove")
+            messages.success(request, _("The photo is removed - the drawing shows again."))
             return redirect("dashboard:device")
         elif action == "reboot":
             backups.storage_request("reboot", requested_by=request.user.get_username())
@@ -251,4 +270,19 @@ def device_scan(request):
 @superuser_required
 @require_GET
 def device_scan_status(request):
-    return JsonResponse(machine.scan_result(request.GET.get("id", "")))
+    result = machine.scan_result(request.GET.get("id", ""))
+    devices = [{**d, "image": static(f"machines/{machine_image.family(d.get('model', ''))}.svg")}
+               for d in result.get("devices") or []]
+    return JsonResponse({**result, "devices": devices})
+
+
+def machine_photo(request, digest, ext):
+    """The admin's photo of the machine, for every screen - the kiosk's on :8443 too, hence not under
+    /dashboard/ and without a login: it shows a coffee machine. The digest is in the URL, so it is cached
+    for good and a new photo is a new URL."""
+    settings_ = CoffeeMachine.objects.filter(pk=1, photo_digest=digest).first()
+    if not digest or settings_ is None or not settings_.photo or machine_image.TYPES.get(settings_.photo_type) != ext:
+        raise Http404
+    response = HttpResponse(bytes(settings_.photo), content_type=settings_.photo_type)
+    response["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response

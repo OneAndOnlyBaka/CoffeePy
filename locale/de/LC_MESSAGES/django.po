@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 11:30+0100\n"
+"POT-Creation-Date: 2026-11-26 19:50+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -1409,6 +1409,25 @@ msgstr "Nach Maschinen suchen"
 msgid "Searching - about 15 seconds ..."
 msgstr "Suche läuft - etwa 15 Sekunden ..."
 
+msgid "Picture"
+msgstr "Bild"
+
+msgid ""
+"Your own photo of the machine - it shows here, on the kiosk and on the "
+"members' phones."
+msgstr "Dein eigenes Foto der Maschine - es erscheint hier, am Kiosk und auf den Handys der Mitglieder."
+
+msgid ""
+"A drawing of the machine's product line. A photo of your own machine "
+"replaces it here, on the kiosk and on the members' phones."
+msgstr "Eine Zeichnung der Baureihe der Maschine. Ein Foto deiner eigenen Maschine ersetzt sie hier, am Kiosk und auf den Handys der Mitglieder."
+
+msgid "Upload photo"
+msgstr "Foto hochladen"
+
+msgid "Remove photo"
+msgstr "Foto entfernen"
+
 msgid "Counters"
 msgstr "Zähler"
 
@@ -1912,7 +1931,11 @@ msgid ""
 "Beans: the portion under Coffee machine → Supplies times the product's cups. "
 "Milk: an estimate - the machine doesn't say; best measure one foam into a "
 "jug once. Check the values, then save."
-msgstr "Bohnen: die Portion unter Kaffeemaschine → Füllstände mal die Tassen des Produkts. Milch: geschätzt - die Maschine sagt es nicht; am besten einmal einen Milchschaum in einen Messbecher laufen lassen. Werte prüfen, dann speichern."
+msgstr ""
+"Bohnen: die Portion unter Kaffeemaschine → Füllstände mal die Tassen des "
+"Produkts. Milch: geschätzt - die Maschine sagt es nicht; am besten einmal "
+"einen Milchschaum in einen Messbecher laufen lassen. Werte prüfen, dann "
+"speichern."
 
 msgid ""
 "What members can book as a purchase. An item that was bought can't be "
@@ -2962,6 +2985,16 @@ msgstr "Die Maschine ist getrennt."
 
 msgid "Created - check its price."
 msgstr "Angelegt - prüfe den Preis."
+
+msgid ""
+"That is no photo this device can show - a JPEG, PNG or WebP up to 1.5 MB."
+msgstr "Das ist kein Foto, das dieses Gerät zeigen kann - ein JPEG, PNG oder WebP bis 1,5 MB."
+
+msgid "Saved - the photo now shows wherever the machine does."
+msgstr "Gespeichert - das Foto erscheint jetzt überall, wo die Maschine gezeigt wird."
+
+msgid "The photo is removed - the drawing shows again."
+msgstr "Das Foto ist entfernt - die Zeichnung erscheint wieder."
 
 msgid "The device restarts - the dashboard is back in about two minutes."
 msgstr ""

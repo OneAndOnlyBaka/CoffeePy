@@ -60,6 +60,7 @@
     {% if settings.address %}
     <div class="list">
         <div class="list-row">
+            <img class="machine-thumb" src="{% machine_image status.state.model %}" alt="">
             <div class="list-row-text">
                 <span class="list-row-title">{{ machine_name }}</span>
                 <span class="list-row-meta">{{ settings.address }}{% if firmware %} · {{ firmware }}{% endif %}</span>
@@ -96,6 +97,36 @@
     <div class="list" id="machine-found"></div>
     {% endif %}
 </div>
+
+{% if settings.address %}
+<div class="card">
+    <h2>{% translate "Picture" %}</h2>
+    <div class="machine-picture">
+        <img class="machine-image" src="{% machine_image status.state.model %}" alt="">
+        <div>
+            <p class="muted">{% if settings.photo_digest %}{% translate "Your own photo of the machine - it shows here, on the kiosk and on the members' phones." %}{% else %}{% blocktranslate trimmed %}
+                A drawing of the machine's product line. A photo of your own machine replaces it here, on the kiosk
+                and on the members' phones.
+            {% endblocktranslate %}{% endif %}</p>
+            {% comment %}Downsized in the browser first (the script below): a phone's photo is several MB, and the
+            Pi 3 would decode all of it for every screen. Without the script the upload still works up to the limit.{% endcomment %}
+            <form method="post" enctype="multipart/form-data" id="machine-photo-form">
+                {% csrf_token %}
+                <input type="hidden" name="form" value="photo">
+                <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required>
+                <button type="submit" class="btn">{% translate "Upload photo" %}</button>
+            </form>
+            {% if settings.photo_digest %}
+            <form method="post" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="form" value="photo_remove">
+                <button type="submit" class="secondary">{% translate "Remove photo" %}</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% if counter_rows %}
 <div class="card">
@@ -279,6 +310,7 @@
         <input type="hidden" name="form" value="connect">
         <input type="hidden" name="address">
         <input type="hidden" name="name">
+        <img class="machine-thumb" alt="">
         <div class="list-row-text">
             <span class="list-row-title"></span>
             <span class="list-row-meta"></span>
@@ -298,6 +330,30 @@
             options: {responsive: true, scales: {x: {stacked: true}, y: {stacked: true, ticks: {precision: 0}}},
                       plugins: {title: {display: true, text: "{% translate 'Products made per day, last 30 days' as x %}{{ x|escapejs }}"}}}});
     }
+})();
+(function () {
+    // The machine's photo, made at most PHOTO_EDGE pixels on its long side and sent as a JPEG.
+    const PHOTO_EDGE = 800;
+    const form = document.getElementById("machine-photo-form");
+    if (!form) return;
+    form.addEventListener("submit", (event) => {
+        const file = form.elements.photo.files[0];
+        if (!file || !window.createImageBitmap) return;
+        event.preventDefault();
+        createImageBitmap(file).then((bitmap) => {
+            const scale = Math.min(1, PHOTO_EDGE / Math.max(bitmap.width, bitmap.height));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
+            canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                const data = new FormData(form);
+                data.set("photo", blob, "machine.jpg");
+                fetch(form.action || location.href, {method: "POST", body: data})
+                    .then((res) => { location.href = res.url || location.href; })
+                    .catch(() => form.submit());
+            }, "image/jpeg", 0.85);
+        }).catch(() => form.submit());
+    });
 })();
 (function () {
     const button = document.getElementById("machine-search");
@@ -334,6 +390,7 @@
                 row.querySelector("[name=address]").value = d.address;
                 row.querySelector("[name=name]").value = d.model ? "JURA " + d.model : d.name;
                 row.querySelector(".list-row-title").textContent = d.model ? "JURA " + d.model : (d.name || d.address);
+                row.querySelector(".machine-thumb").src = d.image;
                 row.querySelector(".list-row-meta").textContent = d.address + (d.rssi != null ? " · " + texts.signal + " " + d.rssi + " dBm" : "");
                 found.appendChild(row);
             }

@@ -36,6 +36,7 @@
         </div>
         {% if machine %}
         <div class="list-row">
+            {% if machine.machine.address %}<img class="machine-thumb" src="{% machine_image machine.state.model %}" alt="">{% endif %}
             <div class="list-row-text">
                 <span class="list-row-title">{% translate "Coffee machine" %}</span>
                 <span class="list-row-meta">{% if machine.connected %}{% for key in machine.alerts %}{{ key|alert_label }}{% if not forloop.last %} · {% endif %}{% empty %}{% translate "ready" %}{% endfor %}{% elif machine.machine.address %}{{ machine.machine.name|default:machine.machine.address }}{% else %}{% translate "not set up yet" %}{% endif %}</span>

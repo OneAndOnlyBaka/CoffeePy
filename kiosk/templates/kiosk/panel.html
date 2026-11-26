@@ -67,6 +67,8 @@ no seconds: the cup's animation runs in CSS, the countdown in countdown.js from 
     <div class="panel-body brew-body">
         {% comment %}The wait screen's cup (scripts/make_wait_gifs.py): standing empty under the spout, then
         filling. The GIF starts with the one swap from heating to pouring, as it should.{% endcomment %}
+        {% comment %}The machine itself (coffee/machine_image.py) - one URL per machine, so the panel stays the same.{% endcomment %}
+        <img class="brew-machine" alt="" src="{% machine_image %}">
         <img class="brew-cup" alt=""
              src="{% if stage == 'brewing' and phase != 'heating' %}{% static 'kiosk/img/wait/wait_order.gif' %}{% else %}{% static 'kiosk/img/wait/brew_cup.png' %}{% endif %}">
         <div class="brew-text">

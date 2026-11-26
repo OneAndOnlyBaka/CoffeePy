@@ -1,6 +1,9 @@
-{% load i18n l10n %}
+{% load i18n l10n coffee_tags %}
 <div class="modal-card machine-card">
     <button type="button" class="modal-close" hx-on:click="document.getElementById('qr-modal').classList.remove('open')">✕</button>
+    <div class="machine-head">
+    <img class="machine-photo" src="{% machine_image model %}" alt="">
+    <div>
     <h1>{{ name|default:_("Coffee machine") }}</h1>
     <p class="machine-state machine-{{ level }}">
         {% if level == "off" %}{% translate "Not connected - the machine works as usual, the tally books as before." %}
@@ -8,6 +11,8 @@
         {% elif level == "warn" %}{% translate "Ready - and something wants doing soon." %}
         {% else %}{% translate "Ready." %}{% endif %}
     </p>
+    </div>
+    </div>
     {% if messages %}
     <ul class="machine-messages">{% for message in messages %}<li>{{ message }}</li>{% endfor %}</ul>
     {% endif %}
