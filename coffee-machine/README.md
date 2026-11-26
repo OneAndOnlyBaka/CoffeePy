@@ -52,7 +52,7 @@ All payloads JSON; `<prefix>` defaults to `coffeemachine`.
 | `cmd` | app | no | `{"id", "action": "scan" \| "brew" \| "refresh", "product", "options", "source", "request_ids"}` |
 | `scan` | bridge | no | `{"id", "devices": [{"address", "name", "rssi", "article", "model"}], "error"}` |
 | `state` | bridge | yes | `{"connected", "model", "article", "firmware", "alerts": [...], "blocking": [...], "locked", "progress": {"phase", "product", "percent", "water_ml", "strength"}, "error", "missing_since", "driver", "address", "block_manual", "updated"}` |
-| `event` | bridge | no | `{"type", "request_id", "source", "product", "water_ml", "strength", "reason", "cup", "of", "time"}` |
+| `event` | bridge | no | `{"type", "request_id", "source", "product", "water_ml", "strength", "temperature", "percent", "reason", "cup", "of", "time"}` |
 | `counters` | bridge | yes | `{"total", "products": {"<code>": n}, "maintenance": {"counters": {...}, "percent": {...}}, "taken"}` |
 | `products` | bridge | yes | `{"article", "model", "products": [{"code", "name", "strokes", "water_ml", "strength", "brewable", "recipe"}]}` |
 

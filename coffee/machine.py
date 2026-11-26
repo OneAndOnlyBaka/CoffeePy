@@ -18,7 +18,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy, pgettext_lazy
 
 from coffee.models import (
-    CoffeeSort, MachineCounter, MachineDispense, MachineIncident, MachineProduct, MachineStatus, MachineSupply, Member,
+    CoffeeSort, MachineCounter, MachineDispense, MachineIncident, MachineMaintenance, MachineProduct, MachineStatus,
+    MachineSupply, Member,
     Order,
 )
 
@@ -410,6 +411,7 @@ def handle_event(payload: dict):
             dispense = MachineDispense.objects.create(
                 request_id=request_id, code=code, product_name=product.name if product else f"#{code}",
                 source=payload.get("source") or MachineDispense.SOURCE_MANUAL, state=MachineDispense.STARTED,
+                started_at=timezone.now(),
                 coffee_sort=product.coffee_sort if product else None)
         elif dispense is None and kind == "brew_done":
             # A brew at the machine: the one that started last and isn't done.
@@ -419,11 +421,14 @@ def handle_event(payload: dict):
             log.info("machine event without a brew to it: %s", payload)
             return None
         was_done = dispense.state == MachineDispense.DONE
-        for key in ("water_ml", "strength"):
+        for key in ("water_ml", "strength", "temperature"):
             if payload.get(key) is not None:
                 setattr(dispense, key, payload[key])
+        if payload.get("percent") is not None:
+            dispense.reached = max(0, min(100, int(payload["percent"])))
         if kind == "brew_started":
             dispense.state = MachineDispense.STARTED
+            dispense.started_at = dispense.started_at or timezone.now()
         elif kind == "brew_done":
             dispense.state, dispense.finished_at = MachineDispense.DONE, timezone.now()
         elif kind == "brew_failed":
@@ -490,16 +495,35 @@ def housekeeping(now=None):
 
 # --- counters ------------------------------------------------------------------------------------
 
+# The care programmes worth a row: what someone ran (or the machine asked for). The rinses - coffee at every
+# switching on and off, milk after a milk drink - count too, but by the thousand (an E6: 5926): only noise.
+CARE_KINDS = ("decalc", "cleaning", "filter_change", "cappu_clean")
+
+
 def record_counters(payload: dict) -> MachineCounter | None:
-    """A reading of the machine's counters - kept when something counted since the last one."""
+    """A reading of the machine's counters - kept when something counted since the last one - and every care
+    programme it ran since (MachineMaintenance)."""
+    from dashboard import audit  # noqa: PLC0415
+    from dashboard.models import CoffeeMachine  # noqa: PLC0415
+
     products = {str(k): int(v) for k, v in (payload.get("products") or {}).items() if v}
     if not products:
         return None
-    last = MachineCounter.objects.first()
-    if last is not None and last.products == products:
+    address = CoffeeMachine.current().address
+    maintenance = payload.get("maintenance") or {}
+    last = MachineCounter.objects.filter(address=address).first()
+    care = {k: int(v) for k, v in (maintenance.get("counters") or {}).items()}
+    before = {k: int(v) for k, v in ((last.maintenance or {}).get("counters") or {}).items()} if last else None
+    # A cleaning makes no product: its counters alone make a reading worth keeping too.
+    if last is not None and last.products == products and before == care:
         return None
-    return MachineCounter.objects.create(total=int(payload.get("total") or 0), products=products,
-                                         maintenance=payload.get("maintenance") or {})
+    reading = MachineCounter.objects.create(total=int(payload.get("total") or 0), products=products, address=address,
+                                            maintenance=maintenance)
+    for kind, count in care.items():
+        if kind in CARE_KINDS and before is not None and count > before.get(kind, count):
+            MachineMaintenance.objects.create(address=address, kind=kind, count=count, done_at=reading.taken_at)
+            audit.log_actor("coffee machine", "machine.maintenance", target=kind, details=f"{count}x in its life")
+    return reading
 
 
 # --- for the pages ------------------------------------------------------------------------------
@@ -598,6 +622,35 @@ def supply_levels() -> dict:
         return {"supplies": []}
     return {"supplies": [{"kind": s.kind, "label": str(SUPPLY_LABELS[s.kind]), "used": s.used_percent,
                           "left": s.left_percent} for s in supplies().values()]}
+
+
+# What one product takes, for the inventory's consumption (dashboard → Inventory → an item): beans are the
+# supplies' portion (MachineSupply.per_portion, 8 g unless set) times the product's cups; milk is an estimate -
+# py-jura's machine definitions have no milk amounts, and the E6's foam runs by time. Only a suggestion the
+# admin saves or changes; measure once (a cup of foam into a measuring jug) and put the real value in.
+MILK_ML = {"cappuccino": 100, "espresso macchiato": 40, "milk foam": 120, "latte macchiato": 200, "flat white": 120,
+           "milk": 150, "caffe latte": 200, "cortado": 50}
+UNITS = {"kg": ("g", Decimal("0.001")), "g": ("g", Decimal("1")), "l": ("ml", Decimal("0.001")),
+         "ml": ("ml", Decimal("1"))}
+
+
+def consumption_suggestions(unit: str) -> dict:
+    """{"beans": {code: amount}, "milk": {code: amount}} in the item's unit - empty for a unit that isn't a
+    weight or a volume (a pack, a piece): nothing to convert to."""
+    unit = (unit or "").strip().lower()
+    if unit not in UNITS:
+        return {}
+    measure, factor = UNITS[unit]
+    portion = Decimal(str(supplies()[MachineSupply.BEANS].per_portion or 8))
+    beans, milk = {}, {}
+    for product in MachineProduct.objects.filter(present=True):
+        name = product.name.lower()
+        if not product.free and product.code not in FREE_BY_DEFAULT:
+            beans[product.code] = (portion * product.strokes * factor).quantize(Decimal("0.001"))
+        ml = next((amount for key, amount in MILK_ML.items() if key in name), None)
+        if ml is not None:
+            milk[product.code] = (Decimal(ml) * factor).quantize(Decimal("0.001"))
+    return {"beans": beans} if measure == "g" else {"milk": milk}  # beans weigh, milk is poured
 
 
 def tasks_before(product: MachineProduct, water_ml: int | None = None, count: int = 1) -> list[str]:

@@ -104,6 +104,14 @@ class BrewTrackerTestCase(SimpleTestCase):
             events += tracker.update(codec.progress(H(frame)), start + i)
         return events
 
+    def test_how_far_a_brew_got(self):
+        """The highest progress while pouring goes with "done" - a brew stopped at the keys ends below 100."""
+        tracker = policy.BrewTracker()
+        tracker.expect("r1", 2, 0.0)
+        events = self.feed(tracker, [MANUAL[0], MANUAL[1], MANUAL[3], MANUAL[4], MANUAL[5]])
+        done = next(e for e in events if e["type"] == "brew_done")
+        self.assertEqual(done["percent"], codec.progress(H(MANUAL[4]))["percent"])
+
     def test_a_brew_asked_for(self):
         tracker = policy.BrewTracker()
         tracker.expect("r1", 2, 0.0)

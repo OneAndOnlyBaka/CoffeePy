@@ -454,22 +454,38 @@ def _counters_at(moment):
 
 def machine_counted(start, end=None) -> dict | None:
     """{code: products made} between two moments, from the machine's own counters - also what went
-    past the tally. None when the readings don't cover the stretch (no machine, or none before it)."""
+    past the tally. None when the readings don't cover the stretch (no machine, or none before it).
+
+    Added up reading by reading: a reading of another machine (a replacement, the bridge's simulator - on
+    the test device both were mixed with an E6's), or one whose total went down, starts afresh from itself
+    - that step counts nothing. A JURA's product counters run for its whole life, so falling means another
+    machine; first and last reading alone made a replacement's lower counters count nothing for weeks."""
     end = end or timezone.now()
     first = _counters_at(start + COUNTER_SLACK)
     last = _counters_at(end)
     if first is None or last is None or first.taken_at > start + COUNTER_SLACK:
         return None
-    return {code: max(0, n - first.products.get(code, 0)) for code, n in last.products.items()}
+    readings = (MachineCounter.objects.filter(taken_at__gte=first.taken_at, taken_at__lte=last.taken_at)
+                .order_by("taken_at", "id").values_list("address", "total", "products"))
+    counted: dict[str, int] = {}
+    previous = None
+    for address, total, products in readings:
+        if previous is not None and previous[0] == address and total >= previous[1]:
+            for code, n in products.items():
+                counted[code] = counted.get(code, 0) + max(0, n - previous[2].get(code, 0))
+        previous = (address, total, products)
+    return counted
 
 
 def machine_cups(start, end=None) -> int | None:
-    """Cups (strokes) the machine made in a stretch: each product counted times its strokes."""
+    """Cups (strokes) the machine made in a stretch: each product counted times its strokes - not the free
+    ones (hot water, milk foam): nobody pays for them, and as cups they made a cup look cheaper than it is."""
     counted = machine_counted(start, end)
     if counted is None:
         return None
-    strokes = dict(MachineProduct.objects.values_list("code", "strokes"))
-    return sum(n * strokes.get(int(code), 1) for code, n in counted.items())
+    products = {code: (strokes, free) for code, strokes, free in MachineProduct.objects.values_list("code", "strokes", "free")}
+    return sum(n * products.get(int(code), (1, False))[0] for code, n in counted.items()
+               if not products.get(int(code), (1, False))[1])
 
 
 def machine_used(item: InventoryItem, start, end=None) -> Decimal | None:

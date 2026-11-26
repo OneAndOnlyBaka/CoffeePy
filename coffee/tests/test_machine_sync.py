@@ -10,7 +10,7 @@ from django.utils import timezone
 from coffee import machine, services
 from coffee.models import (
     AuditLogEntry, CoffeeSort, InventoryConsumption, InventoryItem, MachineCounter, MachineDispense, MachineIncident,
-    MachineProduct, MachineSupply, Member, Order, StockCount,
+    MachineMaintenance, MachineProduct, MachineSupply, Member, Order, StockCount,
 )
 from dashboard.models import CoffeeMachine
 
@@ -107,6 +107,18 @@ class BrewTestCase(TestCase):
     def brew(self):
         return machine.request_brew(self.product, self.member, self.espresso)
 
+    def test_what_the_machine_said_of_a_brew(self):
+        dispense = self.brew()
+        machine.handle_event({"type": "brew_started", "request_id": dispense.request_id, "product": 2})
+        machine.handle_event({"type": "brew_done", "request_id": dispense.request_id, "product": 2, "strength": 8,
+                              "water_ml": 40, "temperature": 2, "percent": 64})
+        dispense.refresh_from_db()
+        self.assertEqual((dispense.strength, dispense.water_ml, dispense.temperature, dispense.reached), (8, 40, 2, 64))
+        self.assertIsNotNone(dispense.seconds)
+        self.assertEqual(MachineDispense(started_at=None).seconds, None)
+        # Booked all the same: a brew stopped at the machine is booked in full (the user's call, 2026-11-23).
+        self.assertTrue(Order.objects.filter(member=self.member).exists())
+
     def test_a_kiosk_brew_is_booked_once_it_is_done(self):
         dispense = self.brew()
         self.assertEqual(self.send.call_args.args[1]["product"], 2)
@@ -163,12 +175,26 @@ class BrewTestCase(TestCase):
         self.assertEqual(Order.objects.get().member, self.member)  # most likely made
         self.assertEqual((requested.state, requested.reason), ("failed", "no answer"))
 
+    def test_care_programmes_from_the_maintenance_counters(self):
+        care = lambda **counters: {"total": 100, "products": {"2": 100}, "maintenance": {"counters": counters}}  # noqa: E731
+        machine.record_counters(care(cleaning=38, decalc=3))     # the first reading: no telling when those ran
+        self.assertFalse(MachineMaintenance.objects.exists())
+        self.assertIsNotNone(machine.record_counters(care(cleaning=39, decalc=3)))  # cleaned, nothing brewed
+        done = MachineMaintenance.objects.get()
+        self.assertEqual((done.kind, done.count, done.address), ("cleaning", 39, CoffeeMachine.current().address))
+        self.assertTrue(AuditLogEntry.objects.filter(action="machine.maintenance", target="cleaning").exists())
+        self.assertIsNone(machine.record_counters(care(cleaning=39, decalc=3)))      # nothing new
+        machine.record_counters(care(cleaning=39, decalc=3, coffee_rinse=5926))
+        machine.record_counters(care(cleaning=39, decalc=3, coffee_rinse=5927))   # switched on: a rinse, no care
+        self.assertEqual(MachineMaintenance.objects.count(), 1)
+
     def test_counters_are_kept_when_they_move(self):
         self.assertIsNone(machine.record_counters({"total": 0, "products": {"2": 0}}))
         machine.record_counters({"total": 10, "products": {"2": 10, "3": 0}})
         machine.record_counters({"total": 10, "products": {"2": 10}})
         machine.record_counters({"total": 11, "products": {"2": 11}})
         self.assertEqual(MachineCounter.objects.count(), 2)
+        self.assertEqual(MachineCounter.objects.first().address, CoffeeMachine.current().address)
 
 
 class SupplyTestCase(TestCase):
@@ -252,8 +278,8 @@ class InventoryTestCase(TestCase):
         InventoryConsumption.objects.create(item=self.beans, product=MachineProduct.objects.get(code=19), amount=Decimal("0.016"))
         self.start = timezone.now() - timedelta(days=10)
 
-    def reading(self, when, **counts):
-        MachineCounter.objects.create(taken_at=when, total=sum(counts.values()),
+    def reading(self, when, address="F4:57:52:42:0C:04", **counts):
+        MachineCounter.objects.create(taken_at=when, total=sum(counts.values()), address=address,
                                       products={k.lstrip("p"): v for k, v in counts.items()})
 
     def test_expected_stock_from_the_counters(self):
@@ -264,6 +290,33 @@ class InventoryTestCase(TestCase):
         # 50 espressi x 8 g + 10 double coffees x 16 g = 0.56 kg
         self.assertEqual((level["machine_used"], level["expected"]), (Decimal("0.560"), Decimal("1.440")))
         self.assertEqual(services.machine_cups(self.start), 50 + 10 * 2)
+
+    def test_another_machine_starts_afresh(self):
+        """What the test device held on 2026-11-23: the bridge's simulator and the E6 counting into one list -
+        and a replacement machine whose counters stand far lower than the old one's."""
+        hour = timedelta(hours=1)
+        self.reading(self.start - timedelta(minutes=5), p2=1000)
+        self.reading(self.start + 2 * hour, p2=1010)                      # 10 on the old machine
+        self.reading(self.start + 3 * hour, address="AA:BB:CC:DD:EE:FF", p2=40)   # replaced: a new baseline
+        self.reading(self.start + 4 * hour, address="AA:BB:CC:DD:EE:FF", p2=45)   # 5 on the new one
+        self.reading(self.start + 5 * hour, address="AA:BB:CC:DD:EE:FF", p2=7)    # down: someone else's counters
+        self.reading(self.start + 6 * hour, address="AA:BB:CC:DD:EE:FF", p2=9)    # 2 more
+        self.assertEqual(services.machine_counted(self.start), {"2": 17})
+
+    def test_free_products_are_no_cups(self):
+        MachineProduct.objects.filter(code=19).update(free=True)  # say the double were given away
+        self.reading(self.start - timedelta(minutes=5), p2=100, p19=10)
+        self.reading(timezone.now(), p2=150, p19=20)
+        self.assertEqual(services.machine_cups(self.start), 50)
+        self.assertEqual(services.machine_used(self.beans, self.start), Decimal("0.560"))  # their beans still count
+
+    def test_suggested_consumption(self):
+        MachineProduct.objects.create(code=4, name="Cappuccino", strokes=1, present=True)
+        beans = machine.consumption_suggestions("kg")["beans"]
+        self.assertEqual((beans[2], beans[19], 13 in beans), (Decimal("0.008"), Decimal("0.016"), False))
+        self.assertEqual(machine.consumption_suggestions(" G ")["beans"][2], Decimal("8"))
+        self.assertEqual(machine.consumption_suggestions("l"), {"milk": {4: Decimal("0.100")}})
+        self.assertEqual(machine.consumption_suggestions("Packung"), {})
 
     def test_without_counters_covering_it(self):
         StockCount.objects.create(item=self.beans, quantity=Decimal("2"), created_at=self.start)

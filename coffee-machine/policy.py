@@ -22,7 +22,7 @@ class BrewTracker:
     asked for; `update` turns progress into events:
 
         {"type": "brew_started", "request_id", "source", "product"}
-        {"type": "brew_done", ... "water_ml", "strength", "temperature"}
+        {"type": "brew_done", ... "water_ml", "strength", "temperature", "percent"}
         {"type": "brew_failed", "request_id", "product", "reason"}
 
     A product that starts without having been asked for is the machine's own ("manual") - chosen
@@ -59,6 +59,9 @@ class BrewTracker:
             for key in ("strength", "water_ml", "temperature"):
                 if key in prog:
                     self.current[key] = prog[key]
+            # How far it got - the highest the machine said while pouring: a brew stopped at its keys ends lower.
+            if prog.get("phase") == "dispensing" and "percent" in prog:
+                self.current["percent"] = max(self.current.get("percent", 0), prog["percent"])
             if prog["state"] == codec.STATE_DONE or not codec.is_active(prog["state"]):
                 # Back to idle without "done" in between happens when a frame was missed between
                 # two polls - the product was made all the same.

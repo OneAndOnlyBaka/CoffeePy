@@ -111,21 +111,30 @@
         </div>
         {% endfor %}
     </div>
-    {% if maintenance.counters %}
+    {% if care_rows %}
     <h3>{% translate "Maintenance" %}</h3>
     <div class="list">
-        {% for key, count in maintenance.counters.items %}
+        {% for row in care_rows %}
         <div class="list-row">
             <div class="list-row-text">
-                <span class="list-row-title">{{ key|maintenance_label }}</span>
-                {% for pkey, percent in maintenance.percent.items %}{% if pkey == key %}
-                <span class="list-row-meta">{% blocktranslate trimmed %}{{ percent }}% due{% endblocktranslate %}</span>
-                {% endif %}{% endfor %}
+                <span class="list-row-title">{{ row.key|maintenance_label }}</span>
+                <span class="list-row-meta">{% if row.percent is not None %}{% blocktranslate trimmed with percent=row.percent %}{{ percent }}% due{% endblocktranslate %}{% endif %}{% if row.percent is not None and row.last %} · {% endif %}{% if row.last %}{% blocktranslate trimmed with date=row.last|date:"d.m.Y" %}last on {{ date }}{% endblocktranslate %}{% endif %}</span>
             </div>
-            <span class="list-row-value">{{ count }}×</span>
+            <span class="list-row-value">{{ row.count }}×</span>
         </div>
         {% endfor %}
     </div>
+    {% if care_history %}
+    <h3>{% translate "Care programmes run" %}</h3>
+    <div class="list">
+        {% for done in care_history %}
+        <div class="list-row"><div class="list-row-text">
+            <span class="list-row-title">{{ done.kind|maintenance_label }}</span>
+            <span class="list-row-meta">{{ done.done_at|date:"d.m.Y H:i" }} · {% blocktranslate trimmed with n=done.count %}the {{ n }}th in its life{% endblocktranslate %}</span>
+        </div></div>
+        {% endfor %}
+    </div>
+    {% endif %}
     {% endif %}
 </div>
 {% endif %}
@@ -228,7 +237,7 @@
         <div class="list-row">
             <div class="list-row-text">
                 <span class="list-row-title">{{ dispense.product_name|product_label }}{% if dispense.member %} · {{ dispense.member.display_name }}{% endif %}</span>
-                <span class="list-row-meta">{{ dispense.created_at|date:"d.m.Y H:i" }} · {{ dispense.get_source_display }}{% if dispense.water_ml %} · {{ dispense.water_ml }} ml{% endif %}{% if dispense.order_id %} · {% blocktranslate with id=dispense.order_id %}order #{{ id }}{% endblocktranslate %}{% endif %}{% if dispense.reason %} · {{ dispense.reason }}{% endif %}</span>
+                <span class="list-row-meta">{{ dispense.created_at|date:"d.m.Y H:i" }} · {{ dispense.get_source_display }}{% if dispense.water_ml %} · {{ dispense.water_ml }} ml{% endif %}{% if dispense.strength %} · {% blocktranslate trimmed with level=dispense.strength %}strength {{ level }}{% endblocktranslate %}{% endif %}{% if dispense.temperature == 2 %} · {% translate "extra hot" %}{% endif %}{% if dispense.seconds is not None %} · {{ dispense.seconds }} s{% endif %}{% if dispense.reached is not None and dispense.reached < 100 %} · {% blocktranslate trimmed with percent=dispense.reached %}stopped at {{ percent }}%{% endblocktranslate %}{% endif %}{% if dispense.order_id %} · {% blocktranslate with id=dispense.order_id %}order #{{ id }}{% endblocktranslate %}{% endif %}{% if dispense.reason %} · {{ dispense.reason }}{% endif %}</span>
             </div>
             {% if dispense.state == "done" %}<span class="badge ok-badge">● {{ dispense.get_state_display }}</span>
             {% else %}<span class="badge off">● {{ dispense.get_state_display }}</span>{% endif %}

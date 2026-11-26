@@ -18,7 +18,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
 from coffee import backups, machine
-from coffee.models import CoffeeSort, MachineDispense, MachineIncident, MachineProduct, MachineSupply
+from coffee.models import CoffeeSort, MachineDispense, MachineIncident, MachineMaintenance, MachineProduct, MachineSupply
 
 from . import audit
 from .decorators import superuser_required
@@ -138,7 +138,7 @@ def device(request):
         "form": form, "settings": settings_, "status": status, "bluetooth": _bluetooth_status(),
         "onboard_with_ap": settings_.enabled and settings_.adapter == CoffeeMachine.ADAPTER_ONBOARD
         and bool(django_settings.AP_SSID),
-        "counter_rows": machine.counter_rows(status), "maintenance": status["counters"].get("maintenance") or {},
+        "counter_rows": machine.counter_rows(status), **_care(settings_.address, status),
         "products": products, "sorts": CoffeeSort.objects.order_by("name"), "free_max": machine.FREE_ON_KIOSK,
         "supplies": list(machine.supplies().values()) if products else [],
         **_statistics(request),
@@ -194,6 +194,20 @@ def _int(value, default):
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _care(address, status) -> dict:
+    """The machine's care counters with how far each is due and when it last ran (MachineMaintenance), and
+    the latest care programmes - this machine's, not a predecessor's."""
+    maintenance = status["counters"].get("maintenance") or {}
+    done = MachineMaintenance.objects.filter(address=address)
+    last = {}
+    for row in done.values("kind", "done_at"):  # newest first: the first of each kind is its latest
+        last.setdefault(row["kind"], row["done_at"])
+    percent = maintenance.get("percent") or {}
+    return {"care_rows": [{"key": key, "count": count, "percent": percent.get(key), "last": last.get(key)}
+                          for key, count in (maintenance.get("counters") or {}).items()],
+            "care_history": list(done[:10])}
 
 
 def _statistics(request) -> dict:

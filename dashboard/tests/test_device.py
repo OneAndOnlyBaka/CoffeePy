@@ -121,6 +121,22 @@ class DeviceTestCase(TestCase):
         with self.settings(AP_SSID=""):  # on the office's own WiFi: no shared chip to warn about
             self.assertNotContains(self.client.get(self.url), "A USB Bluetooth stick avoids all of it.")
 
+    def test_care_and_the_brews_details(self):
+        from coffee.models import MachineMaintenance  # noqa: PLC0415
+
+        self.save()
+        self.client.post(self.url, {"form": "connect", "address": "F4:57:52:42:0C:04"})
+        machine.store({"online": True, "status": "online",
+                       "state": {"connected": True, "address": "F4:57:52:42:0C:04", "alerts": [], "blocking": []},
+                       "counters": {"total": 4254, "products": {"3": 2650},
+                                    "maintenance": {"counters": {"cleaning": 38}, "percent": {"cleaning": 40}}}})
+        MachineMaintenance.objects.create(address="F4:57:52:42:0C:04", kind="cleaning", count=38)
+        MachineMaintenance.objects.create(address="AA:BB:CC:DD:EE:FF", kind="cleaning", count=99)  # another machine
+        page = self.client.get(self.url)
+        self.assertContains(page, "40% due · last on")
+        self.assertContains(page, "the 38th in its life")
+        self.assertNotContains(page, "the 99th")
+
     def test_connecting_takes_only_an_address(self):
         self.save()
         self.client.post(self.url, {"form": "connect", "address": "'; DROP"})
@@ -246,7 +262,13 @@ class DeviceProductsTestCase(TestCase):
         InventoryPolicy.objects.update_or_create(pk=1, defaults={"mode": "dashboard"})
         beans = InventoryItem.objects.create(name="Beans", unit="kg")
         url = reverse("dashboard:inventory_item_edit", args=[beans.pk])
-        self.assertContains(self.client.get(url), "Used by the coffee machine")
+        page = self.client.get(url)
+        self.assertContains(page, "Used by the coffee machine")
+        self.assertContains(page, "Suggest for coffee beans")  # kg: a weight - beans, no milk
+        self.assertNotContains(page, "Suggest for milk")
+        self.assertContains(page, '"2": "0.008"')
+        cups = InventoryItem.objects.create(name="Cups", unit="pack")
+        self.assertNotContains(self.client.get(reverse("dashboard:inventory_item_edit", args=[cups.pk])), "Suggest for")
         self.client.post(url, {"name": "Beans", "unit": "kg", "is_active": "on", "order": "0", "use-2": "0,008"})
         self.assertEqual(str(InventoryConsumption.objects.get().amount), "0.008")
         self.client.post(url, {"name": "Beans", "unit": "kg", "is_active": "on", "order": "0", "use-2": ""})

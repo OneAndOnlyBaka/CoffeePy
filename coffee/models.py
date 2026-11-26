@@ -518,6 +518,11 @@ class MachineDispense(models.Model):
     cup = models.PositiveSmallIntegerField(default=1)
     of = models.PositiveSmallIntegerField(default=1)
     requested = models.JSONField(default=dict, blank=True)
+    # What the machine reported of it: its temperature (0 low, 1 normal, 2 high), when it really began (created_at
+    # is when it was asked for), and how far it got - the highest progress it said while pouring, in percent.
+    temperature = models.PositiveSmallIntegerField(null=True, blank=True)
+    reached = models.PositiveSmallIntegerField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now, db_index=True)
     finished_at = models.DateTimeField(null=True, blank=True)
 
@@ -527,6 +532,13 @@ class MachineDispense(models.Model):
     def __str__(self):
         return f"{self.product_name or self.code} ({self.source}, {self.state})"
 
+    @property
+    def seconds(self) -> int | None:
+        """How long the machine took, from its start to "done" - None until both are known."""
+        if self.started_at is None or self.finished_at is None:
+            return None
+        return max(0, round((self.finished_at - self.started_at).total_seconds()))
+
 
 class MachineCounter(models.Model):
     """The machine's own product counters at one moment - what the inventory reckons consumption
@@ -534,12 +546,32 @@ class MachineCounter(models.Model):
     the tally. One row per reading that changed something."""
 
     taken_at = models.DateTimeField(default=timezone.now, db_index=True)
+    # Which machine counted (CoffeeMachine.address): counters of another one - a replacement, the bridge's
+    # simulator - are no part of this one's (services.machine_counted). Blank: read before it was kept.
+    address = models.CharField(max_length=17, blank=True)
     total = models.PositiveIntegerField()
     products = models.JSONField(default=dict)  # {"<code>": count}
     maintenance = models.JSONField(default=dict)
 
     class Meta:
         ordering = ["-taken_at"]
+
+
+class MachineMaintenance(models.Model):
+    """A care programme the machine ran - decalcifying, cleaning, a new filter, the milk system's cleaning (not
+    the rinses, machine.CARE_KINDS): its maintenance counter went up between two readings (record_counters). The
+    first reading of a machine says nothing about when; only what it counts from then on is kept."""
+
+    address = models.CharField(max_length=17, blank=True)
+    kind = models.CharField(max_length=30)  # the counter's key: decalc, cleaning, filter_change, cappu_clean
+    count = models.PositiveIntegerField()  # the counter after it - how many the machine has run in its life
+    done_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ["-done_at", "-id"]
+
+    def __str__(self):
+        return f"{self.kind} #{self.count}"
 
 
 class MachineSupply(models.Model):

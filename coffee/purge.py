@@ -21,6 +21,7 @@ from coffee.models import (
     MachineCounter,
     MachineDispense,
     MachineIncident,
+    MachineMaintenance,
     MachineTurn,
     Member,
     MemberCard,
@@ -61,7 +62,7 @@ IMPORT_SCOPE = [
 # its counter readings are history, and go.
 # Purchases and stock counts go with the members and payments an import replaces - without them the
 # stock would count purchases nobody made; the item list is the admin's and stays.
-FULL_SCOPE = IMPORT_SCOPE + [InventoryItem, MachineCounter, NfcScan, PaymentMethod, AuditLogEntry]
+FULL_SCOPE = IMPORT_SCOPE + [InventoryItem, MachineCounter, MachineMaintenance, NfcScan, PaymentMethod, AuditLogEntry]
 
 
 def purge(scope) -> dict:

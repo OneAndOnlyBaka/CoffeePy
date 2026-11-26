@@ -13,7 +13,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from coffee import services
+from coffee import machine, services
 from coffee.models import InventoryConsumption, InventoryItem, MachineProduct, Member, Purchase, StockCount
 
 from . import audit
@@ -201,6 +201,8 @@ def item_edit(request, pk):
     return render(request, "dashboard/inventory_item_form.html", {
         "form": form, "instance": instance,
         "consumption": [{"product": p, "amount": current.get(p.pk)} for p in products],
+        "suggestions": {kind: {str(code): f"{amount.normalize():f}" for code, amount in values.items()}
+                        for kind, values in machine.consumption_suggestions(instance.unit).items() if values},
     })
 
 

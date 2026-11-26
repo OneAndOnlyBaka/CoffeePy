@@ -13,6 +13,27 @@
             How much of it one product takes, in the item's unit (e.g. 0.008 for 8 g of beans counted in kg). With the
             machine's counters, the stock shows what should be left since the last stock-take - cups past the tally included.
         {% endblocktranslate %}</p>
+        {% if suggestions %}
+        {% comment %}coffee.machine.consumption_suggestions: fills the fields below, nothing is saved before Save.{% endcomment %}
+        <div class="action-row">
+            {% if suggestions.beans %}<button type="button" class="secondary btn-sm" data-fill="beans">{% translate "Suggest for coffee beans" %}</button>{% endif %}
+            {% if suggestions.milk %}<button type="button" class="secondary btn-sm" data-fill="milk">{% translate "Suggest for milk (estimated)" %}</button>{% endif %}
+        </div>
+        <p class="muted">{% blocktranslate trimmed %}
+            Beans: the portion under Coffee machine → Supplies times the product's cups. Milk: an estimate - the machine
+            doesn't say; best measure one foam into a jug once. Check the values, then save.
+        {% endblocktranslate %}</p>
+        {{ suggestions|json_script:"consumption-suggestions" }}
+        <script>
+        document.querySelectorAll("[data-fill]").forEach((button) => button.addEventListener("click", () => {
+            const values = JSON.parse(document.getElementById("consumption-suggestions").textContent)[button.dataset.fill];
+            Object.entries(values).forEach(([code, amount]) => {
+                const input = document.querySelector(`input[name="use-${code}"]`);
+                if (input) input.value = amount;
+            });
+        }));
+        </script>
+        {% endif %}
         {% for row in consumption %}
         <label class="field-inline">{{ row.product.name|product_label }}
             <input type="text" inputmode="decimal" name="use-{{ row.product.code|unlocalize }}" value="{{ row.amount|default_if_none:''|unlocalize }}" class="input-sm"></label>

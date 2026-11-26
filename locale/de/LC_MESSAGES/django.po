@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 22:05+0100\n"
+"POT-Creation-Date: 2026-11-26 11:30+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -1423,6 +1423,17 @@ msgstr "Pflege"
 msgid "%(percent)s%% due"
 msgstr "%(percent)s%% fällig"
 
+#, python-format
+msgid "last on %(date)s"
+msgstr "zuletzt am %(date)s"
+
+msgid "Care programmes run"
+msgstr "Gelaufene Pflegeprogramme"
+
+#, python-format
+msgid "the %(n)sth in its life"
+msgstr "das %(n)s. in ihrem Leben"
+
 msgid "Products and coffee sorts"
 msgstr "Produkte und Kaffeesorten"
 
@@ -1505,6 +1516,10 @@ msgstr "Nicht gemacht"
 
 msgid "Products"
 msgstr "Produkte"
+
+#, python-format
+msgid "stopped at %(percent)s%%"
+msgstr "bei %(percent)s %% gestoppt"
 
 #, python-format
 msgid "order #%(id)s"
@@ -1886,6 +1901,18 @@ msgstr ""
 "0,008 für 8 g Bohnen, wenn in kg gezählt wird). Mit den Zählern der Maschine "
 "zeigt der Bestand, was seit der letzten Inventur noch da sein sollte - "
 "Tassen an der Strichliste vorbei eingeschlossen."
+
+msgid "Suggest for coffee beans"
+msgstr "Vorschlag für Kaffeebohnen"
+
+msgid "Suggest for milk (estimated)"
+msgstr "Vorschlag für Milch (geschätzt)"
+
+msgid ""
+"Beans: the portion under Coffee machine → Supplies times the product's cups. "
+"Milk: an estimate - the machine doesn't say; best measure one foam into a "
+"jug once. Check the values, then save."
+msgstr "Bohnen: die Portion unter Kaffeemaschine → Füllstände mal die Tassen des Produkts. Milch: geschätzt - die Maschine sagt es nicht; am besten einmal einen Milchschaum in einen Messbecher laufen lassen. Werte prüfen, dann speichern."
 
 msgid ""
 "What members can book as a purchase. An item that was bought can't be "
