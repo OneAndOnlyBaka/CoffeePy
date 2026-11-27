@@ -129,7 +129,9 @@ class MachineRowTestCase(TransactionTestCase):
         self.assertEqual(row.describe({"b": 1, "a": 2}), "a, b")
 
 
-class MachineConfigTestCase(TestCase):
+# push() calls close_old_connections(), which on PostgreSQL closes a connection that is inside a
+# TestCase's transaction - SQLite doesn't mind, so only the container suite showed it.
+class MachineConfigTestCase(TransactionTestCase):
     def test_sent_on_connect_and_when_it_differs(self):
         client = mock.Mock()
         config = mqtt_listener.MachineConfig()

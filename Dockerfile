@@ -25,7 +25,9 @@ FROM python:3.14-slim
 # still only writes the RTC if /dev/rtc0 is mapped into this container - the guaranteed
 # path is the host's coffeepy-rtc-sync.timer (see install/rtc_sync.sh).
 # openssl: dashboard/tls.py creates and checks Caddy's certificates with it.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# upgrade: the base image is rebuilt less often than Debian fixes its packages, and the CI audit
+# fails on every finding an upgrade fixes (zlib1g, libzstd1, passwd so far).
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
         openssl \
         postgresql-client \
         util-linux \

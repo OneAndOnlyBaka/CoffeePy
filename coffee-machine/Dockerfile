@@ -12,6 +12,10 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 FROM python:3.14-slim
 
+# upgrade: the base image is rebuilt less often than Debian fixes its packages, and the CI audit
+# fails on every finding an upgrade fixes (zlib1g, libzstd1, passwd so far).
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /install /usr/local
 # The base image's pip lags behind its fixes (the CI audit fails on that) - a newer one.
 RUN pip install --no-cache-dir --upgrade pip

@@ -15,7 +15,8 @@ for clip in kiosk_wait kiosk_order kiosk_ranking; do
   fi
 done
 declare -A LEN=([hero]=240 [explode]=270 [order]=330 [ranking]=390 [end]=150)
-for shot in ${@:-hero explode order ranking end}; do
+[ $# -gt 0 ] || set -- hero explode order ranking end
+for shot in "$@"; do
   n=$(ls "$WORK/render/$shot" 2>/dev/null | wc -l)
   if [ "$n" -ge "${LEN[$shot]}" ]; then echo "$shot done"; continue; fi
   start=$(date +%s)

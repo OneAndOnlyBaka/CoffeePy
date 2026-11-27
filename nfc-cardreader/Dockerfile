@@ -14,7 +14,9 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 FROM python:3.14-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# upgrade: the base image is rebuilt less often than Debian fixes its packages, and the CI audit
+# fails on every finding an upgrade fixes (zlib1g, libzstd1, passwd so far).
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
         pcscd \
         libpcsclite1 \
         libccid \
