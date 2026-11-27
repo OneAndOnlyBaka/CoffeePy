@@ -1396,11 +1396,12 @@ Leistung zu überwachen – ob das gewollt ist, spielt keine Rolle).
 
 Was dabei hilft, ohne Rechtsberatung zu sein:
 
-- **Rangliste und Pranger bewusst einschalten** (Dashboard → **System**) – ein neues Gerät hat
-  beides aus. Gerade der Pranger zeigt allen an der Maschine, wer Schulden hat.
+- **Rangliste, Pranger und „Weggelaufen“ bewusst einschalten** (Dashboard → **System**) – ein
+  neues Gerät hat alle drei aus. Gerade der Pranger zeigt allen an der Maschine, wer Schulden hat,
+  „Weggelaufen“, wer Wasser, Trester oder Bohnen dem Nächsten überlassen hat.
 - **Vorher informieren**: wer welche Daten sieht, wozu sie dienen (die Strichliste) und wie
   lange sie bleiben (Art. 13 DSGVO); wo es einen Betriebsrat gibt, ihn vor dem Einschalten von
-  Rangliste und Pranger einbeziehen.
+  Rangliste, Pranger oder „Weggelaufen“ einbeziehen.
 - **Kürzel erlauben**: Wer nicht mit Namen in der Rangliste stehen will, nimmt ein Kürzel wie
   „AB“ (siehe [Einstellungen](#einstellungen) am Kiosk).
 - **Ausgeschiedene markieren** (Dashboard → **Mitglieder**): Ihre Karten sind gesperrt, sie

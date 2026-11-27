@@ -1312,11 +1312,12 @@ behaviour or performance – whether that is the intention doesn't matter).
 
 What helps, without being legal advice:
 
-- **Switch the ranking and the pillory on deliberately** (dashboard → **System**) – a new
-  device has both off. The pillory in particular shows everyone at the machine who owes money.
+- **Switch the ranking, the pillory and "Ran off" on deliberately** (dashboard → **System**) – a
+  new device has all of them off. The pillory in particular shows everyone at the machine who owes
+  money, "Ran off" who left the water, the grounds or the beans for the next one.
 - **Inform people first**: who sees which data, what it is for (the tally) and how long it is
-  kept (Art. 13 GDPR); where there is a works council, involve it before switching the ranking
-  or the pillory on.
+  kept (Art. 13 GDPR); where there is a works council, involve it before switching the ranking,
+  the pillory or "Ran off" on.
 - **Allow short codes**: whoever doesn't want their name in the ranking takes a code like "AB"
   (see [Settings](#settings) at the kiosk).
 - **Mark people who left** (dashboard → **Members**): their cards are blocked, and they no

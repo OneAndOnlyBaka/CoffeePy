@@ -10,24 +10,29 @@ project inside it (the software). How the numbers on the screens come about is i
   [Network and HTTPS](#network-and-https) · [Backups](#backups) · [Offline updates](#offline-updates) ·
   [Maintenance screen](#maintenance-screen) · [System time](#system-time)
 - **Software:** [The four apps](#the-four-apps) · [Data model](#data-model) ·
-  [A card tap, end to end](#a-card-tap-end-to-end) · [Users and roles](#users-and-roles) ·
+  [A card tap, end to end](#a-card-tap-end-to-end) · [The coffee machine](#the-coffee-machine) ·
+  [Users and roles](#users-and-roles) ·
   [Audit log](#audit-log) · [Two languages](#two-languages) · [Project layout](#project-layout)
 
 ## Overview
 
-CoffeePy V2 is a single Django project: Postgres instead of V1's SQLite, the Tkinter GUI and
-Flask dashboard replaced by a touchscreen kiosk and an admin dashboard that both run as web
-apps (HTMX), and NFC card reads delivered through the [`nfc-cardreader`](../nfc-cardreader/)
-ACR122U→MQTT bridge. Everything ships via `docker compose`, including on a Raspberry Pi that
-runs fully offline.
+CoffeePy V2 is one Django project at its core - Postgres instead of V1's SQLite, the Tkinter GUI
+and Flask dashboard replaced by a touchscreen kiosk and an admin dashboard that both run as web
+apps (HTMX) - with two small bridges next to it that turn hardware into MQTT messages: the
+[`nfc-cardreader`](../nfc-cardreader/) ACR122U bridge for the card taps, and, optionally, the
+[`coffee-machine`](../coffee-machine/) bridge for a coffee machine. Everything ships via
+`docker compose`, including on a Raspberry Pi that runs fully offline.
 
 ```mermaid
 flowchart LR
     reader[ACR122U reader] -->|USB / PC/SC| bridge[nfc-bridge]
     bridge -->|MQTT nfc/acr122u| mosquitto
+    machine[Coffee machine, optional] <-->|Bluetooth LE| mbridge[machine-bridge]
+    mbridge <-->|MQTT coffeemachine/#| mosquitto
     mosquitto --> listener[mqtt-listener]
-    listener -->|NfcScan rows| db[(PostgreSQL)]
+    listener -->|NfcScan rows, machine status and brews| db[(PostgreSQL)]
     web[web: Django + gunicorn] <--> db
+    web -->|brew commands| mosquitto
     backup[backup: tick every minute] <--> db
     caddy[Caddy] --> web
     kiosk[Kiosk browser on the Pi: cog] -->|127.0.0.1:8443, polls every 500ms| caddy
@@ -52,6 +57,7 @@ Redis.
 | ACR122U NFC reader | the only supported reader; any MIFARE card or fob (ISO 14443A) |
 | DS3231 RTC on I²C-1 | keeps the time without internet |
 | USB stick | backups, set up in the dashboard |
+| Optional: a JURA with Bluetooth (built in, or its Smart Connect dongle), and a USB Bluetooth stick where the Pi's own radio doesn't reach it | the kiosk brews, books what was made and shows what the machine needs ([The coffee machine](#the-coffee-machine)) |
 
 The manual's [What you need](MANUAL.en.md#1-what-you-need) has the shopping list, the wiring
 and what the device measurably needs (CPU, RAM, SD card, boot times).
@@ -79,7 +85,7 @@ talk to the app through files under `/opt/coffeepy/data/`, never through Docker 
 | Unit | What it does |
 |---|---|
 | `coffeepy.service` | the `docker compose` stack |
-| `coffeepy-storage.service` | `install/storage_helper.py`: sees USB sticks, formats/adopts/ejects the backup stick on the dashboard's request (`data/storage/`); also switches SSH on and off (dashboard → System) |
+| `coffeepy-storage.service` | `install/storage_helper.py`: sees USB sticks, formats/adopts/ejects the backup stick on the dashboard's request (`data/storage/`); also switches SSH on and off (dashboard → System) and the host's Bluetooth, which is off until a coffee machine needs it |
 | `coffeepy-update-watcher.service` | `install/update_watcher.py`: picks up uploaded update bundles and applies them ([Offline updates](#offline-updates)) |
 | `coffeepy-update-recover.service` | before the stack starts: puts back an update a power cut interrupted |
 | `coffeepy-watchdog.timer` | every minute: restarts the kiosk session if its browser stopped polling, the stack if `/health/` stops answering - at most three times an hour |
@@ -104,10 +110,11 @@ and a panel with no usable EDID simply stays black - hence `video=` on the kerne
 | `db`           | PostgreSQL (the version pinned in `docker-compose.yml`) |
 | `mosquitto`    | MQTT broker |
 | `nfc-bridge`   | The ACR122U→MQTT bridge (see [nfc-cardreader/](../nfc-cardreader/)) - publishes every card on `nfc/acr122u`, the reader's state on `nfc/acr122u/status` |
+| `machine-bridge` | The coffee machine→MQTT bridge (see [coffee-machine/](../coffee-machine/)): one machine on `coffeemachine/#`, a JURA over Bluetooth LE today. Always there, idle until the dashboard names a machine |
 | `migrate`      | One-shot `manage.py prepare --tls` (migrate, initial admin, certificates) - the only container that migrates; gates startup of the services below |
 | `web`          | Django (gunicorn, `GUNICORN_WORKERS` workers): kiosk (`/kiosk/`), dashboard (`/dashboard/`), phone portal (`/portal/`) |
 | `caddy`        | The only way in: HTTPS on 443, and the kiosk on 127.0.0.1:8443 (see [Network and HTTPS](#network-and-https)) |
-| `mqtt-listener`| Subscribes to the bridge's topics, writes `NfcScan` rows and the reader status |
+| `mqtt-listener`| Subscribes to both bridges' topics: writes `NfcScan` rows and the reader status, keeps the coffee machine's status, counters and brews, books a brew that was made, and sends the machine bridge its configuration |
 | `backup`       | Every minute `manage.py tick`: corrects a clock that went back, and backs the device up to the stick when the interval set in the dashboard is over; hourly the audit housekeeping and `ensure_tls` (renews certificates before they expire) |
 
 `migrate`, `web`, `mqtt-listener` and `backup` share one image, `coffeepy-web`. Templates
@@ -194,8 +201,8 @@ The Pi is meant to run without internet, so updates are pushed manually instead 
 1. On a dev machine with internet: `./scripts/update_builder.sh` (guided) or
    `./scripts/build_update_bundle.sh [--platform linux/arm64]` builds and signs a bundle of
    every image `docker-compose.yml` defines for the Pi's architecture - `coffeepy-web`
-   (shared by `migrate`/`web`/`mqtt-listener`/`backup`) and `nfc-bridge` (its own
-   Dockerfile under [nfc-cardreader/](../nfc-cardreader/)) - plus pulls `db`/`mosquitto`/`caddy`,
+   (shared by `migrate`/`web`/`mqtt-listener`/`backup`), `nfc-bridge` and `machine-bridge` (their own
+   Dockerfiles under [nfc-cardreader/](../nfc-cardreader/) and [coffee-machine/](../coffee-machine/)) - plus pulls `db`/`mosquitto`/`caddy`,
    and bundles them together with `docker-compose.yml` itself into one `.tar`. The
    compose file is the only source of truth for what's in the bundle *and* what runs on
    the Pi, so the two can't quietly fall out of sync - and shipping it is how you add a
@@ -346,7 +353,10 @@ erDiagram
 | `Payment` | member, value, method name ("Cash" or a `PaymentMethod`'s name - stored, so renaming a method doesn't rewrite history) |
 | `PaymentMethod` | PayPal, a pool, a GiroCode (EPC QR for a bank transfer: recipient, IBAN, purpose with `{member}`) or a custom link with `{amount}` |
 | `InventoryItem`, `Purchase`, `StockCount` | the optional inventory (`dashboard.models.InventoryPolicy`: off, dashboard only, or members too). A purchase a member paid for carries a `Payment` of its full price with the method "Purchase" - that is what puts it into every balance; one from the coffee box has no member and no payment. Stock = newest count + purchases since; nothing per cup (docs/CALCULATIONS.md) |
-| `NfcScan`, `NfcReaderStatus` | what the bridge reported, written by `mqtt-listener` |
+| `NfcScan`, `NfcReaderStatus` | what the card reader's bridge reported, written by `mqtt-listener` |
+| `MachineStatus`, `MachineProduct`, `MachineCounter`, `MachineMaintenance`, `MachineSupply` | what the coffee machine's bridge reported: state and alerts (one row every page reads), the products it can make, its counters and maintenance |
+| `MachineDispense`, `MachineIncident` | every product the machine made - from the kiosk, a phone, free, Home Assistant or its own keys - with the `Order` of a member's brew; and what it asked for during one (water, grounds, beans), the "Ran off" board's data |
+| `MachineTurn`, `MemberSlot` | the line for the machine (`coffee/turns.py`) and a member's up to three saved coffees (`coffee/slots.py`) |
 | `AuditLogEntry` | the audit log (below) |
 | `BackupSettings`, and in `dashboard`: `PasswordPolicy`, `NamePolicy`, `NightPolicy`, `KioskBoards`, `InventoryPolicy`, `MemberRetention`, `AccountSecurity` | settings that live in the database, so a backup carries them |
 
@@ -379,6 +389,38 @@ sequenceDiagram
 An unknown card starts a new member, who is asked for a name first; a name that fails today's
 rules sends the member to the name screen before the order. Taps during the night rest are
 never booked: every page load starts at the newest scan.
+
+## The coffee machine
+
+Optional, and off until dashboard → Coffee machine names one (`dashboard.models.CoffeeMachine`);
+without it the kiosk books from the tally alone.
+
+- **The bridge is the only thing that talks to the machine** - a container of its own
+  (`coffee-machine/bridge.py`), not part of `web` or the minutely `tick`: a Bluetooth connection
+  has to be held, watched and re-made by one long-running process. Its driver
+  (`drivers/jura_ble.py`: bleak for the connection, py-jura for JURA's cipher, command builders
+  and machine definitions; `drivers/simulator.py` for trying the kiosk without a machine) is all
+  that knows the maker; `codec.py` reads the frames, `policy.py` decides (several cups in a row,
+  the key lock), `ha.py` announces the machine to a Home Assistant, if one listens. Bluetooth
+  itself is the host's BlueZ, reached over D-Bus - the container has no privileges and no device.
+- **Everything else goes over MQTT** (`coffeemachine/#`, the contract in the bridge's README).
+  The web processes send a command with one publish each (`coffee/machine.py`): brew this
+  product with these settings, scan for machines. The bridge answers with retained state,
+  counters and products, and with an event per cup: started, done, failed.
+- **`mqtt-listener` turns that into rows.** It keeps `MachineStatus` - the one row every kiosk
+  poll, phone and dashboard page reads instead of asking the machine -, records each product as a
+  `MachineDispense`, and books the `Order` once a member's brew is done (`machine.book`): one
+  order per cup, at the sort's price. A product nobody started through CoffeePy is recorded
+  without a member and books nothing.
+- **The line** (`coffee/turns.py`, `MachineTurn`) is plain database state, not a worker: every
+  brew for a member takes a turn, and `turns.advance` moves the line wherever someone looks
+  anyway - each kiosk poll, each phone poll, the listener. No scheduler, no queue service.
+- **Telemetry** is what the machine counts itself: products made, maintenance counters and what
+  it asks for. From it come the dashboard's machine page, the stock an inventory item should
+  have (`InventoryConsumption`), the kiosk's hints, the optional "Ran off" board
+  (`MachineIncident`) and - with "follow the machine" - a night rest while it is switched off.
+
+How far the machine's radio link can be trusted: [SECURITY.md](SECURITY.md#the-coffee-machine).
 
 ## Users and roles
 
@@ -427,7 +469,8 @@ translated where it is shown.
   `update_builder.sh` (dev-machine side of the offline update pipeline),
   `build_offline_bundle.sh` (full no-internet install bundle), and the generators of the
   kiosk's icons and animations.
-- `nfc-cardreader/` - ACR122U→MQTT bridge, carried over from V1 and extended with a reader-status topic and beep control.
+- `nfc-cardreader/` - ACR122U→MQTT bridge, carried over from V1 and extended with a reader-status topic, beep control and a reader that stays dark.
+- `coffee-machine/` - coffee machine→MQTT bridge ([The coffee machine](#the-coffee-machine)); usable without CoffeePy, e.g. with Home Assistant.
 - `docs/` - this documentation, the manual in [English](MANUAL.en.md) and
   [German](MANUAL.de.md) with its screenshots under `pictures/manual/`, and `pictures/` the
   images the README shows.

@@ -144,7 +144,7 @@ The portal compares one member with everybody else, on equal terms:
 | Figure | Calculation |
 |---|---|
 | Your cups | your strokes, all time |
-| Average of the others | the others' all-time strokes ÷ the number of other members who ever ordered |
+| Average of the others | the others' all-time strokes ÷ the number of other members who ever ordered - departed members included, like in your place below |
 | Compared with the average | (yours − average) ÷ average, in percent; nothing shown while there is nobody to compare with |
 | Your place | 1 + the number of other members with more cups (counts departed members too, unlike the kiosk's podium) |
 | Per month (12 months) | your strokes against the average of the others **who ordered that month** - members who stopped coming don't drag it down |
@@ -208,7 +208,7 @@ carries its share of the milk. The manuals ("How the inventory reckons") work an
 |---|---|
 | Revenue − purchases | sum of order values minus sum of purchase prices in the period |
 | Written off | for every member marked as departed in the period: orders − payments, if positive; as a share of the period's revenue |
-| Suggestion per sort | strokes × cost per cup × (1 + adjustment), rounded **up** to 5 cents, never below 0; the adjustment is set on the same page, −100% to +100% (default +10%) - a plus for what no purchase shows, a minus where someone else pays part of the coffee |
+| Suggestion per sort | strokes × cost per cup × (1 + adjustment), always rounded **up** to the next 5 cents (0.41 → 0.45, 0.45 stays), never below 0; the adjustment is set on the same page, −100% to +100% (default +10%) - a plus for what no purchase shows, a minus where someone else pays part of the coffee |
 
 No suggestion is shown below purchases in 3 different months of the period (in all of them for
 a shorter period) or below 100 cups. It is only a suggestion: prices are still changed under
