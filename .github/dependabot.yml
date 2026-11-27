@@ -52,3 +52,9 @@ updates:
     schedule: {interval: weekly}
     groups:
       actions: {patterns: ["*"]}
+    ignore:
+      # A major of these follows GitVersion's own: v5 only runs GitVersion 7, whose configuration
+      # is laid out differently (GitVersion.yml) - and the version it computes is what decides
+      # whether a device takes an update. A migration to do and test, not a weekly update.
+      - dependency-name: "gittools/actions"
+        update-types: ["version-update:semver-major"]
