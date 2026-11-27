@@ -346,9 +346,11 @@ mind before changing it:
   itself (beep, LEDs - ACS's API manual, chapter 6) go through the PC/SC escape channel,
   which libccid refuses unless `ifdDriverOptions` is `0x0001` (the bridge's Dockerfile), and
   on Linux under `SCARD_CTL_CODE(1)`, not the manual's Windows 3500. The bridge turns the beep
-  off that way. The red LED can't be turned off the same way: the firmware lights it while it
-  polls for cards, which pcscd needs - only a bridge that polls itself (`InAutoPoll`, as V1's
-  libnfc did) could, tried and not done.
+  off that way. The red LED is the firmware's: it lights it while it polls for cards and puts it
+  back on within a second of an LED command. So the bridge switches the firmware's polling off
+  (PICC operating parameter) and polls the PN532 itself (`poll_cards`, `READER_LED=0`, the
+  default) - pcscd never sees a card then, only the escape channel is used. A reader that won't
+  take the setting is read the old way, through pcscd's `CardMonitor`.
 - The DS3231 is read at boot by the kernel, but nothing writes it: the dashboard sets the
   clock from inside a container, and an offline box never gets the NTP sync that would
   trigger the kernel's own RTC update. `install/rtc_sync.sh` on a timer closes that loop -
