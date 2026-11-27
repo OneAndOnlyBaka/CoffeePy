@@ -1,0 +1,22 @@
+{% extends "portal/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Privacy" %} - CoffeePy{% endblock %}
+{% block portal_content %}
+<h1>{% translate "Privacy" %}</h1>
+<div class="card privacy-notice">
+    {% include "includes/privacy_notice.html" %}
+    <p><a href="{{ docs_url }}" target="_blank" rel="noopener">{% translate "Open the documentation" %}</a></p>
+</div>
+<div class="card">
+    {% if confirmed %}
+    <p class="msg success">{% blocktranslate trimmed with date=member.privacy_confirmed_at|date:"d.m.Y" %}You confirmed this on {{ date }}.{% endblocktranslate %}</p>
+    {% else %}
+    <p>{% translate "Without your confirmation you can't order or book anything here." %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn success btn-block">✓ {% translate "Understood - go on" %}</button>
+    </form>
+    <a href="{% url 'portal:index' %}" class="btn secondary btn-block">{% translate "Not now" %}</a>
+    {% endif %}
+</div>
+{% endblock %}

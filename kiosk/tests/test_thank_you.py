@@ -5,6 +5,7 @@ from unittest import mock
 from django.test import Client, TestCase
 from django.urls import reverse
 
+from coffee import privacy
 from coffee.models import AuditLogEntry, CoffeeSort, Member, NfcReaderStatus, NfcScan, Order
 
 
@@ -12,7 +13,7 @@ class ThankYouTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.espresso = CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.tom = Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
+        self.tom = Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.", favourite_coffee=self.espresso)
         NfcReaderStatus.objects.create(pk=1, is_online=True)
         self.client.get(reverse("kiosk:index"))
 
@@ -74,7 +75,7 @@ class ThankYouTestCase(TestCase):
             self.assertNotIn(leftover, response.content)
 
     def test_a_different_members_card_interrupts_thank_you_immediately(self):
-        Member.objects.create(uid=42, nickname="Alice X.", favourite_coffee=self.espresso)
+        Member.objects.create(privacy_version=privacy.VERSION, uid=42, nickname="Alice X.", favourite_coffee=self.espresso)
         self._log_in()
         self.client.post(reverse("kiosk:order_confirm"))
 
@@ -141,7 +142,7 @@ class NameRequiredTestCase(TestCase):
         self.client.get(reverse("kiosk:index"))
 
     def tap_as(self, nickname):
-        Member.objects.create(uid=0xDDCCBBAA, nickname=nickname, favourite_coffee=self.espresso)
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname=nickname, favourite_coffee=self.espresso)
         NfcScan.objects.create(uid="AABBCCDD", event=NfcScan.EVENT_INSERTED)
         return self.client.get(reverse("kiosk:panel"))
 
@@ -165,7 +166,7 @@ class NameRequiredTestCase(TestCase):
         self.assertEqual(Order.objects.count(), 1)
 
     def test_a_refused_name_says_why_and_keeps_what_was_typed(self):
-        Member.objects.create(uid=1, nickname="Tom K.")
+        Member.objects.create(privacy_version=privacy.VERSION, uid=1, nickname="Tom K.")
         self.tap_as("")
         for typed, reason in (("", "Please enter your name."), ("Tom", 'like "Anna B."'),
                               ("tom k.", "Somebody already goes by that name"),
@@ -194,7 +195,7 @@ class NameRequiredTestCase(TestCase):
     def test_a_name_taken_away_mid_order_still_gets_the_nag(self):
         # An admin renames someone while they stand at the kiosk - rare, but the nag beats
         # the weekly override then.
-        member = Member.objects.create(uid=42, nickname="Tom X.")
+        member = Member.objects.create(privacy_version=privacy.VERSION, uid=42, nickname="Tom X.")
         for _ in range(101):
             Order.objects.create(member=member, coffee_sort=self.espresso, value=Decimal("0.30"), machine_strokes=1)
         NfcScan.objects.create(uid="2A", event=NfcScan.EVENT_INSERTED)  # uid_as_int() -> 42

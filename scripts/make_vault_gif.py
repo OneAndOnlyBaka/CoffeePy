@@ -1,4 +1,4 @@
-"""Draws the kiosk ranking's month view into static/kiosk/img/ranking/vault.webm.
+"""Draws the kiosk ranking's month view into static/kiosk/img/ranking/vault.gif.
 
     /tmp/gif/bin/python scripts/make_vault_gif.py      # venv with pillow, see make_wait_gifs.py
 

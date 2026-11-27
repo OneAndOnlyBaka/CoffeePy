@@ -19,10 +19,15 @@ updates:
     schedule: {interval: weekly}
     groups:
       nfc-bridge: {patterns: ["*"]}
+  - package-ecosystem: pip
+    directory: /coffee-machine
+    schedule: {interval: weekly}
+    groups:
+      machine-bridge: {patterns: ["*"]}
 
-  # The python base image of the app, the test image and the bridge.
+  # The python base image of the app, the test image and the bridges.
   - package-ecosystem: docker
-    directories: ["/", "/nfc-cardreader"]
+    directories: ["/", "/nfc-cardreader", "/coffee-machine"]
     schedule: {interval: weekly}
     ignore:
       # A Python minor version is a decision (Django has to support it), not a weekly update.
@@ -47,3 +52,9 @@ updates:
     schedule: {interval: weekly}
     groups:
       actions: {patterns: ["*"]}
+    ignore:
+      # A major of these follows GitVersion's own: v5 only runs GitVersion 7, whose configuration
+      # is laid out differently (GitVersion.yml) - and the version it computes is what decides
+      # whether a device takes an update. A migration to do and test, not a weekly update.
+      - dependency-name: "gittools/actions"
+        update-types: ["version-update:semver-major"]

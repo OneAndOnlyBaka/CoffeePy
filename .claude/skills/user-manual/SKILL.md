@@ -77,7 +77,7 @@ why, then run `--shots` with exactly those. Only a change to something every scr
 (base CSS, the nav, the corner buttons) justifies `--only` or a full run.
 
 - Deploy the change to the Pi first (`pi-device` deploy.sh) - the screenshots show what runs there.
-- The **kiosk** is captured on the Pi, in its own Chromium. **Dashboard and portal** are
+- The **kiosk** is captured on the Pi, in its own browser (cog, through WebDriver). **Dashboard and portal** are
   captured from this machine, in a throwaway headless Chromium profile (`chromium-browser`, one
   per language so the browser's own widgets - "Choose File" - match), pointed at the Pi's
   address; the touchscreen is left alone for them.

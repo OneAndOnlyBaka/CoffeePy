@@ -60,6 +60,7 @@ for unsupported cards/commands they simply stay `null`.
 | `LOG_LEVEL` | `INFO` | Python log level |
 | `PCSCD_DEBUG` | `false` | `pcscd` debug logging |
 | `READER_BEEP` | `0` | `1` lets the reader beep on every card it detects (its own default); sent at each reader session through the PC/SC escape channel, which the image enables (`ifdDriverOptions 0x0001`) |
+| `READER_LED` | `0` | `0` keeps the reader dark: its firmware lights the red LED while it polls for cards, so the bridge switches that polling off and asks the PN532 for a card itself, every 0.2s (`InListPassiveTarget` through "Direct Transmit"). pcscd sees no card then - events carry no `atr`, and `card_type` only what the SAK says for certain. `1` leaves polling and LED to the firmware, cards come through pcscd |
 
 ## Build (multi-arch)
 

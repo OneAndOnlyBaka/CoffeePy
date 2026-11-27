@@ -30,6 +30,11 @@ So a later price change never rewrites history, and every ranking, statistic and
 counts **cups = the sum of `machine_strokes`**, not the number of orders. The one exception
 is the statistics page's distribution by coffee sort, which counts orders (see below).
 
+**With a coffee machine** the order is booked when the machine reports the brew done, not when it is
+asked for. A member's saved coffee of n cups in a row (`MemberSlot.count`) is **n orders**, one per
+cup made, each at the sort's own price and strokes - whatever its strength or water. A cup that wasn't
+made isn't booked. Without a machine the same coffee books its n orders at once.
+
 **A payment** is an amount and a method name ("Cash" or a configured payment method). It is a
 note that someone says they paid - nothing is transferred, and an admin can correct it under
 "Bookings".
@@ -139,7 +144,7 @@ The portal compares one member with everybody else, on equal terms:
 | Figure | Calculation |
 |---|---|
 | Your cups | your strokes, all time |
-| Average of the others | the others' all-time strokes ÷ the number of other members who ever ordered |
+| Average of the others | the others' all-time strokes ÷ the number of other members who ever ordered - departed members included, like in your place below |
 | Compared with the average | (yours − average) ÷ average, in percent; nothing shown while there is nobody to compare with |
 | Your place | 1 + the number of other members with more cups (counts departed members too, unlike the kiosk's podium) |
 | Per month (12 months) | your strokes against the average of the others **who ordered that month** - members who stopped coming don't drag it down |
@@ -157,10 +162,21 @@ from the coffee box** (dashboard only) creates no payment: it counts in the stoc
 the costs and the statistics' purchases bar, in nobody's balance.
 
 ```
-stock = newest stock-take + quantity bought since      (nothing is taken off per cup)
+stock = newest stock-take + quantity bought since      (nothing is taken off per order)
 ```
 
-Without a stock-take the stock is everything ever bought.
+Without a stock-take the stock is everything ever bought. **With a coffee machine** and an item's
+consumption per product set (dashboard → Inventory → Items, "Used by the coffee machine"), the
+dashboard's stock page adds:
+
+```
+machine used = Σ over its products: products made since the stock-take × amount per product
+expected     = stock − machine used                    (never below 0)
+```
+
+"Products made" comes from the machine's own counters (`services.machine_counted`), added up reading
+by reading: a reading of another machine, or one whose total went down, starts afresh from itself.
+It includes what was brewed past the tally. Kiosk and portal show the plain stock.
 
 **Costs** (dashboard → Inventory → Costs) cover the last 3, 6 or 12 months. Every item is
 reckoned over its own stretch:
@@ -168,24 +184,31 @@ reckoned over its own stretch:
 ```
 with two stock-takes in the period:
   used     = first count + bought between the counts − last count     (never below 0)
-  cost     = used × (sum of prices ÷ sum of quantities bought in the period)
+  cost     = used × (sum of prices ÷ sum of quantities bought in the period - or, with none
+                     bought in the period, of all the item's purchases)
   stretch  = first count → last count
 otherwise:
   cost     = sum of the item's purchase prices in the period
   stretch  = the whole period
 
-per cup (item)  = cost ÷ strokes ordered in the item's stretch
+per cup (item)  = cost ÷ cups in the item's stretch
+cups            = the machine's own count, where its counters cover the stretch - each product
+                  times its strokes, free products (hot water, milk foam) not counted;
+                  otherwise the strokes ordered
 cost per cup    = sum over all items
 ```
 
 Stock-takes value what was used - a large purchase at the end of the period that is still on the
-shelf doesn't make the cups dearer. Without them, purchases stand in for use.
+shelf doesn't make the cups dearer. Without them, purchases stand in for use. Every item - milk and
+cookies too - is spread evenly over every stroke: CoffeePy knows cups, not recipes, so an espresso
+carries its share of the milk. The manuals ("How the inventory reckons") work an example through;
+`coffee/tests/test_inventory.py` `ManualExampleTestCase` checks its numbers.
 
 | Figure | Calculation |
 |---|---|
 | Revenue − purchases | sum of order values minus sum of purchase prices in the period |
 | Written off | for every member marked as departed in the period: orders − payments, if positive; as a share of the period's revenue |
-| Suggestion per sort | strokes × cost per cup × (1 + adjustment), rounded **up** to 5 cents, never below 0; the adjustment is set on the same page, −100% to +100% (default +10%) - a plus for what no purchase shows, a minus where someone else pays part of the coffee |
+| Suggestion per sort | strokes × cost per cup × (1 + adjustment), always rounded **up** to the next 5 cents (0.41 → 0.45, 0.45 stays), never below 0; the adjustment is set on the same page, −100% to +100% (default +10%) - a plus for what no purchase shows, a minus where someone else pays part of the coffee |
 
 No suggestion is shown below purchases in 3 different months of the period (in all of them for
 a shorter period) or below 100 cups. It is only a suggestion: prices are still changed under

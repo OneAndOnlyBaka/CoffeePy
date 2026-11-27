@@ -55,6 +55,7 @@ This manual covers every screen. Technical details are in English under [docs](I
 | Real-time clock | **DS3231** module with a CR2032 battery, so the Pi keeps the right time without internet. Wire it to I²C-1: VCC→pin 1, GND→pin 6, SDA→pin 3, SCL→pin 5. CoffeePy checks it regularly and warns when it is missing, doesn't answer or has lost the time. **Replace the battery every two to three years**, warning or not (see [When something goes wrong](#8-when-something-goes-wrong)). |
 | Cards | Any MIFARE cards or key fobs (ISO 14443A) – one per member. Many company or transit cards work as well. |
 | USB stick (recommended) | For automatic backups. Nothing to prepare: you set it up in the dashboard (see [Backups](#backups)) – that erases it. |
+| JURA coffee machine (optional) | A JURA with **Smart Connect**, connected over Bluetooth – tested with an E6. On the Pi a **USB Bluetooth stick** will do; it had more range on the test device than the Pi 3's built-in radio. Without a machine, CoffeePy simply books from the tally. See [Coffee machine](#coffee-machine). |
 
 ### What the device needs
 
@@ -296,6 +297,7 @@ device needs looking after – an **amber** one when an admin has something to d
 | Red, database symbol | **Backups are not running** – the backup stick is missing, or the last backup failed. Details under **Backup** in the dashboard. |
 | Red, clock symbol | **The clock module (RTC) is faulty** – missing, not answering, or its battery is flat –, or **the clock was wrong and has been put forward**. Details on the dashboard's **Overview**. |
 | Amber, clipboard | **A task for the admin**: departed members are suggested for deletion (see [Members](#members)). It shows no names and goes once each of them is deleted or kept – or once the period is set to 0. |
+| Ring with a machine | **The coffee machine** – only when one is set up. The ring's colour shows its state: ready, something wants doing soon, it needs something first, or not connected. Tap it for the details, see [With a coffee machine](#with-a-coffee-machine). |
 
 ![Warning sign on the kiosk](pictures/manual/en/kiosk-device-alarm.png)
 
@@ -306,6 +308,20 @@ preselected coffee (unless you tap **Cancel**), everywhere else it logs you out.
 shows how long is left. Tapping a section in the bar logs out too. **Pay**, **Settings**, **Purchase** and the **Ranking** go back to **Order** by
 themselves after 30 seconds without a tap – so the next person always finds the kiosk ready to
 order.
+
+### Privacy notice
+
+Before anything is booked for someone for the first time, the kiosk shows the privacy notice – for a
+new card even before asking for a name: **what** is recorded (card number, name, orders, payments),
+**what for** (the coffee tally only, bound to that purpose), **where** it is kept (only on this device
+and its backup stick) and what your **rights** are. The QR code leads to the exact description of how
+the data is kept, on GitHub.
+
+![Privacy notice](pictures/manual/en/kiosk-privacy.png)
+
+**Understood - go on** confirms it, and the kiosk doesn't ask again. **No, log out** logs you out, as
+does doing nothing for 60 seconds. **Without your confirmation nothing can be ordered or booked** – at
+the kiosk or on the phone. Who is responsible for the data is set by the admin under [System](#system).
 
 ### Order
 
@@ -340,6 +356,81 @@ and this month. Whoever still owes money from last month gets a reminder here.
 Then a thank-you – with a different animation depending on how many cups it's been today.
 
 ![Thank you](pictures/manual/en/kiosk-thank-you.png)
+
+### With a coffee machine
+
+With a JURA connected (see [Coffee machine](#coffee-machine)), the kiosk guides you through the brew,
+and **it is booked only once the machine is done**. After **Order now** – or when the countdown runs
+out – it says *Put your cup under the outlet*, and only **Start** sets the machine going. If you don't
+tap **Start**, the kiosk goes back after 30 seconds: no coffee, nothing booked. **Cancel** does the same
+right away. Next to the cup you see the machine – the drawing of its product line, or the admin's photo
+of it (see [Coffee machine](#coffee-machine)).
+
+![Put your cup under the outlet](pictures/manual/en/kiosk-cup.png)
+
+If the machine needs something first – water, emptying the grounds, the tray – it says so on this
+screen, and **Start** stays disabled until it is done. What will be due soon is only recommended. If
+the machine doesn't make the coffee, the kiosk says why and nothing is booked. Sorts the machine
+doesn't make at all (tea, a biscuit – marked *without the coffee machine* in the dashboard) are booked
+straight away, as ever.
+
+The start screen offers the **free products** the admin has released, hot water for instance: no card,
+no booking, up to five of them. With the machine's keys locked, this is the only way to get them.
+
+![Start screen with a coffee machine](pictures/manual/en/kiosk-wait-machine.png)
+
+The **ring** at the top right shows what the machine reports, the predicted **supplies** and how far
+its **maintenance** is. Its messages only while it is connected: switched off, it just says *Not
+connected*. If you topped up the beans, tap **Beans refilled** – the machine notices the
+water tank and the grounds container by itself.
+
+![State of the coffee machine](pictures/manual/en/kiosk-machine-popup.png)
+
+If water runs out, the grounds container fills up or the beans run out during your brew or shortly
+after, your thank-you screen says so. Whoever leaves it for the next one shows up under **Ran off**
+after three minutes – if the admin has switched that on (see [Ranking](#ranking)).
+
+### My coffees
+
+Every member can save up to **three coffees of their own**: tap **Settings**, apply your card, **My
+coffees**. For each one, ‹ › picks the sort and − and + set **Strength**, **Water**, **Temperature** and
+**Cups** – only what the machine allows for that sort (for the E6's coffee, say, strength 1 to 8 and 25
+to 240 ml). **Preselect** makes it the one already selected when you order, the one that goes to the
+machine after the countdown. It works the same on the phone (see [Phone portal](#5-the-phone-portal)).
+
+![My coffees](pictures/manual/en/kiosk-slots.png)
+
+When you order, your coffees come first, with their settings and price.
+
+![Ordering with your own coffees](pictures/manual/en/kiosk-order-slots.png)
+
+**Cups** means: that many brews run **one right after the other into the same big cup or jug**, without
+another tap. The screen counts along (*Cup 2 of 2*). Each cup costs the sort's price – however strong or
+large – and is booked as soon as it is done. If the machine stops halfway, that's the end of it, and
+only what was made is booked. Without a machine, a coffee of two cups simply books two orders.
+
+With *Show only my coffees when I order* ticked, the page stays tidy: the other sorts are behind **Other
+sorts ›**.
+
+### When the machine is taken
+
+The machine has one outlet, and people order at the kiosk and on their phones – so everyone stands in
+**one line**. Whoever's turn it is has **60 seconds** to press **Start**, otherwise it is the next one's
+turn, and nothing is booked.
+
+The start screen shows where the line stands – numbers only, no names here. The free products are
+hidden meanwhile.
+
+![Start screen with a line](pictures/manual/en/kiosk-wait-line.png)
+
+If you order while someone else's turn is on, the order screen tells you beforehand, and **Order now**
+puts you in line: you get a number and see how many are before you. **OK** frees the kiosk for the next
+person and keeps your place; **Give up my place** gives it up.
+
+![You are in line](pictures/manual/en/kiosk-queued.png)
+
+When it is your turn, **tap your card again** – the kiosk goes straight to the cup with what you chose
+– or start it on your phone. Pay, Settings and sorts without the machine keep working all along.
 
 ### Pay
 
@@ -411,7 +502,7 @@ takes nothing off per cup – the stock is the last count plus everything bought
 
 ### Ranking
 
-No card needed. Up to three tabs at the top (which ones is the admin's decision, see below), each with its own retro animation; the names are in the
+No card needed. Up to four tabs at the top (which ones is the admin's decision, see below), each with its own retro animation; the names are in the
 bar underneath. Counted are cups – a jug is two.
 
 - **All time** – the podium: the top 3 since the start, first in the middle.
@@ -428,6 +519,8 @@ bar underneath. Counted are cups – a jug is two.
   **NO SHAME** and the executioner stands on an empty scaffold with nothing to do.
 
   ![Pillory](pictures/manual/en/kiosk-ranking-pillory.png)
+
+With a coffee machine the admin can also switch on **Ran off**: who left water, grounds or beans for the next one this month – and who then stepped in.
 
 Opening the ranking always starts on its first tab.
 
@@ -467,6 +560,35 @@ phone only. **Log out** next to it ends the link on this phone.
 something about you, an admin say, appear by their role only) – and the device certificate.
 
 ![Portal home](pictures/manual/en/portal-home.png)
+
+**Order a coffee** – the green button on **Home**, when a coffee machine is set up. Pick one of your
+coffees or a sort the machine makes and tap **Get in line**: you are then in the same
+[line](#when-the-machine-is-taken) as everyone at the kiosk. Take your cup to the machine – nothing runs
+without someone to put it there. At the top you see which machine it is: its drawing, or the admin's
+photo of it.
+
+![Ordering a coffee on the phone](pictures/manual/en/portal-order.png)
+
+Here you see the line **with names**, and how far along you are. **Give up my place** takes you out
+again.
+
+![In line](pictures/manual/en/portal-order-line.png)
+
+When it is your turn you have 60 seconds: cup under the outlet, tap **Start** – or tap your card at the
+kiosk. What the machine needs first is listed there; afterwards the page counts the cups and says what
+was booked – cup by cup, as at the kiosk.
+
+![It's your turn](pictures/manual/en/portal-order-turn.png)
+
+**My coffees** (on **Home**) are the same three saved coffees as at the kiosk, see
+[My coffees](#my-coffees).
+
+![My coffees on the phone](pictures/manual/en/portal-coffees.png)
+
+A member who hasn't confirmed the [privacy notice](#privacy-notice) yet is asked to on **Home**. Until
+then, nothing can be booked on the phone either.
+
+![Privacy notice on the phone](pictures/manual/en/portal-privacy.png)
 
 **Pay** opens your payment app with the amount owed – for a GiroCode it lists the transfer's
 details to copy –, or records a payment you've already made.
@@ -649,6 +771,51 @@ active* hides a method without deleting it, *Order* sets its place in the list.
 
 ![Add payment method](pictures/manual/en/dashboard-payment-method-form.png)
 
+### Coffee machine
+
+Optional, and for admins only: a JURA with Smart Connect is connected over Bluetooth. Without a machine
+nothing changes; the kiosk books from the tally.
+
+![Coffee machine](pictures/manual/en/dashboard-device.png)
+
+**Setting up:** under *Connection*, pick the coffee machine and the Bluetooth adapter and save –
+Bluetooth is switched on along the way. The Pi's built-in radio needs **Restart the device** once, a USB
+stick doesn't. Switch the machine on, close the JURA app on every phone (a connected machine can't be
+found), **Search for machines** and **Connect**.
+
+The Pi's built-in radio shares its chip with the WiFi the device runs for the phones: the connection to
+the machine drops now and then, and the chip can get stuck – the device then restarts it by itself, and
+the page says how often that happened. A **USB Bluetooth stick** avoids all of it.
+
+**Lock the machine's own keys**: nothing can be brewed past the tally while CoffeePy is connected. If
+the connection is lost, the machine unlocks itself within a minute.
+
+**Products and coffee sorts** assigns each of the machine's products the sort it is sold as at the
+kiosk; **As a new sort** creates it. A sort no product belongs to any more is no longer offered – unless
+it is marked *without the coffee machine* under **Coffee sorts**. **Free** makes a product a free one at
+the kiosk (up to five fit its screen).
+
+**Supplies** are predicted, not measured: every brew takes its water, a portion of grounds and its
+beans. Here you set the tank size, the grounds portions and the bean container; **Refilled** resets a
+level. When the machine's message goes away – tank back in, grounds emptied – the level refills by
+itself.
+
+**Picture**: every JURA product line has a drawing of its own (ENA, E, J, S, Z, GIGA, X …), shown on
+the overview, on this page, on the kiosk – the machine's state and the brew screen – and on *Order a
+coffee* in the portal. **Upload photo** replaces it everywhere with a photo of your own machine – JPEG,
+PNG or WebP; the browser makes it small first (800 pixels on its long side), and the device takes up
+to 1.5 MB. **Remove photo** brings the drawing back. The photo is kept in the database, so a backup
+carries it along.
+
+Below that: the machine's **Counters** and **Maintenance** – how far each care programme is due and
+*last on* which day it ran; **Care programmes run** lists every descaling, cleaning, filter change and
+milk system cleaning with its date (the rinses when the machine is switched on and off don't count).
+Then **Products made** with a chart and every single brew – with its strength, *extra hot*, how many
+seconds it took and, if someone stopped it at the machine, *stopped at …%*: it is booked all the same.
+And **Left for the next one** – which message came during whose brew, and whether someone
+saw to it. The order at the outlet is explained under
+[When the machine is taken](#when-the-machine-is-taken).
+
 ### Inventory
 
 What is bought for everyone – coffee beans, milk, cookies – with its price, the stock, and what a
@@ -663,8 +830,10 @@ cup really costs. The inventory only exists once an admin has switched it on und
 
 Switched off, purchases already booked stay credited in the balance. The inventory has five tabs:
 
-**Stock**: what should be on the shelf – the last stock-take plus everything bought since; nothing
-is taken off per cup. To count, enter what you counted for the items and tap **Save stock-take**;
+**Stock**: what should be on the shelf – the last stock-take plus everything bought since. With a
+coffee machine, and an item's consumption set under **Items**, it adds what the machine used since the
+stock-take and about how much should be left – cups past the tally included; otherwise nothing is
+taken off per cup. To count, enter what you counted for the items and tap **Save stock-take**;
 an empty field leaves the item as it is. Below, the recent stock-takes and who counted.
 
 ![Inventory – stock](pictures/manual/en/dashboard-inventory.png)
@@ -703,7 +872,88 @@ in detail is in [the calculations](CALCULATIONS.md#purchases-stock-and-the-price
 **Items**: what can be booked – name, *Unit* (*kg*, *l* …), *Can be booked* and *Order*. An item
 that has been bought can't be deleted; untick *Can be booked* instead.
 
+With a coffee machine connected, an item's form also has **Used by the coffee machine**: how much of
+the item each of the machine's products takes, in the item's unit (0.008 for 8 g of beans counted in
+kg). **Suggest for coffee beans** fills it in from the portion under **Coffee machine** → *Supplies*
+times the product's cups; **Suggest for milk (estimated)** with estimates – the machine doesn't report
+milk, so best let one milk foam run into a measuring jug once and correct the values. Nothing is saved
+before **Save**.
+
 ![Inventory – items](pictures/manual/en/dashboard-inventory-items.png)
+
+#### How the inventory reckons
+
+**The stock** is what should be on the shelf according to the bookings: an item's last stock-take
+plus everything bought since. Without a coffee machine CoffeePy takes nothing off per cup – it doesn't know how many beans
+a cup takes or who has milk. Without a stock-take, the stock is everything ever bought. A
+**stock-take** records what is really there and is the new starting point from then on; a number
+that was mistyped is put right by the next stock-take. What was used follows from two stock-takes:
+
+```
+used = first stock-take + bought in between − second stock-take
+```
+
+It is most accurate when everything is counted at once, regularly – at the start of each month,
+say.
+
+**What a cup costs** is worked out by the **Costs** tab for each item on its own, and the amounts
+are then added up:
+
+1. **The item's cost.** With at least two stock-takes in the chosen period, what was used between
+   the first and the last counts, valued at the average price per unit of the period's purchases
+   (or, with none in the period, of all the item's purchases). A bulk purchase still in the
+   cupboard doesn't make the cup dearer that way. Without two stock-takes, simply what was spent
+   on the item in the period counts.
+2. **Divided by the cups of the same time** – between the two stock-takes, or over the whole
+   period. Machine strokes are counted: a jug is two cups. With a coffee machine whose counters cover
+   that time, its own count is taken instead – cups past the tally used beans and milk too; free
+   products such as hot water don't count as cups.
+3. **The cost per cup** is the sum of these amounts over all items.
+
+**Milk, cookies and everything else are spread evenly over every cup**, whoever has milk or eats a
+cookie: an espresso, too, carries a few cents of milk and cookies. CoffeePy knows cups, not
+recipes. Whatever is booked, everyone pays for through the coffee price. If something should stay
+out of it – cookies someone brings privately, say – it isn't booked as a purchase.
+
+**The price suggestion** for a sort is then
+
+```
+the sort's strokes × cost per cup × (1 + price adjustment), rounded up to 5 cents
+```
+
+An example over 12 months with 2,000 cups and a price adjustment of +10%:
+
+| Item | Calculation | Per cup |
+|---|---|---|
+| Coffee beans | 12 kg bought in the period for €186.00, so €15.50/kg. Stock-take in May 1.5 kg, in October 0.8 kg, 5 kg bought in between: 5.7 kg used = €88.35, 800 cups in that time | 11.0 ct |
+| Milk | never counted: €172.00 bought, 2,000 cups | 8.6 ct |
+| Cookies | never counted: €60.00 bought, 2,000 cups | 3.0 ct |
+| **Cost per cup** | | **22.6 ct** |
+
+An espresso (1 stroke): 22.6 ct × 1.10 = 24.9 ct, rounded up **€0.25**. A jug (2 strokes): 49.8 ct,
+rounded up **€0.50**. The price adjustment covers what no purchase shows – cleaning agents, wear,
+and debts that are never paid. How much that is for you, **Written off** at the top of the same
+page shows; it doesn't go into the suggestion itself.
+
+Income and spending don't have to fall in the same stretch for this: the suggestion only asks what
+a cup cost. Whether the box pays for itself overall, *Revenue - purchases* next to it shows.
+
+**More worked examples**
+
+- **Stock:** on the 1st, 2 kg of beans are counted, then 3 kg are bought – the stock shows 5 kg. The
+  next stock-take finds 1.2 kg: from now on the stock is 1.2 kg, and 2 + 3 − 1.2 = 3.8 kg were used.
+- **Credit:** Anna stands at −€10.00 and buys 6 l of milk for €7.14. She books the purchase and
+  stands at −€2.86, without any cash. If someone pays for the same milk from the coffee box
+  (*Paid by: The coffee box*), no balance changes; the milk still counts for the stock, the spending
+  and the costs.
+- **A bulk purchase:** in the example above, someone buys another 10 kg of beans on offer in the last
+  week for €140.00, after the last stock-take – so they are still in the cupboard. With the two
+  stock-takes little changes: only the average price drops to €326.00 ÷ 22 kg = €14.82/kg, and the
+  beans cost 10.6 instead of 11.0 ct a cup. Without stock-takes the whole purchase would count:
+  (€186.00 + €140.00) ÷ 2,000 cups = 16.3 ct a cup, although the beans haven't been drunk yet.
+- **When someone else pays a share:** if the company pays half, the price adjustment is −50%:
+  22.6 ct × 0.5 = 11.3 ct, rounded up **€0.15** for an espresso, and 22.6 ct, rounded up **€0.25**,
+  for a jug.
 
 ### My account
 
@@ -757,6 +1007,9 @@ money, is not affected. See [Privacy and the workplace](#privacy-and-the-workpla
 mean is under [Inventory](#inventory). A new device starts with *Off*; the kiosk follows with its
 next poll.
 
+**Privacy notice**: *Responsible for the data* appears in the [notice](#privacy-notice) at the kiosk
+and on the phone – a name and how to reach them. Empty, it says *the admin of this device*.
+
 **SSH**: remote login to the device's operating system. It is off after the installation and
 only needed to run the [provisioning tool](#the-provisioning-tool) again or for maintenance:
 **Switch SSH on**, and it stays on – across restarts too – until **Switch SSH off**. While it is
@@ -773,7 +1026,9 @@ choose *Like the weekdays*, *Off all day* or *Times of its own* (*Weekend: off f
 from*). A night belongs to the day it starts on: Friday night runs to Saturday morning by the
 weekday times, and after a Sunday that was off all day the kiosk comes back on Monday at *On
 again from*. At night, cards at the machine are **not booked** – not later in the morning
-either. The phone portal, the backups and the dashboard keep running. A change takes effect
+either. With *Also switch it off while the coffee machine is off* the kiosk also goes dark once the
+machine has been gone for five minutes – switched off by hand or by its own timer – and comes back
+within about two minutes of switching it on; taps in between aren't booked either. The phone portal, the backups and the dashboard keep running. A change takes effect
 within a minute and shows up in the **Audit log** as *night.update*.
 
 **System time**: only needed when the clock module is missing or wrong. The new time is
@@ -1057,11 +1312,12 @@ behaviour or performance – whether that is the intention doesn't matter).
 
 What helps, without being legal advice:
 
-- **Switch the ranking and the pillory on deliberately** (dashboard → **System**) – a new
-  device has both off. The pillory in particular shows everyone at the machine who owes money.
+- **Switch the ranking, the pillory and "Ran off" on deliberately** (dashboard → **System**) – a
+  new device has all of them off. The pillory in particular shows everyone at the machine who owes
+  money, "Ran off" who left the water, the grounds or the beans for the next one.
 - **Inform people first**: who sees which data, what it is for (the tally) and how long it is
-  kept (Art. 13 GDPR); where there is a works council, involve it before switching the ranking
-  or the pillory on.
+  kept (Art. 13 GDPR); where there is a works council, involve it before switching the ranking,
+  the pillory or "Ran off" on.
 - **Allow short codes**: whoever doesn't want their name in the ranking takes a code like "AB"
   (see [Settings](#settings) at the kiosk).
 - **Mark people who left** (dashboard → **Members**): their cards are blocked, and they no
@@ -1069,6 +1325,12 @@ What helps, without being legal advice:
   suggested for deletion after a period of your choosing.
 - **Someone asks what is stored about them**: members download it themselves in the portal
   (**Download my data**), admins with **Export data** on their row under **Members**.
+- **The privacy notice is mandatory before the first booking** (see [Privacy notice](#privacy-notice)):
+  enter who is responsible under **System**. A member who hasn't confirmed it yet is marked under
+  **Members**.
+- **The line** shows names only on the members' phones, the kiosk shows numbers only; its entries are
+  deleted one day after they ended.
+
 - **Backups** hold the same data – keep the stick as you would the data itself, and its
   passphrase apart from it.
 - The dashboard needs a login; an admin sees everything. Hand out the roles sparingly
@@ -1096,6 +1358,9 @@ with its **DE/EN** button, phones and PCs at the top right of the portal and of 
 | The kiosk briefly showed "Aw, Snap!" (or went white) and then came back by itself. | The kiosk's browser crashed while loading the page – the browser of Raspberry Pi OS does that now and then, mostly right after an update or a restore. The device notices within seconds and reloads the page; nothing is lost. |
 | The kiosk went black for a moment and started again. | The device restarted a hanging kiosk or the app by itself (see [When the kiosk hangs](#when-the-kiosk-hangs)); the **Audit log** says which. If it happens often, that is where to look for why. |
 | *Card reader not available* | Check the reader's cable and restart the device. |
+| The kiosk shows the coffee machine as *not connected*. | See **Coffee machine**: is the machine on and within range, and is no JURA app on a phone connected to it? Until then the kiosk books from the tally. |
+| After **Order now** you get *You are in line* instead of the cup screen. | The machine is taken, or someone is ahead of you in line. When it is your turn, tap your card again. |
+| *Your turn is over* | The 60 seconds for **Start** ran out, nothing was booked. Just order again. |
 | A card isn't recognised. | Hold it flat and still; a card marked as departed is turned away. |
 | Red **database** sign on the kiosk | Backups aren't running: plug the backup stick back in, or look at **Backup** in the dashboard for the error. |
 | Red **clock** sign on the kiosk, or the time is wrong | If the overview has a *Time – corrected* row, the clock went back and was put forward: check it under **System time** and set or confirm it. Otherwise the *Clock module (RTC)* row says why. *Not found* / *Does not answer*: check the module and its wiring. *Had lost the time*: replace its battery (CR2032), then correct the time under **System time** – the sign goes once the module has kept the time through a restart. |

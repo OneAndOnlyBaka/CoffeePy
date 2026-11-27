@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.test import Client, TestCase
 from django.urls import NoReverseMatch, reverse
 
+from coffee import privacy
 from coffee.models import CoffeeSort, Member, NfcScan
 
 
@@ -16,13 +17,14 @@ class OnScreenKeyboardTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.")
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.")
         self.page = self.client.get(reverse("kiosk:index")).content.decode()
 
     def panel_in(self, mode):
         self.client.get(reverse("kiosk:nav", args=[mode]))
         NfcScan.objects.create(uid="AABBCCDD", event=NfcScan.EVENT_INSERTED)
-        return self.client.get(reverse("kiosk:panel")).content.decode()
+        self.client.get(reverse("kiosk:panel"))  # a new card: the privacy notice first
+        return self.client.post(reverse("kiosk:privacy_confirm")).content.decode()
 
     def test_the_page_carries_the_keyboard_outside_the_panel(self):
         self.assertIn('id="osk-modal"', self.page)
@@ -64,7 +66,8 @@ class FavouriteTilesTestCase(TestCase):
 
     def settings_panel(self):
         NfcScan.objects.create(uid="AABBCCDD", event=NfcScan.EVENT_INSERTED)
-        return self.client.get(reverse("kiosk:panel")).content.decode()
+        self.client.get(reverse("kiosk:panel"))  # a new card: the privacy notice first
+        return self.client.post(reverse("kiosk:privacy_confirm")).content.decode()
 
     def checked(self, content):
         return re.findall(r'value="(\d+)"\s+checked', content)

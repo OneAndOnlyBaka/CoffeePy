@@ -93,7 +93,8 @@ if [ "$age" -lt "$STALE" ]; then
 fi
 # A browser younger than that is still starting - in the morning after the night, say, when
 # the last heartbeat is the evening's. The session's own loop restarts one that never loads.
-browser=$(pgrep -o -f "^/usr/lib/chromium/chromium" 2>/dev/null)
+# cog (kiosk/cog-session), or Chromium on a device that has no cog yet.
+browser=$(pgrep -n -x cog 2>/dev/null || pgrep -o -f "^/usr/lib/chromium/chromium" 2>/dev/null)
 if [ -n "$browser" ] && [ "$(ps -o etimes= -p "$browser" | tr -d ' ')" -lt "$STALE" ] 2>/dev/null; then
     exit 0
 fi

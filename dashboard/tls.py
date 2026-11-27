@@ -6,8 +6,9 @@ module owns what Caddy needs for that, in settings.TLS_DIR (./data/tls on the ho
 
   ca.crt / ca.key          the device's own CA, created on first start, 10 years. Phones
                            and PCs install ca.crt once (offered for download without a
-                           login, see views.certificate_download); the kiosk's Chromium
-                           gets it in its NSS store from install/kiosk/openbox-autostart.
+                           login, see views.certificate_download); the kiosk's cog
+                           trusts it through the system's CA store, which
+                           install/coffeepy-ca-trust.path keeps in step.
   server.crt / .key        signed by that CA for settings.TLS_HOSTNAMES - port 443.
   kiosk.crt / .key         signed by that CA for localhost - port 8443. Never replaced by
                            an uploaded certificate, so the kiosk can't be locked out by one.

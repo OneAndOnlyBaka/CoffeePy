@@ -16,7 +16,7 @@
 #                  so apt on the device does the dependency ordering rather than dpkg
 #                  being fed a directory in the hope that the order works out.
 #   docker-compose Docker's own plugin build; Raspberry Pi OS has no package for it.
-#   images.tar     coffeepy-web and nfc-bridge built for the target platform, plus the
+#   images.tar     coffeepy-web and the bridges built for the target platform, plus the
 #                  postgres/mosquitto images - built here because building them on a Pi 3
 #                  means compiling psutil and pyscard on a 1.2GHz board.
 #   repo/          this checkout, filtered the same way install.sh filters it.
@@ -78,7 +78,7 @@ log "Target ${PLATFORM} (${DEB_ARCH}), Raspberry Pi OS ${RELEASE}"
 
 log "Collecting packages from the Raspberry Pi OS archives"
 # Debian's own image plus the two Raspberry Pi archives: Raspbian carries the armhf rebuild
-# of Debian, archive.raspberrypi.com the Pi-specific packages (chromium, rpd-plym-splash).
+# of Debian, archive.raspberrypi.com the Pi-specific packages (rpd-plym-splash, the Pi builds of Mesa and the kernel).
 # Both are what a real Pi has configured, and only there do these names resolve.
 "${DOCKER}" run --rm --platform "${PLATFORM}" \
 	-v "$(realpath "${PACKAGE_LIST}")":/packages.txt:ro \

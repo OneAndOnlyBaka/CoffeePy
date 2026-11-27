@@ -42,6 +42,27 @@ class InstallerTestCase(SimpleTestCase):
         self.assertEqual(self.sourced(ask, SUDO_USER="admin", KIOSK_USER="kiosk"), "kiosk")
         self.assertEqual(self.sourced(f'GETTY_AUTOLOGIN="{self.root}/missing"; kiosk_user'), "pi")
 
+    # The kiosk's .profile block: a device from before cog has the startx snippet, with no end
+    # line - it is replaced, not left next to the new one; a second run changes nothing.
+    def test_the_kiosk_block_in_profile_is_replaced(self):
+        profile = self.root / ".profile"
+        profile.write_text('PATH="$HOME/bin:$PATH"\n\n# --- CoffeePy kiosk autostart ---\n# old\n'
+                           'if [ -z "${DISPLAY}" ] && [ "$(tty)" = "/dev/tty1" ]; then\n'
+                           '    exec startx -- -nocursor\nfi\nalias ll="ls -l"\n')
+        snippet = settings.BASE_DIR / "install" / "kiosk" / "bash_profile_kiosk"
+        self.sourced(f'kiosk_profile "{profile}" "{snippet}"')
+        once = profile.read_text()
+        self.assertIn('PATH="$HOME/bin:$PATH"', once)
+        self.assertIn('alias ll="ls -l"', once)  # what came after the old block stays
+        self.assertEqual(once.count("# --- CoffeePy kiosk autostart ---"), 1)
+        self.assertNotIn("# old", once)
+        self.assertIn("exec /opt/coffeepy/install/kiosk/cog-session", once)
+        self.sourced(f'kiosk_profile "{profile}" "{snippet}"')
+        self.assertEqual(profile.read_text(), once)
+        fresh = self.root / "fresh"  # an account without a .profile of its own
+        self.sourced(f'kiosk_profile "{fresh}" "{snippet}"')
+        self.assertTrue(fresh.read_text().startswith("# --- CoffeePy kiosk autostart ---"))
+
     def fake_ip(self, output):
         """A PATH with an `ip` that answers `ip -4 route get` like this host would."""
         bin_dir = self.root / "bin"
@@ -82,6 +103,19 @@ class InstallerTestCase(SimpleTestCase):
         # And without the watcher, the installer's own status goes again when it exits.
         self.sourced(f'TARGET_DIR="{self.root}"; start_maintenance')
         self.assertFalse(status.exists())
+
+    def test_bluetooth_stays_for_the_coffee_machine(self):
+        """The hardware step switches Bluetooth off - unless the dashboard switched it on for the coffee
+        machine (data/storage/bluetooth.json, written by the storage helper); every update runs it."""
+        storage = self.root / "data" / "storage"
+        storage.mkdir(parents=True)
+        check = f'TARGET_DIR="{self.root}"; bluetooth_wanted enabled && echo on; bluetooth_wanted onboard && echo pi; true'
+        self.assertEqual(self.sourced(check), "")
+        (storage / "bluetooth.json").write_text('{"enabled": true, "onboard": false}')
+        self.assertEqual(self.sourced(check), "on")
+        (storage / "bluetooth.json").write_text('{"enabled": true, "onboard": true}')
+        self.assertEqual(self.sourced(check).split(), ["on", "pi"])
+        self.assertNotIn("kept on for the coffee machine", self.dry_run("--only=hardware").stdout)  # /opt/coffeepy: none
 
     def test_ssh_is_switched_off_unless_kept(self):
         result = self.dry_run("--only=ssh")

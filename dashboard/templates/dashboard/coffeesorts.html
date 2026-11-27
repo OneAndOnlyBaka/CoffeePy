@@ -18,7 +18,7 @@
         {% autoescape off %}{% blocktranslate with name=sort.name asvar confirm_delete %}Delete {{ name }}?{% endblocktranslate %}{% endautoescape %}
         <div class="list-row">
             <div class="list-row-text">
-                <span class="list-row-title">{{ sort.name }}</span>
+                <span class="list-row-title">{{ sort.name }}{% if sort.is_obsolete %} <span class="badge off" title="{% translate "The coffee machine doesn't make it - not offered at the kiosk" %}">{% translate "obsolete" %}</span>{% endif %}</span>
                 <span class="list-row-meta">{% blocktranslate with cups=sort.machine_strokes %}{{ cups }} cup(s){% endblocktranslate %}</span>
             </div>
             <span class="list-row-value">{{ sort.price }}€</span>

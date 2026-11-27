@@ -1,8 +1,13 @@
 # shellcheck shell=sh
-# Snippet appended to .profile (not run standalone, hence no shebang) - added by the
-# CoffeePy installer (install.sh, kiosk step): autologin on tty1 (see the getty override) drops into a shell
-# here, so start X (-> Openbox -> Chromium kiosk) automatically, no desktop/display
-# manager needed for a single always-on kiosk session.
+# Snippet in .profile (not run standalone, hence no shebang) - written by the CoffeePy
+# installer (install.sh, kiosk step, kiosk_profile): autologin on tty1 (see the getty override)
+# drops into a shell here, which becomes the kiosk session - no desktop, no display manager.
+# cog (WPE WebKit, kiosk/cog-session) where it is installed; the older Chromium session under X
+# (startx -> Openbox -> kiosk/openbox-autostart) on a device that got this file from an app update
+# before an OS bundle brought cog.
 if [ -z "${DISPLAY}" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    if command -v cog >/dev/null 2>&1; then
+        exec /opt/coffeepy/install/kiosk/cog-session
+    fi
     exec startx -- -nocursor
 fi

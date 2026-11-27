@@ -62,11 +62,21 @@
     setTimeout(check, 2000);
   }
 
+  // Only a poll that got no answer, or an error page (Caddy's 502 while the app restarts), counts.
+  // Not an aborted one: every tap on the nav cancels the running poll (hx-sync="#panel:replace"),
+  // and htmx reports that as an unsuccessful request too - a few quick taps were six "failures",
+  // the overlay covered the screen, took the next taps and then reloaded the page (cog, 2026-11-07:
+  // "only every second tap works").
   document.body.addEventListener("htmx:afterRequest", (evt) => {
-    if (evt.target.id !== "panel") return;
-    failures = evt.detail.successful ? 0 : failures + 1;
-    if (failures >= FAILED_POLLS && !active) show(null);
+    if (evt.target.id === "panel" && evt.detail.successful) failures = 0;
   });
+  for (const failed of ["htmx:sendError", "htmx:responseError"]) {
+    document.body.addEventListener(failed, (evt) => {
+      if (evt.target.id !== "panel") return;
+      failures += 1;
+      if (failures >= FAILED_POLLS && !active) show(null);
+    });
+  }
 
   check();
 })();

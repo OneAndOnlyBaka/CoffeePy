@@ -34,3 +34,11 @@ ignore:
       name: python
       type: binary
     reason: "http.client response parsing; nothing here makes HTTP requests at run time; fixed only in Python 3.16"
+  # hashlib no longer enforced FIPS's choice of algorithms - a regression of 3.14.10 alone, fixed in
+  # 3.14.11, which is not released yet: drop this once python:3.14-slim carries it. Not reachable
+  # here: it only concerns an OpenSSL in FIPS mode, and none of the images runs one.
+  - vulnerability: CVE-2026-119170
+    package:
+      name: python
+      type: binary
+    reason: "hashlib FIPS enforcement regression in 3.14.10; only with OpenSSL in FIPS mode, which no image uses; fixed in 3.14.11, not yet released"

@@ -12,6 +12,7 @@
 <script src="{% static 'kiosk/countdown.js' %}" defer></script>
 <script src="{% static 'kiosk/osk.js' %}" defer></script>
 <script src="{% static 'kiosk/sort_pages.js' %}" defer></script>
+<script src="{% static 'kiosk/slots_editor.js' %}" defer></script>
 <script src="{% static 'kiosk/maintenance.js' %}" defer></script>
 <script src="{% static 'kiosk/language.js' %}" defer></script>
 {% comment %}
@@ -34,7 +35,7 @@ The csrf token goes along with every htmx request from here, once per page load:
 inside #panel is masked anew on every render, so a screen with a form differed on every poll -
 and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
 {% endcomment %}
-<div class="kiosk-frame" data-mode="{{ mode }}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<div class="kiosk-frame" data-mode="{{ mode }}" data-lang="{{ language }}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% comment %}
     The buttons swap #panel in place instead of loading a page (see views.nav). hx-sync
     aborts a poll that is still in flight - its answer predates the tap and would put the
@@ -74,13 +75,13 @@ and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
         <div class="wait-card"><p>{{ texts.loading }}</p></div>
     </main>
 </div>
-<!-- The ranking videos' posters, held by the page: an image already in the document is reused
-     without asking the server again, so the stage is never empty while a video starts. -->
+<!-- The ranking's GIFs, held by the page: an image already in the document is reused without
+     asking the server again and is decoded already, so the stage never waits for one. -->
 <div hidden>
-    <img src="{% static 'kiosk/img/ranking/podium.png' %}" alt="">
-    <img src="{% static 'kiosk/img/ranking/vault.png' %}" alt="">
-    <img src="{% static 'kiosk/img/ranking/pillory.png' %}" alt="">
-    <img src="{% static 'kiosk/img/ranking/pillory_empty.png' %}" alt="">
+    <img src="{% static 'kiosk/img/ranking/podium.gif' %}" alt="">
+    <img src="{% static 'kiosk/img/ranking/vault.gif' %}" alt="">
+    <img src="{% static 'kiosk/img/ranking/pillory.gif' %}" alt="">
+    <img src="{% static 'kiosk/img/ranking/pillory_empty.gif' %}" alt="">
 </div>
 <!-- Lives outside #panel so the 500ms poll never touches it while it's open. -->
 <div id="qr-modal" class="modal-overlay"
@@ -117,4 +118,5 @@ and each swap of a differing panel risks Chromium's renderer crash (CLAUDE.md).
     </div>
 </div>
 {{ texts.steps|json_script:"maintenance-steps" }}
+{{ all_texts|json_script:"kiosk-texts" }}
 {% endblock %}

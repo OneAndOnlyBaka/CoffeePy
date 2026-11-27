@@ -27,3 +27,4 @@ data/usb/
 pi-gen/
 .coverage
 coffeepy-version.json
+.render/

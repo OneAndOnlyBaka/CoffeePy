@@ -1,5 +1,8 @@
 #!/bin/sh
 # ~/.config/openbox/autostart - runs once Openbox itself is up.
+#
+# The Chromium session - only still used on a device without cog (kiosk/bash_profile_kiosk): one
+# updated by app bundles, which bring no packages. Everything new goes into kiosk/cog-session.
 
 # No mouse on a touchscreen kiosk: blank the cursor after half a second of inactivity,
 # and disable the screen blanking/DPMS a normal desktop would apply.
@@ -58,6 +61,9 @@ fi
 # since a touch on the panel wakes it - and starts a fresh browser in the morning.
 night() { python3 /opt/coffeepy/install/kiosk_night.py; }
 NIGHT_CHECK_SECONDS=30
+# While dark the night is asked more often: switching the coffee machine on ends it (NightPolicy.follow_machine),
+# and whoever did is waiting at the kiosk. kiosk_night.py only reads a file.
+WAKE_CHECK_SECONDS=10
 
 # A renderer that dies leaves "Aw, Snap!" on the screen until someone presses Reload - and
 # the watchdog only notices minutes later, by the missing polls. Chromium 156 of Raspberry Pi
@@ -81,7 +87,7 @@ while true; do
         xset +dpms
         while night; do
             xset dpms force off
-            sleep "$NIGHT_CHECK_SECONDS"
+            sleep "$WAKE_CHECK_SECONDS"
         done
         xset dpms force on
         xset -dpms

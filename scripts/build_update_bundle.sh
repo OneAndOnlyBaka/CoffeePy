@@ -76,7 +76,7 @@ if [ ! -f .env ]; then
 	trap 'rm -rf "$workdir"; rm -f .env' EXIT
 fi
 
-echo "== $VERSION: building coffeepy-web + nfc-bridge for $PLATFORM =="
+echo "== $VERSION: building coffeepy-web and the bridges for $PLATFORM =="
 "$DOCKER" compose build
 echo "== Pulling every image the compose file does not build, for $PLATFORM =="
 "$DOCKER" compose pull --ignore-buildable

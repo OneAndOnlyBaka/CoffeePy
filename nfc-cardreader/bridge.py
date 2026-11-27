@@ -6,6 +6,9 @@ import time
 import paho.mqtt.client as mqtt
 from smartcard.CardMonitoring import CardMonitor, CardObserver
 from smartcard.Exceptions import CardConnectionException, NoCardException
+from smartcard.scard import (SCARD_CTL_CODE, SCARD_LEAVE_CARD, SCARD_PROTOCOL_UNDEFINED, SCARD_SCOPE_USER,
+                             SCARD_SHARE_DIRECT, SCardConnect, SCardControl, SCardDisconnect,
+                             SCardEstablishContext, SCardGetErrorMessage, SCardReleaseContext)
 from smartcard.System import readers
 from smartcard.util import toHexString
 
@@ -181,16 +184,32 @@ def parse_ndef_message(data):
     return records
 
 
-def read_ndef(conn, start_page=4, max_pages=60):
+def read_pages_pcsc(conn):
+    """Four pages (16 bytes) of a Type 2 tag from `page` on, through the reader's own read
+    pseudo-APDU - or None where the tag ends or the card doesn't do simple block reads."""
+    def read(page):
+        chunk = b""
+        for offset in range(4):
+            try:
+                data, sw1, sw2 = conn.transmit([0xFF, 0xB0, 0x00, page + offset, 0x04])
+            except CardConnectionException:
+                break
+            if (sw1, sw2) != (0x90, 0x00):
+                break
+            chunk += bytes(data)
+        return chunk or None
+    return read
+
+
+def read_ndef(read_pages, start_page=4, max_pages=60):
     pages = []
-    for page in range(start_page, start_page + max_pages):
-        try:
-            data, sw1, sw2 = conn.transmit([0xFF, 0xB0, 0x00, page, 0x04])
-        except CardConnectionException:
+    for page in range(start_page, start_page + max_pages, 4):
+        chunk = read_pages(page)
+        if not chunk:
             break
-        if (sw1, sw2) != (0x90, 0x00):
+        pages.append(chunk)
+        if len(chunk) < 16:
             break
-        pages.append(bytes(data))
     memory = b"".join(pages)
 
     idx = memory.find(b"\x03")
@@ -317,7 +336,7 @@ class TagObserver(CardObserver):
                     log.warning("GET UID failed sw=%02X%02X", sw1, sw2)
 
                 atqa_sak = get_atqa_sak(conn) or {}
-                ndef = read_ndef(conn)
+                ndef = read_ndef(read_pages_pcsc(conn))
 
                 self._insert_times[self._card_key(card)] = time.time()
 
@@ -348,36 +367,157 @@ READER_POLL_INTERVAL_SECONDS = 3
 READER_BEEP = os.environ.get("READER_BEEP", "0") == "1"
 SET_BUZZER_ON_DETECTION = [0xFF, 0x00, 0x52, 0xFF if READER_BEEP else 0x00, 0x00]
 
+# The red LED is the firmware's: it lights it while it polls for cards by itself, and puts it
+# back on within a second of any command that switched it off (measured, firmware ACR122U216).
+# So for a dark reader the firmware's polling is switched off (PICC operating parameter, API
+# 6.5: bit 7) and the bridge asks the PN532 for a card itself - which pcscd then never sees,
+# so this way round there is no CardMonitor, no ATR, and the beep is the bridge's too.
+READER_LED = os.environ.get("READER_LED", "0") == "1"
+PICC_POLLING_ON, PICC_POLLING_OFF = 0xFF, 0x7F
+LEDS_OFF = [0xFF, 0x00, 0x40, 0x0C, 0x04, 0x00, 0x00, 0x00, 0x00]
+# LEDs as they are, the buzzer for one T1 of 100ms.
+BEEP_ONCE = [0xFF, 0x00, 0x40, 0x00, 0x04, 0x01, 0x00, 0x01, 0x01]
+SELF_POLL_INTERVAL_SECONDS = 0.2
+# A card that is still there doesn't answer every poll: one that was just selected takes the
+# next request as an error and only answers the one after it. Gone is what stays silent longer.
+REMOVED_AFTER_MISSES = 3
 
-def configure_reader(reader_name):
-    """Sends the reader its settings through the PC/SC escape channel - possible without a
-    card on it, which is why libccid's ifdDriverOptions 0x0001 is set in the Dockerfile.
-    Linux's CCID driver takes the escape as SCARD_CTL_CODE(1), not the 3500 the ACS manual
-    gives for Windows. Never fatal: a reader that won't take it still reads cards."""
-    from smartcard.scard import (SCARD_CTL_CODE, SCARD_LEAVE_CARD, SCARD_PROTOCOL_UNDEFINED,
-                                 SCARD_SCOPE_USER, SCARD_SHARE_DIRECT, SCardConnect, SCardControl,
-                                 SCardDisconnect, SCardEstablishContext, SCardGetErrorMessage,
-                                 SCardReleaseContext)
-    hr, context = SCardEstablishContext(SCARD_SCOPE_USER)
-    if hr != 0:
-        log.warning("Reader settings not sent - no PC/SC context: %s", SCardGetErrorMessage(hr))
-        return
-    try:
-        hr, handle, _ = SCardConnect(context, reader_name, SCARD_SHARE_DIRECT, SCARD_PROTOCOL_UNDEFINED)
+# What the SAK alone says for certain - the rest of the registry needs the ATR pcscd builds.
+SAK_CARD_TYPES = {
+    0x00: "MIFARE Ultralight",
+    0x08: "MIFARE Classic 1K",
+    0x09: "MIFARE Mini",
+    0x18: "MIFARE Classic 4K",
+}
+
+
+class ReaderError(Exception):
+    pass
+
+
+class Reader:
+    """The reader itself rather than a card on it: the PC/SC escape channel, which needs no
+    card - why libccid's ifdDriverOptions 0x0001 is set in the Dockerfile. Linux's CCID
+    driver takes the escape as SCARD_CTL_CODE(1), not the 3500 the ACS manual gives for
+    Windows."""
+
+    def __init__(self, name):
+        self.name = name
+        hr, self.context = SCardEstablishContext(SCARD_SCOPE_USER)
         if hr != 0:
-            log.warning("Reader settings not sent - cannot connect: %s", SCardGetErrorMessage(hr))
-            return
+            raise ReaderError(f"no PC/SC context: {SCardGetErrorMessage(hr)}")
+        hr, self.handle, _ = SCardConnect(self.context, name, SCARD_SHARE_DIRECT, SCARD_PROTOCOL_UNDEFINED)
+        if hr != 0:
+            SCardReleaseContext(self.context)
+            raise ReaderError(f"cannot connect: {SCardGetErrorMessage(hr)}")
+
+    def escape(self, command):
+        hr, response = SCardControl(self.handle, SCARD_CTL_CODE(1), command)
+        if hr != 0:
+            raise ReaderError(SCardGetErrorMessage(hr))
+        return list(response)
+
+    def pn532(self, command):
+        """One PN532 command through "Direct Transmit" (API 6.1); its answer without the
+        D5/code header and the reader's 90 00, or None if it is no answer to that command."""
+        response = self.escape([0xFF, 0x00, 0x00, 0x00, len(command)] + command)
+        if len(response) < 4 or response[0] != 0xD5 or response[1] != command[1] + 1 or response[-2:] != [0x90, 0x00]:
+            return None
+        return response[2:-2]
+
+    def close(self):
+        SCardDisconnect(self.handle, SCARD_LEAVE_CARD)
+        SCardReleaseContext(self.context)
+
+
+def configure_reader(reader):
+    """Sends the reader its settings; True if it is dark now and leaves the polling to the
+    bridge. Never fatal: a reader that won't take them still reads cards the firmware's way."""
+    try:
+        response = reader.escape(SET_BUZZER_ON_DETECTION)
+        if response[:2] == [0x90, 0x00]:
+            log.info("Reader beep on card detection: %s", "on" if READER_BEEP else "off")
+        else:
+            log.warning("Reader did not take the beep setting: %s", toHexString(response))
+
+        # Also sent to switch it back on: the reader keeps the parameter while it has power,
+        # a container that restarts with READER_LED=1 finds it as the last one left it.
+        polling = PICC_POLLING_ON if READER_LED else PICC_POLLING_OFF
+        response = reader.escape([0xFF, 0x00, 0x51, polling, 0x00])
+        if response != [0x90, polling]:
+            log.warning("Reader did not take the polling setting: %s", toHexString(response))
+            return False
+        if READER_LED:
+            return False
+        response = reader.escape(LEDS_OFF)
+        if response[:1] != [0x90]:
+            log.warning("Reader did not switch its LEDs off: %s", toHexString(response))
+        log.info("Reader LED: off - the bridge polls for cards itself")
+        return True
+    except ReaderError as exc:
+        log.warning("Reader settings not sent: %s", exc)
+        return False
+
+
+def list_target(reader):
+    """Asks the PN532 for one ISO 14443 type A card in the field (InListPassiveTarget) -
+    None without one, which it says within ~25ms."""
+    answer = reader.pn532([0xD4, 0x4A, 0x01, 0x00])
+    # targets, target number, ATQA (2), SAK, UID length, UID
+    if not answer or answer[0] < 1 or len(answer) < 6 or len(answer) < 6 + answer[5]:
+        return None
+    sak = answer[4]
+    return {
+        "uid": bytes(answer[6:6 + answer[5]]).hex().upper(),
+        "atqa": bytes(answer[2:4]).hex().upper(),
+        "sak": f"{sak:02X}",
+        "card_type": SAK_CARD_TYPES.get(sak),
+        "type2": sak == 0x00,
+    }
+
+
+def read_pages_pn532(reader):
+    """read_pages_pcsc's counterpart for a card the bridge selected itself: a Type 2 READ
+    (0x30) through InDataExchange, which answers with four pages at once."""
+    def read(page):
         try:
-            hr, response = SCardControl(handle, SCARD_CTL_CODE(1), SET_BUZZER_ON_DETECTION)
-            if hr == 0 and list(response[:2]) == [0x90, 0x00]:
-                log.info("Reader beep on card detection: %s", "on" if READER_BEEP else "off")
-            else:
-                log.warning("Reader did not take the beep setting: %s %s", SCardGetErrorMessage(hr),
-                            toHexString(list(response)))
-        finally:
-            SCardDisconnect(handle, SCARD_LEAVE_CARD)
-    finally:
-        SCardReleaseContext(context)
+            answer = reader.pn532([0xD4, 0x40, 0x01, 0x30, page])
+        except ReaderError:
+            return None
+        if not answer or answer[0] != 0x00:
+            return None
+        return bytes(answer[1:17]) or None
+    return read
+
+
+def poll_cards(publisher, reader):
+    """The dark reader's card loop, until the reader stops answering (ReaderError)."""
+    card, since, misses = None, None, 0
+
+    def removed():
+        publisher.publish_event("card_removed", reader=reader.name,
+                                dwell_time_ms=int((time.time() - since) * 1000))
+
+    while True:
+        target = list_target(reader)
+        if target and target["uid"] != card:
+            if card:
+                removed()
+            card, since, misses = target["uid"], time.time(), 0
+            if READER_BEEP:
+                reader.escape(BEEP_ONCE)
+            ndef = read_ndef(read_pages_pn532(reader)) if target["type2"] else None
+            publisher.publish_event("card_inserted", uid=card, reader=reader.name, card_type=target["card_type"],
+                                    atqa=target["atqa"], sak=target["sak"], ndef=ndef)
+        elif target:
+            misses = 0
+        elif card:
+            misses += 1
+            if misses >= REMOVED_AFTER_MISSES:
+                removed()
+                card = None
+        log.debug("poll: %s", target["uid"] if target else "-")
+        time.sleep(SELF_POLL_INTERVAL_SECONDS)
 
 
 def _list_readers():
@@ -414,8 +554,28 @@ def run_session(publisher):
     "up" forever with no way to ever see another card again. Polling readers() directly
     from here, each iteration, is an independent liveness check that doesn't depend on
     that thread staying healthy."""
-    for reader in _list_readers():
-        configure_reader(str(reader))
+    reader = None
+    try:
+        reader = Reader(str(_list_readers()[0]))
+    except (IndexError, ReaderError) as exc:
+        log.warning("Reader settings not sent: %s", exc)
+    if reader and configure_reader(reader):
+        publisher.publish_status(True)
+        log.info("Polling for NFC tags, publishing to topic '%s' ...", MQTT_TOPIC)
+        try:
+            poll_cards(publisher, reader)
+        except ReaderError as exc:
+            log.warning("Reader stopped answering (%s) - waiting for it to come back", exc)
+            # wait_for_reader may still find it listed (a pcscd stuck on an unplugged
+            # reader, see entrypoint.sh): not a loop without a pause.
+            time.sleep(READER_POLL_INTERVAL_SECONDS)
+        finally:
+            reader.close()
+            publisher.publish_status(False)
+        return
+    if reader:
+        reader.close()
+
     observer = TagObserver(publisher)
     monitor = CardMonitor()
     monitor.addObserver(observer)

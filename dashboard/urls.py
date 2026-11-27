@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views, views_backup, views_inventory, views_update
+from . import views, views_backup, views_device, views_inventory, views_update
 from .security import LockingAuthenticationForm
 
 app_name = "dashboard"
@@ -42,6 +42,9 @@ urlpatterns = [
     path("export/payments.csv", views.export_payments, name="export_payments"),
     path("system/", views.system_dashboard, name="system_dashboard"),
     path("system-time/", views.system_time, name="system_time"),
+    path("device/", views_device.device, name="device"),
+    path("device/scan/", views_device.device_scan, name="device_scan"),
+    path("device/scan/status/", views_device.device_scan_status, name="device_scan_status"),
     path("backup/", views_backup.backup, name="backup"),
     path("backup/now/", views_backup.backup_now, name="backup_now"),
     path("backup/settings/", views_backup.backup_settings, name="backup_settings"),

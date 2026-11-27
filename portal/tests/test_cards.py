@@ -4,13 +4,14 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from coffee import privacy
 from coffee.models import AltUidCapture, Member, MemberCard, MemberLinkToken, NfcScan
 
 
 class PortalCardsTestCase(TestCase):
     def setUp(self):
         self.client = Client()
-        self.alice = Member.objects.create(uid=42, nickname="Alice")
+        self.alice = Member.objects.create(privacy_version=privacy.VERSION, uid=42, nickname="Alice")
         token = MemberLinkToken.objects.create(member=self.alice, expires_at=timezone.now() + timedelta(minutes=5))
         self.client.get(reverse("portal:link", args=[token.token]))
 
@@ -26,7 +27,7 @@ class PortalCardsTestCase(TestCase):
         self.assertEqual(capture.member, self.alice)
 
     def test_add_card_clears_any_other_pending_capture(self):
-        bob = Member.objects.create(uid=43, nickname="Bob")
+        bob = Member.objects.create(privacy_version=privacy.VERSION, uid=43, nickname="Bob")
         AltUidCapture.objects.create(member=bob, expires_at=timezone.now() + timedelta(seconds=60))
 
         self.client.get(reverse("portal:card_add_start"))
@@ -63,7 +64,7 @@ class PortalCardsTestCase(TestCase):
         self.assertContains(response, "Waiting for a card")
 
     def test_end_to_end_conflict_is_visible_on_both_portal_and_kiosk(self):
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Carol")
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Carol")
         self.client.get(reverse("portal:card_add_start"))
 
         kiosk = Client()

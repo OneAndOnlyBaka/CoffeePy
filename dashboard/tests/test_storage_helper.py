@@ -132,6 +132,15 @@ class StorageHelperTestCase(SimpleTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.helper.ejected.clear()
+        self.helper.bluetooth.clear()
+        # The Pi's firmware config and its Bluetooth adapters, as files of this test's own.
+        self.boot_config = self.root / "config.txt"
+        self.boot_config.write_text("dtoverlay=vc4-kms-v3d\ndtoverlay=disable-bt\n")
+        self.adapters = self.root / "sys-bluetooth"
+        for name, value in (("BOOT_CONFIG", self.boot_config), ("SYS_BLUETOOTH", self.adapters)):
+            patcher = mock.patch.object(self.helper, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.storage = self.project / "data" / "storage"
         for directory in (self.helper.REQUESTS_DIR, self.helper.OWN, self.helper.FOREIGN):
             directory.mkdir(parents=True, exist_ok=True)
@@ -348,6 +357,88 @@ class StorageHelperTestCase(SimpleTestCase):
         self.assertIn("systemctl: failed", status["ssh"]["error"])
         lines = [json.loads(line) for line in (self.storage / "events.jsonl").read_text().splitlines()]
         self.assertEqual([(e["action"], e["outcome"]) for e in lines], [("ssh.enable", "failure")])
+
+    def test_bluetooth_from_a_usb_stick(self):
+        status = self.cycle()
+        self.assertEqual((status["bluetooth"]["enabled"], status["bluetooth"]["active"]), (False, False))
+        (self.adapters / "hci0").mkdir(parents=True)
+        status = self.request("bluetooth", enabled=True, onboard=False, requested_by="boss")
+        self.assertEqual(status["bluetooth"]["adapters"], ["hci0"])
+        self.assertTrue(status["bluetooth"]["active"])
+        self.assertFalse(status["bluetooth"]["restart_needed"])
+        self.assertIn("bluetooth.service", self.host.ssh)
+        self.assertIn(("rfkill", "unblock", "bluetooth"), self.host.commands)
+        self.assertIn("dtoverlay=disable-bt", self.boot_config.read_text())  # the Pi's own radio stays off
+        self.assertEqual(json.loads((self.storage / "bluetooth.json").read_text()), {"enabled": True, "onboard": False})
+        self.assertEqual(status["request"], {})  # not the stick's
+        status = self.request("bluetooth", enabled=False, requested_by="boss")
+        self.assertFalse(status["bluetooth"]["active"])
+        self.assertEqual(self.events(), ["bluetooth.enable", "bluetooth.disable"])
+
+    def test_the_pis_own_bluetooth_needs_a_restart(self):
+        status = self.request("bluetooth", enabled=True, onboard=True)
+        self.assertNotIn("disable-bt", self.boot_config.read_text())
+        self.assertIn("dtoverlay=vc4-kms-v3d", self.boot_config.read_text())
+        self.assertTrue(status["bluetooth"]["restart_needed"])  # no adapter until the firmware brings it
+        self.request("reboot", requested_by="boss")
+        self.assertIn(("systemctl", "reboot"), self.host.commands)
+        self.assertEqual(self.events(), ["bluetooth.enable", "system.reboot"])
+        (self.adapters / "hci0").mkdir(parents=True)
+        self.helper.bluetooth["checked"] -= self.helper.SSH_SECONDS
+        self.assertFalse(self.cycle()["bluetooth"]["restart_needed"])
+        # Off again: the firmware line comes back, once.
+        self.request("bluetooth", enabled=False, onboard=True)
+        self.assertEqual(self.boot_config.read_text().count("dtoverlay=disable-bt"), 1)
+        self.request("bluetooth", enabled=False)
+        self.assertEqual(self.boot_config.read_text().count("dtoverlay=disable-bt"), 1)
+
+    def test_a_stuck_onboard_radio_is_bound_again(self):
+        """What the kernel said on 2026-11-23 when the Pi 3's own Bluetooth stuck - and what got it back."""
+        driver = self.root / "hci_uart_bcm"
+        (driver / "serial0-0").mkdir(parents=True)
+        kernel = {"log": ""}
+        for name, value in (("SYS_SERIAL_BT", driver), ("kernel_log", lambda since: kernel["log"])):
+            patcher = mock.patch.object(self.helper, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.request("bluetooth", enabled=True, onboard=True)
+        with mock.patch.object(self.helper.time, "sleep"):
+            self.assertFalse(self.helper.watch_onboard_bluetooth(1000))
+            kernel["log"] = "Bluetooth: hci0: Frame reassembly failed (-84)\n"  # a garbled frame: not stuck
+            self.assertFalse(self.helper.watch_onboard_bluetooth(1030))
+            kernel["log"] = ("Bluetooth: hci0: command 0x0406 tx timeout\n"
+                             "Bluetooth: hci0: Opcode 0x0c03 failed: -110\n")
+            self.assertTrue(self.helper.watch_onboard_bluetooth(1060))
+            self.assertEqual(((driver / "unbind").read_text(), (driver / "bind").read_text()), ("serial0-0", "serial0-0"))
+            self.assertFalse(self.helper.watch_onboard_bluetooth(1090))  # stuck again: not before BT_RESET_SECONDS
+            kernel["log"] = "Bluetooth: hci0: Unable to disable scanning: -16\n"
+            self.assertTrue(self.helper.watch_onboard_bluetooth(1060 + self.helper.BT_RESET_SECONDS))
+        self.assertEqual(self.events().count("bluetooth.reset"), 2)
+        self.request("bluetooth", enabled=True, onboard=False)  # a USB stick: the Pi's own radio isn't watched
+        self.assertFalse(self.helper.watch_onboard_bluetooth(5000))
+
+    def test_the_kernel_log_since_a_moment(self):
+        with mock.patch.object(self.helper.subprocess, "run", return_value=subprocess.CompletedProcess(
+                (), 0, "Bluetooth: hci0: command 0x0406 tx timeout\n", "")) as run:
+            self.assertIn("tx timeout", self.helper.kernel_log(1795426800.5))
+        self.assertEqual(run.call_args.args[0][-2:], ("--since", "@1795426800"))
+        with mock.patch.object(self.helper.subprocess, "run", return_value=subprocess.CompletedProcess((), 1, "", "no journal")):
+            self.assertEqual(self.helper.kernel_log(0), "")
+
+    def test_bluetooth_without_a_firmware_config(self):
+        self.boot_config.unlink()  # not a Pi
+        status = self.request("bluetooth", enabled=True, onboard=True)
+        self.assertTrue(status["bluetooth"]["active"])
+        self.assertFalse(self.boot_config.exists())
+
+    def test_bluetooth_that_cant_be_switched(self):
+        (self.storage / "bluetooth.json").write_text("{nope")  # unreadable: as if never asked for
+        self.assertFalse(self.cycle()["bluetooth"]["enabled"])
+        self.host.fail.add("systemctl")
+        status = self.request("bluetooth", enabled=True)
+        self.assertIn("systemctl: failed", status["bluetooth"]["error"])
+        lines = [json.loads(line) for line in (self.storage / "events.jsonl").read_text().splitlines()]
+        self.assertEqual([(e["action"], e["outcome"]) for e in lines], [("bluetooth.enable", "failure")])
 
     def test_mounted_info_for_a_disk_it_no_longer_lists(self):
         self.host.mounted[self.helper.OWN] = "/dev/gone1"

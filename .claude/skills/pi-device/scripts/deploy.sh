@@ -2,7 +2,7 @@
 # Syncs the working tree and brings the running device up to date with it.
 #
 #   deploy.sh            app code/templates/static: copy to /opt/coffeepy, rebuild, restart
-#   deploy.sh kiosk      also re-install the kiosk session files and restart Chromium
+#   deploy.sh kiosk      also re-install the kiosk session files and restart the kiosk session
 #   deploy.sh STEP...    any install.sh steps, e.g. "packages ap" (runs them with --only)
 #
 # Templates and static files are baked into the image (collectstatic runs in the

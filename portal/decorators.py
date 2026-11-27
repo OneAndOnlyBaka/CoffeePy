@@ -1,8 +1,10 @@
 from functools import wraps
 
 from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils import timezone
 
+from coffee import privacy
 from coffee.models import Member, MemberDevice
 
 # ~6 months - a portal session rolls forward by this much on every authenticated
@@ -25,6 +27,18 @@ def portal_login_required(view):
         MemberDevice.objects.filter(session_key=request.session.session_key).update(
             last_seen_at=timezone.now()
         )
+        return view(request, *args, **kwargs)
+
+    return wrapper
+
+
+def portal_privacy_required(view):
+    """Inside portal_login_required: whatever books something - a payment, a purchase, a new card - only
+    once the member has confirmed the privacy notice (coffee/privacy.py); before, the notice."""
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not privacy.confirmed(request.member):
+            return redirect(reverse("portal:privacy") + "?next=" + request.path)
         return view(request, *args, **kwargs)
 
     return wrapper

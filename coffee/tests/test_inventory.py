@@ -185,3 +185,54 @@ class CoffeeBoxPurchaseTestCase(TestCase):
         self.assertEqual(monthly["payments"][-1], 0.0)
         self.assertEqual(services.account_balance(member), Decimal("5.00"))
         self.assertEqual(Payment.objects.count(), 1)
+
+
+class ManualExampleTestCase(TestCase):
+    """The worked example in the manuals ("How the inventory reckons") - if the calculation changes,
+    the example has to change with it."""
+
+    def test_the_manuals_example(self):
+        member = Member.objects.create(uid=1, nickname="Alice X.")
+        espresso = CoffeeSort.objects.create(name="Espresso", price=Decimal("0.30"), machine_strokes=1)
+        CoffeeSort.objects.create(name="Jug", price=Decimal("0.60"), machine_strokes=2)
+        beans = InventoryItem.objects.create(name="Coffee beans", unit="kg")
+        milk = InventoryItem.objects.create(name="Milk", unit="l")
+        cookies = InventoryItem.objects.create(name="Cookies")
+        now = timezone.now()
+
+        def ago(days):
+            return now - timedelta(days=days)
+
+        def cups(n, days):
+            Order.objects.bulk_create(Order(member=member, coffee_sort=espresso, value=espresso.price,
+                                            machine_strokes=1, created_at=ago(days)) for _ in range(n))
+
+        services.book_purchase(member, beans, Decimal("7"), Decimal("108.50"), created_at=ago(300))
+        StockCount.objects.create(item=beans, quantity=Decimal("1.5"), created_at=ago(180))
+        services.book_purchase(member, beans, Decimal("5"), Decimal("77.50"), created_at=ago(100))
+        StockCount.objects.create(item=beans, quantity=Decimal("0.8"), created_at=ago(20))
+        services.book_purchase(member, milk, Decimal("156"), Decimal("172.00"), created_at=ago(50))
+        services.book_purchase(member, cookies, Decimal("24"), Decimal("60.00"), created_at=ago(60))
+        cups(1200, 250)
+        cups(800, 100)  # between the two stock-takes
+
+        data = services.cost_per_cup(12)
+        rows = {row["item"].name: row for row in data["items"]}
+        self.assertEqual(data["cups"], 2000)
+        self.assertEqual((rows["Coffee beans"]["used"], rows["Coffee beans"]["cost"], rows["Coffee beans"]["cups"]),
+                         (Decimal("5.7"), Decimal("88.35"), 800))
+        self.assertEqual([rows[n]["per_cup_cents"] for n in ("Coffee beans", "Milk", "Cookies")],
+                         [Decimal("11.0"), Decimal("8.6"), Decimal("3.0")])
+        self.assertEqual(data["per_cup_cents"], Decimal("22.6"))
+        suggestions = {row["sort"].name: row["suggestion"] for row in services.price_suggestions(data["per_cup"], 10)}
+        self.assertEqual(suggestions, {"Espresso": Decimal("0.25"), "Jug": Decimal("0.50")})
+        # Someone else pays half: -50%.
+        suggestions = {row["sort"].name: row["suggestion"] for row in services.price_suggestions(data["per_cup"], -50)}
+        self.assertEqual(suggestions, {"Espresso": Decimal("0.15"), "Jug": Decimal("0.25")})
+
+        # 10 kg on offer in the last week, after the last stock-take: still on the shelf. Counted, only
+        # the average price moves (326.00 / 22 kg); bought-only, the beans would have cost 16.3 ct a cup.
+        services.book_purchase(member, beans, Decimal("10"), Decimal("140.00"), created_at=ago(5))
+        rows = {row["item"].name: row for row in services.cost_per_cup(12)["items"]}
+        self.assertEqual(rows["Coffee beans"]["per_cup_cents"], Decimal("10.6"))
+        self.assertEqual(round((Decimal("186.00") + Decimal("140.00")) / 2000 * 100, 1), Decimal("16.3"))

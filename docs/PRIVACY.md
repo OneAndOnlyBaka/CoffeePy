@@ -6,6 +6,15 @@ its features help whoever runs it meet the GDPR (DSGVO). It describes the softwa
 **not legal advice**, and the duties lie with whoever operates the device - usually the
 employer or the group that shares the machine, which then is the **controller**.
 
+Who runs it makes a difference. Where the **employer** runs the device, or has it run,
+everything below applies in full - the works council included. Where a few colleagues share a
+machine **on their own** - their money, their device, the employer not involved - they are the
+controller themselves, together: no employer's facility that a works council would co-determine,
+and little left to do - tell everyone what is recorded, keep it among yourselves, delete who
+leaves. Don't count on the GDPR's exception for purely personal or household activities
+(Art. 2 (2) (c)) to spare you even that: the courts read it narrowly, and whether a list kept at
+the workplace falls under it is open.
+
 The manual has the short version for admins: [Privacy and the workplace](MANUAL.en.md#privacy-and-the-workplace).
 The technical protections are in [SECURITY.md](SECURITY.md).
 
@@ -26,6 +35,9 @@ The technical protections are in [SECURITY.md](SECURITY.md).
 | Name - "First L." or a short code like "AB" | members | to show whose account it is | the member at the kiosk, or an admin |
 | Orders: time, coffee sort, price, cups | members | the tally | the kiosk |
 | Payments: time, amount, method | members | the tally | kiosk, portal, dashboard |
+| "My coffees": up to three saved coffees (sort, strength, water, temperature, cups in a row), which one is preselected, whether the other sorts are hidden | members | to make the coffee the way the member set it | the member at the kiosk or on the phone |
+| The line for the coffee machine: a member's place and number, the coffee chosen, kiosk or phone | members | one cup under the outlet at a time; the names show on the members' phones only, the kiosk's screen shows numbers | the member at the kiosk or on the phone |
+| Incidents at the coffee machine: time, what it asked for (water, grounds, drip tray, beans), whose brew it was, whether it was done - and who came next once it was (a guess at who did it) | members | to remind the member at the kiosk; the optional "Ran off" board | the coffee machine, with the member's brew |
 | Balance, rankings, statistics | members | calculated from the above, never stored separately | - |
 | Linked phones: browser description, linked and last seen | members | to let the member see and log out their phones | the portal |
 | Dashboard users: user name, password hash, role | admins, managers | access to the dashboard | an admin |
@@ -37,7 +49,7 @@ browser's description. Payment links only open the member's own payment app (Pay
 CoffeePy never learns whether or what was paid there - a payment is what the member enters.
 
 **Purpose:** a shared tally of who drank what and who paid - replacing the paper list next to
-the machine. Ranking and pillory are an optional extra on top (see below). Possible legal
+the machine. Ranking, pillory and the "Ran off" board are optional extras on top (see below). Possible legal
 bases are an agreement among those who share the machine (Art. 6 (1) (b) GDPR) or a
 legitimate interest in settling the costs (Art. 6 (1) (f)); in an employment context also
 a works agreement, where there is one. § 26 (1) BDSG, long the usual basis for employee data
@@ -62,6 +74,8 @@ not to rely on it alone. A coffee list is voluntary and not part of anyone's job
 | Members, orders, payments | until the member is deleted, or the database reset | an admin (Members → Delete; System → Reset) |
 | A departed member's data | kept for the history, hidden from rankings and pillory; with a period set under Members → Departed members, suggested for deletion once it is over and the balance is settled | an admin deleting the member - never automatically |
 | Audit log (with IP addresses) | `AUDIT_RETENTION_DAYS`, **90 days** by default | automatically, hourly |
+| Incidents at the coffee machine | until the member is deleted - the entry then stays without a name - or the database reset; the "Ran off" board shows the current month only | an admin (Members → Delete; System → Reset) |
+| Places in the line for the coffee machine | **one day** after they ended | automatically |
 | Raw card taps (`NfcScan`) | at least **one hour** - deleted with the next card tap after that | automatically |
 | One-time phone links | **5 minutes**, or until used | automatically |
 | Phone sessions | **6 months** after the last use | automatically; at once by logging the phone out, revoking, or marking the member as departed |
@@ -81,8 +95,10 @@ they rotate out (up to 12 months with the defaults).
 
 ## Privacy by default
 
-- **Ranking and pillory are off on a new device** (System → kiosk boards). Both show personal
-  data to everyone standing at the machine; switching them on is a deliberate decision.
+- **Ranking, pillory and "Ran off" are off on a new device** (System → kiosk boards). All three
+  show personal data to everyone standing at the machine - who drinks how much, who owes money,
+  who left the water tank, the grounds or the beans for the next one; switching one on is a
+  deliberate decision.
 - **Short names.** "First L." by default, and anyone may use a short code like "AB" instead -
   the name rules accept it, and the ranking then shows only the code.
 - **The kiosk shows a member's own data only after their tap**, and logs them out after 20
@@ -104,15 +120,17 @@ they rotate out (up to 12 months with the defaults).
 | Erasure (Art. 17) | Members → Delete removes the member with their cards, orders, payments and linked phones; audit entries and backups follow within their retention periods |
 | Restriction (Art. 18) | Mark as departed: cards blocked, hidden from rankings and pillory, data kept |
 | Data portability (Art. 20) | **Download my data** in the portal, **Export data** in the dashboard (JSON); the CSV exports for everyone |
-| Objection (Art. 21) | a short code instead of a name; the ranking and pillory can be switched off for everyone |
+| Objection (Art. 21) | a short code instead of a name; the ranking, the pillory and "Ran off" can be switched off for everyone |
 
 ## Works council
 
 In Germany a technical facility that is *suited* to monitor employees' behaviour or performance
 is subject to co-determination (§ 87 (1) no. 6 BetrVG) - whether monitoring is intended doesn't
-matter. Consumption times, rankings and a list of debtors can be read that way. Where there is
-a works council, involve it before the device goes live, and in particular before the ranking or
-the pillory are switched on. The configurable parts - boards, name rules, audit retention,
+matter. Consumption times, rankings and a list of debtors can be read that way, and the "Ran off"
+board most plainly of all: it names who did not do something. Where there is a works council,
+involve it before the device goes live, and in particular before the ranking, the pillory or
+"Ran off" are switched on. (A group that runs the device on its own, without the employer, is not
+the employer's facility - see the top of this page.) The configurable parts - boards, name rules, audit retention,
 backup generations, who has a dashboard login - are the natural content of an agreement.
 
 ## Technical and organisational measures
@@ -147,9 +165,9 @@ What the operator adds:
 3. Involve the works council, where there is one.
 4. Check whether a data protection impact assessment is needed (Art. 35) and write down the
    result. For a coffee list it will usually be no - little data, no special categories, no
-   automated decisions - but with the ranking and pillory on at a workplace, the check
-   belongs on record.
-5. Decide whether the ranking and the pillory are switched on - and tell people.
+   automated decisions - but with the ranking, the pillory or "Ran off" on at a workplace, the
+   check belongs on record.
+5. Decide whether the ranking, the pillory and "Ran off" are switched on - and tell people.
 6. Set the audit retention (`AUDIT_RETENTION_DAYS`) and a backup passphrase in the
    provisioning tool if needed.
 7. Set the backup generations in the dashboard to what you want to keep.

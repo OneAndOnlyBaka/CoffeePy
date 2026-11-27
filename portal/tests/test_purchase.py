@@ -3,14 +3,14 @@ from decimal import Decimal
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from coffee import services
+from coffee import privacy, services
 from coffee.models import InventoryItem, Member, StockCount
 from dashboard.models import InventoryPolicy
 
 
 class PortalPurchaseTestCase(TestCase):
     def setUp(self):
-        self.member = Member.objects.create(uid=1, nickname="Alice X.")
+        self.member = Member.objects.create(privacy_version=privacy.VERSION, uid=1, nickname="Alice X.")
         self.coffee = InventoryItem.objects.create(name="Coffee beans", unit="kg")
         InventoryPolicy.objects.update_or_create(pk=1, defaults={"mode": "members"})
         self.client = Client()

@@ -19,6 +19,7 @@ their card says, a lost phone, a lost backup stick, a broken update, a power cut
 - [Backups](#backups)
 - [Updates](#updates)
 - [The device](#the-device)
+- [The coffee machine](#the-coffee-machine)
 - [Development and supply chain](#development-and-supply-chain)
 - [Known limits](#known-limits)
 
@@ -161,6 +162,35 @@ How an update runs: [ARCHITECTURE.md](ARCHITECTURE.md#offline-updates).
   it is on. Use a strong password or a key for the Pi's user, and keep the Pi physically in
   its housing.
 
+## The coffee machine
+
+Optional: a JURA over Bluetooth LE, built in or through its Smart Connect dongle (dashboard →
+Coffee machine). Without one, none of this exists on the device.
+
+- **The radio link is JURA's, and it is not a secure channel.** The protocol scrambles its
+  messages with a key the machine itself broadcasts in its advertisement - obfuscation, not
+  authentication. Anyone within Bluetooth range - metres, not the street - can
+  read the machine's state and start a product with JURA's own app or any other client, with or
+  without CoffeePy next to it. CoffeePy neither adds to that nor can it take it away.
+- **A cup is only ever booked for a brew a member started themselves** - at the kiosk after
+  their card tap, or on their linked phone - and once the machine reports it made. A product
+  started any other way, at the machine's keys or by a foreign Bluetooth client, is recorded as
+  "At the machine" without a member and books nothing: radio packets can't put a cup on
+  somebody's account.
+- **What someone in range could still do**: get a coffee that nobody is booked for (as with a
+  press on the machine's own key - locking the keys doesn't stop a Bluetooth client); keep the
+  connection busy or lock the keys, so the kiosk can't brew (the tally by hand still works); or
+  pose as the machine and report a member's own brew as made when it wasn't, or a full grounds
+  container that isn't - a wrong booking, which an admin corrects in Bookings, or a wrong "Ran off" entry, which the
+  dashboard's machine page and the audit log show.
+- **Bluetooth is off unless it is used.** The host's Bluetooth service is only switched on when
+  an admin sets a machine up (audited); the Pi's own radio stays disabled in the firmware unless
+  chosen. The bridge runs in a container without privileges or devices and reaches the host's
+  Bluetooth stack over D-Bus only; the app never talks to the machine, only to the bridge, over
+  MQTT inside the device.
+- **The machine can't reach into the device.** What it reports is taken as numbers and states
+  with fixed meanings (`coffee-machine/codec.py`) - nothing of it is executed or shown unescaped.
+
 ## Development and supply chain
 
 - **Every push is audited**: `pip-audit` on the Python requirements and Grype on the images
@@ -181,6 +211,9 @@ How an update runs: [ARCHITECTURE.md](ARCHITECTURE.md#offline-updates).
 - **A QR code can be photographed.** Whoever scans a member's link QR code first, within its
   five minutes, gets that member's portal. The member notices (their own scan fails), sees the
   extra device and can log it out.
+- **The coffee machine's Bluetooth is open to whoever stands near it** - see
+  [The coffee machine](#the-coffee-machine). Where free coffee for someone with the right app is
+  a problem, the machine needs a place where strangers don't get within radio range of it.
 - **Unencrypted backups are readable** by whoever has the stick - the backup page says so
   while there is no passphrase.
 - **An admin sees everything** - hand out the admin role sparingly.

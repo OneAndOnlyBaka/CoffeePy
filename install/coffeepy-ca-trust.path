@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch the device CA for the kiosk browser's trust store
+
+[Path]
+# Written by the app (dashboard/tls.py) at the stack's first start - and again only if the CA
+# is ever re-created. Each change puts it into the system's CA store (coffeepy-ca-trust.service).
+PathChanged=/opt/coffeepy/data/tls/ca.crt
+
+[Install]
+WantedBy=multi-user.target

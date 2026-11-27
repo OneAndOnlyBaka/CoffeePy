@@ -131,6 +131,16 @@ disable_units() {
 	done
 }
 
+# Whether the coffee machine needs the host's Bluetooth - "enabled" or "onboard" (the Pi's own
+# radio), as the storage helper recorded it when the dashboard switched it on
+# (data/storage/bluetooth.json, install/storage_helper.py). Every run of the hardware step - the
+# update watcher's too - would otherwise switch it off again.
+bluetooth_wanted() {
+	local file="${TARGET_DIR}/data/storage/bluetooth.json"
+	[ -f "${file}" ] || return 1
+	grep -Eq "\"$1\": *true" "${file}"
+}
+
 step_done()   { [ -f "${STATE_FILE}" ] && grep -qxF "$1" "${STATE_FILE}"; }
 mark_done()   { [ "${DRY_RUN}" = "1" ] && return 0; install -d "$(dirname "${STATE_FILE}")"; grep -qxF "$1" "${STATE_FILE}" 2>/dev/null || printf '%s\n' "$1" >> "${STATE_FILE}"; }
 
@@ -398,11 +408,13 @@ step_hardware() {
 
 	log "Installing the udev rules"
 	run install -m 0644 "${SCRIPT_DIR}/99-acr122u.rules" /etc/udev/rules.d/
+	run install -m 0644 "${SCRIPT_DIR}/99-coffeepy-display.rules" /etc/udev/rules.d/
 	# The backup stick is no longer mounted by udev but by coffeepy-storage.service, which
 	# checks it really is this device's stick first (install/storage_helper.py).
 	run rm -f /etc/udev/rules.d/99-usb-backup-mount.rules
 	run install -d /srv/coffeepy-usb
 	run udevadm control --reload-rules
+	run udevadm trigger --subsystem-match=graphics --action=add  # the framebuffer is there already
 
 	if [ "${COFFEEPY_FROM_WATCHER:-0}" = "1" ]; then
 		# The display mode is chosen at provisioning; the watcher has no VIDEO_MODE to pass, and
@@ -422,8 +434,14 @@ step_hardware() {
 
 	log "Trimming what a kiosk does not need"
 	# No Bluetooth peripherals, no physical hotkeys, no modem on this device - and on a
-	# 1GB board the RAM matters more than the convenience.
-	disable_units bluetooth.service hciuart.service triggerhappy.service ModemManager.service
+	# 1GB board the RAM matters more than the convenience. Bluetooth stays if a coffee machine
+	# talks over it (dashboard -> Coffee machine).
+	if bluetooth_wanted enabled; then
+		info "Bluetooth: kept on for the coffee machine"
+		disable_units hciuart.service triggerhappy.service ModemManager.service
+	else
+		disable_units bluetooth.service hciuart.service triggerhappy.service ModemManager.service
+	fi
 	# What the Desktop image adds on top (none of it exists on Lite): printing, NFS, VNC, the
 	# Pi 5's GPU/RP1 self-tests, desktop accounts. NetworkManager's dispatcher has no scripts
 	# here to run. Each of these starts at boot, next to the stack, on four slow cores.
@@ -438,7 +456,10 @@ step_hardware() {
 	if systemctl cat udisks2.service >/dev/null 2>&1; then
 		run systemctl mask --now udisks2.service
 	fi
-	ensure_line "${boot}/config.txt" "dtoverlay=disable-bt"
+	# The Pi's own radio off, unless the coffee machine uses it (a USB stick needs no change here).
+	if ! bluetooth_wanted onboard; then
+		ensure_line "${boot}/config.txt" "dtoverlay=disable-bt"
+	fi
 	# The Imager's cloud-init has done its job (user, hostname, SSH) by the time this runs,
 	# but would still go through all its stages on every boot, one of them waiting for
 	# network-online.target. Edits to user-data on the boot partition no longer apply after this.
@@ -476,6 +497,27 @@ kiosk_user() {
 	printf '%s\n' "${KIOSK_USER:-${SUDO_USER:-${installed:-pi}}}"
 }
 
+KIOSK_PROFILE_BEGIN="# --- CoffeePy kiosk autostart ---"
+KIOSK_PROFILE_END="# --- end of CoffeePy kiosk autostart ---"
+# Puts kiosk/bash_profile_kiosk at the end of a .profile, in place of the one an earlier run put
+# there - which before the switch to cog had no end line and simply ended with its "fi" (the
+# startx snippet), so that is where an old block ends. Everything else in the file stays.
+kiosk_profile() { # profile snippet
+	local profile=$1 snippet=$2 kept=""
+	[ -f "${profile}" ] && kept="$(awk -v begin="${KIOSK_PROFILE_BEGIN}" -v end="${KIOSK_PROFILE_END}" '
+		$0 == begin { skip = 1; next }
+		$0 == end { skip = 0; next }
+		skip && /^fi$/ { skip = 0; next }
+		!skip' "${profile}" 2>/dev/null | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')"
+	{
+		[ -n "${kept}" ] && printf '%s\n\n' "${kept}"
+		printf '%s\n' "${KIOSK_PROFILE_BEGIN}"
+		cat "${snippet}"
+		printf '%s\n' "${KIOSK_PROFILE_END}"
+	} > "${profile}.coffeepy-new"
+	mv "${profile}.coffeepy-new" "${profile}"
+}
+
 step_kiosk() {
 	local kiosk_user; kiosk_user="$(kiosk_user)"
 	if ! id "${kiosk_user}" >/dev/null 2>&1; then
@@ -488,25 +530,25 @@ step_kiosk() {
 	local home; home="$(getent passwd "${kiosk_user}" | cut -d: -f6)"
 	log "Setting up the kiosk session for ${kiosk_user} (${home})"
 
-	run install -d -o "${kiosk_user}" -g "${kiosk_user}" "${home}/.config/openbox"
-	run install -m 0755 -o "${kiosk_user}" -g "${kiosk_user}" \
-		"${SCRIPT_DIR}/kiosk/openbox-autostart" "${home}/.config/openbox/autostart"
-	run install -m 0644 -o "${kiosk_user}" -g "${kiosk_user}" \
-		"${SCRIPT_DIR}/kiosk/xinitrc" "${home}/.xinitrc"
+	# cog draws straight on the display and reads the touchscreen itself (kiosk/cog-session) - the
+	# first account of an Imager image is in these groups already; one set up by hand may not be.
+	run usermod -aG video,render,input "${kiosk_user}"
+	# The Chromium session under X is only kept for a device that has no cog yet: one updated by
+	# app bundles, which bring no packages (kiosk/bash_profile_kiosk picks the session).
+	if command -v chromium >/dev/null 2>&1; then
+		run install -d -o "${kiosk_user}" -g "${kiosk_user}" "${home}/.config/openbox"
+		run install -m 0755 -o "${kiosk_user}" -g "${kiosk_user}" \
+			"${SCRIPT_DIR}/kiosk/openbox-autostart" "${home}/.config/openbox/autostart"
+		run install -m 0644 -o "${kiosk_user}" -g "${kiosk_user}" \
+			"${SCRIPT_DIR}/kiosk/xinitrc" "${home}/.xinitrc"
+	fi
 
-	# Appended to .profile, not written over it: the account's normal PATH and .bashrc
-	# sourcing has to keep working.
-	if ! grep -q "CoffeePy kiosk autostart" "${home}/.profile" 2>/dev/null; then
-		if [ "${DRY_RUN}" = "1" ]; then
-			info "[dry-run] append the startx snippet to ${home}/.profile"
-		else
-			{
-				echo ""
-				echo "# --- CoffeePy kiosk autostart ---"
-				cat "${SCRIPT_DIR}/kiosk/bash_profile_kiosk"
-			} >> "${home}/.profile"
-			chown "${kiosk_user}:${kiosk_user}" "${home}/.profile"
-		fi
+	# Into .profile, not over it: the account's normal PATH and .bashrc sourcing has to keep working.
+	if [ "${DRY_RUN}" = "1" ]; then
+		info "[dry-run] write the kiosk snippet into ${home}/.profile"
+	else
+		kiosk_profile "${home}/.profile" "${SCRIPT_DIR}/kiosk/bash_profile_kiosk"
+		chown "${kiosk_user}:${kiosk_user}" "${home}/.profile"
 	fi
 
 	# A Desktop image (instead of the documented Lite) autologins into a full desktop through
@@ -518,20 +560,22 @@ step_kiosk() {
 	fi
 	run systemctl set-default multi-user.target
 
-	log "Locking down the kiosk browser"
-	# Managed policies (kiosk/chromium-policies.json - JSON, hence the explanation here):
-	# no password manager, so an admin who logs into the dashboard on the touchscreen is
-	# never offered to leave the password in the kiosk's profile; no leak check, which
-	# would try to reach Google; no translation bar over a German page in an English
-	# browser; and no address/card autofill, which would otherwise show
-	# the previous person's entries under the nickname and amount fields.
-	run install -d /etc/chromium/policies/managed
-	run install -m 0644 "${SCRIPT_DIR}/kiosk/chromium-policies.json" /etc/chromium/policies/managed/coffeepy.json
-	# Chromium asks the XDG desktop portal for the desktop's settings at every start. Without a
-	# desktop its GTK backend dies at once, and the portal then sits out D-Bus's 25s timeout
-	# before answering - a third of the time until the kiosk showed. Masked, the request fails
-	# right away and Chromium carries on with its defaults.
-	run systemctl --global mask xdg-desktop-portal.service xdg-desktop-portal-gtk.service
+	if command -v chromium >/dev/null 2>&1; then
+		log "Locking down the kiosk browser"
+		# Managed policies (kiosk/chromium-policies.json - JSON, hence the explanation here):
+		# no password manager, so an admin who logs into the dashboard on the touchscreen is
+		# never offered to leave the password in the kiosk's profile; no leak check, which
+		# would try to reach Google; no translation bar over a German page in an English
+		# browser; and no address/card autofill, which would otherwise show
+		# the previous person's entries under the nickname and amount fields.
+		run install -d /etc/chromium/policies/managed
+		run install -m 0644 "${SCRIPT_DIR}/kiosk/chromium-policies.json" /etc/chromium/policies/managed/coffeepy.json
+		# Chromium asks the XDG desktop portal for the desktop's settings at every start. Without a
+		# desktop its GTK backend dies at once, and the portal then sits out D-Bus's 25s timeout
+		# before answering - a third of the time until the kiosk showed. Masked, the request fails
+		# right away and Chromium carries on with its defaults.
+		run systemctl --global mask xdg-desktop-portal.service xdg-desktop-portal-gtk.service
+	fi
 
 	log "Enabling autologin on tty1"
 	run install -d "$(dirname "${GETTY_AUTOLOGIN}")"
@@ -586,7 +630,8 @@ step_services() {
 	local unit
 	for unit in coffeepy.service coffeepy-update-watcher.service coffeepy-update-recover.service \
 	            coffeepy-storage.service coffeepy-rtc-sync.service coffeepy-rtc-sync.timer \
-	            coffeepy-watchdog.service coffeepy-watchdog.timer; do
+	            coffeepy-watchdog.service coffeepy-watchdog.timer \
+	            coffeepy-ca-trust.path coffeepy-ca-trust.service; do
 		if [ "${DRY_RUN}" = "1" ]; then
 			info "[dry-run] install ${unit} (paths pointing at ${TARGET_DIR})"
 		else
@@ -615,6 +660,12 @@ step_services() {
 	run systemctl restart coffeepy-storage.service  # a re-run brings a changed helper in
 	run systemctl enable --now coffeepy-rtc-sync.timer
 	run systemctl enable --now coffeepy-watchdog.timer
+	# The device CA into the system's store for the kiosk's cog, now and whenever it changes. On
+	# a fresh device the CA only comes with the stack's first start (step_verify): the path unit
+	# catches it then.
+	run systemctl enable --now coffeepy-ca-trust.path
+	run systemctl enable coffeepy-ca-trust.service
+	run systemctl start coffeepy-ca-trust.service
 
 	if [ "${DRY_RUN}" != "1" ]; then
 		info "RTC check: $(hwclock --show 2>&1 | head -1 || true)"

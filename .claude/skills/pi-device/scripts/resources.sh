@@ -12,7 +12,7 @@ SECONDS_="${1:-30}"
 "$(dirname "$0")/pi.sh" "sudo bash -s $SECONDS_" <<'EOF'
 group() {
 	case "$1" in
-		chrom*) echo chromium ;; postgres*) echo postgres ;; *gunicorn*) echo gunicorn ;;
+		chrom*) echo chromium ;; cog|WPE*) echo cog ;; postgres*) echo postgres ;; *gunicorn*) echo gunicorn ;;
 		python*) echo python ;; Xorg|openbox*) echo X ;; dockerd|containerd*) echo docker ;;
 		mosquitto) echo mosquitto ;; *) echo other ;;
 	esac

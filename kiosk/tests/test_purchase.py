@@ -5,7 +5,7 @@ from unittest import mock
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from coffee import services
+from coffee import privacy, services
 from coffee.models import AuditLogEntry, CoffeeSort, InventoryItem, Member, NfcReaderStatus, NfcScan, Purchase, StockCount
 from dashboard.models import InventoryPolicy
 
@@ -21,7 +21,7 @@ class KioskPurchaseTestCase(TestCase):
         self.client = Client()
         CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
         NfcReaderStatus.objects.create(pk=1, is_online=True)
-        self.member = Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.")
+        self.member = Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.")
         self.coffee = InventoryItem.objects.create(name="Coffee beans", unit="kg")
         inventory(True)
         self.client.get(reverse("kiosk:index"))
@@ -70,7 +70,8 @@ class KioskPurchaseTestCase(TestCase):
         the name the purchase was gone."""
         self.nav("purchase")
         NfcScan.objects.create(uid="11223344", event=NfcScan.EVENT_INSERTED)
-        panel = self.client.get(reverse("kiosk:panel"))
+        self.assertContains(self.client.get(reverse("kiosk:panel")), "Your data on this coffee machine")
+        panel = self.client.post(reverse("kiosk:privacy_confirm"))
         self.assertContains(panel, "Welcome, new card!")
         self.assertContains(panel, "then on to your purchase")
         panel = self.client.post(reverse("kiosk:settings_save"), {"nickname": "Bea Y."})

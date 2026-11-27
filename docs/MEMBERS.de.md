@@ -17,9 +17,25 @@ Der Startbildschirm ist **Bestellen**.
 Stehen viele Sorten zur Auswahl, sind deine zuerst unter **Für dich**, die übrigen erreichst du
 mit **Weitere Sorten ›**. Eine Kanne zählt als zwei Tassen.
 
+## Wenn eine Kaffeemaschine angeschlossen ist
+
+Nach **Jetzt bestellen** stellst du die Tasse unter den Auslauf und tippst **Start** – gebucht wird
+erst, wenn die Maschine fertig ist. Ohne **Start** passiert nichts, auch keine Buchung. Steht dort,
+was die Maschine braucht (Wasser, Trester …): bitte erledigen, dann geht es weiter. Heißes Wasser und
+Ähnliches bekommst du gratis und ohne Karte direkt auf dem Startbildschirm.
+
+**Maschine belegt?** **Jetzt bestellen** stellt dich an, du bekommst eine Nummer. Zeigt der Kiosk
+deine Nummer, leg die Karte wieder auf – viel Zeit bleibt dafür nicht, sonst ist der Nächste dran.
+Mit **Platz freigeben** bist du wieder draußen.
+
+**Dein Kaffee, wie du ihn magst:** Unter **Einstellungen** → **Meine Kaffees** speicherst du Sorte,
+Stärke, Wasser, Temperatur und mehrere Tassen hintereinander in eine Kanne. Jede Tasse kostet den
+Preis der Sorte.
+
 ## Zum ersten Mal hier
 
-Halte deine Karte auf **Bestellen** an den Leser. Der Kiosk fragt nach deinem **Namen** –
+Halte deine Karte auf **Bestellen** an den Leser. Zuerst kommt der **Datenschutzhinweis** – ohne
+**Verstanden - weiter** lässt sich nichts buchen. Dann fragt der Kiosk nach deinem **Namen** –
 Vorname und erster Buchstabe des Nachnamens, z. B. *Anna B.*, oder ein Kürzel wie *AB* – und
 deinem **Lieblingskaffee**. **Speichern**, dann geht es direkt zur Bestellung. Jede Karte mit
 NFC-Chip geht, oft auch der Firmen- oder Fahrausweis.
@@ -42,7 +58,8 @@ Steht links **Einkauf**, buchst du dort, was du für alle gekauft hast – Kaffe
 **Einstellungen** antippen, Karte auflegen: Name oder Lieblingskaffee ändern, **Speichern**. Dort
 verbindet **Dieses Handy verknüpfen** dein Handy – den QR-Code selbst mit der Kamera scannen
 (ein WLAN-Code daneben zuerst). Ohne App und Passwort zeigt es dann Kontostand, Buchungen und
-Statistik, nimmt Zahlungen und Ersatzkarten an, und **Meine Daten herunterladen** liefert alles,
+Statistik, nimmt Zahlungen und Ersatzkarten an, stellt dich mit **Kaffee bestellen** an der Maschine
+an (wenn eine angeschlossen ist), und **Meine Daten herunterladen** liefert alles,
 was das Gerät über dich speichert.
 
 ## Wenn etwas schiefgeht

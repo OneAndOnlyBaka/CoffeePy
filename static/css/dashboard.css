@@ -351,3 +351,14 @@ form:has(#id_provider option[value="paypal_me"]:checked) [data-providers]:not([d
 form:has(#id_provider option[value="paypal_pool"]:checked) [data-providers]:not([data-providers~="paypal_pool"]),
 form:has(#id_provider option[value="girocode"]:checked) [data-providers]:not([data-providers~="girocode"]),
 form:has(#id_provider option[value="custom"]:checked) [data-providers]:not([data-providers~="custom"]) { display: none; }
+
+/* The coffee machine page (device.html): small number fields in a table or a row. */
+.input-sm { width: 6.5em; min-width: 0; }
+.field-inline { display: inline-flex; align-items: center; gap: 6px; margin: 4px 12px 4px 0; }
+
+/* The coffee machine's picture (coffee/machine_image.py): a drawing of its product line or the admin's photo. */
+.machine-thumb { flex: 0 0 auto; width: 40px; height: 48px; object-fit: contain; border-radius: 4px; }
+.machine-picture { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.machine-picture > div { flex: 1 1 240px; }
+.machine-picture form { margin: 0 0 8px; }
+.machine-image { width: 160px; height: 192px; object-fit: contain; border-radius: 8px; }

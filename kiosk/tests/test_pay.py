@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.test import Client, TestCase
 from django.urls import reverse
 
+from coffee import privacy
 from coffee.models import CoffeeSort, Member, NfcScan, Order, Payment, PaymentMethod
 
 
@@ -10,7 +11,7 @@ class KioskPayTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
-        self.alice = Member.objects.create(uid=42, nickname="Alice X.")
+        self.alice = Member.objects.create(privacy_version=privacy.VERSION, uid=42, nickname="Alice X.")
         self.client.get(reverse("kiosk:index"))
         self.client.get(reverse("kiosk:nav", args=["info"]))
         NfcScan.objects.create(uid="2A", event=NfcScan.EVENT_INSERTED)  # uid_as_int() -> 42

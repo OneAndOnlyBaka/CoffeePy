@@ -80,35 +80,38 @@ def steam(d, x, top, phase, alpha_t):
         d.line([tuple(s(px, py)) for px, py in points], fill=ACCENT, width=4 * SS, joint="curve")
 
 
+def cup_frame(t, pouring=True):
+    """One moment of the order animation: t 0..1 through the loop. Without `pouring` the cup
+    stands empty under the spout - the kiosk's "put your cup under the outlet" (brew_cup.png)."""
+    img, d = canvas()
+    fill = ease(t / 0.55) if pouring else 0.0  # pouring for the first 55% of the loop
+    # saucer + shadow
+    d.ellipse(s(48, 172, 172, 188), fill=CREAM_DARK)
+    # spout of the machine
+    d.rounded_rectangle(s(92, 14, 128, 34), radius=4 * SS, fill=COFFEE_DARK)
+    d.rectangle(s(104, 34, 116, 42), fill=COFFEE_DARK)
+    # stream while pouring
+    if pouring and t < 0.55:
+        d.rectangle(s(107, 42, 113, 150 - 66 * fill), fill=COFFEE)
+    # cup body (drawn as the inside, then the coffee level, then the rim)
+    d.rounded_rectangle(s(62, 92, 158, 172), radius=16 * SS, fill=COFFEE)
+    d.rounded_rectangle(s(70, 98, 150, 164), radius=12 * SS, fill=CREAM)
+    level = 164 - 60 * fill
+    if fill > 0.02:
+        d.rounded_rectangle(s(70, level, 150, 164), radius=12 * SS, fill=COFFEE_DARK)
+    d.arc(s(146, 108, 182, 146), start=-90, end=90, fill=COFFEE, width=9 * SS)
+    # steam once full
+    if pouring and t >= 0.55:
+        k = (t - 0.55) / 0.45
+        for j, x in enumerate((92, 110, 128)):
+            steam(d, x, 40, 2 * math.pi * (k * 1.5) + j, min(1.0, k * 3 - j * 0.3))
+    return finish(img)
+
+
 def order_frames(n=36):
-    """A cup filling from the machine's spout, then steaming."""
-    frames = []
-    for i in range(n):
-        img, d = canvas()
-        t = i / n
-        fill = ease(t / 0.55)  # pouring for the first 55% of the loop
-        # saucer + shadow
-        d.ellipse(s(48, 172, 172, 188), fill=CREAM_DARK)
-        # spout of the machine
-        d.rounded_rectangle(s(92, 14, 128, 34), radius=4 * SS, fill=COFFEE_DARK)
-        d.rectangle(s(104, 34, 116, 42), fill=COFFEE_DARK)
-        # stream while pouring
-        if t < 0.55:
-            d.rectangle(s(107, 42, 113, 150 - 66 * fill), fill=COFFEE)
-        # cup body (drawn as the inside, then the coffee level, then the rim)
-        d.rounded_rectangle(s(62, 92, 158, 172), radius=16 * SS, fill=COFFEE)
-        d.rounded_rectangle(s(70, 98, 150, 164), radius=12 * SS, fill=CREAM)
-        level = 164 - 60 * fill
-        if fill > 0.02:
-            d.rounded_rectangle(s(70, level, 150, 164), radius=12 * SS, fill=COFFEE_DARK)
-        d.arc(s(146, 108, 182, 146), start=-90, end=90, fill=COFFEE, width=9 * SS)
-        # steam once full
-        if t >= 0.55:
-            k = (t - 0.55) / 0.45
-            for j, x in enumerate((92, 110, 128)):
-                steam(d, x, 40, 2 * math.pi * (k * 1.5) + j, min(1.0, k * 3 - j * 0.3))
-        frames.append(finish(img))
-    return frames
+    """A cup filling from the machine's spout, then steaming - also the kiosk's brew, while the
+    machine pours (panel.html "brew")."""
+    return [cup_frame(i / n) for i in range(n)]
 
 
 def info_frames(n=36):
@@ -242,6 +245,10 @@ def purchase_frames(n=36):
 
 if __name__ == "__main__":
     save("wait_order.gif", order_frames(), 80)
+    # The brew's still: the same cup, empty, under the spout (a PNG - nothing in it moves).
+    still = cup_frame(0, pouring=False)
+    still.save(os.path.join(OUT, "brew_cup.png"), optimize=True)
+    print(os.path.join(OUT, "brew_cup.png"))
     save("wait_info.gif", info_frames(), 80)
     save("wait_settings.gif", settings_frames(), 60)
     save("wait_purchase.gif", purchase_frames(), 80)

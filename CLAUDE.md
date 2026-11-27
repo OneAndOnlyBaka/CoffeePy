@@ -74,6 +74,12 @@ Rules that hold across all four:
   name screen first (`then_mode` in the session; the kiosk's purchase screen does the same) - and the dashboard's member form applies
   the same rules. So **test fixtures that order need a valid name** (`"Alice X."`), and so do
   the manual's demo members (`demo_data.py` NAMES).
+- **Nothing is booked for a member who hasn't confirmed the privacy notice** (`coffee/privacy.py`):
+  the card tap shows it first - a new card before its name - and every booking view refuses past it
+  (`kiosk.views._in_session`, the portal's `portal_privacy_required`). So test fixtures that book
+  also need `privacy_version=privacy.VERSION`, as do `demo_data.py` and the Pi's UI tests' probe
+  member. Raising `VERSION` asks everyone again. The notice links docs/PRIVACY.md on GitHub (master):
+  what it says about the data has to stay true there.
 - Tests live in `<app>/tests/test_*.py`. UI text is bilingual - see "Two languages" below.
 - **A change users can see also changes the manual** (`docs/MANUAL.de.md` + `.en.md`, with
   screenshots in both languages; what members do at the kiosk or on the phone also the one-page
@@ -99,7 +105,8 @@ immediately. Consequences, all of which have already caused bugs:
   `scripts/make_wait_gifs.py`.
 - **Every screen stays byte-identical from poll to poll** until something happens - not only for
   the GIFs: each swap of a differing panel tears its layout down, and that is where Chromium's
-  renderer crashes (below). So no `{% csrf_token %}` inside `#panel` (Django re-masks it on every
+  renderer crashed (below; cog, the kiosk's browser now, didn't - but the rule stays: devices
+  without cog still run Chromium, and a swap is layout work on a Pi 3 either way). So no `{% csrf_token %}` inside `#panel` (Django re-masks it on every
   render; the token goes along as `hx-headers` on `.kiosk-frame`, rendered once per page load),
   and the countdowns are a fixed `data-deadline` that `static/kiosk/countdown.js` counts down.
   `kiosk/tests/test_stable_panel.py` guards order, pay and settings. Still never key anything on
@@ -136,8 +143,10 @@ network only - `curl localhost:8000` on the device finds nothing.
   new one. The CA is created once; `ensure_tls` (migrate, and the backup loop) only
   re-issues the leaf certificates.
 - On the device, talk to the app as `curl --cacert /opt/coffeepy/data/tls/ca.crt
-  https://localhost:8443/...`. Chromium trusts the CA through the kiosk user's NSS store,
-  filled by `install/kiosk/openbox-autostart` with `certutil` on every session start.
+  https://localhost:8443/...`. The kiosk's cog trusts the CA through the system's CA store,
+  which only root may write: `coffeepy-ca-trust.path` watches `data/tls/ca.crt` and copies it
+  there on every change (the CA only appears at the stack's first start, after the installer's
+  services step). The Chromium session of a device without cog fills its own NSS store instead.
 
 ## Two languages
 
@@ -163,10 +172,14 @@ browser's language (`config/language.py`).
   message lives in the session, the alt-card error in the database (read by kiosk, dashboard
   and portal, each in its own language). "Cash" is data too - show it via `|method_label`.
 - The kiosk's language button is a GET, not `set_language`'s form: a csrf token would make the
-  wait screen differ per poll (see above). Through htmx it swaps only `#panel` and relabels the rest
-  of the page in place (`kiosk.views._page_texts`, `static/kiosk/language.js`) - a page load per
-  tap was a navigation, and a few taps in a row crashed Chromium. So **index.html takes every text
-  from `_page_texts`** (`test_language` checks that). Relabelling changes text only: setting
+  wait screen differ per poll (see above). **The wait screen comes in both languages at once**
+  (`kiosk/_wait.html`, rendered per language by `_wait_variants`, stacked in one grid cell): its button
+  only moves `.kiosk-frame`'s `data-lang`, relabels the page from the texts index.html carries for every
+  language, and saves the choice with `?to=` (204) - no wait, no swap, the GIF runs on. Elsewhere the
+  button swaps only `#panel` through htmx and relabels the rest of the page in place
+  (`kiosk.views._page_texts`, `static/kiosk/language.js`) - a page load per tap was a navigation, and a
+  few taps in a row crashed Chromium. So **index.html takes every text from `_page_texts`**
+  (`test_language` checks that), and a test that counts something on the wait screen counts it twice. Relabelling changes text only: setting
   `<html lang>` crashed the renderer 7 times in 8 switches on the Pi, the nav icons' `alt` 2 in 8,
   text alone 0 (2026-11-01) - both rebuild layout.
 
@@ -176,6 +189,10 @@ browser's language (`config/language.py`).
 (`install/maintenance.sh`); Caddy serves it itself, so the kiosk's `maintenance.js` can read it
 while the app is down, and covers the screen with "We'll be right back" until it is over. Caddy
 answers 502s with `data/tls/maintenance.html` (both languages, rendered by `dashboard/tls.py`).
+The overlay also comes up when six panel polls in a row get no answer - counted from htmx's
+`sendError`/`responseError` only: a nav tap aborts the running poll (`hx-sync`), htmx reports that
+as unsuccessful too, and a few quick taps once put the overlay up, which swallowed the next taps
+and reloaded the page ("only every second tap works").
 A new installer step or watcher phase needs a label in `kiosk.views.MAINTENANCE_STEPS`; the
 installer's rsync keeps `data/maintenance/` (`src-filter.txt`) or it would delete the status
 mid-run.
@@ -205,6 +222,48 @@ The web container can't touch block devices, so `install/storage_helper.py` does
   empty database - which is exactly what happened once with a two-step restore.
 - A restore replaces the dashboard logins and sessions too - the restoring admin may be
   logged out afterwards.
+
+## The coffee machine is optional
+
+`coffee-machine/` is a second bridge next to the card reader's: one machine over MQTT (`coffeemachine/#`,
+the contract in its README), a JURA over Bluetooth LE today. It runs on every device and idles until
+dashboard → Coffee machine names one (`dashboard.models.CoffeeMachine`, sent as the retained
+`config`); with "none" the kiosk books from the tally alone, as it always did. Nothing outside the
+bridge talks to the machine: `mqtt_listener` keeps `coffee.models.MachineStatus`, the web processes
+send commands with one publish each (`coffee/machine.py`), and every page reads the row.
+
+- **Bluetooth is the host's BlueZ, over `/run/dbus`** - the container needs no privileges. It is off on
+  a CoffeePy device: the storage helper's `bluetooth` request switches the service on and records it in
+  `data/storage/bluetooth.json`, which `install.sh` reads so the next update doesn't switch it off
+  again. The Pi's own radio is also off in the firmware (`dtoverlay=disable-bt`); using it takes that
+  line out and a restart (`reboot` request). A USB stick needs neither - and had the range the Pi 3's
+  antenna didn't (-95 dBm at the test site, the laptop -82).
+- **What the JURA does was measured, not read** (an E6 with a Smart Connect, 2026-11-06; frames in
+  `coffee/tests/test_machine_bridge.py`): the key in the advertisement changes, py-jura 0.2.1 waits for
+  the wrong statistics "ready" byte, there is **no working cancel** - the keys are locked instead, and
+  the lock drops by itself within ~40 s of a lost connection. Never write to the UART tunnel
+  (5a401625) unframed: it made the dongle change its key. A brew or a lock needs someone with a cup at
+  the machine - ask first.
+- The bridge's logic that decides anything (`codec.py`, `policy.py`, `ha.py`) imports neither bleak nor
+  py-jura, so the app's tests import it from `coffee-machine/` directly.
+- **"My coffees"** (`coffee/slots.py`, `MemberSlot`): up to three slots a member sets at the kiosk (Settings →
+  My coffees) or on the phone - sort, strength, water, temperature within the product's `recipe` (what the
+  bridge reports from py-jura's definition), and n cups in a row into one jug. The bridge runs the n cups
+  itself (`policy.BrewChain`: the next once the machine is idle and says `coffee_ready`), one dispense row
+  and one order per cup, at the sort's price - a cup that fails ends the chain. With the sorts hidden behind
+  the slots, a slot is what is preselected: the auto-checkout must never book something out of sight.
+- **Its picture** (`coffee/machine_image.py`): the drawing of its JURA line, found from py-jura's model name
+  (`static/machines/`, drawn by `scripts/make_machine_images.py` - `test_machine_image` compares the files with
+  the script), or the admin's photo, kept in the database (a backup carries it). The image has no Pillow: the
+  dashboard's page downsizes the photo in the browser, the server only checks type and size. It is served at
+  `/machine-photo/<digest>.<ext>` without a login - the kiosk on 8443 needs it as much as the phones - and its
+  URL changes only with the photo, so the brew screen stays byte-identical.
+- **One line for the machine** (`coffee/turns.py`, `MachineTurn`): every brew for a member - kiosk or phone
+  (portal → Order a coffee) - takes a turn; the first one while the machine is free is called and has
+  `TURN_SECONDS` to press Start, at the kiosk after a card tap or on the phone. Free products wait while
+  anyone is in line. `turns.advance` moves it on every kiosk poll (one query while empty - keep it so),
+  every phone poll and in the listener; the kiosk's wait screen shows numbers only, names are for the
+  members' phones. A brew from the phone is `MachineDispense.SOURCE_PHONE` and booked like a kiosk one.
 
 ## Django traps that already cost time here
 
@@ -268,7 +327,7 @@ two-phase setup script and a pi-gen image build; what those cost us is worth kee
 mind before changing it:
 
 - **Package names have to be checked against Raspberry Pi OS, not Debian.** No `chromium`
-  in Raspbian (it comes from the Raspberry Pi archive), no `docker-compose-v2` anywhere
+  in Raspbian (it came from the Raspberry Pi archive), no `docker-compose-v2` anywhere
   (hence the pinned, checksummed plugin binary), and the "pix" boot splash is
   `rpd-plym-splash`. The installer therefore verifies every package *before* installing
   any of them - a wrong name half-way through leaves a half-configured device.
@@ -287,9 +346,11 @@ mind before changing it:
   itself (beep, LEDs - ACS's API manual, chapter 6) go through the PC/SC escape channel,
   which libccid refuses unless `ifdDriverOptions` is `0x0001` (the bridge's Dockerfile), and
   on Linux under `SCARD_CTL_CODE(1)`, not the manual's Windows 3500. The bridge turns the beep
-  off that way. The red LED can't be turned off the same way: the firmware lights it while it
-  polls for cards, which pcscd needs - only a bridge that polls itself (`InAutoPoll`, as V1's
-  libnfc did) could, tried and not done.
+  off that way. The red LED is the firmware's: it lights it while it polls for cards and puts it
+  back on within a second of an LED command. So the bridge switches the firmware's polling off
+  (PICC operating parameter) and polls the PN532 itself (`poll_cards`, `READER_LED=0`, the
+  default) - pcscd never sees a card then, only the escape channel is used. A reader that won't
+  take the setting is read the old way, through pcscd's `CardMonitor`.
 - The DS3231 is read at boot by the kernel, but nothing writes it: the dashboard sets the
   clock from inside a container, and an offline box never gets the NTP sync that would
   trigger the kernel's own RTC update. `install/rtc_sync.sh` on a timer closes that loop -
@@ -348,24 +409,30 @@ mind before changing it:
   it (`ReaderStatus`); before, a status that arrived too early was lost and the kiosk said
   "card reader not available" with a working reader. It also compares its last status with the row
   every 30s: a reset, restore or import replaces the database under it, and the bridge only
-  reports a change (the reset itself leaves `NfcReaderStatus` alone - `coffee/purge.py`). Starting Chromium
-  in parallel with the stack was tried and measured: both slowed down by half a minute and
+  reports a change (the reset itself leaves `NfcReaderStatus` alone - `coffee/purge.py`). Starting the
+  browser (Chromium then) in parallel with the stack was tried and measured: both slowed down by half a minute and
   the box went into swap, so the kiosk waits for `/health/` first. Measure from the
   device's journal, not by polling it over SSH - that alone slowed a boot by 30s.
-  Chromium itself waited 25s at every start for the XDG desktop portal (no desktop, so its
+  Chromium waited 25s at every start for the XDG desktop portal (no desktop, so its
   GTK backend dies and the portal sits out D-Bus's timeout): the installer masks the portal
   globally - look for a pause in the journal before blaming the CPU.
 - **The kiosk's night rest** (dashboard → System, `dashboard.models.NightPolicy`) is carried out
   by the kiosk session, not the app: `dashboard/night.py` writes `data/storage/night.json` (on save
   and in every `tick`, so a restore catches up), and `install/kiosk_night.py` - stdlib, the host
   has no Django - mirrors its `is_night`; keep the two identical (`test_night` compares them).
-  The file carries `TIME_ZONE`, because the host's own zone may be UTC. At night the autostart
-  ends Chromium and holds DPMS off; the watchdog leaves the kiosk alone then, and also a browser
+  The file carries `TIME_ZONE`, because the host's own zone may be UTC. At night the session
+  (`install/kiosk/cog-session`) ends cog and takes the display's signal down through the framebuffer
+  (`/sys/class/graphics/fb0/blank` = 4, writable for group video by `install/99-coffeepy-display.rules`) -
+  `setterm --blank force` alone left it on now and then, a black screen with its backlight lit all night
+  (2026-11-23); check `/sys/class/drm/card0-HDMI-A-1/dpms` = `Off` and the HDMI CRTC's `active=0` in
+  `/sys/kernel/debug/dri/0/state`, a KMS screenshot only shows the last buffer. With `follow_machine` the night
+  is also on while the coffee machine is switched off: the bridge's state carries `missing_since`, believed while
+  the bridge keeps saying so (`BRIDGE_FRESH_SECONDS`), dark after `MACHINE_OFF_SECONDS`; the listener writes
+  night.json the moment it changes, and the session asks every 10 s while dark - measured 16-22 s from the
+  machine back to the kiosk. The watchdog leaves the kiosk alone then, and also a browser
   younger than its stale limit (the morning's, with the evening's heartbeat). Taps at night are
   never booked: `kiosk.views.index` starts every page load at the newest scan. Measured on the
-  Pi: dark within 4s of the night's start, polling 28s after the morning's - but the first
-  Chromium after a *reboot* during the night hit the network-service crash below and needed the
-  90s restart.
+  Pi with Chromium: dark within 4s of the night's start, polling 28s after the morning's.
 - **The AP's channel is picked at every hostapd start** (`install/ap_channel.sh`, an
   `ExecStartPre`): as an access point the radio only hears its own channel, so the scan has
   to happen before. Transmit power needs no setting - the Pi 3 already runs at the
@@ -430,7 +497,8 @@ mind before changing it:
   black unless the mode is forced with `video=` on the kernel command line.
 - **What the device needs is measured, not guessed** - the manual's "What the device needs"
   has the numbers (Pi 3, 1 GB, 2026-10-29): about 530 MB RAM in use plus 340 MB in zram swap,
-  so nothing under 1 GB works; the kiosk's Chromium is most of the CPU. `resources.sh`
+  so nothing under 1 GB works; the kiosk's browser is most of the CPU (cog 24% of a core on the
+  wait screen, Chromium 44% - 2026-11-07; the manual's numbers are still Chromium's). `resources.sh`
   (pi-device skill) measures per process group; mind the ranking screen's 30s idle return
   when measuring it. Every `docker compose build` leaves the replaced image dangling, a few
   hundred MB each - `install.sh`'s image step and the update watcher prune them (only
@@ -438,27 +506,50 @@ mind before changing it:
 - **`CmaFree` is not the GPU's free memory.** The kernel lends the 256MB CMA area to ordinary
   movable memory, and on a 1GB Pi under pressure it is always near zero. What the GPU holds is
   `/sys/kernel/debug/dri/0/bo_stats`: 12MB on the wait screen, about 19MB on the ranking.
-  The ranking's animations are lossless VP9 4:4:4 videos (`scripts/make_podium_gif.py`
-  `save()`), not GIFs: measured A/B on the Pi, about 14% less browser CPU for the same picture
-  and the same RAM - not the GPU memory that was the reason to try. A video needs up to a
-  second to start, so each has its first frame as `poster`, which `kiosk/index.html` keeps
-  loaded: the static files' 60s max-age would otherwise leave the stage empty while the poster
-  is revalidated.
-- **The Pi 3's GPU has 256MB (CMA), and GPU rasterization fills it with GIF frames**:
+- **The ranking's animations are GIFs, not videos** (`scripts/make_podium_gif.py` `save()`). They
+  were lossless VP9 for a while - about 14% less CPU in Chromium - but cog (WPE WebKit, through
+  GStreamer) drew every video on the Pi 3 squeezed, with a green bar beside it: 4:4:4 and 4:2:0
+  alike, padded to multiples of 16 or not (KMS screenshot - WebDriver's own screenshot showed it
+  right, so check the display itself). It also cost 1.5 cores against a GIF's 0.55 on top of the
+  wait screen, and the first video of a page waited ~4s for GStreamer to start. So no `<video>`
+  on the kiosk. `kiosk/index.html` holds the four GIFs, so the stage never waits for one.
+- **The kiosk's browser is cog (WPE WebKit), straight on the display through DRM/KMS** - no X, no
+  window manager (`install/kiosk/cog-session`, started by the autologin shell on tty1 through
+  `kiosk/bash_profile_kiosk`). It replaced Chromium on 2026-11-07, after the same UI tests with the
+  same touches on the same Pi 3 (`kiosk-ui-test.sh`, `kiosk-machine-test.sh`): Chromium 8 renderer
+  crashes in 9 rounds, cog none in 13; CPU 24% of a core against 44%, memory about the same, the
+  kiosk polling ~13s after a session start instead of ~45s. What it took:
+  `-O renderer=gles` (cog picked the plain modeset renderer and crashed at its first start); the
+  CA in the system store (above); GIFs instead of videos (below). cog does **not** reload after its web process dies: it prints "Crash!: The renderer
+  process crashed" and shows its own error page - the session reads its log every 2s and starts
+  cog afresh (seconds, not Chromium's minute). It does the same for a cog that never polls
+  (`KIOSK_LOAD_SECONDS`), and the loop restarts one that exits; its events also go to the journal
+  (`journalctl -t coffeepy-kiosk`). **A cog started outside the tty1 session needs a runtime
+  directory of its own**: systemd removes `/run/user/<uid>` ~10s after that user's last session
+  ends - an SSH command, say - and cog, whose sockets live there, then ends with SIGABRT
+  ("eglReleaseThread" on the way out). That looked like a cog crash for a day (2026-11-07);
+  `kiosk-browser.sh on` gives WPEWebDriver `/run/coffeepy-wd`. A device updated by app bundles has no cog
+  until an OS bundle (or an app bundle built `--with-os-packages`) brings it: `bash_profile_kiosk`
+  keeps such a device on the Chromium session, and the installer replaces the old `.profile` block
+  (`kiosk_profile`). Testing: `kill -SEGV` does nothing to a WPEWebProcess - JavaScriptCore handles
+  SEGV itself - use `kill -9` to play a crash. There is no X to ask for a screenshot: ffmpeg's
+  kmsgrab reads the scanout buffer, which is VC4-tiled, and `kms_untile.py` (pi-device skill)
+  reorders it; the tests drive cog through WPEWebDriver and a uinput touchscreen (`wd.py`).
+- **Chromium (the session of a device without cog), the Pi 3's GPU has 256MB (CMA), and GPU rasterization fills it with GIF frames**:
   Chromium keeps every decoded frame of an animated GIF as a texture, the ranking's GIFs
   are 120-160 frames of ~1MB, and the GPU process then dies (`dmesg`: "Failed to allocate
   from GEM DMA helper", `gpu-recent-crash-count` in its arguments). Hence
   `--disable-gpu-rasterization` in `install/kiosk/openbox-autostart`. A new long animation
   is worth a look at `/sys/kernel/debug/dri/0/bo_stats` on the device while it plays (with
   GPU rasterization on - off, as it is, the GPU stays near 20MB).
-- **After a power cut, Chromium's network service crashes at its first start** ("Network service
+- **Chromium (devices without cog): after a power cut, its network service crashes at its first start** ("Network service
   crashed or was terminated" in `$XDG_RUNTIME_DIR/chromium.log`; three times in three tries; once
   also after a clean reboot, when the night rest had delayed the start - never after a killed
   browser), the kiosk's page load dies with it and Chromium
   stays on `about:blank` - a white screen, the app answering. The root cause is inside
   Chromium; `install/kiosk/openbox-autostart` restarts a browser whose kiosk hasn't polled
   within `KIOSK_LOAD_SECONDS`. Reproduce with `sync; echo b > /proc/sysrq-trigger`.
-- **Chromium's renderer crashes in about one page load in ten** ("Aw, Snap!", error code 11 -
+- **Chromium (devices without cog): its renderer crashes in about one page load in ten** ("Aw, Snap!", error code 11 -
   Chromium 156.0.8078.73-1~deb13u1+rpt1, measured 2026-10-31: 3 in 40 reloads, 4-5 in 30
   maintenance cycles). Every crashpad dump (`~/.config/chromium/Crash Reports/pending/`) has the
   same frame - a null pointer (fault address 0x8) in `blink::FragmentData::SetLayer`, called from

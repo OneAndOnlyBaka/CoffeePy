@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Exits 0 while it is the kiosk's night, 1 otherwise - asked by the kiosk session
-(install/kiosk/openbox-autostart) and the watchdog (install/kiosk_watchdog.sh). The schedule
+(install/kiosk/cog-session) and the watchdog (install/kiosk_watchdog.sh). The schedule
 is data/storage/night.json, written by the app (dashboard/night.py, whose is_night() this
 mirrors - the host has no Django). Anything wrong with the file - missing, unreadable, half
 written - counts as day: a broken schedule must never leave the kiosk dark.
@@ -29,7 +29,11 @@ def is_night(now, schedule):
     """Whether the datetime `now` falls into a night of `schedule` (night.json's content). A
     night usually runs past midnight (20:00-05:30), so it belongs to the day it started on:
     Friday's runs into Saturday, and the morning after an all-day Sunday ends at Monday's own
-    on time. off before on (01:00-04:00) is a night within one day; equal times are no night."""
+    on time. off before on (01:00-04:00) is a night within one day; equal times are no night.
+    Also night, whatever the time: the coffee machine gone (switched off) for machine_off_after seconds."""
+    off_since = schedule.get("machine_off_since")
+    if off_since is not None and now.timestamp() - float(off_since) >= float(schedule.get("machine_off_after", 300)):
+        return True
     if schedule.get("enabled") is not True:
         return False
     today, yesterday = _rule(schedule, now.weekday()), _rule(schedule, (now.weekday() - 1) % 7)

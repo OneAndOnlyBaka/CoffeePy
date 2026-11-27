@@ -6,6 +6,7 @@ from unittest import mock
 from django.test import Client, TestCase
 from django.urls import reverse
 
+from coffee import privacy
 from coffee.models import CoffeeSort, Member, NfcReaderStatus, NfcScan, Order
 
 
@@ -19,7 +20,7 @@ class StablePanelTestCase(TestCase):
         self.client = Client()
         CoffeeSort.objects.create(name="espresso", price=Decimal("0.30"), machine_strokes=1)
         NfcReaderStatus.objects.create(pk=1, is_online=True)
-        Member.objects.create(uid=0xDDCCBBAA, nickname="Tom X.")
+        Member.objects.create(privacy_version=privacy.VERSION, uid=0xDDCCBBAA, nickname="Tom X.")
         self.client.get(reverse("kiosk:index"))
 
     def log_in(self, mode):

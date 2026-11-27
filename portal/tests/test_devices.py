@@ -5,12 +5,13 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from coffee import privacy
 from coffee.models import Member, MemberDevice, MemberLinkToken
 
 
 class DeviceManagementTestCase(TestCase):
     def setUp(self):
-        self.alice = Member.objects.create(uid=42, nickname="Alice")
+        self.alice = Member.objects.create(privacy_version=privacy.VERSION, uid=42, nickname="Alice")
 
         self.phone = Client()
         self._link(self.phone)
@@ -37,7 +38,7 @@ class DeviceManagementTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_cannot_revoke_another_members_device(self):
-        bob = Member.objects.create(uid=99, nickname="Bob")
+        bob = Member.objects.create(privacy_version=privacy.VERSION, uid=99, nickname="Bob")
         bob_client = Client()
         token = MemberLinkToken.objects.create(member=bob, expires_at=timezone.now() + timedelta(minutes=5))
         bob_client.get(reverse("portal:link", args=[token.token]))

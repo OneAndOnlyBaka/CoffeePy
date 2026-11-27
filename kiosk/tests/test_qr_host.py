@@ -4,6 +4,7 @@ from unittest import mock
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+from coffee import privacy
 from coffee.models import CoffeeSort, Member, NfcScan
 
 
@@ -36,7 +37,7 @@ class QrCodeHostTestCase(TestCase):
         self.assertFalse(any("localhost" in u for u in urls))
 
     def test_link_phone_popup_uses_public_host(self):
-        Member.objects.create(uid=42, nickname="Alice X.", favourite_coffee=self.espresso)
+        Member.objects.create(privacy_version=privacy.VERSION, uid=42, nickname="Alice X.", favourite_coffee=self.espresso)
         NfcScan.objects.create(uid="2A", event=NfcScan.EVENT_INSERTED)  # uid_as_int() -> 42
         self.client.get(reverse("kiosk:nav", args=["settings"]))
         self.client.get(reverse("kiosk:panel"))  # logs in

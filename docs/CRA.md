@@ -7,7 +7,8 @@ essential requirements of its Annex I set against what the software does. It bui
 system); the data protection side is [PRIVACY.md](PRIVACY.md).
 
 It describes the software as of this version; it is **not legal advice**. Assessed
-2026-10-31; it is reviewed with every change listed under [Review](#review).
+2026-10-31, and reviewed on 2026-11-27 for the coffee machine's Bluetooth link (R24) - a new
+interface; it is reviewed with every change listed under [Review](#review).
 
 - [Does the CRA apply?](#does-the-cra-apply)
 - [The product](#the-product)
@@ -48,11 +49,13 @@ phone. The device runs offline, inside one office or group.
 - the Pi's SSH left on with the Imager's password.
 
 **Parts with digital elements:** Raspberry Pi 3 or newer with Raspberry Pi OS, an ACR122U NFC
-reader, a DS3231 clock module, a touchscreen; on it five images (Caddy, the Django app,
-PostgreSQL, Mosquitto, the NFC bridge) in eight containers - the app runs as migrate, web, mqtt-listener and backup and host services (update watcher and recovery,
-storage helper, watchdog, RTC sync, the kiosk session with Chromium). Interfaces: HTTPS on
+reader, a DS3231 clock module, a touchscreen, optionally a coffee machine over Bluetooth; on it six
+images (Caddy, the Django app, PostgreSQL, Mosquitto, the NFC bridge, the coffee machine bridge) in
+nine containers - the app runs as migrate, web, mqtt-listener and backup and host services (update watcher and recovery,
+storage helper, watchdog, RTC sync, the kiosk session with WPE WebKit's cog). Interfaces: HTTPS on
 443 (network) and `127.0.0.1:8443` (kiosk), optionally a WPA2 access point, SSH (the
-operating system's), USB (reader, backup stick).
+operating system's), USB (reader, backup stick), and - only with a coffee machine set up -
+Bluetooth LE to that machine.
 
 ## Classification
 
@@ -64,7 +67,7 @@ the sense of Annex III class I. CoffeePy therefore falls into the **default cate
 conformity by internal control (Module A, Art. 32(1)(a)) - the manufacturer assesses
 themselves; no notified body.
 
-Chromium and Raspberry Pi OS are themselves Annex III products; their conformity is their
+WPE WebKit (the kiosk's browser engine) and Raspberry Pi OS are themselves Annex III products; their conformity is their
 manufacturers' - the device's manufacturer has to keep them updated (below, R11).
 
 ## What is protected, against whom
@@ -83,7 +86,8 @@ manufacturers' - the device's manufacturer has to keep them updated (below, R11)
 
 **Attackers considered:** a colleague at the touchscreen with someone else's card; a curious
 or mischievous person on the same network or WiFi; someone who finds a lost phone or backup
-stick; a malicious or broken update; a compromised upstream package. **Not considered:** an
+stick; someone within Bluetooth range of the coffee machine; a malicious or broken update; a
+compromised upstream package. **Not considered:** an
 attacker with prolonged physical access and tools (opening the case, reading the SD card) - a
 device in an office kitchen cannot defend against that, and it is stated as a limit.
 
@@ -109,8 +113,8 @@ existing measures in place; *accepted* means the operator is told in the manual 
 | R8 | Dashboard published to the internet | not foreseen by the product, the manual says not to ("Keeping it safe"); lockout and password rules still hold | 1 | 3 | low | A7 ✓ |
 | R9 | A forged or tampered update bundle | Ed25519-signed manifest, per-file SHA-256, platform and space check, forward only; key never in CI | 1 | 3 | low | - |
 | R10 | Signature check switched off on a device in use | labelled "development only" in the provisioning tool; permanent warning on the update page | 1 | 3 | low | - |
-| R11 | Known vulnerabilities in the OS, Chromium, the kernel or SSH on an offline device | `apt` at installation; **OS bundles** (`scripts/build_os_bundle.sh`): any set of packages - best the device's own list, downloadable on the update page - signed like an app bundle, applied through the same update page by the script signed into the bundle (`install/os_update.sh`), which upgrades what is installed (new packages only as their dependencies); database saved first, restart when kernel or firmware changed. Building and applying them is the operator's job: CoffeePy runs on more than one kind of hardware | 2 | 3 | medium (operator's) | A1 ✓ |
-| R12 | Known vulnerabilities in the app's own images | `pip-audit` + Grype fail CI on anything fixable; Dependabot weekly; each exception in `.grype.yaml` says why it can't be taken and whether the code is reachable (CVE-2025-15367: `poplib`, never imported; CVE-2026-12345: `TemporaryDirectory`, only in directories nothing but the app can write; CVE-2026-103995: `http.client`, nothing makes HTTP requests at run time) | 1 | 3 | low | A5 ✓ |
+| R11 | Known vulnerabilities in the OS, the browser engine (WPE WebKit), the kernel or SSH on an offline device | `apt` at installation; **OS bundles** (`scripts/build_os_bundle.sh`): any set of packages - best the device's own list, downloadable on the update page - signed like an app bundle, applied through the same update page by the script signed into the bundle (`install/os_update.sh`), which upgrades what is installed (new packages only as their dependencies); database saved first, restart when kernel or firmware changed. Building and applying them is the operator's job: CoffeePy runs on more than one kind of hardware | 2 | 3 | medium (operator's) | A1 ✓ |
+| R12 | Known vulnerabilities in the app's own images | `pip-audit` + Grype fail CI on anything fixable; Dependabot weekly; each exception in `.grype.yaml` says why it can't be taken and whether the code is reachable (CVE-2025-15367: `poplib`, never imported; CVE-2026-12345: `TemporaryDirectory`, only in directories nothing but the app can write; CVE-2026-103995: `http.client`, nothing makes HTTP requests at run time; CVE-2026-119170: `hashlib` under an OpenSSL in FIPS mode, which no image runs) | 1 | 3 | low | A5 ✓ |
 | R13 | Known vulnerabilities in third-party images (postgres, mosquitto, caddy) | pinned to exact versions in `docker-compose.yml`, moved weekly by Dependabot; CI reports their findings without failing - their packages are theirs to fix | 2 | 2 | medium | A4 ✓ (accepted: reported only) |
 | R14 | SSH with the Imager's password, reachable from the network | **off after the installation** (`install.sh`'s `ssh` step; `--keep-ssh` / the provisioning tool's "SSH" setting keep it); an admin switches it on in the dashboard (System → SSH), audited, with a warning for as long as it is on | 1 | 3 | low | A2 ✓ |
 | R15 | Lost or stolen backup stick | written to one registered stick only; AES-256 with `BACKUP_PASSPHRASE`, which the provisioning tool generates unless declined (and puts into its saved summary); the backup page warns while backups are unencrypted | 1 | 2 | low | A3 ✓ |
@@ -122,6 +126,7 @@ existing measures in place; *accepted* means the operator is told in the manual 
 | R21 | Harm to other devices (the box used as a stepping stone) | only Caddy publishes ports; no forwarding from the AP; web container without Docker socket or block devices; host helpers take validated file requests only | 1 | 3 | low | - |
 | R22 | Misuse as a POS/payment system | README disclaimer; no money is moved; payment links only open the member's own app | 1 | 2 | low | - |
 | R23 | Compromised dependency or CI (supply chain) | pinned and hashed actions, zizmor, gitleaks, Dependabot, SBOM per release, signing outside CI | 1 | 3 | low | - |
+| R24 | Someone within Bluetooth range of the coffee machine: reading its state, starting products, locking its keys, or posing as the machine towards the bridge | the link is the machine maker's and not authenticated - with or without CoffeePy; a cup is only booked for a brew a member started themselves at the kiosk or on their phone, anything else is recorded without a member; what the machine reports is parsed as fixed frames, never executed; Bluetooth is off on the host unless a machine is set up, the bridge an unprivileged container; the host's Bluetooth stack is the OS's (R11) | 2 | 1 | low | accepted, stated in SECURITY.md |
 
 ## Annex I part I - security requirements
 
@@ -137,7 +142,7 @@ existing measures in place; *accepted* means the operator is told in the manual 
 | (2)(g) data minimisation | "First L." names, no e-mail or phone, no tracking; see [PRIVACY.md](PRIVACY.md#what-is-processed) | - |
 | (2)(h) availability, resilience against denial of service | watchdog, auto-recovery, rate limits on logins and links | no general request rate limit at Caddy - low, the device is on a LAN |
 | (2)(i) minimise negative impact on other devices and networks | offline, no outgoing connections, no forwarding | - |
-| (2)(j) limit attack surfaces | one published port (+ local 8443), no Django admin, web container without host access, SSH off unless switched on | - |
+| (2)(j) limit attack surfaces | one published port (+ local 8443), no Django admin, web container without host access, SSH off unless switched on, Bluetooth off unless a coffee machine is set up | - |
 | (2)(k) reduce the impact of an incident | containers, least-privilege host helpers, per-device secrets, rollback | - |
 | (2)(l) record and monitor security-relevant activity, with an opt-out | audit log of every change, retention `AUDIT_RETENTION_DAYS`; the opt-out the Annex asks for is the retention setting - switching the log off would also switch off the lockouts | - |
 | (2)(m) remove all data and settings securely, transfer data | reset in System; backup and restore to move the data to another device; the manual says to wipe or destroy SD card and stick before they leave your hands | reset deletes rows, not the SD card's blocks (accepted, documented) |
@@ -170,13 +175,13 @@ actively exploited vulnerabilities to ENISA's single reporting platform within 2
 | A2 | SSH off after the installation (`install.sh` step `ssh`, `--keep-ssh`; provisioning tool setting "SSH"); dashboard System → SSH switches it on and off through the storage helper, audited | done |
 | A3 | The provisioning tool generates a backup passphrase unless declined and shows it in its summary; the backup page warns while backups are unencrypted | done |
 | A4 | Third-party images pinned to exact versions (not digests: a `docker load`ed image has none, and the watcher's rollback tags are made from the tag); the watcher untags a version the compose file no longer names | done - their findings stay reported only (accepted) |
-| A5 | `.grype.yaml`: every exception says why and whether it is reachable - CVE-2025-15367 (`poplib`, never imported) and CVE-2026-12345 (`TemporaryDirectory` cleanup race, fixed on CPython's 3.14 branch but in no release yet; it was dropped once too early and failed CI on 2026-10-31), CVE-2026-103995 (`http.client` response parsing, fixed only in Python 3.16; nothing here makes HTTP requests at run time) | done - drop CVE-2026-12345 with the next `python:3.14-slim` that carries the fix |
+| A5 | `.grype.yaml`: every exception says why and whether it is reachable - CVE-2025-15367 (`poplib`, never imported) and CVE-2026-12345 (`TemporaryDirectory` cleanup race, fixed on CPython's 3.14 branch but in no release yet; it was dropped once too early and failed CI on 2026-10-31), CVE-2026-103995 (`http.client` response parsing, fixed only in Python 3.16; nothing here makes HTTP requests at run time), CVE-2026-119170 (`hashlib` no longer enforcing FIPS's algorithms, in 3.14.10 alone; only with an OpenSSL in FIPS mode, which no image runs) | done - drop CVE-2026-12345 and CVE-2026-119170 with the next `python:3.14-slim` that carries their fixes |
 | A6 | GitHub's private vulnerability reporting switched on; SECURITY.md points to it; fixed vulnerabilities get an advisory | done |
 | A7 | Manual: "Keeping it safe" (not on the internet, SSH off, signed updates, encrypted backups, disposing of SD card and stick), operating system updates, the SSH switch | done |
 
 ## Review
 
 This assessment is revisited - and its date above changed - when any of these change: a new
-interface or published port, the update or backup path, authentication or roles, a new
+interface (a radio link counts, as Bluetooth did) or published port, the update or backup path, authentication or roles, a new
 category of personal data, a new third-party component, a vulnerability report, or before a
 device is supplied commercially.

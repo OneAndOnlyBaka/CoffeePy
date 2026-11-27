@@ -7,7 +7,7 @@ services:
   # The images of others are pinned to exact versions (Dependabot moves them): a floating tag
   # put whatever was newest at build time into a bundle, and two builds of one commit differed.
   db:
-    image: postgres:16.15-alpine
+    image: postgres:16.16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-coffeepy}
@@ -26,7 +26,7 @@ services:
       start_interval: 1s
 
   mosquitto:
-    image: eclipse-mosquitto:2.1.2-alpine
+    image: eclipse-mosquitto:2.1.4-alpine
     restart: unless-stopped
     volumes:
       - ./nfc-cardreader/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro,z
@@ -42,6 +42,25 @@ services:
       MQTT_HOST: mosquitto
       MQTT_PORT: "1883"
       MQTT_TOPIC: ${MQTT_TOPIC:-nfc/acr122u}
+      LOG_LEVEL: INFO
+
+  # The coffee machine (coffee-machine/README.md). Always there, idle until the dashboard names a
+  # machine - a device without one costs this container's few MB and nothing else. Bluetooth goes
+  # through the host's BlueZ over D-Bus, so it needs no device and no privileges; the host's
+  # Bluetooth itself is off until the dashboard switches it on (install/storage_helper.py).
+  machine-bridge:
+    build: ./coffee-machine
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    volumes:
+      - /run/dbus:/run/dbus:ro
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      MACHINE_TOPIC: ${MACHINE_TOPIC:-coffeemachine}
+      # A pretend machine for trying the kiosk without one (coffee-machine/drivers/simulator.py).
+      MACHINE_SIMULATE: ${MACHINE_SIMULATE:-false}
       LOG_LEVEL: INFO
 
   migrate:
@@ -120,6 +139,11 @@ services:
     env_file: .env
     environment:
       COFFEEPY_PREPARE: "0"
+      STORAGE_DIR: /storage
+    volumes:
+      # night.json: the kiosk goes dark and wakes with the coffee machine (dashboard/night.py) - written the
+      # moment the machine is gone or back, not at the next minutely tick.
+      - ./data/storage:/storage:z
 
   backup:
     build: .
@@ -176,7 +200,7 @@ services:
   # one place /kiosk/ is served). The Caddyfile and certificates are written by the app
   # (dashboard/tls.py); --watch picks up a changed certificate without a restart.
   caddy:
-    image: caddy:2.11.7-alpine
+    image: caddy:2.11.9-alpine
     restart: unless-stopped
     command: ["caddy", "run", "--config", "/tls/Caddyfile", "--adapter", "caddyfile", "--watch"]
     depends_on:

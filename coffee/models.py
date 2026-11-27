@@ -10,12 +10,23 @@ class CoffeeSort(models.Model):
     name = models.CharField(max_length=100, unique=True)
     price = models.DecimalField(max_digits=8, decimal_places=2)
     machine_strokes = models.PositiveIntegerField()
+    # Set by the coffee machine sync (coffee.machine.sync_products): a sort the connected machine
+    # doesn't make is no longer offered at the kiosk - its orders and statistics stay. Cleared again
+    # when the machine is switched off in the dashboard.
+    is_obsolete = models.BooleanField(default=False)
+    # What the machine has nothing to do with (tea, a biscuit) and stays offered all the same.
+    without_machine = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
+
+    @classmethod
+    def offered(cls):
+        """The sorts the kiosk offers - every one, unless the machine sync made it obsolete."""
+        return cls.objects.filter(is_obsolete=False)
 
 
 class Member(models.Model):
@@ -32,6 +43,14 @@ class Member(models.Model):
     # One of the "selected people" who may correct the stock at the kiosk and in the portal
     # (dashboard → Members). Only matters while the inventory is switched on.
     may_take_stock = models.BooleanField(default=False)
+    # The privacy notice this member confirmed, and when (coffee/privacy.py) - 0: none yet, and
+    # nothing is booked for them until they do.
+    privacy_version = models.PositiveSmallIntegerField(default=0)
+    privacy_confirmed_at = models.DateTimeField(null=True, blank=True)
+    # "My coffees" (coffee/slots.py, MemberSlot): the order screen shows only their slots, the coffee
+    # sorts one page on - and the slot preselected (and checked out after 20 s) instead of the favourite.
+    hide_standard_sorts = models.BooleanField(default=False)
+    favourite_slot = models.PositiveSmallIntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.nickname or str(self.uid)
@@ -51,6 +70,13 @@ class Member(models.Model):
     @property
     def is_departed(self) -> bool:
         return self.departed_at is not None
+
+    @property
+    def privacy_open(self) -> bool:
+        """Hasn't confirmed the current privacy notice yet - and can't book anything until they do."""
+        from coffee import privacy  # noqa: PLC0415 - privacy is about this model
+
+        return not privacy.confirmed(self)
 
 
 class MemberCard(models.Model):
@@ -413,6 +439,201 @@ class NfcReaderStatus(models.Model):
         return "online" if self.is_online else "offline"
 
 
+class MachineStatus(models.Model):
+    """Singleton row (always pk=1): what the coffee machine bridge last reported (coffee-machine/,
+    its retained MQTT topics) - written by mqtt_listener only, read by the kiosk and the dashboard.
+    Like NfcReaderStatus it is left alone by a reset: it describes the device, not its data."""
+
+    online = models.BooleanField(default=False)  # the bridge runs and reaches the broker
+    status = models.CharField(max_length=20, blank=True)  # online / offline / disabled, as sent
+    state = models.JSONField(default=dict)  # connected, model, alerts, progress, ... (README)
+    counters = models.JSONField(default=dict)
+    products = models.JSONField(default=dict)
+    scan = models.JSONField(default=dict)  # the answer to the dashboard's last search
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def current(cls):
+        return cls.objects.filter(pk=1).first() or cls(pk=1)
+
+    @property
+    def connected(self) -> bool:
+        return self.online and bool(self.state.get("connected"))
+
+
+class MachineProduct(models.Model):
+    """A product the connected coffee machine makes (its own list, coffee-machine/ `products`), and
+    the coffee sort it is sold as. Kept when the machine no longer lists it (`present` off), so a
+    machine that comes back - or a restore - finds its links again."""
+
+    code = models.PositiveSmallIntegerField(unique=True)
+    name = models.CharField(max_length=100)
+    strokes = models.PositiveSmallIntegerField(default=1)
+    present = models.BooleanField(default=True)
+    brewable = models.BooleanField(default=True)  # the bridge knows a recipe it can send
+    water_ml = models.PositiveSmallIntegerField(null=True, blank=True)  # the definition's default
+    # What a brew may ask for, as the bridge reports it (coffee-machine/README.md, `recipe`): strength,
+    # water and temperature with their limits - what a member's slot can set (coffee/slots.py).
+    recipe = models.JSONField(default=dict, blank=True)
+    coffee_sort = models.OneToOneField(CoffeeSort, null=True, blank=True, on_delete=models.SET_NULL,
+                                       related_name="machine_product")
+    # Free: offered at the kiosk without a card and without a booking (hot water, milk foam) - and,
+    # with the keys locked, the only way to get it at all.
+    free = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class MachineDispense(models.Model):
+    """One product the machine made, or was asked for and didn't: from the kiosk (booked as an order
+    once done), free at the kiosk, from Home Assistant, or started at the machine itself."""
+
+    SOURCE_KIOSK, SOURCE_PHONE, SOURCE_FREE, SOURCE_HA, SOURCE_MANUAL = "app", "phone", "free", "ha", "manual"
+    SOURCES = [(SOURCE_KIOSK, gettext_lazy("Kiosk")), (SOURCE_PHONE, gettext_lazy("Phone")),
+               (SOURCE_FREE, gettext_lazy("Free at the kiosk")),
+               (SOURCE_HA, gettext_lazy("Home Assistant")), (SOURCE_MANUAL, gettext_lazy("At the machine"))]
+    REQUESTED, STARTED, DONE, FAILED = "requested", "started", "done", "failed"
+    STATES = [(REQUESTED, gettext_lazy("asked for")), (STARTED, gettext_lazy("running")),
+              (DONE, gettext_lazy("done")), (FAILED, gettext_lazy("failed"))]
+
+    request_id = models.CharField(max_length=40, blank=True, db_index=True)
+    code = models.PositiveSmallIntegerField()
+    product_name = models.CharField(max_length=100, blank=True)
+    source = models.CharField(max_length=10, choices=SOURCES)
+    state = models.CharField(max_length=10, choices=STATES, default=REQUESTED)
+    reason = models.CharField(max_length=200, blank=True)
+    member = models.ForeignKey(Member, null=True, blank=True, on_delete=models.SET_NULL, related_name="dispenses")
+    coffee_sort = models.ForeignKey(CoffeeSort, null=True, blank=True, on_delete=models.SET_NULL)
+    order = models.OneToOneField(Order, null=True, blank=True, on_delete=models.SET_NULL, related_name="dispense")
+    water_ml = models.PositiveSmallIntegerField(null=True, blank=True)
+    strength = models.PositiveSmallIntegerField(null=True, blank=True)
+    # Several cups of one slot in a row (coffee-machine/README.md): the first cup's request id ties
+    # them together, `cup` of `of` says which; `requested` is what the slot asked for - water_ml and
+    # strength above are what the machine reported.
+    chain = models.CharField(max_length=40, blank=True)
+    cup = models.PositiveSmallIntegerField(default=1)
+    of = models.PositiveSmallIntegerField(default=1)
+    requested = models.JSONField(default=dict, blank=True)
+    # What the machine reported of it: its temperature (0 low, 1 normal, 2 high), when it really began (created_at
+    # is when it was asked for), and how far it got - the highest progress it said while pouring, in percent.
+    temperature = models.PositiveSmallIntegerField(null=True, blank=True)
+    reached = models.PositiveSmallIntegerField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.product_name or self.code} ({self.source}, {self.state})"
+
+    @property
+    def seconds(self) -> int | None:
+        """How long the machine took, from its start to "done" - None until both are known."""
+        if self.started_at is None or self.finished_at is None:
+            return None
+        return max(0, round((self.finished_at - self.started_at).total_seconds()))
+
+
+class MachineCounter(models.Model):
+    """The machine's own product counters at one moment - what the inventory reckons consumption
+    from (each product counted since a stock-take times what it takes), also for products made past
+    the tally. One row per reading that changed something."""
+
+    taken_at = models.DateTimeField(default=timezone.now, db_index=True)
+    # Which machine counted (CoffeeMachine.address): counters of another one - a replacement, the bridge's
+    # simulator - are no part of this one's (services.machine_counted). Blank: read before it was kept.
+    address = models.CharField(max_length=17, blank=True)
+    total = models.PositiveIntegerField()
+    products = models.JSONField(default=dict)  # {"<code>": count}
+    maintenance = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ["-taken_at"]
+
+
+class MachineMaintenance(models.Model):
+    """A care programme the machine ran - decalcifying, cleaning, a new filter, the milk system's cleaning (not
+    the rinses, machine.CARE_KINDS): its maintenance counter went up between two readings (record_counters). The
+    first reading of a machine says nothing about when; only what it counts from then on is kept."""
+
+    address = models.CharField(max_length=17, blank=True)
+    kind = models.CharField(max_length=30)  # the counter's key: decalc, cleaning, filter_change, cappu_clean
+    count = models.PositiveIntegerField()  # the counter after it - how many the machine has run in its life
+    done_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ["-done_at", "-id"]
+
+    def __str__(self):
+        return f"{self.kind} #{self.count}"
+
+
+class MachineSupply(models.Model):
+    """What the machine has left of water, grounds space and beans - predicted, as nothing in it
+    measures them: every product made takes its share (its water from the brew's own recipe, a
+    portion of grounds, the beans per portion), and the machine's message going away (the tank put
+    back, the container emptied) or a tap at the kiosk refills it. coffee.machine.SUPPLIES."""
+
+    WATER, GROUNDS, BEANS = "water", "grounds", "beans"
+    KINDS = [(WATER, gettext_lazy("Water")), (GROUNDS, gettext_lazy("Grounds")), (BEANS, gettext_lazy("Beans"))]
+
+    kind = models.CharField(max_length=10, choices=KINDS, unique=True)
+    capacity = models.PositiveIntegerField()  # ml of water, portions of grounds, g of beans
+    used = models.FloatField(default=0)
+    # What one portion of coffee takes, for the beans (g); unused for the others.
+    per_portion = models.FloatField(default=0)
+    reset_at = models.DateTimeField(default=timezone.now)
+
+    @property
+    def used_percent(self) -> int:
+        return min(100, round(self.used * 100 / self.capacity)) if self.capacity else 0
+
+    @property
+    def left_percent(self) -> int:
+        return 100 - self.used_percent
+
+
+class MachineIncident(models.Model):
+    """The machine asked for something (water, grounds, drip tray, beans) during or right after a
+    member's brew - theirs to do. Not done in time, they "ran off"; whoever came next and it was done
+    by then is the hero (a guess - nobody can tell who really did it, so it only ever counts for
+    someone). The kiosk's "Ran off" board, if the admin switches it on (KioskBoards)."""
+
+    OPEN, FIXED, LEFT = "open", "fixed", "left"
+    OUTCOMES = [(OPEN, gettext_lazy("open")), (FIXED, gettext_lazy("done")), (LEFT, gettext_lazy("ran off"))]
+
+    member = models.ForeignKey(Member, null=True, blank=True, on_delete=models.SET_NULL, related_name="machine_incidents")
+    alert = models.CharField(max_length=40)
+    dispense = models.ForeignKey("MachineDispense", null=True, blank=True, on_delete=models.SET_NULL)
+    raised_at = models.DateTimeField(default=timezone.now, db_index=True)
+    cleared_at = models.DateTimeField(null=True, blank=True)
+    outcome = models.CharField(max_length=10, choices=OUTCOMES, default=OPEN)
+    # The last member at the kiosk after the grace while it stood open - who most likely did it.
+    hero = models.ForeignKey(Member, null=True, blank=True, on_delete=models.SET_NULL, related_name="machine_heroics")
+
+    class Meta:
+        ordering = ["-raised_at"]
+
+
+class InventoryConsumption(models.Model):
+    """How much of an item one product of the coffee machine takes (8 g of beans an espresso, 100 ml
+    of milk a cappuccino) - with the machine's counters that is what was used since a stock-take,
+    and so the stock there should be (services.stock_levels "expected"), past the tally too."""
+
+    item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name="consumption")
+    product = models.ForeignKey(MachineProduct, on_delete=models.CASCADE, related_name="consumption")
+    amount = models.DecimalField(max_digits=10, decimal_places=3)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["item", "product"], name="one_consumption_per_item_product")]
+
+
 class BackupSettings(models.Model):
     """How often the backup service backs up to the stick, and which backups it keeps -
     set on the dashboard's backup page. One row, starting from the defaults below."""
@@ -428,3 +649,63 @@ class BackupSettings(models.Model):
     @classmethod
     def current(cls):
         return cls.objects.get_or_create(pk=1)[0]
+
+
+class MemberSlot(models.Model):
+    """One of a member's "my coffees" (coffee/slots.py): a coffee sort the way they like it - strength,
+    water, temperature as the machine's product allows (MachineProduct.recipe; empty: the machine's
+    default) - and how many of it in a row, into one big cup or a jug. Each cup is booked as an order
+    of the sort, at its price, once the machine has made it."""
+
+    POSITIONS = (1, 2, 3)
+    MAX_COUNT = 4
+
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="slots")
+    position = models.PositiveSmallIntegerField()
+    coffee_sort = models.ForeignKey(CoffeeSort, on_delete=models.CASCADE, related_name="+")
+    strength = models.PositiveSmallIntegerField(null=True, blank=True)
+    water_ml = models.PositiveSmallIntegerField(null=True, blank=True)
+    temperature = models.PositiveSmallIntegerField(null=True, blank=True)  # 0 low, 1 normal, 2 high
+    count = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ["member", "position"]
+        constraints = [models.UniqueConstraint(fields=["member", "position"], name="one_slot_per_position")]
+
+    def __str__(self):
+        return f"{self.member} #{self.position}: {self.coffee_sort}"
+
+
+class MachineTurn(models.Model):
+    """A member's place in the line for the machine (coffee/turns.py) - from the kiosk or the phone,
+    one line for both: one outlet, one cup under it at a time. Waiting, then "your turn" for
+    turns.TURN_SECONDS to press Start, then brewing; what was chosen goes along, so whoever is called
+    starts it with one tap. Finished rows are deleted after a day; `number` counts within the day."""
+
+    SOURCE_KIOSK, SOURCE_PHONE = "kiosk", "phone"
+    SOURCES = [(SOURCE_KIOSK, gettext_lazy("Kiosk")), (SOURCE_PHONE, gettext_lazy("Phone"))]
+    WAITING, CALLED, BREWING = "waiting", "called", "brewing"
+    DONE, FAILED, EXPIRED, CANCELLED = "done", "failed", "expired", "cancelled"
+    ACTIVE = (WAITING, CALLED, BREWING)
+    STATES = [(WAITING, "waiting"), (CALLED, "called"), (BREWING, "brewing"), (DONE, "done"),
+              (FAILED, "failed"), (EXPIRED, "expired"), (CANCELLED, "cancelled")]
+
+    number = models.PositiveIntegerField()
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="turns")
+    coffee_sort = models.ForeignKey(CoffeeSort, on_delete=models.CASCADE, related_name="+")
+    slot_position = models.PositiveSmallIntegerField(null=True, blank=True)
+    options = models.JSONField(default=dict, blank=True)
+    count = models.PositiveSmallIntegerField(default=1)
+    source = models.CharField(max_length=10, choices=SOURCES)
+    state = models.CharField(max_length=10, choices=STATES, default=WAITING, db_index=True)
+    dispense = models.ForeignKey(MachineDispense, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    reason = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    called_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self):
+        return f"#{self.number} {self.member} ({self.state})"

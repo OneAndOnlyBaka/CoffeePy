@@ -117,6 +117,13 @@ html, body.kiosk { overflow: hidden; }
 .wait-card {
   text-align: center;
 }
+/* The wait screen in both languages, one on top of the other in a single grid cell (panel.html):
+   both always laid out, the other one only invisible - switching builds and tears down nothing, and
+   the cell is as large as the larger of the two, so nothing moves either. */
+.lang-variants { display: grid; }
+.lang-variant { grid-area: 1 / 1; display: flex; align-items: center; justify-content: center; }
+.kiosk-frame[data-lang="de"] .lang-variant:not([data-lang="de"]),
+.kiosk-frame[data-lang="en"] .lang-variant:not([data-lang="en"]) { visibility: hidden; }
 
 .wait-card h1 { color: var(--coffee); margin-bottom: 8px; font-size: 3rem; }
 .wait-card.error h1 { color: var(--danger); }
@@ -256,6 +263,10 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 .action-row button, .action-row .btn { min-height: 72px; font-size: 1.1rem; padding: 12px 20px; white-space: nowrap; }
 
 .countdown { color: var(--danger); font-weight: 600; font-size: 1rem; white-space: nowrap; }
+/* Three buttons and the countdown (Settings): in German they don't fit one line of text each - the buttons
+   keep their width, tighter, and the countdown takes two lines. Shrinking buttons overran their own labels. */
+.action-row.crowded button, .action-row.crowded .btn { flex: 0 0 auto; padding-left: 14px; padding-right: 14px; }
+.action-row.crowded .countdown { flex: 0 1 auto; min-width: 0; white-space: normal; text-align: center; }
 
 .field {
   display: flex;
@@ -517,3 +528,115 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 @keyframes device-alarm { 50% { opacity: 0.35; } }
 /* Not a fault but a task for the admin (departed members to review): amber, and steady. */
 .device-alarm.admin-task { background: var(--accent); animation: none; }
+.msg.warning { background: #fbefdc; color: #8a5a12; }
+
+/* --- the coffee machine (views._checkout, panel.html "brew") ------------------------------------ */
+/* The wait screen's cup (scripts/make_wait_gifs.py): still while the cup goes under the outlet,
+   the filling GIF while the machine pours. The panel stays byte-identical while the machine works,
+   so the GIF is never restarted by a poll - only by the one change from heating to pouring. */
+.brew-body { flex-direction: row; align-items: center; justify-content: center; gap: 28px; }
+.brew-text { flex: 0 1 480px; }
+.brew-text h2 { margin: 0 0 10px; font-size: 2rem; color: var(--coffee); }
+.brew-text p { font-size: 1.25rem; margin: 6px 0; }
+.brew-tasks { margin: 6px 0 0; padding-left: 26px; font-size: 1.3rem; font-weight: 600; }
+/* A plain image and nothing else: no position, no opacity, no animation. Each of those gives the
+   element a layer of its own, and tearing such layers down is where Chromium's renderer crashes
+   (CLAUDE.md) - the first cup, drawn in CSS with an animated stream, crashed it about four times a
+   round on the Pi (2026-11-06). The stage is "stage-<name>", not "brew-<name>": "brew-cup" is the
+   cup itself, and the card that once carried it too shrank to the cup's size. */
+.brew-cup { flex: 0 0 auto; width: 220px; height: 220px; }
+/* The machine next to the cup (coffee/machine_image.py) - just as plain: its drawing or the admin's photo. */
+.brew-machine { flex: 0 0 auto; width: 160px; height: 192px; object-fit: contain; }
+
+/* No card needed: the machine's free products on the waiting screen. Unmistakably buttons - the
+   first ones, light on cream, read as text boxes: the coffee colour of the main actions, a darker
+   bottom edge to press, the cup, and what a tap costs (nothing) in its own line. Plain paint only -
+   no shadow animation, no transform: the wait screen has to stay cheap to swap. */
+/* The line for the machine (coffee/turns.py), above the free products. */
+.line-banner { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 10px 0 0;
+    font-size: 1.15rem; padding: 6px 14px; border-radius: var(--radius); background: #fdf1dc; color: #7a4a00; }
+.line-banner .icon { width: 26px; height: 26px; }
+/* The kiosk's font turns "Nr." into a "№" ligature (and leaves a gap after it) - the number reads plainer without. */
+.line-banner, .stage-queued h2 { font-variant-ligatures: none; font-feature-settings: "liga" 0, "dlig" 0, "calt" 0; }
+.line-note { margin: 0 0 6px; }
+.free-products { display: flex; justify-content: center; gap: 16px; margin-top: 14px; }
+.free-btn { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 6px 24px 6px 18px;
+  background: var(--coffee); color: var(--text-inverse); border-top: 0 solid transparent;
+  border-bottom: 5px solid var(--coffee-dark); box-shadow: 0 3px 8px rgba(59, 35, 20, 0.25); text-align: left; }
+/* Pressed: the edge moves to the top, the height stays - nothing else on the screen moves. */
+.free-btn:active { border-top-width: 3px; border-bottom-width: 2px; }
+.free-btn .icon { width: 34px; height: 34px; flex: 0 0 auto; }
+.free-btn .free-text { display: flex; flex-direction: column; line-height: 1.15; }
+.free-btn b { font-size: 1.2rem; }
+.free-btn small { font-size: 0.9rem; color: var(--cream-dark); }
+/* Three to five: "free, no card needed" once above, the buttons only the name, all the same width;
+   a long name wraps between its words (two lines fit the height) instead of pushing the row off the
+   screen. A smaller type than the two-up buttons: at five across "Milchschaum" broke inside the word -
+   WebKit here hyphenates nothing, it only cuts (break-word is for a word that fits no line at all). */
+.free-caption { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 0 0;
+  font-size: 1.05rem; font-weight: 600; color: var(--coffee); }
+.free-caption .icon { width: 26px; height: 26px; }
+.free-products.many { gap: 12px; margin-top: 4px; }
+.free-products.many .free-btn { flex: 1 1 0; max-width: 200px; min-width: 0; min-height: 58px; justify-content: center;
+  padding: 4px 8px; text-align: center; overflow-wrap: break-word; }
+.free-products.many .free-btn b { font-size: 1.05rem; }
+
+/* The machine's ring next to the language button (coffee.machine.kiosk_level). */
+.machine-btn { position: static; background: var(--cream); color: var(--coffee); box-sizing: border-box; border: 5px solid var(--coffee-light); }
+.machine-btn .icon { width: 28px; height: 28px; }
+.machine-btn.machine-ok { border-color: var(--success); }
+.machine-btn.machine-warn { border-color: var(--accent); }
+.machine-btn.machine-blocked { border-color: var(--danger); animation: device-alarm 1.2s ease-in-out infinite; }
+.machine-btn.machine-off { border-color: #9a9a9a; color: #9a9a9a; }
+.machine-card { text-align: left; }
+.machine-card h1 { margin-top: 0; }
+.machine-head { display: flex; align-items: center; gap: 20px; }
+.machine-photo { flex: 0 0 auto; width: 110px; height: 132px; object-fit: contain; }
+.machine-card h2 { font-size: 1.1rem; margin: 18px 0 8px; color: var(--coffee); text-transform: uppercase; letter-spacing: 0.04em; }
+.machine-state { font-size: 1.25rem; font-weight: 600; }
+.machine-state.machine-blocked { color: var(--danger); }
+.machine-messages { font-size: 1.2rem; margin: 6px 0; }
+.machine-bar { display: grid; grid-template-columns: 11em 1fr 7em; align-items: center; gap: 12px; margin: 8px 0; font-size: 1.1rem; }
+.machine-bar .bar-track { height: 16px; border-radius: 8px; background: var(--cream-dark); overflow: hidden; }
+.machine-bar .bar-fill { display: block; height: 100%; background: var(--success); }
+.machine-bar .bar-fill.warn { background: var(--accent); }
+.machine-card .action-row { margin-top: 16px; }
+.ticker-hero { color: #9be3a6; font-weight: 700; }
+
+/* The privacy notice before the first booking (panel.html "privacy"): all of it at once, no
+   scrolling - the text next to the QR code of docs/PRIVACY.md, the confirmation at the bottom. */
+.privacy-card .panel-header { font-size: 2rem; }
+.privacy-body { flex-direction: row; align-items: flex-start; gap: 20px; overflow: hidden; }
+.privacy-text { flex: 1 1 auto; min-width: 0; }
+.privacy-text h2 { margin: 0 0 6px; font-size: 1.2rem; color: var(--coffee); }
+.privacy-text ul { margin: 0; padding-left: 20px; }
+.privacy-text li { font-size: 1rem; line-height: 1.3; margin: 3px 0; }
+.privacy-docs { margin: 8px 0 0; font-size: 0.95rem; }
+.privacy-url { color: var(--coffee-light); overflow-wrap: anywhere; }
+.privacy-qr { flex: 0 0 auto; margin: 0; text-align: center; }
+.privacy-qr svg { display: block; width: 150px; height: 150px; }
+.privacy-qr figcaption { font-size: 0.85rem; color: var(--coffee-light); }
+.privacy-gate { margin: 0; font-weight: 600; color: var(--coffee); }
+
+/* "My coffees" (coffee/slots.py) on the order screen: a row of their own above the sorts, the same
+   tiles with what the slot changes in a small line - two rows of sorts are left below them. */
+.slot-row { display: flex; flex-direction: column; gap: 10px; }
+.slot-option .slot-details { font-size: 0.85rem; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brew-options, .brew-cups { margin: 4px 0 0; font-size: 1.2rem; font-weight: 600; }
+
+/* The editor of "my coffees": three cards side by side, every row always laid out (slots_editor.js only
+   hides a row the sort can't set, with visibility) - nothing moves, nothing scrolls. */
+.slots-card .panel-header { font-size: 2rem; }
+.slots-hint { margin: 0; font-size: 0.95rem; color: var(--coffee-light); }
+.slot-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.slot-card { display: flex; flex-direction: column; gap: 6px; background: var(--cream-dark); border-radius: var(--radius); padding: 8px; }
+.slot-card.empty .slot-sort .slot-value { color: var(--coffee-light); font-weight: 400; }
+.slot-ctl { display: flex; align-items: center; gap: 6px; min-height: 48px; }
+.slot-ctl button { min-width: 48px; min-height: 48px; padding: 0; font-size: 1.4rem; font-weight: 700; }
+.slot-ctl .slot-wide { flex: 1; font-size: 1rem; }
+.slot-ctl .slot-label { flex: 1; font-size: 0.95rem; }
+.slot-ctl .slot-value { min-width: 64px; text-align: center; font-weight: 600; white-space: nowrap; }
+.slot-sort .slot-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 1.1rem; }
+.slot-fav { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.slot-fav input, .slot-hide input { width: 28px; height: 28px; }
+.slot-hide { display: flex; align-items: center; gap: 10px; font-size: 1rem; }

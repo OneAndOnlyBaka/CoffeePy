@@ -6,14 +6,15 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from coffee import privacy
 from coffee.models import AuditLogEntry, Member, MemberLinkToken, Payment
 from dashboard import audit
 
 
 class MyDataTestCase(TestCase):
     def setUp(self):
-        self.alice = Member.objects.create(uid=42, nickname="Alice X.")
-        Member.objects.create(uid=99, nickname="Bob X.")
+        self.alice = Member.objects.create(privacy_version=privacy.VERSION, uid=42, nickname="Alice X.")
+        Member.objects.create(privacy_version=privacy.VERSION, uid=99, nickname="Bob X.")
         self.phone = Client()
         token = MemberLinkToken.objects.create(member=self.alice, expires_at=timezone.now() + timedelta(minutes=5))
         self.phone.get(reverse("portal:link", args=[token.token]))

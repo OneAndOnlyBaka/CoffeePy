@@ -1,53 +1,15 @@
 {% load static i18n l10n coffee_tags %}
 <div id="panel-state" data-panel-key="{{ panel_key }}" data-mode="{{ mode }}" data-ranking="{{ ranking_views|yesno:'1,0' }}" data-inventory="{{ inventory_on|yesno:'1,0' }}" hidden></div>
 {% if state == "wait_for_card" %}
-{% include "kiosk/_corner_buttons.html" %}
 {% comment %}
-Nothing on this screen may change from one poll to the next: identical HTML is what lets
-panel_stable_swap.js skip the swap, and only a skipped swap keeps the animation running
-instead of restarting it every second. Hence the clock is filled in by clock.js, not here.
+The wait screen in every language at once, stacked in one grid cell: the language button here only
+changes which one is visible (static/kiosk/language.js, .kiosk-frame[data-lang]) - nothing is fetched,
+nothing swapped, the animation runs on. The HTML is the same whatever the active language, so the next
+poll is byte-identical to this one either way. Measured on the Pi 3 (2026-11-07): the second copy costs
+the server ~2ms a poll, and cog stayed at its 27% of a core - the hidden GIF isn't painted.
 {% endcomment %}
-{% if not reader_online %}
-<div class="wait-card error">
-    <h1>{% translate "Card reader not available" %}</h1>
-    <p>{% translate "The NFC reader isn't responding - please tell an admin." %}</p>
-    <div class="clock" data-kiosk-clock></div>
-</div>
-{% else %}
-<div class="wait-card wait-{{ wait_mode }}">
-    <h1>{% translate "Apply your card" %}</h1>
-    <p class="wait-purpose">
-        {% if wait_mode == "info" %}{% translate "to see your account or pay" %}{% elif wait_mode == "settings" %}{% translate "to change your settings" %}{% elif wait_mode == "purchase" %}{% translate "to book what you bought" %}{% else %}{% translate "to order a coffee" %}{% endif %}
-        &middot; {% translate "the scanner is at the marked spot" %}
-    </p>
-    <div class="wait-body">
-        <img class="wait-gif" src="{% static 'kiosk/img/wait/wait_'|add:wait_mode|add:'.gif' %}" alt="">
-        <div class="info-box">
-            <h2>{% translate "What happens next" %}</h2>
-            <ul>
-                {% if wait_mode == "info" %}
-                <li>{% translate "You see your cups this month and in total, and your balance." %}</li>
-                <li>{% translate "Enter what you paid - or scan a payment QR code, if one is shown." %}</li>
-                <li>{% blocktranslate trimmed with seconds=logout_seconds %}You are logged out after {{ seconds }} seconds.{% endblocktranslate %}</li>
-                {% elif wait_mode == "purchase" %}
-                <li>{% translate "Pick what you bought for everyone - coffee, milk, cookies." %}</li>
-                <li>{% translate "Enter the quantity and what you paid for all of it: that is credited to your balance." %}</li>
-                <li>{% blocktranslate trimmed with seconds=logout_seconds %}You are logged out after {{ seconds }} seconds.{% endblocktranslate %}</li>
-                {% elif wait_mode == "settings" %}
-                <li>{% translate "Change your name and your favourite coffee." %}</li>
-                <li>{% translate "Link your phone to see your stats and pay from there." %}</li>
-                <li>{% translate "A card the kiosk doesn't know yet is registered here." %}</li>
-                {% else %}
-                <li>{% translate "Your favourite coffee is preselected - tap another one to change it." %}</li>
-                <li>{% blocktranslate trimmed with seconds=checkout_seconds %}Tap <strong>Order now</strong>, or it is booked after {{ seconds }} seconds.{% endblocktranslate %}</li>
-                <li>{% translate "A new card, or a name that doesn't fit the rules yet, is asked for a name first." %}</li>
-                {% endif %}
-            </ul>
-        </div>
-    </div>
-    <div class="clock" data-kiosk-clock></div>
-</div>
-{% endif %}
+<div class="lang-variants">{% for code, html in wait_variants %}<div class="lang-variant" data-lang="{{ code }}">
+{{ html }}</div>{% endfor %}</div>
 
 {% elif state == "assigning_alt_uid" %}
 <div class="wait-card{% if capture_error %} error{% endif %}">
@@ -84,7 +46,105 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
     gif through instead of restarting at frame 0 twice a second.
     {% endcomment %}
     <img class="thank-you-gif" src="{% static 'kiosk/img/thankyou/'|add:gif %}" alt="">
+    {% if tasks %}
+    <p class="msg error">{% translate "The machine needs you once more - please do this now:" %}</p>
+    <ul class="brew-tasks">{% for task in tasks %}<li>{{ task }}</li>{% endfor %}</ul>
+    {% elif tasks_done %}
+    <p class="msg success">{% translate "Done - thanks, hero!" %}</p>
+    {% else %}
     <p>{{ message }}</p>
+    {% endif %}
+</div>
+
+{% elif state == "brew" %}
+{% comment %}
+The coffee machine's brew (views._checkout, coffee/machine.py). Each stage renders the same bytes
+on every poll until the stage (or, while brewing, heating vs. making) changes - no percentages,
+no seconds: the cup's animation runs in CSS, the countdown in countdown.js from a fixed deadline.
+{% endcomment %}
+<div class="panel-card brew-card stage-{{ stage }}">
+    <h1 class="panel-header">{% if member %}{% blocktranslate trimmed with name=member.display_name %}Hi {{ name }}!{% endblocktranslate %}{% else %}{{ product_name }}{% endif %}</h1>
+    <div class="panel-body brew-body">
+        {% comment %}The wait screen's cup (scripts/make_wait_gifs.py): standing empty under the spout, then
+        filling. The GIF starts with the one swap from heating to pouring, as it should.{% endcomment %}
+        {% comment %}The machine itself (coffee/machine_image.py) - one URL per machine, so the panel stays the same.{% endcomment %}
+        <img class="brew-machine" alt="" src="{% machine_image %}">
+        <img class="brew-cup" alt=""
+             src="{% if stage == 'brewing' and phase != 'heating' %}{% static 'kiosk/img/wait/wait_order.gif' %}{% else %}{% static 'kiosk/img/wait/brew_cup.png' %}{% endif %}">
+        <div class="brew-text">
+            {% if stage == "cup" %}
+            <h2>{% translate "Put your cup under the outlet" %}</h2>
+            <p>{% if free %}{% translate "Free - nothing is booked." %}{% elif count > 1 %}{% blocktranslate trimmed with sort=product_name count=count %}{{ count }} × {{ sort }} in a row, into this cup or jug - each booked once the machine has made it.{% endblocktranslate %}{% else %}{% blocktranslate trimmed with sort=product_name %}{{ sort }} - booked once the machine has made it.{% endblocktranslate %}{% endif %}</p>
+            {% if options_text %}<p class="brew-options">{{ options_text }}</p>{% endif %}
+            {% if blocking %}
+            <p class="msg error">{% translate "The machine needs this first:" %}</p>
+            <ul class="brew-tasks">{% for task in blocking %}<li>{{ task }}</li>{% endfor %}</ul>
+            {% elif tasks %}
+            <p class="msg warning">{% translate "Better do this first, before you start:" %}</p>
+            <ul class="brew-tasks">{% for task in tasks %}<li>{{ task }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% elif stage == "brewing" %}
+            <h2>{% if phase == "heating" %}{% translate "The machine is getting ready ..." %}{% else %}{% blocktranslate trimmed with sort=product_name %}Your {{ sort }} is on its way{% endblocktranslate %}{% endif %}</h2>
+            {% if cup %}<p class="brew-cups">{% blocktranslate trimmed with cup=cup count=count %}Cup {{ cup }} of {{ count }}{% endblocktranslate %}</p>{% endif %}
+            <p>{% translate "Leave the cup where it is until the machine is done." %}</p>
+            {% if tasks %}
+            {% comment %}Not now: pulling the tank or the grounds container stops the machine.{% endcomment %}
+            <p class="msg warning">{% translate "Right after, please:" %}</p>
+            <ul class="brew-tasks">{% for task in tasks %}<li>{{ task }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% elif stage == "failed" %}
+            <h2>{% if made %}{% blocktranslate trimmed with made=made count=count %}{{ made }} of {{ count }} made and booked{% endblocktranslate %}{% else %}{% translate "Nothing was booked" %}{% endif %}</h2>
+            <p class="msg error">{{ reason }}</p>
+            {% if blocking %}<ul class="brew-tasks">{% for task in blocking %}<li>{{ task }}</li>{% endfor %}</ul>{% endif %}
+            {% elif stage == "done_free" %}
+            <h2>{% translate "Enjoy!" %}</h2>
+            {% elif stage == "queued" %}
+            {% comment %}coffee/turns.py: in line for the machine. Changes only when the line moves; called
+            while still here, the screen goes straight on to the cup (views._brew_tick).{% endcomment %}
+            <h2>{% blocktranslate trimmed with number=number %}You are in line - No. {{ number }}{% endblocktranslate %}</h2>
+            <p class="brew-cups">{% if ahead %}{% blocktranslate trimmed with n=ahead %}Before you: {{ n }}{% endblocktranslate %}{% else %}{% translate "You are next" %}{% endif %}</p>
+            <p>{% if count > 1 %}{% blocktranslate trimmed with sort=product_name count=count %}{{ count }} × {{ sort }}{% endblocktranslate %}{% else %}{{ product_name }}{% endif %}</p>
+            <p>{% blocktranslate trimmed with seconds=turn_seconds %}When it is your turn, tap your card again - or start it on your phone. You then have {{ seconds }} seconds.{% endblocktranslate %}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% if stage == "queued" %}
+    <div class="action-row panel-footer">
+        <button type="button" class="danger" hx-post="{% url 'kiosk:turn_leave' %}" hx-target="#panel" hx-swap="innerHTML">✕ {% translate "Give up my place" %}</button>
+        {% blocktranslate trimmed with seconds="{s}" asvar queued_text %}Back in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ brew_deadline_ms|unlocalize }}" data-text="{{ queued_text|force_escape }}"></span>
+        <button type="button" class="success primary-action" hx-post="{% url 'kiosk:machine_cancel' %}" hx-target="#panel" hx-swap="innerHTML">✓ {% translate "OK" %}</button>
+    </div>
+    {% endif %}
+    {% if stage == "cup" %}
+    <div class="action-row panel-footer">
+        <button type="button" class="danger" hx-post="{% url 'kiosk:machine_cancel' %}" hx-target="#panel" hx-swap="innerHTML">✕ {% translate "Cancel" %}</button>
+        {% if brew_deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar cup_text %}Cancelled in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ brew_deadline_ms|unlocalize }}" data-text="{{ cup_text|force_escape }}"></span>{% endif %}
+        <button type="button" class="success primary-action" hx-post="{% url 'kiosk:machine_start' %}" hx-target="#panel" hx-swap="innerHTML"{% if blocking %} disabled{% endif %}>▶ {% translate "Start" %}</button>
+    </div>
+    {% endif %}
+</div>
+
+{% elif state == "privacy" %}
+{% comment %}
+The privacy notice before the first booking (coffee/privacy.py, views._privacy_context): what is
+recorded, what for, where, and where it is documented in full - a QR code to docs/PRIVACY.md on
+GitHub, for a phone that has the internet the device hasn't. Fits the screen without scrolling (a
+scrolled list crashed Chromium, CLAUDE.md); the same bytes on every poll until it is answered.
+{% endcomment %}
+<div class="panel-card privacy-card">
+    <h1 class="panel-header">{% if member %}{% blocktranslate trimmed with name=member.display_name %}Hi {{ name }} - before you go on{% endblocktranslate %}{% else %}{% translate "Welcome, new card! Before you go on" %}{% endif %}</h1>
+    <div class="panel-body privacy-body">
+        <div class="privacy-text">
+            {% include "includes/privacy_notice.html" %}
+        </div>
+        <figure class="privacy-qr">{{ docs_qr_svg|safe }}<figcaption>{% translate "Scan to read it" %}</figcaption></figure>
+    </div>
+    <p class="privacy-gate">{% translate "Without your confirmation you can't order or book anything here." %}</p>
+    <div class="action-row panel-footer">
+        <button type="button" class="danger" hx-post="{% url 'kiosk:privacy_decline' %}" hx-target="#panel" hx-swap="innerHTML">✕ {% translate "No, log out" %}</button>
+        {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
+        <button type="button" class="success primary-action" hx-post="{% url 'kiosk:privacy_confirm' %}" hx-target="#panel" hx-swap="innerHTML">✓ {% translate "Understood - go on" %}</button>
+    </div>
 </div>
 
 {% elif state == "order" %}
@@ -95,12 +155,25 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
             {% if month_badge %}<span class="rank-badge" title="{% translate "Top 3 this month" %}">{% include "icons/medal.svg" with place=month_badge %}</span>{% endif %}
         </h1>
         <div class="panel-body">
+            {% if line_ahead %}
+            <p class="msg warning line-note">{% blocktranslate trimmed with n=line_ahead %}The machine is taken - a coffee from it puts you in line (before you: {{ n }}).{% endblocktranslate %}</p>
+            {% endif %}
             {% if month_reminder_balance %}
             <p class="msg error">{% blocktranslate trimmed with amount=month_reminder_balance %}Reminder: you still owe {{ amount }}€ from last month - please settle up soon (see Pay).{% endblocktranslate %}</p>
             {% endif %}
             {% comment %}Pages, not a scrolling list, once there are more sorts than fit - see
             views.SORTS_WITHOUT_SCROLL. Turning a page counts as a pick (order_select): whoever
             browses is choosing, and the favourite isn't booked under their fingers.{% endcomment %}
+            {% comment %}"My coffees" (coffee/slots.py): the member's own, first row, in the same group of tiles
+            as the sorts - one pick for all. Hidden sorts: they are a page of their own instead (views._order_context).{% endcomment %}
+            {% if slot_tiles %}
+            <div class="slot-row">
+                <h2 class="sort-group">{% translate "My coffees" %}</h2>
+                <div class="coffee-list">
+                    {% for tile in slot_tiles %}{% include "kiosk/_slot_tile.html" %}{% endfor %}
+                </div>
+            </div>
+            {% endif %}
             <div class="sort-pages{% if sort_pages|length > 1 %} paged{% endif %}">
                 {% for page in sort_pages %}
                 <div class="sort-page{% if page.index == sort_page %} current{% endif %}" data-page="{{ page.index }}">
@@ -108,6 +181,7 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                     <div class="coffee-list">
                         {% if page.back %}<button type="button" class="coffee-option sort-nav" data-sort-page="{{ page.index|add:-1 }}"
                                 hx-post="{% url 'kiosk:order_select' %}" hx-swap="none">‹ {% translate "Back" %}</button>{% endif %}
+                        {% for tile in page.slots %}{% include "kiosk/_slot_tile.html" %}{% endfor %}
                         {% for sort in page.sorts %}
                         <label class="coffee-option">
                             <input type="radio" name="coffee_id" value="{{ sort.pk|unlocalize }}"
@@ -161,7 +235,17 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
             The highlight is CSS (:has(:checked)) - a pick changes nothing the poll renders.{% endcomment %}
             <fieldset class="field">
                 <legend>{% translate "Favourite coffee" %}</legend>
-                <div class="sort-pages{% if sort_pages|length > 1 %} paged{% endif %}">
+                {% comment %}"My coffees" (coffee/slots.py): the member's own, first row, in the same group of tiles
+            as the sorts - one pick for all. Hidden sorts: they are a page of their own instead (views._order_context).{% endcomment %}
+            {% if slot_tiles %}
+            <div class="slot-row">
+                <h2 class="sort-group">{% translate "My coffees" %}</h2>
+                <div class="coffee-list">
+                    {% for tile in slot_tiles %}{% include "kiosk/_slot_tile.html" %}{% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            <div class="sort-pages{% if sort_pages|length > 1 %} paged{% endif %}">
                     {% for page in sort_pages %}
                     <div class="sort-page{% if page.index == sort_page %} current{% endif %}" data-page="{{ page.index }}">
                         {% if page.heading %}<h2 class="sort-group">{{ page.heading }}</h2>{% endif %}
@@ -184,14 +268,65 @@ instead of restarting it every second. Hence the clock is filled in by clock.js,
                 </div>
             </fieldset>
         </div>
-        <div class="action-row panel-footer">
+        <div class="action-row panel-footer crowded">
             <button type="button" class="btn secondary" title="{% translate "Link this phone" %}"
                     hx-get="{% url 'kiosk:link_phone_popup' %}" hx-target="#qr-modal-content" hx-swap="innerHTML"
                     hx-on:click="document.getElementById('qr-modal').classList.add('open')">{% include "icons/phone.svg" %} {% translate "Link this phone" %}</button>
+            {% if not is_new_user and not name_required %}<button type="button" class="btn secondary"
+                    hx-post="{% url 'kiosk:slots_open' %}" hx-target="#panel" hx-swap="innerHTML">{% include "icons/cup.svg" %} {% translate "My coffees" %}</button>{% endif %}
             {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-touch-seconds="{{ touch_seconds|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
             <button type="submit" class="success primary-action">{% translate "Save" %}</button>
         </div>
     </form>
+</div>
+
+{% elif state == "slots" %}
+{% comment %}
+"My coffees" (coffee/slots.py, views._slots_context): three slots side by side - a sort (‹ ›), and what its
+machine product lets them set: strength, water, temperature, and how many cups in a row. Everything is laid
+out from the start; the buttons only change text and the hidden fields (static/kiosk/slots_editor.js), a row
+the sort can't set is only invisible - nothing is built or torn down, nothing scrolls, no <select>.
+{% endcomment %}
+<div class="panel-card slots-card">
+    <form class="slots-editor" hx-post="{% url 'kiosk:slots_save' %}" hx-target="#panel" hx-swap="innerHTML"
+          data-touch-url="{% url 'kiosk:settings_touch' %}" data-empty="{% translate "empty" %}"
+          data-temp-0="{% translate "less hot" %}" data-temp-1="{% translate "normal" %}" data-temp-2="{% translate "extra hot" %}"
+          data-sort-ids="{{ sort_ids|join:',' }}" data-max-count="{{ max_count|unlocalize }}">
+        <h1 class="panel-header">{% translate "My coffees" %}</h1>
+        <div class="panel-body">
+            <p class="slots-hint">{% translate "Your coffee the way you like it - it appears first when you order. Several cups run one after the other into the same big cup or jug, each at the sort's price." %}</p>
+            {% if notice %}<p class="msg success">{% translate "Saved - your coffees are on the order screen now." %}</p>{% endif %}
+            <div class="slot-cards">
+                {% for card in cards %}
+                <div class="slot-card" data-pos="{{ card.position }}">
+                    <input type="hidden" name="s{{ card.position }}-sort" value="{{ card.sort_id|unlocalize }}">
+                    <input type="hidden" name="s{{ card.position }}-strength" value="{{ card.strength|default_if_none:''|unlocalize }}">
+                    <input type="hidden" name="s{{ card.position }}-water" value="{{ card.water_ml|default_if_none:''|unlocalize }}">
+                    <input type="hidden" name="s{{ card.position }}-temperature" value="{{ card.temperature|default_if_none:''|unlocalize }}">
+                    <input type="hidden" name="s{{ card.position }}-count" value="{{ card.count|unlocalize }}">
+                    <div class="slot-ctl slot-sort"><button type="button" data-step="sort" data-by="-1">‹</button>
+                        <span class="slot-value" data-show="sort"></span><button type="button" data-step="sort" data-by="1">›</button></div>
+                    <div class="slot-ctl" data-needs="strength"><span class="slot-label">{% translate "Strength" %}</span>
+                        <button type="button" data-step="strength" data-by="-1">−</button><span class="slot-value" data-show="strength"></span><button type="button" data-step="strength" data-by="1">+</button></div>
+                    <div class="slot-ctl" data-needs="water"><span class="slot-label">{% translate "Water" %}</span>
+                        <button type="button" data-step="water" data-by="-1">−</button><span class="slot-value" data-show="water"></span><button type="button" data-step="water" data-by="1">+</button></div>
+                    <div class="slot-ctl" data-needs="temperature"><span class="slot-label">{% translate "Temperature" %}</span>
+                        <button type="button" data-step="temperature" data-by="1" class="slot-wide"><span class="slot-value" data-show="temperature"></span></button></div>
+                    <div class="slot-ctl" data-needs="sort"><span class="slot-label">{% translate "Cups" %}</span>
+                        <button type="button" data-step="count" data-by="-1">−</button><span class="slot-value" data-show="count"></span><button type="button" data-step="count" data-by="1">+</button></div>
+                    <label class="slot-fav" data-needs="sort"><input type="radio" name="favourite" value="{{ card.position }}"{% if favourite_slot == card.position %} checked{% endif %}> {% translate "Preselect" %}</label>
+                </div>
+                {% endfor %}
+            </div>
+            <label class="slot-hide"><input type="checkbox" name="hide_standard_sorts"{% if hide_standard_sorts %} checked{% endif %}> {% translate "Show only my coffees when I order (the other sorts one page on)" %}</label>
+        </div>
+        <div class="action-row panel-footer">
+            <button type="button" class="danger" hx-post="{% url 'kiosk:slots_close' %}" hx-target="#panel" hx-swap="innerHTML">‹ {% translate "Back" %}</button>
+            {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-touch-seconds="{{ touch_seconds|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
+            <button type="submit" class="success primary-action">✓ {% translate "Save" %}</button>
+        </div>
+    </form>
+    {{ recipes|json_script:"slot-recipes" }}
 </div>
 
 {% elif state == "info_pay" %}
@@ -387,24 +522,47 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
         <a class="{% if ranking_view == 'pillory' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'pillory' %}"
            hx-get="{% url 'kiosk:ranking_view' 'pillory' %}">{% translate "Pillory" %}</a>
         {% endif %}
+        {% if "runaways" in ranking_views %}
+        <a class="{% if ranking_view == 'runaways' %}active{% endif %}" href="{% url 'kiosk:ranking_view' 'runaways' %}"
+           hx-get="{% url 'kiosk:ranking_view' 'runaways' %}">{% translate "Ran off" %}</a>
+        {% endif %}
     </nav>
     {% endif %}
     {% comment %}
-    The animations are lossless videos, not GIFs: measured on the Pi, the browser needs about 14%
-    less CPU for the same picture (scripts/make_podium_gif.py). Like a GIF a video restarts when
-    it is swapped in again, so the panel stays byte-identical from poll to poll here as well.
-    disableremoteplayback hides the grey cast button Chromium otherwise lays over every video. The
-    poster is the first frame: starting a video takes the Pi up to a second, and without it the
-    stage stays empty until then.
+    The animations are GIFs (scripts/make_podium_gif.py). They were lossless videos for a while -
+    about 14% less CPU in Chromium - but the kiosk's cog (WPE WebKit) drew every video on the Pi 3
+    squeezed, with a green bar beside it, at 1.5 cores, and only after GStreamer took ~4s to start;
+    a GIF it draws right at half that (2026-11-07). A GIF restarts when it is swapped in again, so
+    the panel stays byte-identical from poll to poll here as well.
     {% endcomment %}
     <div class="podium-stage">
         <div class="podium-banner">{{ banner }}</div>
-        {% if ranking_view == "pillory" %}
+        {% if ranking_view == "runaways" %}
+        {% comment %}Who left the water, the grounds or the beans for the next one this month, and who stepped in (coffee.machine.runaway_board) - the pillory's ticker, the same rules for the poll.{% endcomment %}
         {% if rows %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.webm' %}" poster="{% static 'kiosk/img/ranking/pillory.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.gif' %}" alt="" aria-hidden="true">
+        <div class="podium-names ticker">
+            <div class="ticker-track" style="animation-duration: {{ ticker_seconds|unlocalize }}s">
+                {% for copy in "12" %}
+                <span class="ticker-copy"{% if forloop.last %} aria-hidden="true"{% endif %}>
+                    {% for row in rows %}
+                    <span class="ticker-item"><b>{{ row.name }}</b>{% if row.left %} <span class="ticker-debt">{% blocktranslate trimmed with n=row.left %}ran off {{ n }}×{% endblocktranslate %}</span>{% endif %}{% if row.heroic %} <span class="ticker-hero">{% blocktranslate trimmed with n=row.heroic %}hero {{ n }}×{% endblocktranslate %}</span>{% endif %}</span>
+                    {% endfor %}
+                    <span class="ticker-item ticker-hint">{% translate "Water, grounds, beans: whoever gets the message sees to it" %}</span>
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.gif' %}" alt="" aria-hidden="true">
+        <div class="podium-names ticker"><b class="ticker-clear">{% translate "Nobody ran off this month!" %}</b></div>
+        {% endif %}
+        {% elif ranking_view == "pillory" %}
+        {% if rows %}
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory.gif' %}" alt="" aria-hidden="true">
         {% comment %}
         The list twice in a row, moved left by exactly one copy's width per animation round
-        (kiosk.css) - so the band never runs out. A CSS animation, like the video, survives the
+        (kiosk.css) - so the band never runs out. A CSS animation, like the GIF, survives the
         poll because an unchanged panel is never swapped in again.
         {% endcomment %}
         <div class="podium-names ticker">
@@ -420,14 +578,14 @@ on every one: so the tabs are GET links, and there is no form (and no csrf token
             </div>
         </div>
         {% else %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.webm' %}" poster="{% static 'kiosk/img/ranking/pillory_empty.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/pillory_empty.gif' %}" alt="" aria-hidden="true">
         <div class="podium-names ticker"><b class="ticker-clear">{% translate "Everyone has paid up!" %}</b></div>
         {% endif %}
         {% else %}
         {% if ranking_view == "month" %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/vault.webm' %}" poster="{% static 'kiosk/img/ranking/vault.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/vault.gif' %}" alt="" aria-hidden="true">
         {% else %}
-        <video class="podium-gif" src="{% static 'kiosk/img/ranking/podium.webm' %}" poster="{% static 'kiosk/img/ranking/podium.png' %}" autoplay loop muted playsinline disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
+        <img class="podium-gif" src="{% static 'kiosk/img/ranking/podium.gif' %}" alt="" aria-hidden="true">
         {% endif %}
         <div class="podium-names{% if ranking_view == 'month' %} standings{% endif %}">
             {% for place, row in podium %}
