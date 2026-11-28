@@ -55,6 +55,8 @@ PRIVACY_SECONDS = 60
 LINK_TOKEN_TTL_SECONDS = 300
 
 THANK_YOU_SECONDS = 20
+# How long "Saved" stands on the screen after Settings' Save logged the member out.
+SETTINGS_SAVED_SECONDS = 4
 # The coffee machine (coffee/machine.py): how long the "put your cup under it" screen waits for its
 # Start before it gives up (nothing booked), and how long a failed brew's message stays.
 CUP_SECONDS = 30
@@ -424,40 +426,60 @@ def order_cancel(request):
     return _render_panel(request)
 
 
+def _save_settings(request):
+    """Name and favourite from the Settings form - by its Save, and before "My coffees" opens, which would
+    otherwise drop what was typed. A name that fails the rules (coffee/names.py) keeps the form as it was,
+    with the reason, and returns None."""
+    uid = request.session["uid"]
+    # No falling back to the card's uid any more: that is how the legacy device ended up
+    # with a third of its members listed as numbers (coffee/names.py).
+    nickname = names.normalize(request.POST.get("nickname", ""))
+    favourite_id = request.POST.get("favourite_coffee_id") or None
+    before = Member.objects.filter(uid=uid).first()
+    problem = names.problem(nickname, member=before)
+    if problem:
+        request.session["pending_nickname"] = nickname
+        request.session["pending_favourite"] = favourite_id  # or the re-render undid the pick
+        request.session["name_error"] = problem
+        request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
+        request.session.pop("shown_deadline", None)
+        return None
+    for key in ("pending_nickname", "pending_favourite", "name_error"):
+        request.session.pop(key, None)
+    unchanged = before is not None and (before.nickname, before.favourite_coffee_id) == (
+        nickname, _int(favourite_id))
+    member, created = Member.objects.update_or_create(
+        uid=uid,
+        defaults={
+            "nickname": nickname,
+            "favourite_coffee_id": favourite_id,
+        },
+    )
+    if not unchanged:
+        audit.log(request, "member.create" if created else "member.update", target=audit.member_actor(member),
+                  actor=audit.member_actor(member), details="own settings at the kiosk")
+    if request.session.get("privacy_confirmed") and not privacy.confirmed(member):
+        privacy.confirm(member)
+        audit.log(request, "member.privacy_confirm", target=audit.member_actor(member),
+                  actor=audit.member_actor(member), details=f"notice {privacy.VERSION}, new card")
+    return member
+
+
 @require_POST
 def settings_save(request):
     if _in_session(request, MODE_SETTINGS):
-        uid = request.session["uid"]
-        # No falling back to the card's uid any more: that is how the legacy device ended up
-        # with a third of its members listed as numbers (coffee/names.py).
-        nickname = names.normalize(request.POST.get("nickname", ""))
-        favourite_id = request.POST.get("favourite_coffee_id") or None
-        problem = names.problem(nickname, member=Member.objects.filter(uid=uid).first())
-        if problem:
-            request.session["pending_nickname"] = nickname
-            request.session["pending_favourite"] = favourite_id  # or the re-render undid the pick
-            request.session["name_error"] = problem
-            request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
-            request.session.pop("shown_deadline", None)
+        member = _save_settings(request)
+        if member is None:
             return _render_panel(request)
-        member, created = Member.objects.update_or_create(
-            uid=uid,
-            defaults={
-                "nickname": nickname,
-                "favourite_coffee_id": favourite_id,
-            },
-        )
-        audit.log(request, "member.create" if created else "member.update", target=audit.member_actor(member),
-                  actor=audit.member_actor(member), details="own settings at the kiosk")
-        if request.session.get("privacy_confirmed") and not privacy.confirmed(member):
-            privacy.confirm(member)
-            audit.log(request, "member.privacy_confirm", target=audit.member_actor(member),
-                      actor=audit.member_actor(member), details=f"notice {privacy.VERSION}, new card")
         then_mode = request.session.get("then_mode")
         _reset_session_state(request)
         if then_mode in (MODE_ORDER, MODE_PURCHASE):
             # They came to order or to book a purchase and were asked for their name first: on to it.
             _start_session(request, then_mode, member.uid)
+        else:
+            # Save logs out - said on the screen for a moment, or it looked as if nothing had happened.
+            request.session["settings_saved_until"] = time.time() + SETTINGS_SAVED_SECONDS
+            request.session["settings_saved_name"] = member.display_name()
     return _render_panel(request)
 
 
@@ -490,6 +512,10 @@ def pay(request):
             payment = Payment.objects.create(member_id=request.session["uid"], value=amount, method_name=method_name)
             who = audit.member_actor(payment.member)
             audit.log(request, "payment.create", target=who, actor=who, details=f"#{payment.pk}: {amount} EUR ({method_name})")
+            # Said on the screen: the balance alone changing was easy to miss, and Pay tapped twice paid twice.
+            request.session["pay_notice"] = {"amount": str(payment.value), "method": method_name}
+        else:
+            request.session["pay_notice"] = {"error": True}
         request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
         request.session.pop("shown_deadline", None)
     return _render_panel(request)
@@ -573,6 +599,7 @@ def _reset_session_state(request):
         "brew",
         "pending_nickname", "pending_favourite", "name_error", "then_mode",
         "inventory_page", "inventory_notice", "inventory_error", "privacy_pending", "privacy_confirmed",
+        "pay_notice", "settings_saved_until", "settings_saved_name",
     ):
         request.session.pop(key, None)
     _touched(request)
@@ -614,6 +641,30 @@ def _start_session(request, mode, uid, is_new_user=False):
     request.session["order_slot"] = None
     request.session["order_auto_checkout"] = True
     request.session.pop("settings_view", None)
+
+
+def _drop_own_taps(request):
+    """While a member is logged in - ordering, or at the machine with their brew - their own card tapped again
+    means nothing new, and is dropped. Left for later, it logged them in again the moment the session ended:
+    right after their coffee, the brew screens being theirs for a minute or more. Another member's tap stays
+    for after them, as it always did - so this stops at the first one."""
+    last_id = request.session.get("last_scan_id", 0)
+    seen = last_id
+    for scan in NfcScan.objects.filter(id__gt=last_id).order_by("id")[:50]:
+        if scan.event == NfcScan.EVENT_INSERTED and _scan_member_uid(scan) != request.session.get("uid"):
+            break
+        seen = scan.id
+    if seen != last_id:
+        request.session["last_scan_id"] = seen
+
+
+def _scan_member_uid(scan):
+    """The uid a tap logs in as (_handle_new_scan): the member's own, also through one of their other cards."""
+    uid = scan.uid_as_int()
+    if uid is None:
+        return None
+    member = Member.objects.filter(Q(uid=uid) | Q(alt_cards__uid=uid)).distinct().first()
+    return member.uid if member is not None else uid
 
 
 def _consume_new_scan(request):
@@ -922,6 +973,8 @@ def _render_panel(request):
     # The line for the machine moves on with every poll (coffee/turns.py) - one query while it is empty.
     request.line = turns.advance()
     _brew_tick(request)
+    if request.session.get("logged_in"):
+        _drop_own_taps(request)
     if not request.session.get("logged_in"):
         scan = _consume_new_scan(request)
         if scan is not None:
@@ -1203,6 +1256,9 @@ def _state_context(request, mode):
             thank_you_ctx = _thank_you_context(request)
             if thank_you_ctx is not None:
                 return thank_you_ctx
+        if mode == MODE_SETTINGS and request.session.get("settings_saved_until", 0) > time.time():
+            # Nothing that counts down: the same bytes on every poll until it is over.
+            return {"state": "settings_saved", "member_name": request.session.get("settings_saved_name")}
         if not CoffeeSort.offered().exists():
             return _setup_wizard_context(request)
         reader_online = NfcReaderStatus.objects.filter(pk=1, is_online=True).exists()
@@ -1448,6 +1504,7 @@ def _settings_context(request, uid, seconds_left):
         "sort_pages": sort_pages,
         "sort_page": sort_page,
         "seconds_left": seconds_left,
+        "slots_saved": request.session.get("slots_notice", False),
     }
 
 
@@ -1475,13 +1532,16 @@ def _slots_context(request, uid):
         "sort_ids": [""] + [str(sort.pk) for sort in sorts],
         "hide_standard_sorts": member.hide_standard_sorts if member else False,
         "favourite_slot": member.favourite_slot if member else None,
-        "notice": request.session.get("slots_notice"),
     }
 
 
 @require_POST
 def slots_open(request):
     if _in_session(request, MODE_SETTINGS) and Member.objects.filter(uid=request.session["uid"]).exists():
+        # The button sits in the Settings form, so its name and favourite come along: saved first, or
+        # a name typed before "My coffees" was gone when they came back. A name that fails stays put.
+        if "nickname" in request.POST and _save_settings(request) is None:
+            return _render_panel(request)
         request.session["settings_view"] = "slots"
         request.session.pop("slots_notice", None)
         request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
@@ -1502,7 +1562,7 @@ def slots_close(request):
 @require_POST
 def slots_save(request):
     """Save on the editor: each slot within its sort's recipe (my_coffees.clean), the preselected
-    one, and whether the sorts hide behind them on the order screen."""
+    one, and whether the sorts hide behind them on the order screen - then back to Settings."""
     if _in_session(request, MODE_SETTINGS) and request.session.get("settings_view") == "slots":
         member = Member.objects.filter(uid=request.session["uid"]).first()
         if member is not None:
@@ -1510,7 +1570,10 @@ def slots_save(request):
             who = audit.member_actor(member)
             audit.log(request, "member.slots_update", target=who, actor=who, details="; ".join(
                 f"{p}: {my_coffees.describe(slot)}" for p, slot in saved.items()) or "none")
+            # Save closes the editor, like every green button that finishes something: back on Settings,
+            # which says it was saved - staying behind a "Saved" left people unsure whether they were done.
             request.session["slots_notice"] = True
+            request.session.pop("settings_view", None)
         request.session["deadline"] = time.time() + AUTO_LOGOUT_SECONDS
         request.session.pop("shown_deadline", None)
     return _render_panel(request)
@@ -1548,7 +1611,15 @@ def _info_pay_context(request, uid, seconds_left):
         ),
         "payment_method_qr_row": _payment_method_qr_row(balance, member),
         "seconds_left": seconds_left,
+        "pay_notice": _pay_notice(request),
     }
+
+
+def _pay_notice(request):
+    notice = request.session.get("pay_notice")
+    if not notice or notice.get("error"):
+        return notice
+    return {"amount": Decimal(notice["amount"]), "method": notice["method"]}
 
 
 # Item tiles per page on the purchase screen - two rows of four at 1024x600, above the quantity

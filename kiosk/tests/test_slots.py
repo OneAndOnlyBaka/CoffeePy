@@ -126,13 +126,55 @@ class KioskSlotsTestCase(TestCase):
         saved = self.client.post(reverse("kiosk:slots_save"), {
             "s1-sort": self.kaffee.pk, "s1-strength": "9", "s1-water": "100", "s1-temperature": "2", "s1-count": "3",
             "s2-sort": self.espresso.pk, "s2-count": "1", "s3-sort": "", "favourite": "2", "hide_standard_sorts": "on"})
-        self.assertContains(saved, "Saved")
+        # Save closes the editor: back on Settings, which says it was saved - and stays that way from poll to poll
+        self.assertContains(saved, "Favourite coffee")
+        self.assertContains(saved, "Saved - your coffees")
+        self.assertNotContains(saved, "slots-editor")
+        self.assertEqual(saved.content, self.panel().content)
         slot = MemberSlot.objects.get(member=self.member, position=1)
         self.assertEqual((slot.strength, slot.water_ml, slot.temperature, slot.count), (8, None, None, 3))
         self.member.refresh_from_db()
         self.assertEqual((self.member.favourite_slot, self.member.hide_standard_sorts), (2, True))
         self.assertTrue(AuditLogEntry.objects.filter(action="member.slots_update").exists())
-        self.assertContains(self.client.post(reverse("kiosk:slots_close")), "Favourite coffee")
+        # Cancel leaves the editor without saving, and without the last notice
+        self.client.post(reverse("kiosk:slots_open"))
+        closed = self.client.post(reverse("kiosk:slots_close"))
+        self.assertContains(closed, "Favourite coffee")
+        self.assertNotContains(closed, "Saved - your coffees")
+        self.assertEqual(MemberSlot.objects.get(member=self.member, position=1).count, 3)
+
+    def test_my_coffees_keeps_what_was_typed_in_settings(self):
+        self.client.get(reverse("kiosk:nav", args=["settings"]))
+        self.log_in()
+        editor = self.client.post(reverse("kiosk:slots_open"), {"nickname": "tom y", "favourite_coffee_id": self.kaffee.pk})
+        self.assertContains(editor, "slots-editor")
+        self.member.refresh_from_db()
+        self.assertEqual((self.member.nickname, self.member.favourite_coffee_id), ("Tom Y.", self.kaffee.pk))
+        self.assertEqual(AuditLogEntry.objects.filter(action="member.update").count(), 1)
+        # back on Settings, the name is the saved one
+        self.assertContains(self.client.post(reverse("kiosk:slots_close")), 'value="Tom Y."')
+        # unchanged: no audit row of its own
+        self.client.post(reverse("kiosk:slots_open"), {"nickname": "Tom Y.", "favourite_coffee_id": self.kaffee.pk})
+        self.assertEqual(AuditLogEntry.objects.filter(action="member.update").count(), 1)
+
+    def test_my_coffees_does_not_open_past_a_refused_name(self):
+        self.client.get(reverse("kiosk:nav", args=["settings"]))
+        self.log_in()
+        response = self.client.post(reverse("kiosk:slots_open"), {"nickname": "Tom"})
+        self.assertNotContains(response, "slots-editor")
+        self.assertContains(response, 'like &quot;Anna B.&quot;')
+        self.assertContains(response, 'value="Tom"')
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.nickname, "Tom X.")
+
+    def test_settings_save_says_saved_for_a_moment(self):
+        self.client.get(reverse("kiosk:nav", args=["settings"]))
+        self.log_in()
+        saved = self.client.post(reverse("kiosk:settings_save"), {"nickname": "Tom X.", "favourite_coffee_id": self.kaffee.pk})
+        self.assertContains(saved, "Saved, Tom X.!")
+        self.assertEqual(saved.content, self.panel().content)  # the same bytes from poll to poll
+        with mock.patch("time.time", return_value=time.time() + 5):
+            self.assertNotContains(self.panel(), "Saved, Tom X.!")
 
     def test_no_slots_for_a_session_waiting_for_the_privacy_notice(self):
         Member.objects.filter(pk=self.member.pk).update(privacy_version=0)

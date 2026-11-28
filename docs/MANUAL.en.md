@@ -363,8 +363,7 @@ With a JURA connected (see [Coffee machine](#coffee-machine)), the kiosk guides 
 and **it is booked only once the machine is done**. After **Order now** – or when the countdown runs
 out – it says *Put your cup under the outlet*, and only **Start** sets the machine going. If you don't
 tap **Start**, the kiosk goes back after 30 seconds: no coffee, nothing booked. **Cancel** does the same
-right away. Next to the cup you see the machine – the drawing of its product line, or the admin's photo
-of it (see [Coffee machine](#coffee-machine)).
+right away.
 
 ![Put your cup under the outlet](pictures/manual/en/kiosk-cup.png)
 
@@ -396,7 +395,9 @@ Every member can save up to **three coffees of their own**: tap **Settings**, ap
 coffees**. For each one, ‹ › picks the sort and − and + set **Strength**, **Water**, **Temperature** and
 **Cups** – only what the machine allows for that sort (for the E6's coffee, say, strength 1 to 8 and 25
 to 240 ml). **Preselect** makes it the one already selected when you order, the one that goes to the
-machine after the countdown. It works the same on the phone (see [Phone portal](#5-the-phone-portal)).
+machine after the countdown. **Save** takes you back to Settings, which says it was saved; **✕ Cancel**
+leaves without changing anything. A name or favourite you had just changed on Settings is saved on the
+way in. It works the same on the phone (see [Phone portal](#5-the-phone-portal)).
 
 ![My coffees](pictures/manual/en/kiosk-slots.png)
 
@@ -439,7 +440,7 @@ When it is your turn, **tap your card again** – the kiosk goes straight to the
 This is where you pay in. For information, the screen also shows your **cups in total**
 and **this month** and your **balance**. If it's
 negative, the amount owed is already in the field – enter what you paid, pick how, and tap
-**Pay**. With payment methods that have a link, or a GiroCode, you can also pay what you owe
+**Pay** – the screen confirms it (*Paid 5.00€ (Cash) – thank you!*). With payment methods that have a link, or a GiroCode, you can also pay what you owe
 straight from your phone via QR code – the GiroCode you scan with your banking app.
 
 ![Pay](pictures/manual/en/kiosk-pay.png)
@@ -448,7 +449,8 @@ straight from your phone via QR code – the GiroCode you scan with your banking
 
 ![Settings – apply your card](pictures/manual/en/kiosk-wait-settings.png)
 
-Change your **name** and **favourite coffee** here and tap **Save**. Type directly, or use
+Change your **name** and **favourite coffee** here and tap **Save**: that logs you out, and the screen says
+*Saved* for a moment. Type directly, or use
 the on-screen keyboard via **Keyboard** – it has umlauts, ß, hyphen and full stop too. The
 favourite coffee is a tile per sort – with more than 12 sorts grouped like on **Order**.
 
@@ -564,8 +566,7 @@ something about you, an admin say, appear by their role only) – and the device
 **Order a coffee** – the green button on **Home**, when a coffee machine is set up. Pick one of your
 coffees or a sort the machine makes and tap **Get in line**: you are then in the same
 [line](#when-the-machine-is-taken) as everyone at the kiosk. Take your cup to the machine – nothing runs
-without someone to put it there. At the top you see which machine it is: its drawing, or the admin's
-photo of it.
+without someone to put it there.
 
 ![Ordering a coffee on the phone](pictures/manual/en/portal-order.png)
 
@@ -581,7 +582,7 @@ was booked – cup by cup, as at the kiosk.
 ![It's your turn](pictures/manual/en/portal-order-turn.png)
 
 **My coffees** (on **Home**) are the same three saved coffees as at the kiosk, see
-[My coffees](#my-coffees).
+[My coffees](#my-coffees). **Save** brings you back to **Home**, where the card says it was saved.
 
 ![My coffees on the phone](pictures/manual/en/portal-coffees.png)
 
@@ -801,8 +802,7 @@ level. When the machine's message goes away – tank back in, grounds emptied �
 itself.
 
 **Picture**: every JURA product line has a drawing of its own (ENA, E, J, S, Z, GIGA, X …), shown on
-the overview, on this page, on the kiosk – the machine's state and the brew screen – and on *Order a
-coffee* in the portal. **Upload photo** replaces it everywhere with a photo of your own machine – JPEG,
+the overview, on this page and in the machine's state behind the kiosk's ring. **Upload photo** replaces it everywhere with a photo of your own machine – JPEG,
 PNG or WebP; the browser makes it small first (800 pixels on its long side), and the device takes up
 to 1.5 MB. **Remove photo** brings the drawing back. The photo is kept in the database, so a backup
 carries it along.

@@ -99,6 +99,7 @@ def index(request):
         "recent_payments": member.payments.select_related("purchase__item")[:10],
         "privacy_confirmed": privacy.confirmed(member),
         "machine_on": machine.status()["machine"].configured,
+        "coffees_saved": request.GET.get("coffees_saved") == "1",
     }
     return render(request, "portal/index.html", ctx)
 
@@ -331,13 +332,13 @@ def coffees(request):
     """"My coffees" on the phone (coffee/slots.py) - the same three slots as the kiosk's editor, with a
     form a phone handles better. Values outside what the machine allows are put within it on saving."""
     member = request.member
-    saved = False
     if request.method == "POST":
         found = my_coffees.save_form(member, request.POST)
         who = audit.member_actor(member)
         audit.log(request, "member.slots_update", target=who, actor=who, details="; ".join(
             f"{p}: {my_coffees.describe(slot)}" for p, slot in found.items()) or "none")
-        saved = True
+        # Save closes the page, as Pay does: back home, to its card there, which says it was saved.
+        return redirect(reverse("portal:index") + "?coffees_saved=1#my-coffees")
     by_position = {slot.position: slot for slot in my_coffees.slots_for(member)}
     cards = []
     for position in MemberSlot.POSITIONS:
@@ -347,7 +348,7 @@ def coffees(request):
         cards.append({"position": position, "slot": slot, "made": made, "recipe": recipe})
     return render(request, "portal/coffees.html", {
         "member": member, "cards": cards, "sorts": CoffeeSort.offered(), "max_count": MemberSlot.MAX_COUNT,
-        "counts": range(1, MemberSlot.MAX_COUNT + 1), "saved": saved,
+        "counts": range(1, MemberSlot.MAX_COUNT + 1),
     })
 
 
@@ -428,8 +429,7 @@ def order(request):
                 "price": s.coffee_sort.price * s.count, "options": my_coffees.options_text(my_coffees.options(s))} for s in slots]
     choices += [{"value": str(s.pk), "name": s.name, "count": 1, "price": s.price} for s in sorts]
     ctx = _turn_context(member)
-    ctx.update({"choices": choices, "preselected": _preselected(member, slots, sorts),
-                "machine_name": machine.status()["machine"].name})
+    ctx.update({"choices": choices, "preselected": _preselected(member, slots, sorts)})
     return render(request, "portal/order.html", ctx)
 
 

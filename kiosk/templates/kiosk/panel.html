@@ -37,6 +37,12 @@ the server ~2ms a poll, and cog stayed at its 27% of a core - the hidden GIF isn
     {% include "kiosk/_qr_row.html" %}
 </div>
 
+{% elif state == "settings_saved" %}
+<div class="wait-card settings-saved">
+    <h1>{% blocktranslate trimmed with name=member_name %}Saved, {{ name }}!{% endblocktranslate %}</h1>
+    <p>{% translate "Your settings are stored - you are logged out." %}</p>
+</div>
+
 {% elif state == "thank_you" %}
 <div class="wait-card thank-you">
     <h1>{% blocktranslate trimmed with name=member_name %}Thank you, {{ name }}!{% endblocktranslate %}</h1>
@@ -67,8 +73,6 @@ no seconds: the cup's animation runs in CSS, the countdown in countdown.js from 
     <div class="panel-body brew-body">
         {% comment %}The wait screen's cup (scripts/make_wait_gifs.py): standing empty under the spout, then
         filling. The GIF starts with the one swap from heating to pouring, as it should.{% endcomment %}
-        {% comment %}The machine itself (coffee/machine_image.py) - one URL per machine, so the panel stays the same.{% endcomment %}
-        <img class="brew-machine" alt="" src="{% machine_image %}">
         <img class="brew-cup" alt=""
              src="{% if stage == 'brewing' and phase != 'heating' %}{% static 'kiosk/img/wait/wait_order.gif' %}{% else %}{% static 'kiosk/img/wait/brew_cup.png' %}{% endif %}">
         <div class="brew-text">
@@ -218,6 +222,7 @@ scrolled list crashed Chromium, CLAUDE.md); the same bytes on every poll until i
         <div class="panel-body">
             {% if then_mode == "purchase" %}<p>{% if is_new_user %}{% translate "This card is new here. Your name first - then on to your purchase." %}{% else %}{% translate "Before your purchase: it is credited to a name your colleagues recognise." %}{% endif %}</p>
             {% elif name_required %}<p>{% translate "Before your coffee: the ranking needs a name your colleagues recognise." %}</p>{% endif %}
+            {% if slots_saved %}<p class="msg success">{% translate "Saved - your coffees are on the order screen now." %}</p>{% endif %}
             <p class="muted">{% blocktranslate trimmed with uid=uid|unlocalize %}Card UID: {{ uid }}{% endblocktranslate %}</p>
             <label class="field">
                 {% translate "Name" %}
@@ -275,7 +280,7 @@ scrolled list crashed Chromium, CLAUDE.md); the same bytes on every poll until i
             {% if not is_new_user and not name_required %}<button type="button" class="btn secondary"
                     hx-post="{% url 'kiosk:slots_open' %}" hx-target="#panel" hx-swap="innerHTML">{% include "icons/cup.svg" %} {% translate "My coffees" %}</button>{% endif %}
             {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-touch-seconds="{{ touch_seconds|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
-            <button type="submit" class="success primary-action">{% translate "Save" %}</button>
+            <button type="submit" class="success primary-action">✓ {% translate "Save" %}</button>
         </div>
     </form>
 </div>
@@ -295,7 +300,6 @@ the sort can't set is only invisible - nothing is built or torn down, nothing sc
         <h1 class="panel-header">{% translate "My coffees" %}</h1>
         <div class="panel-body">
             <p class="slots-hint">{% translate "Your coffee the way you like it - it appears first when you order. Several cups run one after the other into the same big cup or jug, each at the sort's price." %}</p>
-            {% if notice %}<p class="msg success">{% translate "Saved - your coffees are on the order screen now." %}</p>{% endif %}
             <div class="slot-cards">
                 {% for card in cards %}
                 <div class="slot-card" data-pos="{{ card.position }}">
@@ -321,7 +325,7 @@ the sort can't set is only invisible - nothing is built or torn down, nothing sc
             <label class="slot-hide"><input type="checkbox" name="hide_standard_sorts"{% if hide_standard_sorts %} checked{% endif %}> {% translate "Show only my coffees when I order (the other sorts one page on)" %}</label>
         </div>
         <div class="action-row panel-footer">
-            <button type="button" class="danger" hx-post="{% url 'kiosk:slots_close' %}" hx-target="#panel" hx-swap="innerHTML">‹ {% translate "Back" %}</button>
+            <button type="button" class="danger" hx-post="{% url 'kiosk:slots_close' %}" hx-target="#panel" hx-swap="innerHTML">✕ {% translate "Cancel" %}</button>
             {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-touch-seconds="{{ touch_seconds|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
             <button type="submit" class="success primary-action">✓ {% translate "Save" %}</button>
         </div>
@@ -339,6 +343,8 @@ the sort can't set is only invisible - nothing is built or torn down, nothing sc
                 <div class="stat"><span class="label">{% translate "Cups this month" %}</span><span class="value">{{ month_cups }}</span></div>
                 <div class="stat"><span class="label">{% translate "Balance" %}</span><span class="value">{{ balance }}€</span></div>
             </div>
+            {% if pay_notice.error %}<p class="msg error">{% translate "Enter an amount above 0." %}</p>
+            {% elif pay_notice %}<p class="msg success">{% blocktranslate trimmed with amount=pay_notice.amount method=pay_notice.method|method_label %}Paid {{ amount }}€ ({{ method }}) - thank you!{% endblocktranslate %}</p>{% endif %}
             <label class="field">
                 {% translate "Payment amount" %}
                 <div class="field-with-osk">
@@ -375,7 +381,7 @@ the sort can't set is only invisible - nothing is built or torn down, nothing sc
         </div>
         <div class="action-row panel-footer">
             {% if deadline_ms %}{% blocktranslate trimmed with seconds="{s}" asvar countdown_text %}Automatic logout in {{ seconds }}s{% endblocktranslate %}<span class="countdown" data-deadline="{{ deadline_ms|unlocalize }}" data-text="{{ countdown_text|force_escape }}"></span>{% endif %}
-            <button type="submit" class="success primary-action">{% translate "Pay" %}</button>
+            <button type="submit" class="success primary-action">✓ {% translate "Pay" %}</button>
         </div>
     </form>
 </div>

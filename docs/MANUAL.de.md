@@ -385,9 +385,7 @@ Ist eine JURA verbunden (siehe [Kaffeemaschine](#kaffeemaschine)), führt der Ki
 und **gebucht wird erst, wenn die Maschine fertig ist**. Nach **Jetzt bestellen** – oder wenn der
 Countdown abläuft – heißt es *Stell deine Tasse unter den Auslauf*, und erst **Start** lässt die
 Maschine loslaufen. Tippst du nicht auf **Start**, geht der Kiosk nach 30 Sekunden zurück: kein
-Kaffee, keine Buchung. **Abbrechen** tut dasselbe sofort. Neben der Tasse siehst du die Maschine – die
-Zeichnung ihrer Baureihe oder das Foto, das der Admin von ihr hochgeladen hat (siehe
-[Kaffeemaschine](#kaffeemaschine)).
+Kaffee, keine Buchung. **Abbrechen** tut dasselbe sofort.
 
 ![Tasse unter den Auslauf](pictures/manual/de/kiosk-cup.png)
 
@@ -421,7 +419,10 @@ auflegen, **Meine Kaffees**. Pro Kaffee stellst du mit ‹ › die Sorte ein und
 **Wasser**, **Temperatur** und **Tassen** – jeweils nur, was die Maschine bei dieser Sorte zulässt
 (beim Kaffee der E6 zum Beispiel Stärke 1 bis 8 und 25 bis 240 ml). **Vorwählen** macht ihn zu dem,
 der beim Bestellen schon ausgewählt ist und nach dem Countdown zur Maschine geht. Am Handy geht das
-genauso (siehe [Handy-Portal](#5-das-handy-portal)).
+genauso (siehe [Handy-Portal](#5-das-handy-portal)). **Speichern** bringt dich zurück zu den Einstellungen,
+die dir das Speichern bestätigen; **✕ Abbrechen** verlässt den Bildschirm, ohne etwas zu ändern. Einen
+Namen oder Lieblingskaffee, den du in den Einstellungen gerade geändert hast, speichert der Kiosk beim
+Öffnen mit.
 
 ![Meine Kaffees](pictures/manual/de/kiosk-slots.png)
 
@@ -465,7 +466,8 @@ Zeit weiter.
 
 Hier zahlst du ein. Zur Information zeigt der Bildschirm dazu deine **Tassen insgesamt** und
 **diesen Monat** und deinen **Kontostand**. Ist er negativ, steht der offene Betrag schon im Feld – trag ein, was du
-bezahlt hast, wähle die Zahlungsart und tippe **Bezahlen**. Sind Zahlungsmethoden mit Link
+bezahlt hast, wähle die Zahlungsart und tippe **Bezahlen** – der Bildschirm bestätigt es (*5,00€ bezahlt
+(Bar) – danke!*). Sind Zahlungsmethoden mit Link
 oder ein GiroCode eingerichtet, kannst du den offenen Betrag auch direkt per QR-Code mit dem Handy
 bezahlen – den GiroCode scannst du mit deiner Banking-App.
 
@@ -475,7 +477,8 @@ bezahlen – den GiroCode scannst du mit deiner Banking-App.
 
 ![Einstellungen – Karte auflegen](pictures/manual/de/kiosk-wait-settings.png)
 
-Hier änderst du **Namen** und **Lieblingskaffee** und tippst **Speichern**. Getippt wird
+Hier änderst du **Namen** und **Lieblingskaffee** und tippst **Speichern**: Das meldet dich ab, und der
+Bildschirm zeigt kurz *Gespeichert*. Getippt wird
 direkt oder über **Tastatur** mit der Bildschirmtastatur – sie hat auch Umlaute, ß, Bindestrich
 und Punkt. Der Lieblingskaffee ist eine Kachel pro Sorte – bei mehr als 12 Sorten so gruppiert wie
 beim **Bestellen**.
@@ -604,8 +607,7 @@ das Gerätezertifikat.
 **Kaffee bestellen** – der grüne Knopf auf **Start**, wenn eine Kaffeemaschine eingerichtet ist. Du
 wählst einen deiner Kaffees oder eine Sorte, die die Maschine macht, und tippst **Anstellen**: Du
 stehst dann in derselben [Warteschlange](#wenn-die-maschine-belegt-ist) wie alle am Kiosk. Geh mit
-deiner Tasse zur Maschine – ohne jemanden, der sie hinstellt, läuft nichts. Oben siehst du, welche
-Maschine es ist: ihre Zeichnung oder das Foto, das der Admin von ihr hochgeladen hat.
+deiner Tasse zur Maschine – ohne jemanden, der sie hinstellt, läuft nichts.
 
 ![Kaffee bestellen am Handy](pictures/manual/de/portal-order.png)
 
@@ -621,7 +623,8 @@ und meldet, was gebucht wurde – Tasse für Tasse, wie am Kiosk.
 ![Du bist dran](pictures/manual/de/portal-order-turn.png)
 
 **Meine Kaffees** (auf **Start**) sind dieselben drei gespeicherten Kaffees wie am Kiosk, siehe
-[Meine Kaffees](#meine-kaffees).
+[Meine Kaffees](#meine-kaffees). **Speichern** bringt dich zurück auf **Start**, wo die Karte das Speichern
+bestätigt.
 
 ![Meine Kaffees am Handy](pictures/manual/de/portal-coffees.png)
 
@@ -855,8 +858,7 @@ und seine Bohnen ab. Hier stellst du Tankgröße, Trester-Portionen und Bohnenbe
 drin, Trester geleert –, füllt sich der Stand von selbst auf.
 
 **Bild**: Jede JURA-Baureihe hat eine eigene Zeichnung (ENA, E, J, S, Z, GIGA, X …). Sie erscheint in
-der Übersicht, auf dieser Seite, am Kiosk – im Zustand der Maschine und beim Bezug – und im Portal
-unter *Kaffee bestellen*. **Foto hochladen** ersetzt sie überall durch ein Foto deiner eigenen
+der Übersicht, auf dieser Seite und im Zustand der Maschine hinter dem Ring am Kiosk. **Foto hochladen** ersetzt sie überall durch ein Foto deiner eigenen
 Maschine – JPEG, PNG oder WebP; der Browser verkleinert es vorher (800 Pixel an der langen Seite), das
 Gerät nimmt bis 1,5 MB. **Foto entfernen** holt die Zeichnung zurück. Das Foto liegt in der
 Datenbank, ein Backup nimmt es also mit.

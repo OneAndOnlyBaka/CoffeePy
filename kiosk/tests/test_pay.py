@@ -22,6 +22,15 @@ class KioskPayTestCase(TestCase):
         payment = Payment.objects.get(member=self.alice)
         self.assertEqual(payment.method_name, "Cash")
 
+    def test_pay_says_what_was_paid(self):
+        response = self.client.post(reverse("kiosk:pay"), {"amount": "5.00"})
+        self.assertContains(response, "Paid 5.00€ (Cash) - thank you!")
+        self.assertEqual(response.content, self.client.get(reverse("kiosk:panel")).content)  # until the next tap
+
+    def test_pay_without_an_amount_says_so(self):
+        self.assertContains(self.client.post(reverse("kiosk:pay"), {"amount": "0"}), "Enter an amount above 0.")
+        self.assertFalse(Payment.objects.exists())
+
     def test_pay_accepts_a_decimal_comma(self):
         self.client.post(reverse("kiosk:pay"), {"amount": "1,50"})
         payment = Payment.objects.get(member=self.alice)

@@ -198,6 +198,7 @@ for r in range(1, ROUNDS + 1):
     k.wait("false", 2)
     saved = sql(f"select m.nickname || '|' || c.name from coffee_member m join coffee_coffeesort c on c.id = m.favourite_coffee_id where m.uid = {UID}")
     check("settings: saved", saved == f"{name}|{target}", saved)
+    check("settings: says saved", k.ev("!!document.querySelector('.settings-saved')"))
 
     step("order pick/cancel")
     # Order: pick another sort, logout countdown, cancel
@@ -264,6 +265,7 @@ for r in range(1, ROUNDS + 1):
     k.tap("form .primary-action, form button[type=submit].success")
     k.wait("false", 2)
     check("pay: payment booked", int(sql(f"select count(*) from coffee_payment where member_id = {UID}")) == int(paid) + 1)
+    check("pay: says paid", k.ev("!!document.querySelector('#panel .msg.success')"))
 
     step("ranking")
     # Ranking and back

@@ -534,8 +534,8 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
 /* The wait screen's cup (scripts/make_wait_gifs.py): still while the cup goes under the outlet,
    the filling GIF while the machine pours. The panel stays byte-identical while the machine works,
    so the GIF is never restarted by a poll - only by the one change from heating to pouring. */
-.brew-body { flex-direction: row; align-items: center; justify-content: center; gap: 28px; }
-.brew-text { flex: 0 1 480px; }
+.brew-body { flex-direction: row; align-items: center; justify-content: center; gap: 40px; }
+.brew-text { flex: 0 1 520px; }
 .brew-text h2 { margin: 0 0 10px; font-size: 2rem; color: var(--coffee); }
 .brew-text p { font-size: 1.25rem; margin: 6px 0; }
 .brew-tasks { margin: 6px 0 0; padding-left: 26px; font-size: 1.3rem; font-weight: 600; }
@@ -545,8 +545,6 @@ fieldset.field legend { padding: 0; margin-bottom: 8px; }
    round on the Pi (2026-11-06). The stage is "stage-<name>", not "brew-<name>": "brew-cup" is the
    cup itself, and the card that once carried it too shrank to the cup's size. */
 .brew-cup { flex: 0 0 auto; width: 220px; height: 220px; }
-/* The machine next to the cup (coffee/machine_image.py) - just as plain: its drawing or the admin's photo. */
-.brew-machine { flex: 0 0 auto; width: 160px; height: 192px; object-fit: contain; }
 
 /* No card needed: the machine's free products on the waiting screen. Unmistakably buttons - the
    first ones, light on cream, read as text boxes: the coffee colour of the main actions, a darker

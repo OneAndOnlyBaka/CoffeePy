@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CoffeePy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 19:50+0100\n"
+"POT-Creation-Date: 2026-11-28 10:43+0100\n"
 "PO-Revision-Date: 2026-10-25 17:56+0100\n"
 "Last-Translator: CoffeePy\n"
 "Language-Team: German\n"
@@ -1413,14 +1413,18 @@ msgid "Picture"
 msgstr "Bild"
 
 msgid ""
-"Your own photo of the machine - it shows here, on the kiosk and on the "
-"members' phones."
-msgstr "Dein eigenes Foto der Maschine - es erscheint hier, am Kiosk und auf den Handys der Mitglieder."
+"Your own photo of the machine - it shows here, on the overview and in the "
+"kiosk's machine state."
+msgstr ""
+"Dein eigenes Foto der Maschine - es erscheint hier, in der Übersicht und im "
+"Zustand der Maschine am Kiosk."
 
 msgid ""
 "A drawing of the machine's product line. A photo of your own machine "
-"replaces it here, on the kiosk and on the members' phones."
-msgstr "Eine Zeichnung der Baureihe der Maschine. Ein Foto deiner eigenen Maschine ersetzt sie hier, am Kiosk und auf den Handys der Mitglieder."
+"replaces it here, on the overview and in the kiosk's machine state."
+msgstr ""
+"Eine Zeichnung der Baureihe der Maschine. Ein Foto deiner eigenen Maschine "
+"ersetzt sie hier, in der Übersicht und im Zustand der Maschine am Kiosk."
 
 msgid "Upload photo"
 msgstr "Foto hochladen"
@@ -2988,10 +2992,13 @@ msgstr "Angelegt - prüfe den Preis."
 
 msgid ""
 "That is no photo this device can show - a JPEG, PNG or WebP up to 1.5 MB."
-msgstr "Das ist kein Foto, das dieses Gerät zeigen kann - ein JPEG, PNG oder WebP bis 1,5 MB."
+msgstr ""
+"Das ist kein Foto, das dieses Gerät zeigen kann - ein JPEG, PNG oder WebP "
+"bis 1,5 MB."
 
 msgid "Saved - the photo now shows wherever the machine does."
-msgstr "Gespeichert - das Foto erscheint jetzt überall, wo die Maschine gezeigt wird."
+msgstr ""
+"Gespeichert - das Foto erscheint jetzt überall, wo die Maschine gezeigt wird."
 
 msgid "The photo is removed - the drawing shows again."
 msgstr "Das Foto ist entfernt - die Zeichnung erscheint wieder."
@@ -3252,6 +3259,13 @@ msgstr ""
 "Handy oder PC ab - der Touchscreen hat keine Tastatur."
 
 #, python-format
+msgid "Saved, %(name)s!"
+msgstr "Gespeichert, %(name)s!"
+
+msgid "Your settings are stored - you are logged out."
+msgstr "Deine Einstellungen sind gespeichert – du bist abgemeldet."
+
+#, python-format
 msgid "Thank you, %(name)s!"
 msgstr "Danke, %(name)s!"
 
@@ -3431,6 +3445,9 @@ msgstr ""
 "Vor dem Kaffee: Die Rangliste braucht einen Namen, an dem dich deine "
 "Kolleg:innen erkennen."
 
+msgid "Saved - your coffees are on the order screen now."
+msgstr "Gespeichert - deine Kaffees stehen jetzt beim Bestellen."
+
 #, python-format
 msgid "Card UID: %(uid)s"
 msgstr "Karten-UID: %(uid)s"
@@ -3463,9 +3480,6 @@ msgstr ""
 "Tassen laufen nacheinander in dieselbe große Tasse oder Kanne, jede zum "
 "Preis der Sorte."
 
-msgid "Saved - your coffees are on the order screen now."
-msgstr "Gespeichert - deine Kaffees stehen jetzt beim Bestellen."
-
 msgid "Strength"
 msgstr "Stärke"
 
@@ -3485,6 +3499,13 @@ msgstr "Tassen insgesamt"
 
 msgid "Balance"
 msgstr "Kontostand"
+
+msgid "Enter an amount above 0."
+msgstr "Gib einen Betrag über 0 ein."
+
+#, python-format
+msgid "Paid %(amount)s€ (%(method)s) - thank you!"
+msgstr "%(amount)s€ bezahlt (%(method)s) – danke!"
 
 msgid "Payment amount"
 msgstr "Betrag"

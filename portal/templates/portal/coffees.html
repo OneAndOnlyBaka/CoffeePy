@@ -4,7 +4,6 @@
 {% block portal_content %}
 <h1>{% translate "My coffees" %}</h1>
 <p class="muted">{% translate "Your coffee the way you like it - it appears first when you order. Several cups run one after the other into the same big cup or jug, each at the sort's price." %}</p>
-{% if saved %}<p class="msg success">{% translate "Saved - your coffees are on the order screen now." %}</p>{% endif %}
 <form method="post">
     {% csrf_token %}
     {% for card in cards %}

@@ -81,6 +81,12 @@ Rules that hold across all four:
   member. Raising `VERSION` asks everyone again. The notice links docs/PRIVACY.md on GitHub (master):
   what it says about the data has to stay true there.
 - Tests live in `<app>/tests/test_*.py`. UI text is bilingual - see "Two languages" below.
+- **Green finishes, red leaves.** The green button on the right does the thing, closes the screen and says
+  so where it lands: Settings' Save logs out with "Saved" for `SETTINGS_SAVED_SECONDS`, "My coffees" goes back
+  to Settings with a notice (and Settings' form is saved on the way in), Pay names the amount, the portal goes
+  back home. Red "✕ Cancel" on the left leaves without changing anything. Purchase and stock-take stay open
+  after booking on purpose - several items in a row. Staying on a screen behind a "Saved" left people unsure
+  whether they were done (2026-11-28).
 - **A change users can see also changes the manual** (`docs/MANUAL.de.md` + `.en.md`, with
   screenshots in both languages; what members do at the kiosk or on the phone also the one-page
   `docs/MEMBERS.de.md` + `.en.md`, which carries no numbers on purpose - `coffee/tests/test_docs.py`
@@ -256,8 +262,8 @@ send commands with one publish each (`coffee/machine.py`), and every page reads 
   (`static/machines/`, drawn by `scripts/make_machine_images.py` - `test_machine_image` compares the files with
   the script), or the admin's photo, kept in the database (a backup carries it). The image has no Pillow: the
   dashboard's page downsizes the photo in the browser, the server only checks type and size. It is served at
-  `/machine-photo/<digest>.<ext>` without a login - the kiosk on 8443 needs it as much as the phones - and its
-  URL changes only with the photo, so the brew screen stays byte-identical.
+  `/machine-photo/<digest>.<ext>` without a login - the kiosk's machine modal on 8443 needs it too. Only where
+  the machine's state is (dashboard, the kiosk's modal), not on the brew or order screens: the user didn't want it there.
 - **One line for the machine** (`coffee/turns.py`, `MachineTurn`): every brew for a member - kiosk or phone
   (portal → Order a coffee) - takes a turn; the first one while the machine is free is called and has
   `TURN_SECONDS` to press Start, at the kiosk after a card tap or on the phone. Free products wait while

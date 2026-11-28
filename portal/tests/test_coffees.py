@@ -21,7 +21,11 @@ class PortalCoffeesTestCase(TestCase):
         self.assertContains(self.client.get(reverse("portal:index")), reverse("portal:coffees"))
         response = self.client.post(reverse("portal:coffees"), {
             "s1-sort": self.kaffee.pk, "s1-count": "3", "s1-strength": "7", "favourite": "1", "hide_standard_sorts": "on"})
-        self.assertContains(response, "Saved")
+        # Save closes the page: back home, to the card that says so
+        self.assertRedirects(response, reverse("portal:index") + "?coffees_saved=1#my-coffees",
+                             fetch_redirect_response=False)
+        self.assertContains(self.client.get(reverse("portal:index") + "?coffees_saved=1"), "Saved")
+        self.assertNotContains(self.client.get(reverse("portal:index")), "Saved")
         slot = MemberSlot.objects.get(member=self.member)
         # without a machine product nothing but the cups can be set
         self.assertEqual((slot.position, slot.count, slot.strength), (1, 3, None))

@@ -48,7 +48,7 @@ class PortalOrderTestCase(TestCase):
         self.assertContains(page, "strength 7")
         self.assertContains(page, "1.00€")
         self.assertContains(page, f'value="{self.kaffee.pk}"')
-        self.assertContains(page, 'src="/static/machines/generic.svg"')  # no model name saved at connect here
+        self.assertNotContains(page, "/static/machines/")  # the machine's picture is for its state, not the order
         self.assertNotContains(page, "Tee")
 
     def test_in_line_behind_the_kiosk_with_names(self):

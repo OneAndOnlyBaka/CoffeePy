@@ -69,7 +69,7 @@ class MachineOrderTestCase(TestCase):
         self.assertContains(response, "Put your cup under the outlet")
         # Not "brew-cup": that is the cup's own class, and the card once shrank to its 200px.
         self.assertContains(response, 'class="panel-card brew-card stage-cup"')
-        self.assertContains(response, 'class="brew-machine" alt="" src="/static/machines/')
+        self.assertNotContains(response, "/static/machines/")  # the machine's picture is for its state, not the brew
         self.assertFalse(Order.objects.exists())  # nothing booked yet
         response = self.client.post(reverse("kiosk:machine_start"))
         dispense = MachineDispense.objects.get()
@@ -83,6 +83,41 @@ class MachineOrderTestCase(TestCase):
         self.done(dispense)
         self.assertContains(self.panel(), "Thank you, Tom X.!")
         self.assertEqual(Order.objects.get().member, self.member)
+
+    def test_the_own_card_again_during_the_brew_is_not_a_new_login(self):
+        dispense = self.start()
+        NfcScan.objects.create(uid="AABBCCDD", event=NfcScan.EVENT_REMOVED)
+        NfcScan.objects.create(uid="AABBCCDD", event=NfcScan.EVENT_INSERTED)  # tapped again while it brews
+        self.assertContains(self.panel(), "The machine is getting ready")
+        self.done(dispense)
+        self.assertContains(self.panel(), "Thank you, Tom X.!")
+        response = self.panel()
+        self.assertNotContains(response, "Order now")
+        self.assertFalse(self.client.session.get("logged_in"))
+        self.assertEqual(Order.objects.count(), 1)
+
+    def test_the_own_card_again_on_the_order_screen_without_the_machine(self):
+        self.log_in()
+        self.client.post(reverse("kiosk:order_select"), {"coffee_id": str(self.biscuit.pk)})
+        NfcScan.objects.create(uid="AABBCCDD", event=NfcScan.EVENT_INSERTED)
+        self.panel()
+        self.client.post(reverse("kiosk:order_confirm"))  # booked at once, from the tally
+        self.panel()
+        self.assertFalse(self.client.session.get("logged_in"))
+        self.assertEqual(Order.objects.get().coffee_sort, self.biscuit)
+
+    def test_another_card_during_the_brew_comes_after_it(self):
+        other = Member.objects.create(privacy_version=privacy.VERSION, uid=0x44332211, nickname="Anna X.",
+                                      favourite_coffee=self.espresso)
+        dispense = self.start()
+        NfcScan.objects.create(uid="AABBCCDD", event=NfcScan.EVENT_INSERTED)
+        NfcScan.objects.create(uid="11223344", event=NfcScan.EVENT_INSERTED)
+        self.panel()
+        self.done(dispense)
+        self.panel()  # the brew ends
+        self.panel()  # Anna's tap from before
+        self.assertTrue(self.client.session.get("logged_in"))
+        self.assertEqual(self.client.session.get("uid"), other.uid)
 
     def test_every_stage_is_the_same_from_poll_to_poll(self):
         first = self.to_cup().content

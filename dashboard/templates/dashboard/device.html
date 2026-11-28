@@ -104,9 +104,9 @@
     <div class="machine-picture">
         <img class="machine-image" src="{% machine_image status.state.model %}" alt="">
         <div>
-            <p class="muted">{% if settings.photo_digest %}{% translate "Your own photo of the machine - it shows here, on the kiosk and on the members' phones." %}{% else %}{% blocktranslate trimmed %}
-                A drawing of the machine's product line. A photo of your own machine replaces it here, on the kiosk
-                and on the members' phones.
+            <p class="muted">{% if settings.photo_digest %}{% translate "Your own photo of the machine - it shows here, on the overview and in the kiosk's machine state." %}{% else %}{% blocktranslate trimmed %}
+                A drawing of the machine's product line. A photo of your own machine replaces it here, on the overview
+                and in the kiosk's machine state.
             {% endblocktranslate %}{% endif %}</p>
             {% comment %}Downsized in the browser first (the script below): a phone's photo is several MB, and the
             Pi 3 would decode all of it for every screen. Without the script the upload still works up to the limit.{% endcomment %}

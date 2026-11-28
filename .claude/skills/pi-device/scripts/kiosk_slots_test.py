@@ -64,7 +64,15 @@ tap(c2 + '[data-step="strength"][data-by="-1"]'); tap(c2 + '[data-step="temperat
 check("slot 2: Espresso", ev(f"document.querySelector('{c2}[data-show=sort]').textContent") == "Espresso")
 shot("editor-filled")
 tap("button.primary-action")
-check("saved", wait_for("document.querySelector('.slots-editor .msg.success')"))
+# Save closes the editor: back on Settings, which says it was saved
+check("saved: back on settings", wait_for("document.querySelector('input[name=nickname]') && document.querySelector('#panel .msg.success')"))
+check("editor closed", not ev("!!document.querySelector('.slots-editor')"))
+shot("settings-saved")
+# Cancel leaves without saving: open, change, cancel - the slot keeps what was saved
+tap("button", "Meine Kaffees"); wait_for("document.querySelector('.slots-editor')"); time.sleep(1)
+tap(c1 + '[data-step="strength"][data-by="1"]')
+tap("button.danger", "Abbrechen")
+check("cancel: back on settings", wait_for("document.querySelector('input[name=nickname]') && !document.querySelector('#panel .msg.success')"))
 check("db: slot 1", sql(f"select strength || ',' || water_ml || ',' || count from coffee_memberslot where member_id = {UID} and position = 1") == "7,200,2")
 time.sleep(1)
 # --- ordering with the slot: 2 cups in a row
